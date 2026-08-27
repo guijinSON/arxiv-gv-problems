@@ -74,10 +74,8 @@ def verify(inst, answer) -> tuple[bool, str]
     inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
 
 def random_candidate(inst, rng) -> object
-    """A random candidate that ALREADY SATISFIES every constraint a solver would
-    trivially enforce from reading the statement (shape, size, and any structural
-    rule that is obvious once stated). Used to measure P(random guess). Must not
-    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+    """A uniformly random SYNTACTICALLY valid candidate (right shape, right size).
+    Used to measure P(random guess). Must not bias toward the planted answer."""
 
 def search_space(inst) -> int | None
     """Size of the naive candidate space, or None if not countable."""
@@ -125,34 +123,10 @@ pass at the difficulty you ship.**
 | **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
 | **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
 | **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
-| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G4 guess resistance** | `P(random guess) < 1e-6`, measured by sampling ≥200k `random_candidate`s. Report hits/total. |
 | **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
 | **G6 adversary panel** | Write ≥3 cheap attacks and confirm each FAILS across ≥8 seeds. See below. |
 | **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
-
-### G4: measure P(guess) against a solver, not against noise
-
-The naive candidate space is almost always a wild overestimate of the difficulty,
-and reporting it makes a guessable family look impossible. `random_candidate` must
-sample from the space **a solver who has read the statement would search**, with
-every freely-deducible constraint already applied.
-
-Measured on a real run of this prompt — an exact-tiling family where the statement
-implies exactly 3 items fill each block:
-
-| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
-|---|---|---|
-| 2 | 2.0e-10 | **0.20** |
-| 3 | 6.6e-16 | 4.3e-2 |
-| 4 | 7.0e-22 | 3.1e-3 |
-
-The uniform column says "impossible" for an instance that is in fact guessed one
-time in five. Eighty orders of magnitude of self-deception.
-
-So: before sampling, ask what a solver gets for free from the statement — the
-arity, the partition shape, the degree, the range, the sum constraint — and build
-those into `random_candidate`. If you also report the naive number, label it
-clearly as the naive one. The structure-aware number is the one that must pass.
 
 ### G6: the adversary panel — this is where generators actually die
 
@@ -224,16 +198,11 @@ Requirements:
 
 ## STEP 5 — deliverables
 
-Write these as **files in the working directory**, not only as chat output — the
-repo collects them and a report that exists only in the run log is not machine
-readable.
-
-1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
-2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
-   measured number (P(guess) as hits/total, solution counts, per-attack results).
-3. `llm_loop_transcript.jsonl` — one JSON object per oracle call:
-   `{"preset","seed","solved","parsed","reason","reply"}`. This is the evidence for
-   the hardness claim; keep the raw replies in it.
+1. `gen_<arxiv_id>.py` — the module.
+2. `selftest()` output: every gate with its measured number (P(guess) as hits/total,
+   solution counts, per-attack results).
+3. The LLM loop transcript: preset, seed, whether solved, and the final shipping
+   difficulty.
 4. One worked example: the rendered question, the answer, and `verify` returning
    True on it plus False on a corrupted variant.
 5. A short `NOTES` block: which paper section fixed the definition, which result
@@ -244,3 +213,17 @@ readable.
 If the family fails, say which gate and why. A rejected family costs nothing; a
 family that silently generates easy or unsolvable instances poisons the dataset.
 Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2503.01929
+url: https://arxiv.org/abs/2503.01929
+title: Orientable quadratic equations in wreath products
+categories: math.GR
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: integer equations
+  method: substitution check
+  candidate generator: choose variable assignments in wreath product, then form the quadratic equation
+  candidate verifier: substitute candidate group elements and reduce equality in the wreath product
+

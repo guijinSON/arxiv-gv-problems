@@ -61,8 +61,8 @@ bash scripts/status.sh --write >/dev/null
 git add "$D" "artifacts/$ID.jsonl" "claims/$ID.json" STATUS.md
 git commit -q -m "result $ID"
 # STATUS.md is generated: on conflict, regenerate rather than merge
-git pull -q --rebase origin main 2>/dev/null || { git checkout --ours STATUS.md 2>/dev/null; git add STATUS.md; git rebase --continue 2>/dev/null || true; }
+git pull -q --rebase origin main 2>/dev/null || { git checkout --ours STATUS.md 2>/dev/null; git add STATUS.md 2>/dev/null; git rebase --continue >/dev/null 2>&1 || true; }
 bash scripts/status.sh --write >/dev/null; git add STATUS.md
-git diff --cached --quiet || git commit -q --amend --no-edit
+git diff --cached --quiet 2>/dev/null || git commit -q --amend --no-edit 2>/dev/null
 git push -q origin main && echo "SUBMITTED $ID" || {
   echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
