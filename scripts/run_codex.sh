@@ -51,7 +51,7 @@ fi
 
 cd "$OUT"
 setsid nohup codex exec --skip-git-repo-check "${SANDBOX_ARGS[@]}" \
-  -m "${CODEX_MODEL:-gpt-5.5}" -c model_reasoning_effort="${CODEX_EFFORT:-high}" \
+  -m "${CODEX_MODEL:-gpt-5.6-sol}" -c model_reasoning_effort="${CODEX_EFFORT:-xhigh}" \
   "$(cat TASK.md)" > codex_run.log 2>&1 < /dev/null &
 sleep 10
 echo "started $ID (pid $(pgrep -x codex | head -1)) -> $OUT/codex_run.log"

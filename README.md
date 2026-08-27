@@ -66,7 +66,8 @@ confirmed 44,239, of which these 12,167 are labelled `strong`. See `MANIFEST.jso
    cd arxiv-gv-problems
    git config user.name "Your Name" && git config user.email "you@example.com"
    ```
-2. Make sure `codex` is logged in, then:
+2. Make sure `codex` is logged in — it should run **`gpt-5.6-sol`** at **`xhigh`**
+   reasoning effort (the defaults in `scripts/run_codex.sh`) — then:
    ```bash
    export OPENAI_API_KEY=sk-...          # for the hardening loop
    bash scripts/claim.sh                 # reserves the next free paper
@@ -101,6 +102,13 @@ selftest()                -> dict            # all gates, with numbers
 Gates a module must pass: planted verifies · corruption rejected · parse round-trips ·
 **P(random guess) < 1e-6** · solutions sparse · survives an adversary panel · scales with `n`
 · **and `gpt-5.6-terra` at medium reasoning effort fails to solve it**.
+
+| role | model | effort |
+|---|---|---|
+| builder (Codex CLI, writes the module) | `gpt-5.6-sol` | `xhigh` |
+| hardening oracle (the solver we must defeat) | `gpt-5.6-terra` | `medium` |
+
+Builder and oracle are deliberately different models — see `CODEX.md`.
 
 See `examples/1912.09051/` for a complete worked result, and `prompts/codex_task.md`
 for the prompt that produces them.

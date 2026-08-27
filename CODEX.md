@@ -1,7 +1,33 @@
 # Running Codex for this repo
 
-One paper ≈ **18 minutes** and **~300k tokens** on `gpt-5.5` at high reasoning effort.
-Budget accordingly: a single Codex account covers a few hundred papers, not thousands.
+## Model and reasoning effort
+
+Run Codex on **`gpt-5.6-sol`** at **`xhigh`** reasoning effort. Sol is the flagship of the
+5.6 series and is the strongest of the tier at command-line and multi-step coding work,
+which is exactly this task: read a paper, write a module, run gates, iterate.
+
+```bash
+codex exec ... -m gpt-5.6-sol -c model_reasoning_effort="xhigh"
+```
+
+`scripts/run_codex.sh` uses these by default. Override per run if you need to:
+
+```bash
+CODEX_MODEL=gpt-5.5 CODEX_EFFORT=high bash scripts/run_codex.sh <arxiv_id>
+```
+
+Do not drop below `high` — the module has to satisfy seven gates and an adversary panel,
+and lower effort produces modules that pass the easy gates and fail the hard ones.
+
+Note this is separate from the **hardening oracle**, which is the model we try to defeat:
+that stays `gpt-5.6-terra` at `medium` effort (see `prompts/codex_task.md`, Step 4).
+Builder and oracle are deliberately different models.
+
+## Budget
+
+One paper ≈ **18 minutes** and **~300k tokens** (measured on `gpt-5.5`/high; expect more
+at `gpt-5.6-sol`/xhigh). A single Codex account covers a few hundred papers, not
+thousands — Codex quota is **weekly**.
 
 ## The sandbox problem
 

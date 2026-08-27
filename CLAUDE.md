@@ -6,8 +6,8 @@ When the user says **"do a paper"** / **"process a paper"**, run this loop.
 
 1. `bash scripts/status.sh` — show where the effort stands.
 2. `bash scripts/claim.sh` — reserves the next free paper (or `scripts/claim.sh <id>`).
-3. `bash scripts/run_codex.sh <id>` — builds `results/<id>/` in the background.
-   Read `CODEX.md` first if the sandbox errors.
+3. `bash scripts/run_codex.sh <id>` — builds `results/<id>/` in the background using
+   `gpt-5.6-sol` at `xhigh` reasoning effort. Read `CODEX.md` first if the sandbox errors.
 4. Poll `results/<id>/codex_run.log` until `ps -eo comm | grep -cx codex` is 0.
 5. **Audit the output yourself — do not trust the self-report.** See below.
 6. `bash scripts/submit.sh <id>` — runs an interface check, then commits and pushes.
