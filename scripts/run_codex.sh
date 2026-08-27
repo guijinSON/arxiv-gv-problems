@@ -6,6 +6,16 @@ cd "$(dirname "$0")/.." || exit 1
 ID="${1:?usage: scripts/run_codex.sh <arxiv_id>}"
 OUT="results/$ID"; mkdir -p "$OUT"
 
+# claim state: claimed -> in_progress
+if [ -f "claims/$ID.json" ]; then
+  python3 -c "
+import json,datetime,sys
+p='claims/$ID.json'; d=json.load(open(p))
+d['status']='in_progress'
+d['started_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d,open(p,'w'))"
+fi
+
 python3 - "$ID" > "$OUT/TASK.md" <<'PY'
 import json, sys
 pid = sys.argv[1]

@@ -71,8 +71,12 @@ confirmed 44,239, of which these 12,167 are labelled `strong`. See `MANIFEST.jso
    export OPENAI_API_KEY=sk-...          # for the hardening loop
    bash scripts/claim.sh                 # reserves the next free paper
    bash scripts/run_codex.sh <arxiv_id>  # ~18 min, ~300k tokens
-   bash scripts/submit.sh <arxiv_id>     # interface check, then push
+   bash scripts/submit.sh <arxiv_id>     # interface check, emit artifacts, push
    ```
+   Rejecting a paper is a valid outcome — write `results/<id>/REJECTED.md` saying which
+   gate failed, then `bash scripts/submit.sh <id> --reject`.
+
+   Track progress in **[STATUS.md](STATUS.md)** or with `bash scripts/status.sh --sync`.
    Read **`CODEX.md`** first — the sandbox needs configuring and it is the most common
    thing that goes wrong.
 
@@ -105,14 +109,17 @@ for the prompt that produces them.
 
 ```
 papers/papers.jsonl          12,167 candidate papers (input)
+STATUS.md                    progress board (generated; do not hand-edit)
 prompts/codex_task.md        the per-paper Codex prompt
 scripts/claim.sh             reserve the next free paper (race-safe via git)
 scripts/run_codex.sh         build one generator/verifier
 scripts/submit.sh            interface-check, commit, push
-scripts/status.sh            progress
+scripts/status.sh            progress board  (--write regenerates STATUS.md)
+scripts/emit.sh              emit dataset instances from a finished module
 scripts/fetch_paper.sh       polite arXiv source/PDF fetch
-claims/<id>.json             who has which paper
-results/<id>/                the module, logs, LLM transcript
+claims/<id>.json             who has which paper + state
+results/<id>/                build output: module, logs, LLM transcript
+artifacts/<id>.jsonl         emitted instances: question + answer + params
 examples/1912.09051/         a finished example
 CODEX.md                     sandbox, keys, quota — read this
 CLAUDE.md                    playbook for Claude Code

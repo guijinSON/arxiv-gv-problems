@@ -2,9 +2,29 @@
 # Submit a finished paper.  Usage: scripts/submit.sh <arxiv_id>
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
-ID="${1:?usage: scripts/submit.sh <arxiv_id>}"
+ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
 D="results/$ID"
 [ -d "$D" ] || { echo "ERROR: $D missing."; exit 1; }
+
+if [ -n "$REJECT" ]; then
+  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+  python3 -c "
+import json,datetime,os
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='rejected'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d,open(p,'w'))"
+  rm -f "$D/.orkey"; rm -rf "$D/__pycache__"
+  bash scripts/status.sh --write >/dev/null
+  git add "$D" "claims/$ID.json" STATUS.md
+  git commit -q -m "reject $ID"
+  git pull -q --rebase origin main && bash scripts/status.sh --write >/dev/null && git add STATUS.md \
+    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+    echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+  exit 0
+fi
 
 MOD="$(ls "$D"/gen_*.py 2>/dev/null | head -1)"
 [ -n "$MOD" ] || { echo "ERROR: no gen_*.py in $D — nothing to submit."; exit 2; }
@@ -27,13 +47,22 @@ PY
 [ $? -eq 0 ] || { echo "SUBMIT BLOCKED — fix the module first."; exit 3; }
 
 rm -f "$D/.orkey"; rm -rf "$D/__pycache__"
+echo "== emitting sample instances =="
+bash scripts/emit.sh "$ID" "${EMIT_N:-20}" || { echo "SUBMIT BLOCKED — emit failed."; exit 5; }
+
 python3 -c "
-import json,io,os,datetime
+import json,os,datetime
 p='claims/$ID.json'
 d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
-d['status']='done'; d['done_at']=datetime.datetime.utcnow().isoformat()+'Z'
+d['status']='done'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 json.dump(d, open(p,'w'))"
-git add "$D" "claims/$ID.json"
+bash scripts/status.sh --write >/dev/null
+git add "$D" "artifacts/$ID.jsonl" "claims/$ID.json" STATUS.md
 git commit -q -m "result $ID"
-git pull -q --rebase origin main && git push -q origin main && echo "SUBMITTED $ID" || {
+# STATUS.md is generated: on conflict, regenerate rather than merge
+git pull -q --rebase origin main 2>/dev/null || { git checkout --ours STATUS.md 2>/dev/null; git add STATUS.md; git rebase --continue 2>/dev/null || true; }
+bash scripts/status.sh --write >/dev/null; git add STATUS.md
+git diff --cached --quiet || git commit -q --amend --no-edit
+git push -q origin main && echo "SUBMITTED $ID" || {
   echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
