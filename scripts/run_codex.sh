@@ -37,8 +37,21 @@ Prior triage (a hypothesis, not ground truth - verify it against the paper):
 """)
 PY
 
-: "${OPENAI_API_KEY:?export OPENAI_API_KEY first (needed for the gpt-5.6-terra loop)}"
-command -v codex >/dev/null || { echo "ERROR: codex CLI not on PATH"; exit 2; }
+if [ -z "${OPENAI_API_KEY:-}" ] && [ -z "${OPENROUTER_API_KEY:-}" ]; then
+  echo "ERROR: export OPENAI_API_KEY (or OPENROUTER_API_KEY) — needed for the hardening loop."
+  exit 3
+fi
+
+CODEX_BIN="${CODEX_BIN:-$(command -v codex)}"
+[ -n "$CODEX_BIN" ] || { echo "ERROR: codex CLI not found (set CODEX_BIN)"; exit 2; }
+CV="$("$CODEX_BIN" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+CVMIN="0.150.0"
+if [ "$(printf '%s\n%s\n' "$CVMIN" "$CV" | sort -V | head -1)" != "$CVMIN" ]; then
+  echo "ERROR: codex $CV is too old for gpt-5.6-sol (need >= $CVMIN)."
+  echo "  npm install -g @openai/codex@latest    # then use that binary, e.g."
+  echo "  CODEX_BIN=\$HOME/.npm-global/bin/codex bash scripts/run_codex.sh $ID"
+  exit 4
+fi
 
 # --- sandbox: see CODEX.md. Prefer the real sandbox; fall back only if bwrap is broken.
 MODE="${CODEX_SANDBOX_MODE:-workspace-write}"
@@ -50,9 +63,10 @@ else
 fi
 
 cd "$OUT"
-setsid nohup codex exec --skip-git-repo-check "${SANDBOX_ARGS[@]}" \
+setsid nohup "$CODEX_BIN" exec --skip-git-repo-check "${SANDBOX_ARGS[@]}" \
   -m "${CODEX_MODEL:-gpt-5.6-sol}" -c model_reasoning_effort="${CODEX_EFFORT:-xhigh}" \
   "$(cat TASK.md)" > codex_run.log 2>&1 < /dev/null &
 sleep 10
-echo "started $ID (pid $(pgrep -x codex | head -1)) -> $OUT/codex_run.log"
+echo "started $ID  codex=$CV model=${CODEX_MODEL:-gpt-5.6-sol} effort=${CODEX_EFFORT:-xhigh}"
+echo "  log: $OUT/codex_run.log"
 echo "watch:  tail -f $OUT/codex_run.log"

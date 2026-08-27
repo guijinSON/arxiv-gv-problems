@@ -10,6 +10,23 @@ which is exactly this task: read a paper, write a module, run gates, iterate.
 codex exec ... -m gpt-5.6-sol -c model_reasoning_effort="xhigh"
 ```
 
+**Requires codex CLI >= 0.150.0.** Older versions reject the model with
+`The 'gpt-5.6-sol' model requires a newer version of Codex`. Check and upgrade:
+
+```bash
+codex --version
+npm install -g @openai/codex@latest
+```
+
+If a stale copy is first on `PATH` (e.g. a root-owned `/usr/local/bin/codex` you cannot
+overwrite), point the scripts at the new one instead of fighting it:
+
+```bash
+CODEX_BIN=$HOME/.npm-global/bin/codex bash scripts/run_codex.sh <arxiv_id>
+```
+
+`run_codex.sh` checks the version and refuses to start if it is too old.
+
 `scripts/run_codex.sh` uses these by default. Override per run if you need to:
 
 ```bash
@@ -95,8 +112,12 @@ Never point it at a machine holding other people's data.
 The hardening loop needs an LLM API key:
 
 ```bash
-export OPENAI_API_KEY=sk-...        # for gpt-5.6-terra
+export OPENAI_API_KEY=sk-...            # preferred
+# or, if you use OpenRouter instead:
+export OPENROUTER_API_KEY=sk-or-v1-...  # model id becomes openai/gpt-5.6-terra
 ```
+
+Either works; `OPENAI_API_KEY` wins when both are set.
 
 Never commit it. `.gitignore` covers `.orkey` and `.env`, and `scripts/submit.sh`
 deletes any stray `.orkey` before committing — but check your own diffs anyway.

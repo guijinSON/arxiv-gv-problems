@@ -158,8 +158,16 @@ crowding/density/size, never from making the planted object look different.
 
 ## STEP 4 — the LLM hardening loop (required)
 
-An `OPENAI_API_KEY` is available in the environment. Use it to check the instance
-actually defeats a strong model.
+A key for the hardening oracle is in the environment. Use whichever is set:
+
+- **`OPENAI_API_KEY`** → OpenAI API, model `gpt-5.6-terra`, reasoning effort `medium`.
+- **`OPENROUTER_API_KEY`** → `POST https://openrouter.ai/api/v1/chat/completions`,
+  `Authorization: Bearer $OPENROUTER_API_KEY`, body
+  `{"model":"openai/gpt-5.6-terra","reasoning":{"effort":"medium"},
+    "messages":[{"role":"user","content":render(inst)}],"max_tokens":16000}`;
+  reply text is `choices[0].message.content`.
+
+Prefer `OPENAI_API_KEY` when both are set. Say in your report which you used.
 
 ```
 for preset in ascending difficulty:
@@ -174,9 +182,10 @@ for preset in ascending difficulty:
 
 Requirements:
 
-- Model `gpt-5.6-terra`, **reasoning effort medium**. Verify the exact parameter
-  names against the installed OpenAI SDK before relying on them — check the SDK, do
-  not guess the request shape.
+- Model `gpt-5.6-terra`, **reasoning effort medium**. Verify the exact parameter names
+  against the installed SDK before relying on them — check the SDK, do not guess the
+  request shape. If the reasoning/effort field is rejected, retry without it and say so.
+- This is the **oracle**, deliberately a different model from the one writing this module.
 - Try **at least 3 distinct seeds** per preset. One failure to solve is not evidence;
   3/3 failures is weak evidence and that is all we are claiming.
 - Log the raw reply for each attempt. If `parse_answer` returns None on a reply that
