@@ -58,7 +58,7 @@ Use, in order of preference:
 
 ```bash
 codex exec --skip-git-repo-check --sandbox workspace-write \
-  -m gpt-5.5 -c model_reasoning_effort="high" "$(cat TASK.md)"
+  -m gpt-5.6-sol -c model_reasoning_effort="xhigh" "$(cat .task.md)"
 ```
 
 Writes are confined to the working directory and network is allowed. This is what

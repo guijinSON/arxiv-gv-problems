@@ -121,12 +121,15 @@ STATUS.md                    progress board (generated; do not hand-edit)
 prompts/codex_task.md        the per-paper Codex prompt
 scripts/claim.sh             reserve the next free paper (race-safe via git)
 scripts/run_codex.sh         build one generator/verifier
-scripts/submit.sh            interface-check, commit, push
+scripts/submit.sh            interface-check, emit, commit, push
 scripts/status.sh            progress board  (--write regenerates STATUS.md)
 scripts/emit.sh              emit dataset instances from a finished module
 scripts/fetch_paper.sh       polite arXiv source/PDF fetch
 claims/<id>.json             who has which paper + state
-results/<id>/                build output: module, logs, LLM transcript
+results/<id>/README.md       what the problem is, why it is hard, caveats — written
+                             by whoever built it, and required by submit.sh
+results/<id>/gen_<id>.py     the generator/verifier module
+results/<id>/                selftest_report.json, llm_loop_transcript.jsonl, codex_run.log
 artifacts/<id>.jsonl         emitted instances: question + answer + params
 examples/1912.09051/         a finished example
 CODEX.md                     sandbox, keys, quota — read this

@@ -10,7 +10,14 @@ When the user says **"do a paper"** / **"process a paper"**, run this loop.
    `gpt-5.6-sol` at `xhigh` reasoning effort. Read `CODEX.md` first if the sandbox errors.
 4. Poll `results/<id>/codex_run.log` until `ps -eo comm | grep -cx codex` is 0.
 5. **Audit the output yourself — do not trust the self-report.** See below.
-6. `bash scripts/submit.sh <id>` — runs an interface check, then commits and pushes.
+6. `bash scripts/submit.sh <id>` — interface check, emit, commit, push. It refuses a
+   result missing `README.md`, `selftest_report.json` or `llm_loop_transcript.jsonl`.
+
+**The builder writes `results/<id>/README.md`, not a script.** Only whoever read the
+paper alongside the code can say which theorem the regime is steering around, which
+preset was rejected and by which gate, and which attacks went untried. If it is missing,
+send the builder back for it rather than generating one — a reformatted JSON dump is
+not the same artifact. The spec is in `prompts/codex_task.md`, STEP 5.
 
 ## Audit before submitting
 
@@ -22,7 +29,9 @@ Codex reports its own gate results. Independently confirm at least:
 - `parse_answer` round-trips, and takes the **last** `<answer>` block, not the first
   (models often emit a draft then a correction)
 - `enumerate_all` agrees with brute force at a small size, if feasible
-- `search_space` and `random_candidate` describe the *same* space
+- `search_space` and `random_candidate` describe the *same* space, and that space is
+  the one a **solver** would search — not a naive superset. A P(guess) measured over
+  uniform noise can understate a family's guessability by 20 orders of magnitude.
 - run the **standard algorithm** for the problem class as an attack — a SAT solver for
   satisfiability, rotation-extension for Hamiltonicity, an ILP for covering. Generic
   greedy/outlier attacks are not enough and have missed real breaks.

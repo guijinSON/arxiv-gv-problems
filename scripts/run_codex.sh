@@ -16,7 +16,7 @@ d['started_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT
 json.dump(d,open(p,'w'))"
 fi
 
-python3 - "$ID" > "$OUT/TASK.md" <<'PY'
+python3 - "$ID" > "$OUT/.task.md" <<'PY'
 import json, sys
 pid = sys.argv[1]
 rec = next(json.loads(l) for l in open("papers/papers.jsonl")
@@ -62,10 +62,19 @@ else
   SANDBOX_ARGS=(--sandbox "$MODE")
 fi
 
+python3 -c "
+import json,datetime
+json.dump({'paper':'$ID',
+           'model':'${CODEX_MODEL:-gpt-5.6-sol}',
+           'effort':'${CODEX_EFFORT:-xhigh}',
+           'codex_version':'$CV',
+           'started_at':datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')},
+          open('$OUT/.meta.json','w'), indent=1)"
+
 cd "$OUT"
 setsid nohup "$CODEX_BIN" exec --skip-git-repo-check "${SANDBOX_ARGS[@]}" \
   -m "${CODEX_MODEL:-gpt-5.6-sol}" -c model_reasoning_effort="${CODEX_EFFORT:-xhigh}" \
-  "$(cat TASK.md)" > codex_run.log 2>&1 < /dev/null &
+  "$(cat .task.md)" > codex_run.log 2>&1 < /dev/null &
 sleep 10
 echo "started $ID  codex=$CV model=${CODEX_MODEL:-gpt-5.6-sol} effort=${CODEX_EFFORT:-xhigh}"
 echo "  log: $OUT/codex_run.log"
