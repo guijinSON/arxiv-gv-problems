@@ -1,0 +1,337 @@
+{
+  "paper": "2311.00090",
+  "shipping_difficulty": "medium",
+  "presets": {
+    "demo": {
+      "n": 12,
+      "modulus_bits": 24
+    },
+    "medium": {
+      "n": 40,
+      "modulus_bits": 80
+    },
+    "hard": {
+      "n": 64,
+      "modulus_bits": 128
+    }
+  },
+  "gates": {
+    "G1_planted_verifies": {
+      "passed": true,
+      "runs": [
+        {
+          "preset": "demo",
+          "seed": 0,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "demo",
+          "seed": 1,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "demo",
+          "seed": 2,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "demo",
+          "seed": 7,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "medium",
+          "seed": 0,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "medium",
+          "seed": 1,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "medium",
+          "seed": 2,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "medium",
+          "seed": 7,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "hard",
+          "seed": 0,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "hard",
+          "seed": 1,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "hard",
+          "seed": 2,
+          "passed": true,
+          "reason": "ok"
+        },
+        {
+          "preset": "hard",
+          "seed": 7,
+          "passed": true,
+          "reason": "ok"
+        }
+      ]
+    },
+    "G2_rejects_corruption": {
+      "passed": true,
+      "distinct_reason_count": 5,
+      "results": {
+        "empty": {
+          "rejected": true,
+          "reason": "answer must be a nonempty list"
+        },
+        "drop_one": {
+          "rejected": true,
+          "reason": "wrong number of indices: expected 40"
+        },
+        "swap_adjacent_order": {
+          "rejected": true,
+          "reason": "indices must be in strictly increasing order"
+        },
+        "duplicate": {
+          "rejected": true,
+          "reason": "indices must be distinct"
+        },
+        "out_of_range": {
+          "rejected": true,
+          "reason": "index out of range: allowed range is 1..79"
+        }
+      }
+    },
+    "G3_round_trip": {
+      "passed": true,
+      "parsed": [
+        5,
+        6,
+        7,
+        8,
+        10,
+        13,
+        14,
+        16,
+        20,
+        21,
+        22,
+        24,
+        25,
+        26,
+        28,
+        29,
+        30,
+        31,
+        33,
+        35,
+        37,
+        40,
+        41,
+        42,
+        43,
+        46,
+        49,
+        50,
+        51,
+        56,
+        57,
+        60,
+        61,
+        63,
+        64,
+        65,
+        70,
+        73,
+        74,
+        79
+      ],
+      "garbage_returns_none": true
+    },
+    "G4_guess_resistance": {
+      "passed": true,
+      "hits": 0,
+      "total": 200000,
+      "measured_probability": 0.0,
+      "sampler": "uniform size-t subsets; sorted, distinct, and in range",
+      "search_space": 53753604366668088230810
+    },
+    "G5_sparse": {
+      "passed": true,
+      "preset": "demo",
+      "seed": 303,
+      "valid_answers": 1,
+      "search_space": 1352078,
+      "fraction": 7.39602301050679e-07,
+      "enumeration_cap": 2000000,
+      "shipping_enumeration": null
+    },
+    "G6_adversary_panel": {
+      "passed": true,
+      "seeds_per_attack": 8,
+      "attack_passed": {
+        "outlier_centered_magnitude": true,
+        "greedy_circular_residue": true,
+        "random_restart_two_sum": true
+      },
+      "results": {
+        "outlier_centered_magnitude": [
+          {
+            "seed": 800,
+            "solved": false,
+            "reason": "selected values sum to 1107874191868471006902558, not 0 modulo M"
+          },
+          {
+            "seed": 801,
+            "solved": false,
+            "reason": "selected values sum to 93550415354932564820275, not 0 modulo M"
+          },
+          {
+            "seed": 802,
+            "solved": false,
+            "reason": "selected values sum to 475229686208193041781558, not 0 modulo M"
+          },
+          {
+            "seed": 803,
+            "solved": false,
+            "reason": "selected values sum to 618967813487893775336888, not 0 modulo M"
+          },
+          {
+            "seed": 804,
+            "solved": false,
+            "reason": "selected values sum to 317602636020642214231038, not 0 modulo M"
+          },
+          {
+            "seed": 805,
+            "solved": false,
+            "reason": "selected values sum to 1056566154743030203420553, not 0 modulo M"
+          },
+          {
+            "seed": 806,
+            "solved": false,
+            "reason": "selected values sum to 653630082043698709387860, not 0 modulo M"
+          },
+          {
+            "seed": 807,
+            "solved": false,
+            "reason": "selected values sum to 900907620364463574702052, not 0 modulo M"
+          }
+        ],
+        "greedy_circular_residue": [
+          {
+            "seed": 800,
+            "solved": false,
+            "reason": "selected values sum to 1236097627210712931396287, not 0 modulo M"
+          },
+          {
+            "seed": 801,
+            "solved": false,
+            "reason": "selected values sum to 258926886956248084681710, not 0 modulo M"
+          },
+          {
+            "seed": 802,
+            "solved": false,
+            "reason": "selected values sum to 724872201029283593153682, not 0 modulo M"
+          },
+          {
+            "seed": 803,
+            "solved": false,
+            "reason": "selected values sum to 1292553926829664481022474, not 0 modulo M"
+          },
+          {
+            "seed": 804,
+            "solved": false,
+            "reason": "selected values sum to 317602636020642214231038, not 0 modulo M"
+          },
+          {
+            "seed": 805,
+            "solved": false,
+            "reason": "selected values sum to 1092239109342720743310804, not 0 modulo M"
+          },
+          {
+            "seed": 806,
+            "solved": false,
+            "reason": "selected values sum to 92969603343182943236128, not 0 modulo M"
+          },
+          {
+            "seed": 807,
+            "solved": false,
+            "reason": "selected values sum to 900907620364463574702052, not 0 modulo M"
+          }
+        ],
+        "random_restart_two_sum": [
+          {
+            "seed": 800,
+            "solved": false,
+            "reason": "attack found no completion"
+          },
+          {
+            "seed": 801,
+            "solved": false,
+            "reason": "attack found no completion"
+          },
+          {
+            "seed": 802,
+            "solved": false,
+            "reason": "attack found no completion"
+          },
+          {
+            "seed": 803,
+            "solved": false,
+            "reason": "attack found no completion"
+          },
+          {
+            "seed": 804,
+            "solved": false,
+            "reason": "attack found no completion"
+          },
+          {
+            "seed": 805,
+            "solved": false,
+            "reason": "attack found no completion"
+          },
+          {
+            "seed": 806,
+            "solved": false,
+            "reason": "attack found no completion"
+          },
+          {
+            "seed": 807,
+            "solved": false,
+            "reason": "attack found no completion"
+          }
+        ]
+      }
+    },
+    "G7_scales": {
+      "passed": true,
+      "base_n": 40,
+      "doubled_n": 80,
+      "base_sequence_length": 79,
+      "doubled_sequence_length": 159,
+      "base_modulus_bits": 80,
+      "doubled_modulus_bits": 161,
+      "base_search_space": 53753604366668088230810,
+      "doubled_search_space": 46022562906867119013231131518689031995038364570,
+      "verification_reason": "ok"
+    }
+  },
+  "all_passed": true
+}

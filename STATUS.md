@@ -1,13 +1,13 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **1 / 12,167** resolved (0.01%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **2 / 12,167** resolved (0.02%)
 
 | state | count |
 |---|---:|
-| ✅ done | 1 |
+| ✅ done | 2 |
 | 🚫 rejected (documented) | 0 |
 | 🔄 in progress | 0 |
-| ⚪ free | 12,166 |
+| ⚪ free | 12,165 |
 | **total** | **12,167** |
 
 ## By family
@@ -27,4 +27,4 @@
 | words and permutations | 0 | 237 |
 | finite field constructions | 0 | 235 |
 
-_regenerated 2026-08-27 08:13Z by `scripts/status.sh --write`_
+_regenerated 2026-08-28 15:30Z by `scripts/status.sh --write`_
