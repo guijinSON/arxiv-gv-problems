@@ -1,20 +1,14 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **3 / 12,167** resolved (0.02%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **4 / 12,167** resolved (0.03%)
 
 | state | count |
 |---|---:|
 | ✅ done | 2 |
-| 🚫 rejected (documented) | 1 |
-| 🔄 in progress | 1 |
+| 🚫 rejected (documented) | 2 |
+| 🔄 in progress | 0 |
 | ⚪ free | 12,163 |
 | **total** | **12,167** |
-
-## In progress
-
-| paper | who | claimed |
-|---|---|---|
-| `2411.12911` | Wongi-Jang | 2026-08-31T01:26 |
 
 ## By family
 
@@ -33,4 +27,4 @@
 | words and permutations | 0 | 237 |
 | finite field constructions | 0 | 235 |
 
-_regenerated 2026-08-31 02:39Z by `scripts/status.sh --write`_
+_regenerated 2026-08-31 02:49Z by `scripts/status.sh --write`_
