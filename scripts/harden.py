@@ -122,12 +122,15 @@ def update_meta(**fields):
 
 # --- the oracle call --------------------------------------------------------
 def ask(model, prompt, key):
-    """Return (reply_text, http_status, finish_reason, error).
+    """Return (reply_text, http_status, finish_reason, error, empty).
 
-    Exactly one of reply/error is set.  An empty body is reported as an error,
-    not as a reply: a model that spent its whole token budget on reasoning and
-    returned nothing has not failed to solve the instance, and scoring it as a
-    failure manufactures hardness out of a truncated response.
+    Exactly one of reply/error is set.  An empty body is NOT an API error: it is
+    flagged via `empty`, and attempt() scores it as an unsolved attempt.  A model
+    that spends its whole budget on reasoning and emits nothing did not produce a
+    witness under the conditions the pool is measured at, so it consumes its slot
+    rather than being redrawn.  The diagnostic is preserved in verify_reason so a
+    level hardened this way can still be told apart from one hardened on wrong
+    answers -- if ORACLE_MAX_TOKENS is the real constraint, raise it and re-run.
 
     Every model in the default pool accepts OpenRouter's normalised `reasoning`
     field, so no per-vendor body mapping is needed.  A model that rejects it is
@@ -150,29 +153,29 @@ def ask(model, prompt, key):
             status = resp.status
             payload = json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
-        return None, e.code, None, f"http {e.code}: {e.read()[:400].decode('utf-8', 'replace')}"
+        return None, e.code, None, f"http {e.code}: {e.read()[:400].decode('utf-8', 'replace')}", False
     except Exception as e:                                    # noqa: BLE001
-        return None, None, None, f"{type(e).__name__}: {e}"
+        return None, None, None, f"{type(e).__name__}: {e}", False
     try:
         choice = payload["choices"][0]
         text = choice["message"]["content"]
         finish = choice.get("finish_reason") or choice.get("native_finish_reason")
     except (KeyError, IndexError, TypeError):
-        return None, status, None, f"unparseable response: {json.dumps(payload)[:400]}"
+        return None, status, None, f"unparseable response: {json.dumps(payload)[:400]}", False
     if not (text or "").strip():
         usage = payload.get("usage") or {}
         return None, status, finish, (
             f"empty reply (finish_reason={finish}, usage={json.dumps(usage)[:160]}) — "
             f"the model returned no content, most likely because reasoning consumed "
-            f"max_tokens={MAX_TOKENS}; raise ORACLE_MAX_TOKENS")
-    return text, status, finish, None
+            f"max_tokens={MAX_TOKENS}; raise ORACLE_MAX_TOKENS"), True
+    return text, status, finish, None, False
 
 
 def attempt(mod, model, params, seed, key):
     """One oracle call.  Returns the transcript record for it."""
     inst = mod.make_instance(seed=seed, **params)
     t0 = time.time()
-    reply, status, finish, error = ask(model, mod.render(inst), key)
+    reply, status, finish, error, empty = ask(model, mod.render(inst), key)
     elapsed = round(time.time() - t0, 2)
 
     rec = {
@@ -191,6 +194,14 @@ def attempt(mod, model, params, seed, key):
         "http_status": status,
         "finish_reason": finish,
     }
+    if empty:
+        # Scored as an unsolved attempt, not an API error: the model returned no
+        # witness within its budget.  error stays None so the invariant
+        # "error is not None => solved == 'error'" holds.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = f"empty length-limited response ({error})"
+        rec["error"] = None
+        return rec
     if error is not None:
         return rec
 
@@ -218,7 +229,9 @@ def run_level(mod, params, preset, escalation_round, rng, key, out):
     vendors failing rather than one vendor failing three times.  A call that
     errors out is redrawn against a different model and does not consume an
     attempt: an API outage must never be recorded as the model failing to solve,
-    which is exactly how a hardness claim gets manufactured out of a 500.
+    which is exactly how a hardness claim gets manufactured out of a 500.  An
+    empty length-limited reply is NOT an error -- it is scored as a failure and
+    consumes its slot (see ask()).
     """
     k = min(ATTEMPTS_PER_PRESET, len(ORACLE_POOL))
     schedule = rng.sample(ORACLE_POOL, k)
