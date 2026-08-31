@@ -1,0 +1,2058 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a055f4-76ff-7af2-bba3-3cd51a580a6b
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know its answer*, because you
+  sampled the answer first and constructed the problem around it.
+- **H — hard.** No known polynomial-time or closed-form method, and the answer space
+  is far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+The answer must be a **witness** — a structured object handed to a checker. Never an
+absence ("no solution exists"), never an optimum whose optimality is the claim,
+never a real number or an asymptotic rate.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the three things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, standard library only, deterministic given `(n, seed)`. No file IO, no
+network, no printing at import. Use `random.Random(seed)`, never global `random`.
+
+```python
+DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
+                            # each maps to kwargs for make_instance
+
+def make_instance(n, seed=0, **params) -> dict
+    """Inverse generation: sample the answer FIRST, then build the problem around
+    it. Returns a dict containing key "answer" (the planted witness) plus all data
+    the solver needs. `n` is the size parameter; larger n must mean harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT."""
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of the naive candidate space, or None if not countable."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship.**
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G6 adversary panel** | Write ≥3 cheap attacks and confirm each FAILS across ≥8 seeds. See below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+5. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard.** The specific theorem and parameter regime you are inside, and
+  — just as important — the easy regimes you had to avoid and the results that
+  identify them. Cite sections by number. This is the part only you know.
+- **A worked example.** A rendered instance small enough to read in full (use your
+  smallest preset), its answer, `verify` returning True on it, and `verify`
+  returning False with its reason on a corrupted variant.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2602.05254
+url: https://arxiv.org/abs/2602.05254
+title: Algebraic capsets
+categories: math.CO
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: additive combinatorial structures
+  method: structural scan
+  candidate generator: construct finite-field capset from algebraic equations
+  candidate verifier: enumerate triples and outside points to check capset completeness
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+codex
+I’m using the PDF skill because the family choice depends on the paper’s exact definitions, hardness regime, and easy cases. I’ll read the full paper first, then either reject the family honestly or implement and test the module before running the required oracle hardening loop.
+hook: PreToolUse
+hook: PreToolUse Completed
+  → Read the full paper and identify an exact G/H/V-suitable family and its easy regimes
+  • Implement the generator module, checker, parser, canonicalization, attacks, and selftest
+  • Run and fix all mandatory gates; write selftest_report.json and README.md
+  • Run scripts/harden.py, interpret verdict, and finalize or reject
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/jang-wongi/.codex/plugins/cache/openai-primary-runtime/pdf/26.826.12353/skills/pdf/SKILL.md" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254
+ succeeded in 0ms:
+---
+name: "pdf"
+description: "Read, create, inspect, render, and verify PDF files where visual layout matters, including fillable AcroForms. Use Poppler rendering plus Python tools such as reportlab, pdfplumber, and pypdf for generation and extraction."
+---
+
+# PDF Skill
+
+## When To Use
+
+- Read or review PDF content where layout and visuals matter.
+- Create PDFs programmatically with reliable formatting.
+- Fill and validate interactive PDF forms.
+- Validate final rendering before delivery.
+
+## Tools + Contract Requirements
+
+Immediately before the first create/edit authoring command, run `mark_artifact_operation_started.mjs` successfully exactly once using the command below. Do not run it for read-only work. For edits, replace `create` with `edit`; adjust the expected count and output format to match the requested outputs.
+
+```bash
+node container_tools/mark_artifact_operation_started.mjs --operation-kind create --expected-output-count 1 --output-format pdf
+```
+
+## Workflow
+
+1. Prefer visual review: render PDF pages to PNGs and inspect them.
+   - Use `pdftoppm` from the bundled runtime or system Poppler when available.
+   - If unavailable, install Poppler or ask the user to review the output locally.
+2. Use `reportlab` to generate PDFs when creating new documents.
+3. Use `pdfplumber` or `pypdf` for text extraction and quick checks; do not rely on text extraction for layout fidelity.
+4. After each meaningful update, re-render pages and verify alignment, spacing, and legibility.
+
+## Fill And Validate AcroForms
+
+Visual review alone is not a correctness check for a fillable PDF. A page `/Widget` annotation can render a value from its appearance stream while the canonical `/AcroForm/Fields` tree is missing or contains a stale value.
+
+1. Keep the result interactive by default; set `flatten=True` only when the user explicitly requests a completed, static form. Preserve the source PDF, and do not flatten a signed PDF without an explicit workflow decision.
+2. Inspect both representations before filling: enumerate fields from `reader.get_fields()` and `/Widget` annotations from every page's `/Annots`, following `/Parent` and `/Kids`. If a widget and a canonical field have the same name but are distinct objects with no `/Parent` relationship, do not call `reattach_fields()` blindly: it can create a second top-level field with the same name. Report the ambiguity or produce a static result.
+3. Recover genuinely orphaned widgets, fill all pages, and write the result with `pypdf`:
+
+```python
+from pypdf import PdfReader, PdfWriter
+from pypdf.generic import NameObject
+
+reader = PdfReader(input_pdf)
+writer = PdfWriter()
+writer.clone_document_from_reader(reader)
+
+# Restores widgets that are missing from /AcroForm/Fields.
+writer.reattach_fields()
+fields = writer.get_fields() or {}
+missing = set(expected_values) - set(fields)
+if missing:
+    raise ValueError(f"Form fields not found after repair: {sorted(missing)}")
+
+values_to_write = dict(expected_values)
+if flatten:
+    # Paint every existing value before removing every widget.
+    values_to_write = {
+        name: field.get("/V", "/Off" if field.get("/FT") == "/Btn" else "")
+        for name, field in fields.items()
+    }
+    values_to_write.update(expected_values)
+
+writer.update_page_form_field_values(
+    None, values_to_write, auto_regenerate=False, flatten=flatten
+)
+
+if flatten:
+    # pypdf's flatten=True paints appearances but does not remove widgets.
+    writer.remove_annotations(subtypes="/Widget")
+    writer.root_object.pop(NameObject("/AcroForm"), None)
+
+with open(output_pdf, "wb") as stream:
+    writer.write(stream)
+```
+
+4. Reopen the written PDF before delivery. For an interactive result, require every expected field to be present in `get_fields()` with the expected `/V`, enumerate page widgets again, and confirm their effective `/V` (the widget value or inherited `/Parent` value) agrees. Confirm each updated widget has a non-empty `/AP` `/N` appearance and render the final pages to catch stale or clipped appearances. Do not rely on `/NeedAppearances` or a successful PNG render as proof that logical field data was updated.
+5. For a flattened result, require zero `/Widget` annotations and no remaining `/AcroForm` field tree after reopening, then render the final pages. Keep an editable copy when the user may need to revise the form.
+
+## Temp And Output Conventions
+
+- Use `tmp/pdfs/` for intermediate files; delete them when done.
+- Write final artifacts under `output/pdf/` when working in this repo.
+- Keep filenames stable and descriptive.
+
+## Dependencies
+
+Prefer the Codex bundled workspace/runtime dependencies when available. The primary runtime is expected to include:
+
+- Python packages: `reportlab`, `pdfplumber`, `pypdf`
+- Rendering tools: `pdftoppm` and `pdfinfo` from Poppler
+
+If a dependency is missing, install only what is needed.
+
+Python packages:
+
+```bash
+uv pip install reportlab pdfplumber pypdf
+```
+
+If `uv` is unavailable:
+
+```bash
+python3 -m pip install reportlab pdfplumber pypdf
+```
+
+System tools for rendering:
+
+```bash
+# macOS (Homebrew)
+brew install poppler
+
+# Ubuntu/Debian
+sudo apt-get install -y poppler-utils
+```
+
+If installation is not possible in this environment, tell the user which dependency is missing and how to install it locally.
+
+## Environment
+
+No required environment variables.
+
+## Rendering Command
+
+```bash
+pdftoppm -png "$INPUT_PDF" "$OUTPUT_PREFIX"
+```
+
+## Quality Expectations
+
+- Maintain polished visual design: consistent typography, spacing, margins, and section hierarchy.
+- Avoid rendering issues: clipped text, overlapping elements, broken tables, black squares, or unreadable glyphs.
+- Charts, tables, and images must be sharp, aligned, and clearly labeled.
+- Use ASCII hyphens only. Avoid U+2011 and other Unicode dashes.
+- Citations and references must be human-readable; never leave tool tokens or placeholder strings.
+
+## Final Checks
+
+- Do not deliver until the latest PNG inspection shows zero visual or formatting defects.
+- Confirm headers, footers, page numbering, and section transitions look polished.
+- Keep intermediate files organized or remove them after final approval.
+
+## Final response citations
+
+Place `:codex-file-citation{...}` inline in prose, not in a trailing list. Use `purpose="source"` for Q&amp;A/no-op and `purpose="output"` for create/edit.
+
+- [HARD REQUIREMENT] Create/edit: cite each final PDF exactly once with a plain output citation. Summarize representative changes; do not cite every page or add a separate filename, path, or Markdown link. Example: `Created :codex-file-citation{path="/abs/path/report.pdf" purpose="output"}, with the completed analysis and appendix.`
+- Q&amp;A/no-op: do not edit or re-export. Inspect the complete relevant pages, preserve material headings, table/figure labels, footnotes, sources, and sample sizes, and cite each source PDF once with a plain source citation.
+
+PDF citations currently support only plain file citations. Do not add `artifact_kind`, `page_number`, or other locators. Never cite rendered PNGs, scratch files, builders, or QA intermediates unless asked.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: https://arxiv.org/abs/2602.05254
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: site:arxiv.org/abs/2602.05254 "Algebraic capsets"
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "pwd; rg --files -g '"'!llm_loop_transcript.jsonl'"' -g '"'!.meta.json'"' | sed -n '1,120p'; curl -L --fail --silent --show-error https://arxiv.org/e-print/2602.05254 -o /tmp/paper_2602.05254.tar; file /tmp/paper_2602.05254.tar; ls -lh /tmp/paper_2602.05254.tar" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254
+ succeeded in 399ms:
+/tmp/paper_2602.05254.tar: gzip compressed data, last modified: Tue Mar 10 01:37:43 2026, from Unix, original size modulo 2^32 30720
+-rw-r--r--@ 1 jang-wongi  wheel   9.5K  8월 31 12:55 /tmp/paper_2602.05254.tar
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'paper_tmp=$(mktemp -d /tmp/algebraic_capsets.XXXXXX); tar -xzf /tmp/paper_2602.05254.tar -C "$paper_tmp"; echo "$paper_tmp"; find "$paper_tmp" -maxdepth 2 -type f -print; for f in "$paper_tmp"/*.tex; do echo "FILE $f"; sed -n '"'1,260p' \""'$f"; done' in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254
+ succeeded in 0ms:
+/tmp/algebraic_capsets.JCwPfl
+/tmp/algebraic_capsets.JCwPfl/merged.tex
+/tmp/algebraic_capsets.JCwPfl/00README.json
+FILE /tmp/algebraic_capsets.JCwPfl/merged.tex
+\documentclass[12pt]{amsart}
+
+
+
+
+\usepackage{amsmath}
+\usepackage{amssymb}  % defines \nmid, for example
+\usepackage{latexsym} % for \Box
+\usepackage{comment}
+\usepackage{url}
+\usepackage{fullpage,url,amssymb,amsmath,amsthm,amsfonts,mathrsfs}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage[pagebackref = true, colorlinks = true, linkcolor = blue, citecolor = Green]{hyperref}
+\usepackage[alphabetic,lite]{amsrefs}
+\usepackage{enumitem}
+\usepackage{amscd}   % for commutative diagrams
+\usepackage[all, cmtip]{xy} % for complicated commutative diagrams
+\usepackage{xfrac}
+\usepackage[T1]{fontenc}
+\usepackage{subfiles}
+\usepackage{colonequals}
+
+
+
+
+%\numberwithin{equation}{section}
+%For compatibility with Journal Numbering
+%\renewcommand{\thesubsection}{\thesection\Alph{subsection}}
+%\renewcommand{\theequation}{\thesection-\arabic{equation}}
+
+
+
+
+%\usepackage[pagewise, mathlines]{lineno} \linenumbers
+
+
+
+
+%\DeclareFontEncoding{OT2}{}{} % to enable usage of cyrillic fonts
+%\newcommand{\textcyr}[1]{%
+% {\fontencoding{OT2}\fontfamily{cmr}\fontseries{m}\fontshape{n}\selectfont #1}}
+% {\fontencoding{OT2}\fontfamily{wncyr}\fontseries{m}\fontshape{n}\selectfont #1}}
+
+
+
+
+\usepackage[all]{xy}
+\usepackage{fullpage}
+%\newcommand{\Sha}{{\mbox{\textcyr{Sh}}}}
+
+
+
+
+
+
+
+
+
+
+
+
+% Color comments!
+\usepackage{color} 
+% Color comments
+
+
+
+
+%\newcommand\changed[1]{{\color{red} \sf [#1]}}
+%\newcommand\commentb[1]{{\color{blue} \sf [#1]}}
+%\newcommand\commentm[1]{{\color{magenta} \sf [#1]}}
+%\newcommand{\bcedit}[1]{{\color{blue} \sf  #1}}
+%\newcommand{\jeremy}[1]{{\color{blue} \sf $\clubsuit$#1$\clubsuit$}}
+%\newcommand{\note}[1]{{\color{blue} \sf #1}}
+%\newcommand{\margBr}[1]{\normalsize{{\color{red}\footnote{{\color{blue}#1}}}{\marginpar[{\color{red}\hfill\tiny\thefootnote$\rightarrow$}]{{\color{red}$\leftarrow$\tiny\thefootnote}}}}}
+%\newcommand{\Brendan}[1]{\margBr{(Brendan) #1}}
+%\newcommand{\felipe}[1]{{\color{BurntOrange} \sf $\clubsuit$ Felipe: [#1]}}
+
+
+
+
+
+
+
+
+\newcommand{\todo}[1]{{\color{red} \sf  [#1]}}
+
+
+
+
+
+
+
+
+\newcommand{\defi}[1]{\textsf{#1}} % for defined terms
+
+
+
+
+
+
+
+
+\def\act#1#2%
+  {\mathop{}%
+   \mathopen{\vphantom{#2}}^{#1}%
+   \kern-3\scriptspace%
+   #2}
+
+
+
+
+% characters
+\newcommand{\Z}{{\mathbb Z}}
+\newcommand{\N}{{\mathbb N}}
+\newcommand{\Q}{{\mathbb Q}}
+\newcommand{\R}{{\mathbb R}}
+\newcommand{\C}{{\mathbb C}}
+\newcommand{\F}{{\mathbb F}}
+\newcommand{\A}{{\mathbb A}}
+\newcommand{\PP}{{\mathbb P}}
+\newcommand{\G}{{\mathbb G}}
+\newcommand{\Abar}{{\overline{A}}}
+\newcommand{\Ebar}{{\overline{E}}}
+\newcommand{\Qbar}{{\overline{\Q}}}
+\newcommand{\Kbar}{{\overline{K}}}
+\newcommand{\Cbar}{{\overline{C}}}
+\newcommand{\kbar}{{\overline{k}}}
+\newcommand{\Fbar}{{\overline{\F}}}
+\newcommand{\Lbar}{{\overline{L}}}
+\newcommand{\Mbar}{{\overline{M}}}
+\newcommand{\Xbar}{{\overline{X}}}
+\newcommand{\Ybar}{{\overline{Y}}}
+\newcommand{\Vbar}{{\overline{V}}}
+\newcommand{\Sbar}{{\overline{S}}}
+\newcommand{\Jbar}{{\overline{J}}}
+
+
+
+
+\newcommand{\al}{{\alpha}}
+% mathcal characters
+\newcommand{\calA}{{\mathcal A}}
+\newcommand{\calB}{{\mathcal B}}
+\newcommand{\calC}{{\mathcal C}}
+\newcommand{\calD}{{\mathcal D}}
+\newcommand{\calE}{{\mathcal E}}
+\newcommand{\calF}{{\mathcal F}}
+\newcommand{\calG}{{\mathcal G}}
+\newcommand{\calH}{{\mathcal H}}
+\newcommand{\calI}{{\mathcal I}}
+\newcommand{\calJ}{{\mathcal J}}
+\newcommand{\calK}{{\mathcal K}}
+\newcommand{\calL}{{\mathcal L}}
+\newcommand{\calM}{{\mathcal M}}
+\newcommand{\calN}{{\mathcal N}}
+\newcommand{\calO}{{\mathcal O}}
+\newcommand{\OO}{{\mathcal O}}
+\newcommand{\calP}{{\mathcal P}}
+\newcommand{\calQ}{{\mathcal Q}}
+\newcommand{\calR}{{\mathcal R}}
+\newcommand{\calS}{{\mathcal S}}
+\newcommand{\calT}{{\mathcal T}}
+\newcommand{\calU}{{\mathcal U}}
+\newcommand{\calV}{{\mathcal V}}
+\newcommand{\calW}{{\mathcal W}}
+\newcommand{\calX}{{\mathcal X}}
+\newcommand{\calY}{{\mathcal Y}}
+\newcommand{\calZ}{{\mathcal Z}}
+
+
+
+
+
+
+
+
+
+
+
+
+%fraktur
+\newcommand{\fp}{{\mathfrak p}}
+\newcommand{\fa}{{\mathfrak a}}
+\newcommand{\fm}{{\mathfrak m}}
+\newcommand{\ZZ}{{\mathfrak Z}}
+\newcommand{\YY}{{\mathfrak Y}}
+\newcommand{\frakL}{{\mathfrak L}}
+
+
+
+
+
+
+
+
+% arrows
+\newcommand{\To}{\longrightarrow}
+\newcommand{\Too}{\;\longrightarrow\;}
+\newcommand{\TO}{\quad\To\quad}
+\newcommand{\surjects}{\twoheadrightarrow}
+\newcommand{\injects}{\hookrightarrow}
+\newcommand{\isom}{\simeq}
+
+
+
+
+% Math operators
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Map}{Map}
+\DeclareMathOperator{\End}{End}
+\DeclareMathOperator{\Hom}{Hom}
+\DeclareMathOperator{\disc}{disc}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator{\Norm}{Norm}
+\DeclareMathOperator{\im}{image}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\divv}{div}
+\DeclareMathOperator{\ord}{ord}
+\DeclareMathOperator{\coker}{coker}
+\DeclareMathOperator{\codim}{codim}
+\DeclareMathOperator{\Gal}{Gal}
+\DeclareMathOperator{\Cor}{Cor}
+\DeclareMathOperator{\Res}{Res}
+\DeclareMathOperator{\Br}{Br}
+\DeclareMathOperator{\Sym}{Sym}
+\DeclareMathOperator{\Div}{Div}
+\DeclareMathOperator{\Princ}{Princ}
+\DeclareMathOperator{\Pic}{Pic}
+\DeclareMathOperator{\Alb}{Alb}
+\DeclareMathOperator{\Jac}{Jac}
+\DeclareMathOperator{\HH}{H}
+\DeclareMathOperator{\NS}{NS}
+\DeclareMathOperator{\WC}{WC}
+\DeclareMathOperator{\Spec}{Spec}
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\PGL}{PGL}
+\DeclareMathOperator{\GL}{GL}
+\DeclareMathOperator{\Aff}{Aff}
+\DeclareMathOperator{\PS}{PS}
+\DeclareMathOperator{\Char}{char}
+\def \f{{\mathbf f}}
+\newcommand{\kk}{\mathbf{k}}
+\newcommand{\ttm}[4]{\begin{pmatrix}
+#1 & #2 \\
+#3 & #4
+\end{pmatrix}}
+
+
+
+
+\newcommand{\ram}{\operatorname{ram}}
+\newcommand{\ind}{\operatorname{ind}}
+\newcommand{\per}{\operatorname{per}}
+\newcommand{\eval}{\operatorname{eval}}
+\newcommand{\diw}{\operatorname{div}}
+\newcommand{\pr}{\operatorname{pr}}
+\newcommand{\res}{\operatorname{res}}
+\newcommand{\BM}{\operatorname{BM}}
+
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '261,900p' /tmp/algebraic_capsets.JCwPfl/merged.tex" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254
+ succeeded in 0ms:
+
+
+
+\newtheorem{Theorem}{Theorem}[section]
+\newtheorem{Lemma}[Theorem]{Lemma}
+\newtheorem{Proposition}[Theorem]{Proposition}
+\newtheorem{Corollary}[Theorem]{Corollary}
+\newtheorem{Definition}[Theorem]{Definition}
+\newtheorem{Example}[Theorem]{Example}
+\newtheorem{Remark}[Theorem]{Remark}
+\newtheorem{Remarks}[Theorem]{Remarks}
+\newtheorem{Conjecture}[Theorem]{Conjecture}
+\newtheorem{Hypothesis}[Theorem]{Hypothesis}
+\newtheorem{Question}[Theorem]{Question}
+
+
+
+
+\newtheorem{prop}[Theorem]{Proposition}
+\newtheorem{lem}[Theorem]{Lemma}
+\newtheorem{example}[Theorem]{Example}
+\newtheorem{remark}[Theorem]{Remark}
+
+
+
+
+
+
+
+
+\newcommand{\Eid}{\mathcal{O}}
+\newcommand{\Gm}{\mathbb{G}_m}
+\newcommand{\Ga}{\mathbb{G}_a}
+\newcommand{\Frob}{\operatorname{Frob}}
+\DeclareMathOperator{\Ext}{Ext}
+\newcommand{\tC}{\widetilde{C}}
+\newcommand \Eu{E^{\dagger}}
+\newcommand \n{\eta}
+\newcommand \w{\omega}
+
+
+
+
+%\newcommand{\jeremy}[1]{{\color{blue} Jeremy: #1}}
+
+
+
+
+\newcommand{\Cartier}{\mathscr{C}}
+\newcommand{\id}{\operatorname{id}}
+
+
+
+
+\begin{document}
+
+
+
+
+\title{Algebraic capsets}
+
+
+
+
+\author{Cassie Grace}
+\address{School of Mathematics and Statistics, University of Canterbury, Private Bag 4800, Christchurch 8140, New Zealand}
+\email{cassie.grace@pg.canterbury.ac.nz}
+
+
+
+
+\author{Jos\'e Felipe Voloch}
+\address{School of Mathematics and Statistics, University of Canterbury, Private Bag 4800, Christchurch 8140, New Zealand}
+\email{felipe.voloch@canterbury.ac.nz}
+\urladdr{http://www.math.canterbury.ac.nz/\~{}f.voloch}
+
+
+
+
+\keywords{Affine spaces, Finite fields, Capsets}
+\subjclass{51E22}
+
+
+
+
+\begin{abstract}
+Capsets are subsets of $\F_3^n$ with no three points on a line and a capset is complete if it is not a subset of a larger capset. We study some new constructions of capsets via algebraic equations over extensions of $\F_3$. In particular we construct the smallest known complete capsets with size proportional to the best known lower bound.
+\end{abstract}
+
+
+
+
+
+
+
+
+\maketitle
+%
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%
+\section{Introduction}%%%%%%%%
+%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+
+
+
+A capset is a subset $C \subset \F_3^n$ with no three points on a line. A question that has attracted a lot of interest (see e.g. \cite{Tao},\cite{Matrix}) is the following: What is the largest size of a capset in $\F_3^n$ as a function of $n$? If we denote this value by $a(n)$ then it can be shown (see \cite[Proposition 2.2]{Tyrrell}) that $c=\lim a(n)^{1/n}$ exists. Moreover, it is known that $2.2202 \le c$ (\cite{Nature}) and $c \le 2.756$ (\cite{Jordan}). The exact value of $a(n)$ is known for $n \le 6$ (\cite{capsetKnownSizes1, capetKnownSizes2, capsetKnownSizes3, capsetKnownSizes4}). It is also known that $a(8)\geq 512$ (\cite{Nature}).
+
+
+
+
+\begin{Definition}
+    A \emph{capset} is a subset of $\mathbb{F}_3^n$ containing no three distinct points on a line. A capset is \emph{complete} if it is not a subset of a larger capset. 
+    \end{Definition}
+
+
+
+
+
+
+
+
+
+
+
+
+The main purpose of this paper is to exhibit some constructions of complete capsets and, in particular, construct the smallest known complete capsets.
+
+
+
+
+If $q=3^m$ is a power of $3$, choosing a basis for $\F_q/\F_3$ induces an
+identification of $\F_q^d$ with $\F_3^{dm}$ for any integer $d$. We will
+define some subsets of $\F_q^d$ by algebraic equations and view them as
+capsets in $\F_3^{dm}$ to study their properties.
+
+
+
+
+We can also consider subsets of $\F_q^d$ with no three points on an $\F_q$-line.
+We call such a set a cap (to distinguish it from a capset under the above 
+identification). It is clear that a cap is a capset but not conversely.
+We can also consider the analogous notion of complete caps. A cap $C$ is complete as a cap if $C$ is not contained in a larger cap. That is, for every
+point $P$ in the complement of $C$, there exists an $\F_q$-line through $P$
+which meets $C$ in two points. We remark that a cap can be complete as a cap and yet not be complete as a capset. For example, a conic in the plane $\F_q^2, q >3$. This follows from the lemma below.
+
+
+
+
+\begin{Lemma}
+\label{lem:lower}
+If there exists a complete capset in $\F_3^n$ with $N$ points, then
+$N(N+1)/2 \ge 3^n$.
+\end{Lemma}
+
+
+
+
+\begin{proof}
+The $\F_3$ lines through the $N(N-1)/2$ pairs of points of the capset have their third point in the complement of the capset, so if $N(N-1)/2 < 3^n -N$, there is a point in the complement not on any line through two points in the capset, hence the capset is not complete. 
+\end{proof}
+%This applies when $q=3^m, m>1$, $N \le q+1$ and $n=2m$. 
+In \cite{Csajbok}, subsets of $\F_p^n$ with $p$ prime no three points in arithmetic progression are studied. This condition is equivalent to the capset condition when $p=3$. They prove a lower bound similar, but slightly weaker, to Lemma \ref{lem:lower} in this more general situation. They also ask if this lower bound is best possible up to a multiplicative constant (loc. cit., Problem 5.1). We give a positive answer to this question in the case $p=3$ (see Corollary \ref{cor:upper}).
+
+
+
+
+\subsection*{Acknowledgements}
+The second author was supported by the Marsden Fund administered by the Royal
+Society of New Zealand. The authors like to thank A. Bishnoi, B. Csajb\'ok,
+ J. Sheekey and G. Van de Voorde for helpful comments.
+
+
+
+
+\section{Constructions}
+
+
+
+
+
+
+
+
+\begin{Theorem}
+\label{thm:two-conics}
+Let $q=3^m$ and $C \subset \F_q^2$ be given by
+$$C = \{(x,x^2) \mid x \in \F_q, x \ne 0\}\cup \{(x,-x^2) \mid x \in \F_q, x \ne 0\}.$$
+
+
+
+
+Then $C$ is a capset of size $2(q-1)$. If $m$ is odd, then $C$ is complete.
+\end{Theorem}
+
+
+
+
+\begin{proof}
+The sets $C_{\pm} = \{(x,\pm x^2) \mid x \in \F_q^*\}$ are subsets of conics and, therefore, caps in the plane so, in particular, capsets. We prove first that $C = C_+ \cup C_-$ is a cap. Suppose not and let $P,Q,R$ be distinct $\F_3$-collinear points of $C$. It is not possible that all three of $P,Q,R$ are in $C_+$ or $C_-$. We first consider the case
+$P = (x_1,x_1^2), Q = (x_2,x_2^2) \in C_+, R =(x_3,-x_3^2) \in C_-$.
+We have $x_1+x_2+x_3 = x_1^2+x_2^2 -x_3^2=0$. So
+$x_1^2+x_2^2 = x_3^2 = (x_1+x_2)^2$, which yields $x_1x_2=0$ which is not
+possible since $C$ does not contain the origin, by hypothesis.
+Now, the case 
+$P = (x_1,-x_1^2), Q = (x_2,-x_2^2) \in C_-, R =(x_3,x_3^2) \in C_+$
+is similar to the first case. So $C$ is a cap.
+
+
+
+
+Now we show that $C$ is complete. Assume that $(a,b) \notin C$. Consider first the case $a \ne 0$. Then we take $x_1 = (a^2-b)/a$ and note that $x_1 \ne 0$ since $(a,b) \notin C$. Let $x_2 = -(a+x_1)$ and we check that
+$(a,b), (x_1,x_1^2), (x_2,-x_2^2)$ are $\F_3$-collinear. Indeed,
+$$a+x_1+x_2=0, b+x_1^2-x_2^2 = b+x_1^2 -(a+x_1)^2= b-a^2 +ax_1=0.$$
+Now, $(x_1,x_1^2) \in C$ by construction but we need to check that 
+$(x_2,-x_2^2) \in C$, i.e., that $x_2 \ne 0$. If $x_2 = 0$, then $x_1=-a$
+so $a^2-b = -a^2$ so $b = -a^2$, i.e. $(a,b) \in C$, contrary
+to hypothesis.
+
+
+
+
+Assume now that $a=0$. If $b=0$, then $(1,1),(-1,-1),(0,0)$ are $\F_3$-collinear and $(1,1),(-1,-1) \in C$. If $b=x^2, x\ne 0$, then
+$(x,x^2),(-x,x^2),(0,b)$ are $\F_3$-collinear
+ and $(x,x^2),(-x,x^2) \in C$. The remaining case is when $b$ is a nonsquare but, since we assumed that $m$ is odd, $-1$ is a non-square and we can write $b=-x^2, x\ne 0$ and, in this case $(x,-x^2),(-x,-x^2),(0,b)$ are $\F_3$-collinear
+ and $(x,-x^2),(-x,-x^2) \in C$. 
+
+
+
+
+\end{proof}
+
+
+
+
+The next result provides a positive answer to Problem 5.1 of \cite{Csajbok} for $p=3$. It was pointed out to us by A. Bishnoi that the construction from \cite{07731270} can also be used to deduce this result.
+
+
+
+
+\begin{Corollary}
+\label{cor:upper}
+For every $n$, there exists a complete capset in $\F_3^n$ of size $O(\sqrt{3^n})$. %\todo{Do we want to work out the constant?}
+\end{Corollary}
+
+
+
+
+\begin{proof}
+Assume first that $n=2m$ even and start with the construction given by Theorem \ref{thm:two-conics} of a capset of size $2(3^m -1) = O(\sqrt{3^n})$ in $\F_{3^m}^2$. If $m$ is odd, this is already complete.
+When $m$ is even, we can only add points of the form $(0,b), b$ non-square. So we need a complete capset in $\F_{3^m}$ comprised of non-squares. Viewing $\F_{3^m}$ as $\F_{3^{m/2}}(\sqrt{d})$ and selecting $\lambda$ a non-square in $\F_{3^m}$, we can take elements of the form $\lambda(\pm 1+x\sqrt{d})^2, x \in \F_{3^{m/2}}^*$ which will be a capset as in the theorem, up to an affine transformation, since $(\pm 1+x\sqrt{d})^2 = (1+dx^2) \pm 2x\sqrt{d}$. Iterating this construction gives the result for $n$ even.
+
+
+
+
+To construct small complete capsets in $\F_{3^n}$ when $n$ is odd, write $n=2m+1$, take the complete capset $C \subset \F_{3^{2m}}$ constructed above and consider $C \times \{0,1\} \subset \F_{3^n}$. It is straightfoward that this is a capset. To see it is complete, consider a pointi $P$ in its complement with last coordinate $c \in \F_3$ and let $P_0 \in \F_{3^{2m}}$ be the point corresponding to the other coordinates. If $c \in \{0,1\}$, then $P_0 \not\in C$ and there is a line in the subspace of points whose last coordinate is $c$ through $P$ meeting $C \times \{c\}$ in two points. If $c=2$ and $P_0 \in C$, the vertical line through $P$ meets the capset in two points. If $c=2$ and $P_0 \not\in C$, there is a line through $P_0$ meeting $C$ in $Q_0,Q_1$, say. Then $(Q_0,0), (Q_1,1)$ are in $C \times \{0,1\}$ and are collinear with $P$.
+\end{proof}
+
+
+
+
+We will now consider the question of whether we can construct capsets with more than two parabolas, in the spirit of Theorem \ref{thm:two-conics}. We begin with the following lemma,
+
+
+
+
+\begin{Lemma}\label{lemma-conditions}
+If $P_i = (x_i,c_ix_i^2), i=1,2,3$ with $x_i,c_i \in \F_{3^m}$ nonzero and $P_i$ distinct
+are such that $P_1+P_2+P_3=0$, then
+$-(c_1c_2+c_1c_3+c_2c_3)$ is a square in $\F_{3^m}$.
+\end{Lemma}
+
+
+
+
+
+
+
+
+\begin{proof}
+We have $x_1+x_2+x_3 = c_1x_1^2+c_2x_2^2 +c_3x_3^2=0$. So
+$c_1x_1^2+c_2x_2^2 +c_3(-x_1-x_2)^2=0$ which yields
+$(c_1+c_3)x_1^2+ (c_2+c_3)x_2^2 +2c_3x_1x_2=0$. So we get a quadratic equation with root $x_1/x_2$ and so its discriminant $c_3^2-(c_1+c_3)(c_2+c_3) = -(c_1c_2+c_1c_3+c_2c_3)$ is a square.
+
+
+
+
+\end{proof}
+
+
+
+
+If $m$ is odd, then no choice of $a,b,c$ distinct will result in $\{(x,ax^2) \mid x \in \F_{3^m}^*\}\cup \{(x,bx^2) \mid x \in \F_{3^m}^*\}\cup \{(x,cx^2) \mid x \in \F_{3^m}^*\}$ being a capset. Indeed, applying the lemma to all possible $6$ choices of $c_i$ equal two of $a,b,c$ result in 
+$$ab-a^2,ab-b^2,ac-a^2,ac-c^2,bc-b^2,bc-c^2$$
+all being non-squares (since $-1$ is a non-square). If we denote by $\chi(.)$ the quadratic character of $\F_{3^m}^*$, we get using that $\chi(-1)=-1$,
+$\chi(a)=-\chi(b-a)=-\chi(b)$ from the first two conditions, $\chi(a)=-\chi(c-a)=-\chi(c)$ from the next two (so $\chi(b)=\chi(c)$), but we get $\chi(b)=-\chi(c-b)=-\chi(c)$ from the last two, which is a contradiction. 
+
+
+
+
+
+
+
+
+%{\color{blue}
+
+
+
+
+For even $m$, we ask for what integers $K$ and choices of $c_i$ will $\{(x,c_i x^2) \mid c_i,x\in \F_{3^m}, \;1\leq i\leq K\}$ be a capset in $\F_3^{2m}$.
+
+
+
+
+
+
+
+
+\begin{Lemma}\label{lemma-bound on conditions}
+	Let $m$ be even and let $a\in \F_{3^m}$ be an element such that $a, a^3,\dots,a^{3^{m-1}}$ are distinct. Consider the set $\{(x,a^{3^i} x^2) \mid x\in \F_{3^m}, \;0\leq i\leq m-1\}$. The number of multiplicatively independent conditions of the form $-(c_1c_2+c_1c_3+c_2c_3)$ is a non-square (as follows from Lemma \ref{lemma-conditions}) is at most $\lceil (m^2+2)/6\rceil$.
+\end{Lemma}
+\begin{proof}
+	First note that $x^{3^i} = x^{3^{i \pmod m}}$. We will represent the condition $\chi(a^{3^i}a^{3^j} + a^{3^i}a^{3^k} + a^{3^j}a^{3^k}) = -1$ as the triple $(i,j,k)$. We have that $x^3$ is a non-square if and only if $x$ is a non-square. Hence $(a^{3^i}a^{3^j} + a^{3^i}a^{3^k} + a^{3^j}a^{3^k})^3 = a^{3^{i+1}}a^{3^{j+1}} + a^{3^{i+1}}a^{3^{k+1}} + a^{3^{j+1}}a^{3^{k+1}}$ is a non-square if and only if $a^{3^i}a^{3^j} + a^{3^i}a^{3^k} + a^{3^j}a^{3^k}$ is a non-square. Therefore the condition given by $(i,j,k)$ is equivalent to the condition given by $(i+1, j+1, k+1)$ (modulo $m$).
+	
+	We now consider the conditions given by $(i,j,k)$, where $i< j< k$. There are $\binom{m}{3}$ such conditions, and the relation found above gives classes of $m$ conditions which are equivalent, except for when $m$ is a multiple of $3$; If $m$ is a multiple of $3$, then the condition given by $(0, m/3, 2m/3)$ is equivalent to only $m/3$ other conditions by the above relationship. Therefore the $\binom{m}{3}$ conditions can be reduced to $\binom{m}{3}/m = (m-1)(m-2)/6$ conditions if $m$ is not a multiple of three, and $(\binom{m}{3} - \frac{m}{3})/m + 1 = \left\lceil (m-1)(m-2)/6 \right\rceil$ conditions if $m$ is a multiple of three.
+	
+	Now consider the condition given by $(i, i, j)$ with $i\neq j$. We have seen before that this condition is equivalent to the condition given by $(0,0,j-i\pmod m)$. We now show that for all $1\leq i\leq m-1$, the conditions given by $(0,0,i)$ and $(0,0,m-i)$ are equivalent: The condition given by $(0,0,m-i)$ is equivalent to the condition given by $(i,i,0)$. This condition is $\chi(a^{2\cdot3^i} - a^{3^i+1}) = \chi(a^{3^i-1})\chi(a^{3^i+1} - a^2) = -1$. But $a^{3^i-1}$ is a square, so this is equivalent to $\chi(a^{3^i+1} - a^2) = -1$. But the condition given by $(0,0,i)$ is $\chi(a^2 - a^{3^i+1})=-1$. Hence the conditions given by $(0,0,i)$ and $(0,0,m-i)$ are equivalent. Therefore the conditions given by $(i, i, j)$, for all $i\neq j$, reduce to $m/2$ conditions.
+	
+	Therefore the conditions given by Lemma \ref{lemma-conditions} can be reduced to $\left\lceil (m-1)(m-2)/6\right\rceil + m/2 = \left\lceil (m^2+2)/6\right\rceil$ conditions. Hence the number of independent conditions is at most $\left\lceil (m^2+2)/6 \right\rceil$.
+\end{proof}
+
+
+
+
+Computationally, we have found that the bound in Lemma \ref{lemma-bound on conditions} is tight for even $m\leq 16$, and that for even $m\leq 20$ there is some choice of $a$ in $\F_{3^m}$ such that the construction in Lemma \ref{lemma-bound on conditions} is a capset. Code available at \cite{git}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{Remark}\label{remark-frobenius-construction}
+    When $m$ is even, there is a capset in $\F_3^{2m}$ of the form $\{(x,a_i^{3^j} x^2) \mid a_i,x\in \F_{3^m}, \;1\leq i\leq k, \; 0\leq j\leq m-1\}$, found by computation, for the following values of $m$ and $k$ displayed in Table \ref{table-capsets1}.
+\end{Remark}
+
+
+
+
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{||c c c c||} 
+		\hline
+		$m$ &  $k$ & number of coefficients & size of capset\\ [0.5ex] 
+		\hline\hline
+		2 &  1 & 2 & 16 \\ 
+		\hline
+		4 & 1 & 4 & 320 \\
+		\hline
+		6 & 1 & 6 &  4,368 \\
+		\hline
+		8 & 2 & 16 & 104,960 \\
+		\hline
+		10 & 4 & 40 & 2,361,920 \\
+		\hline
+		12 & 7 & 84 & 44,640,960 \\
+		\hline
+		14 & 11 & 154 & 736,577,072 \\ [0.5ex]
+		\hline
+	\end{tabular}
+    \caption{} \label{table-capsets1}
+\end{table}
+
+
+
+
+ Table \ref{table-capsets2} shows the largest capsets in $\F_3^{2m}$ of the form $\{(x,c_i x^2) \mid c_i,x\in \F_{3^m}, \;1\leq i\leq K\}$ that we have found for small $m$.
+
+
+
+
+
+
+
+
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{||c c c c c||} 
+		\hline
+		$m$ & number of coefficients ($K$) & size of capset & arising from & exhaustive \\ [0.5ex] 
+		\hline\hline
+		2 &  2 & 16 & exhaustive search & yes \\ 
+		\hline
+		4 & 4 & 320 & exhaustive search & yes \\
+		\hline
+		6 & 8 & 5,824 & exhaustive search & yes \\
+		\hline
+		8 & 20 & 131,200 & random search & no \\
+		\hline
+		10 & 40 & 2,361,920 & Remark \ref{remark-frobenius-construction} & no \\
+		\hline
+		12 & 84 & 44,640,960 & Remark \ref{remark-frobenius-construction} & no \\
+		\hline
+		14 & 154 & 736,577,072 & Remark \ref{remark-frobenius-construction} & no \\ [0.5ex]
+		\hline
+	\end{tabular}
+	\caption{Computational Results} \label{table-capsets2}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%}
+
+
+
+
+So far, we have discussed capset constructions via unions of parabolas in the plane. We can also construct capsets from paraboloids in three-space. By contrast from the plane case, these are always complete.
+
+
+
+
+
+
+
+
+\begin{Theorem}
+\label{thm:quadric}
+Let $\lambda$ be a non-square in $\F_q, q=3^m$ and $Q \subset \F_q^3$ be given by
+$$Q = \{(x,y,x^2-\lambda y^2) \mid x,y \in \F_q\}.$$
+Then $Q$ is a complete capset.
+\end{Theorem}
+
+
+
+
+
+
+
+
+\begin{proof}
+Since $Q$ is an elliptic quadric, it is a cap, so it is a capset.
+To show it is complete, let $(a,b,c) \notin Q$ and consider the set
+$Q' = \{(x,y,z) \mid -(a,b,c)-(x,y,z) \in Q\}$. This is clearly also
+an elliptic quadric. A point $(x,y,z) \in Q \cap Q'$ gives rise to two points $(x,y,z), -(a,b,c)-(x,y,z) \in Q$ collinear with $(a,b,c)$. As algebraic varieties, $Q$ and $Q'$ meet at infinity
+on a pair of (conjugate) lines so the affine part of their intersection is a (possibly singular, but it is not) conic (by B\'ezout), hence has a rational point.
+\end{proof}
+
+
+
+
+
+
+
+
+\begin{bibdiv}
+
+
+
+
+\begin{biblist}
+
+
+
+
+
+
+
+
+
+
+
+
+\bib{Matrix}{article}{
+   author={Blasiak, Jonah},
+   author={Church, Thomas},
+   author={Cohn, Henry},
+   author={Grochow, Joshua A.},
+   author={Naslund, Eric},
+   author={Sawin, William F.},
+   author={Umans, Chris},
+   title={On cap sets and the group-theoretic approach to matrix
+   multiplication},
+   journal={Discrete Anal.},
+   date={2017},
+   pages={Paper No. 3, 27},
+}
+
+
+
+
+\bib{Csajbok}{article}{
+author = {Csajb\'ok, Bence},
+author = {Nagy, Zolt\'an L\'or\'ant}
+title = {Complete 3-term arithmetic progression free sets of small size in vector spaces and other abelian groups},
+journal = {Journal of Combinatorial Theory, Series A},
+volume = {215},
+pages = {106061},
+year = {2025},
+}
+
+
+
+
+\bib{Jordan}{article}{
+   author={Ellenberg, Jordan S.},
+   author={Gijswijt, Dion},
+   title={On large subsets of $\Bbb F^n_q$ with no three-term arithmetic
+   progression},
+   journal={Ann. of Math. (2)},
+   volume={185},
+   date={2017},
+   number={1},
+   pages={339--343},
+}
+
+
+
+
+\bib{Nature}{article}{
+author={Balog, Matej},
+author={Kumar, M. Pawan},
+author={Dupont, Emilien},
+author={Ruiz, Francisco J. R.},
+author={Ellenberg, Jordan S.},
+author={Wang, Pengming},
+author={Fawzi, Omar},
+author={Kohli, Pushmeet},
+author={Fawzi, Alhussein},
+title={Mathematical discoveries from program search with large language models},
+journal={Nature},
+volume={625},
+date={2024},
+pages={468--475},
+}
+
+\bib{07731270}{article}{
+ author={Cossidente, Antonio},
+ author={Csajb{\'o}k, Bence},
+ author={Marino, Giuseppe},
+ author={Pavese, Francesco},
+ issn={0024-6093},
+ issn={1469-2120},
+% doi={10.1112/blms.12743},
+% review={Zbl 1521.51004},
+ title={Small complete caps in {{\(\mathrm{PG}(4n+1, q)\)}}},
+ journal={Bulletin of the London Mathematical Society},
+ volume={55},
+ number={1},
+ pages={522--535},
+ date={2023},
+ publisher={John Wiley \& Sons, Chichester; London Mathematical Society, London},
+}
+
+
+
+
+\bib{Tao}{webpage}{
+author={Tao, Terence},
+title={Open question: best bounds for cap sets},
+url={https://terrytao.wordpress.com/2007/02/23/open-question-best-bounds-for-cap-sets/},
+}
+
+
+
+
+\bib{Tyrrell}{article}{
+   author={Tyrrell, Fred},
+   title={New lower bounds for cap sets},
+   journal={Discrete Anal.},
+   date={2023},
+   pages={Paper No. 20, 18},
+   review={\MR{4684862}},
+}
+
+
+
+
+%\bib{capsetLimitUpperBoundAnd512Example}{article}{
+%	title={Mathematical discoveries from program search with large language models},
+%	author={Romera-Paredes, Bernardino and Barekatain, Mohammadamin and Novikov, Alexander and Balog, Matej and Kumar, M Pawan and Dupont, Emilien and Ruiz, Francisco JR and Ellenberg, Jordan S and Wang, Pengming and Fawzi, Omar and others},
+%	journal={Nature},
+%	volume={625},
+%	number={7995},
+%	pages={468--475},
+%	year={2024},
+%	publisher={Nature Publishing Group UK London}
+%}
+\bib{capsetKnownSizes1}{article}{
+	author = {Edel, Yves},
+	title = {Extensions of generalized product caps},
+	fjournal = {Designs, Codes and Cryptography},
+	journal = {Des. Codes Cryptography},
+	issn = {0925-1022},
+	volume = {31},
+	number = {1},
+	pages = {5--14},
+	year = {2004},
+	language = {English},
+	doi = {10.1023/A:1027365901231},
+	keywords = {51E22},
+	zbMATH = {2073418},
+	Zbl = {1057.51005}
+}
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The full text changes the triage substantially: the paper gives explicit capset constructions, but it does not formulate or prove hardness for a witness-search problem. I’m checking every construction and the computational coefficient search before deciding whether any honest G/H/V family remains; if not, the task’s Step 0 requires rejection rather than manufacturing a hardness claim.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '901,1200p' /tmp/algebraic_capsets.JCwPfl/merged.tex; rg -n \"hard|complex|algorithm|comput|search|exhaust|random|complete|Theorem|Corollary|Remark\" /tmp/algebraic_capsets.JCwPfl/merged.tex" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254
+ succeeded in 0ms:
+\bib{capetKnownSizes2}{article}{
+	author = {Pellegrino, Giuseppe},
+	title = {The maximal order of the spherical cap in {{\(S_{4,3}\)}}},
+	fjournal = {Le Matematiche},
+	journal = {Matematiche},
+	issn = {0373-3505},
+	volume = {25},
+	pages = {149--157},
+	year = {1971},
+	language = {Italian},
+	keywords = {51E12},
+	zbMATH = {3354142},
+	Zbl = {0223.50020}
+}
+\bib{capsetKnownSizes3}{article}{
+	author = {Edel, Y.},
+        author = {Ferret, S.}, 
+        author = {Landjev, I.}, 
+        author = {Storme, L.},
+	title = {The classification of the largest caps in {AG}(5, 3)},
+	fjournal = {Journal of Combinatorial Theory. Series A},
+	journal = {J. Comb. Theory, Ser. A},
+	issn = {0097-3165},
+	volume = {99},
+	number = {1},
+	pages = {95--110},
+	year = {2002},
+	language = {English},
+	doi = {10.1006/jcta.2002.3261},
+	keywords = {51E21,05B25},
+	url = {semanticscholar.org/paper/f19afaaa6dcf640291ebe75365fd09b294fa6439},
+	zbMATH = {1888403},
+	Zbl = {1023.51007}
+}
+\bib{git}{webpage}{
+        author = {Grace, Cassie},
+        title = {capsets},
+        year = {2025},
+        url={https://github.com/cassie-grace/capsets},
+}
+
+
+\bib{capsetKnownSizes4}{article}{
+	author = {Potechin, Aaron},
+	title = {Maximal caps in {{\(\mathrm{AG}(6,3)\)}}.},
+	fjournal = {Designs, Codes and Cryptography},
+	journal = {Des. Codes Cryptography},
+	issn = {0925-1022},
+	volume = {46},
+	number = {3},
+	pages = {243--259},
+	year = {2008},
+	language = {English},
+	doi = {10.1007/s10623-007-9132-z},
+	keywords = {51E22,05B25,51E20},
+	zbMATH = {5536707},
+	Zbl = {1187.51010}
+}
+
+
+
+
+
+
+\end{biblist}
+\end{bibdiv}
+
+
+
+
+%----------------------------------------------------------------------
+%\end{thebibliography}
+%----------------------------------------------------------------------
+	
+	
+\end{document}
+
+
+264:\newtheorem{Theorem}{Theorem}[section]
+265:\newtheorem{Lemma}[Theorem]{Lemma}
+266:\newtheorem{Proposition}[Theorem]{Proposition}
+267:\newtheorem{Corollary}[Theorem]{Corollary}
+268:\newtheorem{Definition}[Theorem]{Definition}
+269:\newtheorem{Example}[Theorem]{Example}
+270:\newtheorem{Remark}[Theorem]{Remark}
+271:\newtheorem{Remarks}[Theorem]{Remarks}
+272:\newtheorem{Conjecture}[Theorem]{Conjecture}
+273:\newtheorem{Hypothesis}[Theorem]{Hypothesis}
+274:\newtheorem{Question}[Theorem]{Question}
+279:\newtheorem{prop}[Theorem]{Proposition}
+280:\newtheorem{lem}[Theorem]{Lemma}
+281:\newtheorem{example}[Theorem]{Example}
+282:\newtheorem{remark}[Theorem]{Remark}
+347:Capsets are subsets of $\F_3^n$ with no three points on a line and a capset is complete if it is not a subset of a larger capset. We study some new constructions of capsets via algebraic equations over extensions of $\F_3$. In particular we construct the smallest known complete capsets with size proportional to the best known lower bound.
+384:    A \emph{capset} is a subset of $\mathbb{F}_3^n$ containing no three distinct points on a line. A capset is \emph{complete} if it is not a subset of a larger capset. 
+398:The main purpose of this paper is to exhibit some constructions of complete capsets and, in particular, construct the smallest known complete capsets.
+414:We can also consider the analogous notion of complete caps. A cap $C$ is complete as a cap if $C$ is not contained in a larger cap. That is, for every
+416:which meets $C$ in two points. We remark that a cap can be complete as a cap and yet not be complete as a capset. For example, a conic in the plane $\F_q^2, q >3$. This follows from the lemma below.
+423:If there exists a complete capset in $\F_3^n$ with $N$ points, then
+431:The $\F_3$ lines through the $N(N-1)/2$ pairs of points of the capset have their third point in the complement of the capset, so if $N(N-1)/2 < 3^n -N$, there is a point in the complement not on any line through two points in the capset, hence the capset is not complete. 
+434:In \cite{Csajbok}, subsets of $\F_p^n$ with $p$ prime no three points in arithmetic progression are studied. This condition is equivalent to the capset condition when $p=3$. They prove a lower bound similar, but slightly weaker, to Lemma \ref{lem:lower} in this more general situation. They also ask if this lower bound is best possible up to a multiplicative constant (loc. cit., Problem 5.1). We give a positive answer to this question in the case $p=3$ (see Corollary \ref{cor:upper}).
+456:\begin{Theorem}
+464:Then $C$ is a capset of size $2(q-1)$. If $m$ is odd, then $C$ is complete.
+465:\end{Theorem}
+483:Now we show that $C$ is complete. Assume that $(a,b) \notin C$. Consider first the case $a \ne 0$. Then we take $x_1 = (a^2-b)/a$ and note that $x_1 \ne 0$ since $(a,b) \notin C$. Let $x_2 = -(a+x_1)$ and we check that
+512:\begin{Corollary}
+514:For every $n$, there exists a complete capset in $\F_3^n$ of size $O(\sqrt{3^n})$. %\todo{Do we want to work out the constant?}
+515:\end{Corollary}
+521:Assume first that $n=2m$ even and start with the construction given by Theorem \ref{thm:two-conics} of a capset of size $2(3^m -1) = O(\sqrt{3^n})$ in $\F_{3^m}^2$. If $m$ is odd, this is already complete.
+522:When $m$ is even, we can only add points of the form $(0,b), b$ non-square. So we need a complete capset in $\F_{3^m}$ comprised of non-squares. Viewing $\F_{3^m}$ as $\F_{3^{m/2}}(\sqrt{d})$ and selecting $\lambda$ a non-square in $\F_{3^m}$, we can take elements of the form $\lambda(\pm 1+x\sqrt{d})^2, x \in \F_{3^{m/2}}^*$ which will be a capset as in the theorem, up to an affine transformation, since $(\pm 1+x\sqrt{d})^2 = (1+dx^2) \pm 2x\sqrt{d}$. Iterating this construction gives the result for $n$ even.
+527:To construct small complete capsets in $\F_{3^n}$ when $n$ is odd, write $n=2m+1$, take the complete capset $C \subset \F_{3^{2m}}$ constructed above and consider $C \times \{0,1\} \subset \F_{3^n}$. It is straightfoward that this is a capset. To see it is complete, consider a pointi $P$ in its complement with last coordinate $c \in \F_3$ and let $P_0 \in \F_{3^{2m}}$ be the point corresponding to the other coordinates. If $c \in \{0,1\}$, then $P_0 \not\in C$ and there is a line in the subspace of points whose last coordinate is $c$ through $P$ meeting $C \times \{c\}$ in two points. If $c=2$ and $P_0 \in C$, the vertical line through $P$ meets the capset in two points. If $c=2$ and $P_0 \not\in C$, there is a line through $P_0$ meeting $C$ in $Q_0,Q_1$, say. Then $(Q_0,0), (Q_1,1)$ are in $C \times \{0,1\}$ and are collinear with $P$.
+533:We will now consider the question of whether we can construct capsets with more than two parabolas, in the spirit of Theorem \ref{thm:two-conics}. We begin with the following lemma,
+627:\begin{Remark}\label{remark-frobenius-construction}
+628:    When $m$ is even, there is a capset in $\F_3^{2m}$ of the form $\{(x,a_i^{3^j} x^2) \mid a_i,x\in \F_{3^m}, \;1\leq i\leq k, \; 0\leq j\leq m-1\}$, found by computation, for the following values of $m$ and $k$ displayed in Table \ref{table-capsets1}.
+629:\end{Remark}
+674:		$m$ & number of coefficients ($K$) & size of capset & arising from & exhaustive \\ [0.5ex] 
+676:		2 &  2 & 16 & exhaustive search & yes \\ 
+678:		4 & 4 & 320 & exhaustive search & yes \\
+680:		6 & 8 & 5,824 & exhaustive search & yes \\
+682:		8 & 20 & 131,200 & random search & no \\
+684:		10 & 40 & 2,361,920 & Remark \ref{remark-frobenius-construction} & no \\
+686:		12 & 84 & 44,640,960 & Remark \ref{remark-frobenius-construction} & no \\
+688:		14 & 154 & 736,577,072 & Remark \ref{remark-frobenius-construction} & no \\ [0.5ex]
+714:So far, we have discussed capset constructions via unions of parabolas in the plane. We can also construct capsets from paraboloids in three-space. By contrast from the plane case, these are always complete.
+723:\begin{Theorem}
+727:Then $Q$ is a complete capset.
+728:\end{Theorem}
+739:To show it is complete, let $(a,b,c) \notin Q$ and consider the set
+826:title={Mathematical discoveries from program search with large language models},
+842: title={Small complete caps in {{\(\mathrm{PG}(4n+1, q)\)}}},
+876:%	title={Mathematical discoveries from program search with large language models},
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The coefficient-search paragraph does not rescue the family. It gives only necessary quadratic-character conditions and finite computational results (even \(m\le 20\)); it supplies neither a hardness result nor an unlimited satisfiable regime. Inverse-generating new constraints around a chosen coefficient would create a different CSP, not the paper’s problem. I’m recording a Step 0 rejection with the exact failure modes and will not fabricate passing gate reports or oracle evidence.
+hook: PreToolUse
+hook: PreToolUse Completed
+apply patch
+patch: completed
+/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254/REJECTED.md
+diff --git a/results/2602.05254/REJECTED.md b/results/2602.05254/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..7f43152bf9316f98a876094a40be767e6bddc610
+--- /dev/null
++++ b/results/2602.05254/REJECTED.md
+@@ -0,0 +1,64 @@
++# Rejection: *Algebraic capsets* (arXiv:2602.05254)
++
++**Decision:** reject at Step 0. The paper supplies explicit algebraic constructions
++of capsets, but no problem family in the paper simultaneously satisfies G
++(inverse-generatable), H (no known polynomial-time or closed-form solution), and V
++(cheap exact witness verification). In particular, the paper contains no hardness
++theorem or hard parameter regime on which a generator could honestly rely.
++
++Paper: Cassie Grace and Jose Felipe Voloch, [*Algebraic capsets*](https://arxiv.org/abs/2602.05254).
++
++## What the full paper actually establishes
++
++Section 1 defines a capset as a subset of `F_3^n` containing no three distinct
++collinear points. It defines a *complete* capset as an inclusion-maximal capset,
++not a maximum-cardinality capset. It also distinguishes a cap over `F_q` from a
++capset after identifying `F_q^d` with `F_3^(dm)`; completeness as a cap does not
++in general imply completeness as a capset.
++
++Section 2 then provides constructions rather than hard search problems:
++
++| Result | Consequence for a proposed witness task |
++|---|---|
++| Theorem 2.1 | For `q = 3^m`, the union of the two explicitly given parabolas `(x,x^2)` and `(x,-x^2)`, with `x != 0`, is a capset; it is complete when `m` is odd. Asking a solver to find it is solved by the displayed formula. |
++| Corollary 2.2 | Gives explicit complete capsets of size `O(sqrt(3^n))` for every `n`, including a product construction in odd dimension. Thus “find a complete capset” has a construction supplied by the paper. |
++| Lemmas 2.3-2.4 and Tables 1-2 | Discuss quadratic-character conditions for unions of more parabolas and report finite computations. The paper finds examples only in bounded tested cases (one coefficient orbit for even `m <= 20`, and tabulated constructions through `m = 14`); it neither proves existence for an unlimited growing regime nor proves hardness of finding the coefficients. |
++| Theorem 2.6 | The elliptic paraboloid `(x,y,x^2-lambda*y^2)` for nonsquare `lambda` is an explicitly given complete capset for every `q = 3^m`. This is another closed-form answer. |
++
++## Why the plausible families fail
++
++1. **Find any capset or complete capset of the constructed size:** G and V hold,
++   but H fails. Theorems 2.1 and 2.6 give the witness by direct evaluation of a
++   formula. Corollary 2.2 supplies complete capsets in every dimension.
++
++2. **Extend a partial capset to any complete capset:** H fails when the finite
++   universe is represented explicitly. Scan the remaining points and greedily add
++   each point whenever it preserves the capset property. The result is
++   inclusion-maximal, hence complete under the paper's exact definition.
++
++3. **Find a largest or smallest capset:** this would make optimality the claim,
++   which the task explicitly forbids. A bare candidate capset does not certify that
++   no larger or smaller object exists.
++
++4. **Find coefficients for a large union of parabolas:** the paper gives
++   computational observations, not an unbounded hard regime. Its character
++   conditions arise as a way to avoid collinear triples, and the reported examples
++   are limited to small even extension degrees. Sampling a coefficient first and
++   inventing a custom subset of character constraints around it would be a new
++   planted CSP, not the fixed algebraic-capset family analyzed in the paper. No
++   theorem in the paper would support H for that CSP.
++
++5. **Verify completeness from a compact dimension-only input:** exact checking can
++   enumerate the ambient space and secants, but that is exponential in the compact
++   dimension parameter. Listing the universe explicitly makes verification
++   polynomial in the representation size, but then the greedy completion argument
++   above makes the unconstrained search easy.
++
++## Required artifacts intentionally not fabricated
++
++No `gen_2602.05254.py`, `selftest_report.json`, or
++`llm_loop_transcript.jsonl` is supplied. Consequently `scripts/harden.py` was not
++run. Those artifacts would imply that a G/H/V family had survived Step 0, and this
++paper does not provide one. This follows the task's instruction to stop after a
++correct G/H/V rejection rather than silently replace the paper's problem with a
++different planted problem or report unsupported hardness.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2602.05254/REJECTED.md b/results/2602.05254/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..7f43152bf9316f98a876094a40be767e6bddc610
+--- /dev/null
++++ b/results/2602.05254/REJECTED.md
+@@ -0,0 +1,64 @@
++# Rejection: *Algebraic capsets* (arXiv:2602.05254)
++
++**Decision:** reject at Step 0. The paper supplies explicit algebraic constructions
++of capsets, but no problem family in the paper simultaneously satisfies G
++(inverse-generatable), H (no known polynomial-time or closed-form solution), and V
++(cheap exact witness verification). In particular, the paper contains no hardness
++theorem or hard parameter regime on which a generator could honestly rely.
++
++Paper: Cassie Grace and Jose Felipe Voloch, [*Algebraic capsets*](https://arxiv.org/abs/2602.05254).
++
++## What the full paper actually establishes
++
++Section 1 defines a capset as a subset of `F_3^n` containing no three distinct
++collinear points. It defines a *complete* capset as an inclusion-maximal capset,
++not a maximum-cardinality capset. It also distinguishes a cap over `F_q` from a
++capset after identifying `F_q^d` with `F_3^(dm)`; completeness as a cap does not
++in general imply completeness as a capset.
++
++Section 2 then provides constructions rather than hard search problems:
++
++| Result | Consequence for a proposed witness task |
++|---|---|
++| Theorem 2.1 | For `q = 3^m`, the union of the two explicitly given parabolas `(x,x^2)` and `(x,-x^2)`, with `x != 0`, is a capset; it is complete when `m` is odd. Asking a solver to find it is solved by the displayed formula. |
++| Corollary 2.2 | Gives explicit complete capsets of size `O(sqrt(3^n))` for every `n`, including a product construction in odd dimension. Thus “find a complete capset” has a construction supplied by the paper. |
++| Lemmas 2.3-2.4 and Tables 1-2 | Discuss quadratic-character conditions for unions of more parabolas and report finite computations. The paper finds examples only in bounded tested cases (one coefficient orbit for even `m <= 20`, and tabulated constructions through `m = 14`); it neither proves existence for an unlimited growing regime nor proves hardness of finding the coefficients. |
++| Theorem 2.6 | The elliptic paraboloid `(x,y,x^2-lambda*y^2)` for nonsquare `lambda` is an explicitly given complete capset for every `q = 3^m`. This is another closed-form answer. |
++
++## Why the plausible families fail
++
++1. **Find any capset or complete capset of the constructed size:** G and V hold,
++   but H fails. Theorems 2.1 and 2.6 give the witness by direct evaluation of a
++   formula. Corollary 2.2 supplies complete capsets in every dimension.
++
++2. **Extend a partial capset to any complete capset:** H fails when the finite
++   universe is represented explicitly. Scan the remaining points and greedily add
++   each point whenever it preserves the capset property. The result is
++   inclusion-maximal, hence complete under the paper's exact definition.
++
++3. **Find a largest or smallest capset:** this would make optimality the claim,
++   which the task explicitly forbids. A bare candidate capset does not certify that
++   no larger or smaller object exists.
++
++4. **Find coefficients for a large union of parabolas:** the paper gives
++   computational observations, not an unbounded hard regime. Its character
++   conditions arise as a way to avoid collinear triples, and the reported examples
++   are limited to small even extension degrees. Sampling a coefficient first and
++   inventing a custom subset of character constraints around it would be a new
++   planted CSP, not the fixed algebraic-capset family analyzed in the paper. No
++   theorem in the paper would support H for that CSP.
++
++5. **Verify completeness from a compact dimension-only input:** exact checking can
++   enumerate the ambient space and secants, but that is exponential in the compact
++   dimension parameter. Listing the universe explicitly makes verification
++   polynomial in the representation size, but then the greedy completion argument
++   above makes the unconstrained search easy.
++
++## Required artifacts intentionally not fabricated
++
++No `gen_2602.05254.py`, `selftest_report.json`, or
++`llm_loop_transcript.jsonl` is supplied. Consequently `scripts/harden.py` was not
++run. Those artifacts would imply that a G/H/V family had survived Step 0, and this
++paper does not provide one. This follows the task's instruction to stop after a
++correct G/H/V rejection rather than silently replace the paper's problem with a
++different planted problem or report unsupported hardness.
+
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,260p' REJECTED.md; git status --short" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254
+ succeeded in 0ms:
+# Rejection: *Algebraic capsets* (arXiv:2602.05254)
+
+**Decision:** reject at Step 0. The paper supplies explicit algebraic constructions
+of capsets, but no problem family in the paper simultaneously satisfies G
+(inverse-generatable), H (no known polynomial-time or closed-form solution), and V
+(cheap exact witness verification). In particular, the paper contains no hardness
+theorem or hard parameter regime on which a generator could honestly rely.
+
+Paper: Cassie Grace and Jose Felipe Voloch, [*Algebraic capsets*](https://arxiv.org/abs/2602.05254).
+
+## What the full paper actually establishes
+
+Section 1 defines a capset as a subset of `F_3^n` containing no three distinct
+collinear points. It defines a *complete* capset as an inclusion-maximal capset,
+not a maximum-cardinality capset. It also distinguishes a cap over `F_q` from a
+capset after identifying `F_q^d` with `F_3^(dm)`; completeness as a cap does not
+in general imply completeness as a capset.
+
+Section 2 then provides constructions rather than hard search problems:
+
+| Result | Consequence for a proposed witness task |
+|---|---|
+| Theorem 2.1 | For `q = 3^m`, the union of the two explicitly given parabolas `(x,x^2)` and `(x,-x^2)`, with `x != 0`, is a capset; it is complete when `m` is odd. Asking a solver to find it is solved by the displayed formula. |
+| Corollary 2.2 | Gives explicit complete capsets of size `O(sqrt(3^n))` for every `n`, including a product construction in odd dimension. Thus “find a complete capset” has a construction supplied by the paper. |
+| Lemmas 2.3-2.4 and Tables 1-2 | Discuss quadratic-character conditions for unions of more parabolas and report finite computations. The paper finds examples only in bounded tested cases (one coefficient orbit for even `m <= 20`, and tabulated constructions through `m = 14`); it neither proves existence for an unlimited growing regime nor proves hardness of finding the coefficients. |
+| Theorem 2.6 | The elliptic paraboloid `(x,y,x^2-lambda*y^2)` for nonsquare `lambda` is an explicitly given complete capset for every `q = 3^m`. This is another closed-form answer. |
+
+## Why the plausible families fail
+
+1. **Find any capset or complete capset of the constructed size:** G and V hold,
+   but H fails. Theorems 2.1 and 2.6 give the witness by direct evaluation of a
+   formula. Corollary 2.2 supplies complete capsets in every dimension.
+
+2. **Extend a partial capset to any complete capset:** H fails when the finite
+   universe is represented explicitly. Scan the remaining points and greedily add
+   each point whenever it preserves the capset property. The result is
+   inclusion-maximal, hence complete under the paper's exact definition.
+
+3. **Find a largest or smallest capset:** this would make optimality the claim,
+   which the task explicitly forbids. A bare candidate capset does not certify that
+   no larger or smaller object exists.
+
+4. **Find coefficients for a large union of parabolas:** the paper gives
+   computational observations, not an unbounded hard regime. Its character
+   conditions arise as a way to avoid collinear triples, and the reported examples
+   are limited to small even extension degrees. Sampling a coefficient first and
+   inventing a custom subset of character constraints around it would be a new
+   planted CSP, not the fixed algebraic-capset family analyzed in the paper. No
+   theorem in the paper would support H for that CSP.
+
+5. **Verify completeness from a compact dimension-only input:** exact checking can
+   enumerate the ambient space and secants, but that is exponential in the compact
+   dimension parameter. Listing the universe explicitly makes verification
+   polynomial in the representation size, but then the greedy completion argument
+   above makes the unconstrained search easy.
+
+## Required artifacts intentionally not fabricated
+
+No `gen_2602.05254.py`, `selftest_report.json`, or
+`llm_loop_transcript.jsonl` is supplied. Consequently `scripts/harden.py` was not
+run. Those artifacts would imply that a G/H/V family had survived Step 0, and this
+paper does not provide one. This follows the task's instruction to stop after a
+correct G/H/V rejection rather than silently replace the paper's problem with a
+different planted problem or report unsupported hardness.
+ M ../../claims/2602.05254.json
+?? ./
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2602.05254/REJECTED.md b/results/2602.05254/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..7f43152bf9316f98a876094a40be767e6bddc610
+--- /dev/null
++++ b/results/2602.05254/REJECTED.md
+@@ -0,0 +1,64 @@
++# Rejection: *Algebraic capsets* (arXiv:2602.05254)
++
++**Decision:** reject at Step 0. The paper supplies explicit algebraic constructions
++of capsets, but no problem family in the paper simultaneously satisfies G
++(inverse-generatable), H (no known polynomial-time or closed-form solution), and V
++(cheap exact witness verification). In particular, the paper contains no hardness
++theorem or hard parameter regime on which a generator could honestly rely.
++
++Paper: Cassie Grace and Jose Felipe Voloch, [*Algebraic capsets*](https://arxiv.org/abs/2602.05254).
++
++## What the full paper actually establishes
++
++Section 1 defines a capset as a subset of `F_3^n` containing no three distinct
++collinear points. It defines a *complete* capset as an inclusion-maximal capset,
++not a maximum-cardinality capset. It also distinguishes a cap over `F_q` from a
++capset after identifying `F_q^d` with `F_3^(dm)`; completeness as a cap does not
++in general imply completeness as a capset.
++
++Section 2 then provides constructions rather than hard search problems:
++
++| Result | Consequence for a proposed witness task |
++|---|---|
++| Theorem 2.1 | For `q = 3^m`, the union of the two explicitly given parabolas `(x,x^2)` and `(x,-x^2)`, with `x != 0`, is a capset; it is complete when `m` is odd. Asking a solver to find it is solved by the displayed formula. |
++| Corollary 2.2 | Gives explicit complete capsets of size `O(sqrt(3^n))` for every `n`, including a product construction in odd dimension. Thus “find a complete capset” has a construction supplied by the paper. |
++| Lemmas 2.3-2.4 and Tables 1-2 | Discuss quadratic-character conditions for unions of more parabolas and report finite computations. The paper finds examples only in bounded tested cases (one coefficient orbit for even `m <= 20`, and tabulated constructions through `m = 14`); it neither proves existence for an unlimited growing regime nor proves hardness of finding the coefficients. |
++| Theorem 2.6 | The elliptic paraboloid `(x,y,x^2-lambda*y^2)` for nonsquare `lambda` is an explicitly given complete capset for every `q = 3^m`. This is another closed-form answer. |
++
++## Why the plausible families fail
++
++1. **Find any capset or complete capset of the constructed size:** G and V hold,
++   but H fails. Theorems 2.1 and 2.6 give the witness by direct evaluation of a
++   formula. Corollary 2.2 supplies complete capsets in every dimension.
++
++2. **Extend a partial capset to any complete capset:** H fails when the finite
++   universe is represented explicitly. Scan the remaining points and greedily add
++   each point whenever it preserves the capset property. The result is
++   inclusion-maximal, hence complete under the paper's exact definition.
++
++3. **Find a largest or smallest capset:** this would make optimality the claim,
++   which the task explicitly forbids. A bare candidate capset does not certify that
++   no larger or smaller object exists.
++
++4. **Find coefficients for a large union of parabolas:** the paper gives
++   computational observations, not an unbounded hard regime. Its character
++   conditions arise as a way to avoid collinear triples, and the reported examples
++   are limited to small even extension degrees. Sampling a coefficient first and
++   inventing a custom subset of character constraints around it would be a new
++   planted CSP, not the fixed algebraic-capset family analyzed in the paper. No
++   theorem in the paper would support H for that CSP.
++
++5. **Verify completeness from a compact dimension-only input:** exact checking can
++   enumerate the ambient space and secants, but that is exponential in the compact
++   dimension parameter. Listing the universe explicitly makes verification
++   polynomial in the representation size, but then the greedy completion argument
++   above makes the unconstrained search easy.
++
++## Required artifacts intentionally not fabricated
++
++No `gen_2602.05254.py`, `selftest_report.json`, or
++`llm_loop_transcript.jsonl` is supplied. Consequently `scripts/harden.py` was not
++run. Those artifacts would imply that a G/H/V family had survived Step 0, and this
++paper does not provide one. This follows the task's instruction to stop after a
++correct G/H/V rejection rather than silently replace the paper's problem with a
++different planted problem or report unsupported hardness.
+
+hook: PreToolUse
+hook: PreToolUse Completed
+Step 0 found no family satisfying G/H/V, so the task explicitly requires stopping before implementation and hardening.
+  ✓ Read the full paper and assess every plausible witness family against G/H/V
+  ✓ Record the evidence-backed Step 0 rejection and intentionally omit fabricated gate/oracle artifacts
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2602.05254/REJECTED.md b/results/2602.05254/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..7f43152bf9316f98a876094a40be767e6bddc610
+--- /dev/null
++++ b/results/2602.05254/REJECTED.md
+@@ -0,0 +1,64 @@
++# Rejection: *Algebraic capsets* (arXiv:2602.05254)
++
++**Decision:** reject at Step 0. The paper supplies explicit algebraic constructions
++of capsets, but no problem family in the paper simultaneously satisfies G
++(inverse-generatable), H (no known polynomial-time or closed-form solution), and V
++(cheap exact witness verification). In particular, the paper contains no hardness
++theorem or hard parameter regime on which a generator could honestly rely.
++
++Paper: Cassie Grace and Jose Felipe Voloch, [*Algebraic capsets*](https://arxiv.org/abs/2602.05254).
++
++## What the full paper actually establishes
++
++Section 1 defines a capset as a subset of `F_3^n` containing no three distinct
++collinear points. It defines a *complete* capset as an inclusion-maximal capset,
++not a maximum-cardinality capset. It also distinguishes a cap over `F_q` from a
++capset after identifying `F_q^d` with `F_3^(dm)`; completeness as a cap does not
++in general imply completeness as a capset.
++
++Section 2 then provides constructions rather than hard search problems:
++
++| Result | Consequence for a proposed witness task |
++|---|---|
++| Theorem 2.1 | For `q = 3^m`, the union of the two explicitly given parabolas `(x,x^2)` and `(x,-x^2)`, with `x != 0`, is a capset; it is complete when `m` is odd. Asking a solver to find it is solved by the displayed formula. |
++| Corollary 2.2 | Gives explicit complete capsets of size `O(sqrt(3^n))` for every `n`, including a product construction in odd dimension. Thus “find a complete capset” has a construction supplied by the paper. |
++| Lemmas 2.3-2.4 and Tables 1-2 | Discuss quadratic-character conditions for unions of more parabolas and report finite computations. The paper finds examples only in bounded tested cases (one coefficient orbit for even `m <= 20`, and tabulated constructions through `m = 14`); it neither proves existence for an unlimited growing regime nor proves hardness of finding the coefficients. |
++| Theorem 2.6 | The elliptic paraboloid `(x,y,x^2-lambda*y^2)` for nonsquare `lambda` is an explicitly given complete capset for every `q = 3^m`. This is another closed-form answer. |
++
++## Why the plausible families fail
++
++1. **Find any capset or complete capset of the constructed size:** G and V hold,
++   but H fails. Theorems 2.1 and 2.6 give the witness by direct evaluation of a
++   formula. Corollary 2.2 supplies complete capsets in every dimension.
++
++2. **Extend a partial capset to any complete capset:** H fails when the finite
++   universe is represented explicitly. Scan the remaining points and greedily add
++   each point whenever it preserves the capset property. The result is
++   inclusion-maximal, hence complete under the paper's exact definition.
++
++3. **Find a largest or smallest capset:** this would make optimality the claim,
++   which the task explicitly forbids. A bare candidate capset does not certify that
++   no larger or smaller object exists.
++
++4. **Find coefficients for a large union of parabolas:** the paper gives
++   computational observations, not an unbounded hard regime. Its character
++   conditions arise as a way to avoid collinear triples, and the reported examples
++   are limited to small even extension degrees. Sampling a coefficient first and
++   inventing a custom subset of character constraints around it would be a new
++   planted CSP, not the fixed algebraic-capset family analyzed in the paper. No
++   theorem in the paper would support H for that CSP.
++
++5. **Verify completeness from a compact dimension-only input:** exact checking can
++   enumerate the ambient space and secants, but that is exponential in the compact
++   dimension parameter. Listing the universe explicitly makes verification
++   polynomial in the representation size, but then the greedy completion argument
++   above makes the unconstrained search easy.
++
++## Required artifacts intentionally not fabricated
++
++No `gen_2602.05254.py`, `selftest_report.json`, or
++`llm_loop_transcript.jsonl` is supplied. Consequently `scripts/harden.py` was not
++run. Those artifacts would imply that a G/H/V family had survived Step 0, and this
++paper does not provide one. This follows the task's instruction to stop after a
++correct G/H/V rejection rather than silently replace the paper's problem with a
++different planted problem or report unsupported hardness.
+
+codex
+Rejected at Step 0: the paper provides explicit closed-form capset constructions but no hard, unlimited witness-search regime. Thus H fails for the constructible families; the computational coefficient results are bounded and have no hardness theorem.
+
+I documented the exact definitions, relevant results, and failure modes in [REJECTED.md](/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254/REJECTED.md).
+
+Per the task instructions, I did not fabricate a generator, passing self-test report, or oracle transcript.
+diff --git a/results/2602.05254/REJECTED.md b/results/2602.05254/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..7f43152bf9316f98a876094a40be767e6bddc610
+--- /dev/null
++++ b/results/2602.05254/REJECTED.md
+@@ -0,0 +1,64 @@
++# Rejection: *Algebraic capsets* (arXiv:2602.05254)
++
++**Decision:** reject at Step 0. The paper supplies explicit algebraic constructions
++of capsets, but no problem family in the paper simultaneously satisfies G
++(inverse-generatable), H (no known polynomial-time or closed-form solution), and V
++(cheap exact witness verification). In particular, the paper contains no hardness
++theorem or hard parameter regime on which a generator could honestly rely.
++
++Paper: Cassie Grace and Jose Felipe Voloch, [*Algebraic capsets*](https://arxiv.org/abs/2602.05254).
++
++## What the full paper actually establishes
++
++Section 1 defines a capset as a subset of `F_3^n` containing no three distinct
++collinear points. It defines a *complete* capset as an inclusion-maximal capset,
++not a maximum-cardinality capset. It also distinguishes a cap over `F_q` from a
++capset after identifying `F_q^d` with `F_3^(dm)`; completeness as a cap does not
++in general imply completeness as a capset.
++
++Section 2 then provides constructions rather than hard search problems:
++
++| Result | Consequence for a proposed witness task |
++|---|---|
++| Theorem 2.1 | For `q = 3^m`, the union of the two explicitly given parabolas `(x,x^2)` and `(x,-x^2)`, with `x != 0`, is a capset; it is complete when `m` is odd. Asking a solver to find it is solved by the displayed formula. |
++| Corollary 2.2 | Gives explicit complete capsets of size `O(sqrt(3^n))` for every `n`, including a product construction in odd dimension. Thus “find a complete capset” has a construction supplied by the paper. |
++| Lemmas 2.3-2.4 and Tables 1-2 | Discuss quadratic-character conditions for unions of more parabolas and report finite computations. The paper finds examples only in bounded tested cases (one coefficient orbit for even `m <= 20`, and tabulated constructions through `m = 14`); it neither proves existence for an unlimited growing regime nor proves hardness of finding the coefficients. |
++| Theorem 2.6 | The elliptic paraboloid `(x,y,x^2-lambda*y^2)` for nonsquare `lambda` is an explicitly given complete capset for every `q = 3^m`. This is another closed-form answer. |
++
++## Why the plausible families fail
++
++1. **Find any capset or complete capset of the constructed size:** G and V hold,
++   but H fails. Theorems 2.1 and 2.6 give the witness by direct evaluation of a
++   formula. Corollary 2.2 supplies complete capsets in every dimension.
++
++2. **Extend a partial capset to any complete capset:** H fails when the finite
++   universe is represented explicitly. Scan the remaining points and greedily add
++   each point whenever it preserves the capset property. The result is
++   inclusion-maximal, hence complete under the paper's exact definition.
++
++3. **Find a largest or smallest capset:** this would make optimality the claim,
++   which the task explicitly forbids. A bare candidate capset does not certify that
++   no larger or smaller object exists.
++
++4. **Find coefficients for a large union of parabolas:** the paper gives
++   computational observations, not an unbounded hard regime. Its character
++   conditions arise as a way to avoid collinear triples, and the reported examples
++   are limited to small even extension degrees. Sampling a coefficient first and
++   inventing a custom subset of character constraints around it would be a new
++   planted CSP, not the fixed algebraic-capset family analyzed in the paper. No
++   theorem in the paper would support H for that CSP.
++
++5. **Verify completeness from a compact dimension-only input:** exact checking can
++   enumerate the ambient space and secants, but that is exponential in the compact
++   dimension parameter. Listing the universe explicitly makes verification
++   polynomial in the representation size, but then the greedy completion argument
++   above makes the unconstrained search easy.
++
++## Required artifacts intentionally not fabricated
++
++No `gen_2602.05254.py`, `selftest_report.json`, or
++`llm_loop_transcript.jsonl` is supplied. Consequently `scripts/harden.py` was not
++run. Those artifacts would imply that a G/H/V family had survived Step 0, and this
++paper does not provide one. This follows the task's instruction to stop after a
++correct G/H/V rejection rather than silently replace the paper's problem with a
++different planted problem or report unsupported hardness.
+
+hook: Stop
+hook: Stop Completed
+tokens used
+40,583
+Rejected at Step 0: the paper provides explicit closed-form capset constructions but no hard, unlimited witness-search regime. Thus H fails for the constructible families; the computational coefficient results are bounded and have no hardness theorem.
+
+I documented the exact definitions, relevant results, and failure modes in [REJECTED.md](/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2602.05254/REJECTED.md).
+
+Per the task instructions, I did not fabricate a generator, passing self-test report, or oracle transcript.
