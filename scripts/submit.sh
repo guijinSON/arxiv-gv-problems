@@ -37,12 +37,79 @@ if [ "$(wc -l < "$D/README.md")" -lt 25 ]; then
   echo "ERROR: $D/README.md is too short to explain the task — see STEP 5."; exit 7
 fi
 
+echo "== hardening transcript =="
+python3 - "$D" <<'PY'
+import json, os, sys
+D = sys.argv[1]
+try:
+    meta = json.load(open(os.path.join(D, ".meta.json")))
+except (OSError, ValueError):
+    meta = {}
+ver = meta.get("schema_version", 1)
+rows = [json.loads(l) for l in open(os.path.join(D, "llm_loop_transcript.jsonl")) if l.strip()]
+
+if ver < 2:
+    # Built before scripts/harden.py existed: single fixed oracle, builder-authored
+    # transcript.  Grandfathered rather than re-run, and tagged so that nobody has
+    # to guess later which rules it was checked against.
+    print(f"  schema_version={ver} (legacy, pre-harden.py) — {len(rows)} calls, not re-validated")
+    sys.exit(0)
+
+NEED = {"schema_version","model","effort","preset","params","seed","escalation_round",
+        "solved","parsed","verify_ok","verify_reason","reply","error","elapsed_sec",
+        "http_status","finish_reason"}
+fail = []
+for n, r in enumerate(rows, 1):
+    missing = NEED - set(r)
+    if missing:
+        fail.append(f"line {n}: missing keys {sorted(missing)}")
+if not rows:
+    fail.append("transcript is empty")
+
+models = {r.get("model") for r in rows}
+if len(models) < 3:
+    fail.append(f"only {len(models)} distinct oracle model(s) used: {sorted(models)} — "
+                "the pool must be redrawn per call")
+seeds = [r.get("seed") for r in rows]
+if len(set(seeds)) != len(seeds):
+    fail.append("repeated seeds — every attempt must use a distinct instance")
+rounds = [r.get("escalation_round", 0) for r in rows]
+cap = meta.get("max_escalations", 3)
+if rounds and max(rounds) > cap:
+    fail.append(f"escalation_round reached {max(rounds)}, above the cap of {cap}")
+# The hardness claim rests on the level that held, not on the run as a whole:
+# a transcript can show four vendors overall while the shipping level was decided
+# by two of them.
+verdict = meta.get("harden_verdict", {})
+if verdict.get("verdict") == "hardened" and rows:
+    top = max(rounds)
+    deciders = {r.get("model") for r in rows
+                if r.get("escalation_round") == top and r.get("solved") != "error"}
+    want = min(3, len(meta.get("oracle_pool") or []) or 3)
+    if len(deciders) < want:
+        fail.append(f"the shipping level was decided by only {len(deciders)} distinct "
+                    f"vendor(s) {sorted(deciders)}; the all-fail claim needs {want}")
+if verdict.get("verdict") == "too_easy":
+    fail.append("harden.py returned verdict too_easy — this family is given up on; "
+                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+
+if fail:
+    print("TRANSCRIPT INVALID:")
+    for f in fail: print("  -", f)
+    sys.exit(1)
+print(f"  {len(rows)} calls | {len(models)} distinct models | "
+      f"{max(rounds)+1} difficulty level(s) | verdict "
+      f"{meta.get('harden_verdict',{}).get('verdict')}")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — see prompts/codex_task.md STEP 4."; exit 8; }
+
 echo "== interface check =="
 python3 - "$MOD" <<'PY'
 import importlib.util, sys
 p=sys.argv[1]
 s=importlib.util.spec_from_file_location("m",p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
-need=["make_instance","render","parse_answer","verify","random_candidate","search_space","enumerate_all"]
+need=["make_instance","render","parse_answer","verify","random_candidate","search_space",
+      "enumerate_all","canonical_key","escalate"]
 miss=[f for f in need if not callable(getattr(m,f,None))]
 if miss: print("MISSING:", miss); sys.exit(1)
 i=m.make_instance(**(getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})), seed=0)
@@ -50,13 +117,43 @@ ok,why=m.verify(i, i["answer"])
 if not ok: print("G1 FAIL: planted answer does not verify:", why); sys.exit(1)
 rt = m.parse_answer(f"<answer>{', '.join(map(str,i['answer']))}</answer>") == i["answer"] \
      if isinstance(i["answer"], list) else True
-print("  interface OK | planted verifies | parse round-trip:", rt)
+# canonical_key must be a function of the instance, not of the call.  A key that
+# is not deterministic cannot detect a duplicate; we cannot check the harder
+# property (invariance under relabelling) without family-specific machinery, so
+# the README caveats have to carry that one.
+params = getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})
+k1 = m.canonical_key(m.make_instance(**params, seed=4242))
+k2 = m.canonical_key(m.make_instance(**params, seed=4242))
+if not isinstance(k1,str) or k1 != k2:
+    print("canonical_key FAIL: not deterministic or not a str:", repr(k1), repr(k2)); sys.exit(1)
+if m.canonical_key(m.make_instance(**params, seed=4243)) == k1:
+    print("canonical_key FAIL: two different seeds collide — the key ignores the instance"); sys.exit(1)
+print("  interface OK | planted verifies | parse round-trip:", rt, "| canonical_key deterministic")
 PY
 [ $? -eq 0 ] || { echo "SUBMIT BLOCKED — fix the module first."; exit 3; }
 
 rm -f "$D/.orkey" "$D/.task.md"; rm -rf "$D/__pycache__"
 echo "== emitting sample instances =="
 bash scripts/emit.sh "$ID" "${EMIT_N:-20}" || { echo "SUBMIT BLOCKED — emit failed."; exit 5; }
+
+# emit.sh already resamples past duplicates; this re-checks the file it produced,
+# so the thing that generates the instances is not the only thing that vouches
+# for them.
+echo "== diversity =="
+python3 - "$MOD" "artifacts/$ID.jsonl" <<'PY'
+import importlib.util, json, sys
+mod_path, art = sys.argv[1], sys.argv[2]
+s = importlib.util.spec_from_file_location("m", mod_path)
+m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+recs = [json.loads(l) for l in open(art) if l.strip()]
+keys = [m.canonical_key(m.make_instance(**r["params"])) for r in recs]
+dupes = len(keys) - len(set(keys))
+if dupes:
+    print(f"  {dupes} duplicate instance(s) out of {len(keys)} — isomorphic problems in "
+          f"the dataset"); sys.exit(1)
+print(f"  {len(set(keys))}/{len(keys)} distinct canonical keys")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — duplicate instances."; exit 9; }
 
 
 python3 -c "

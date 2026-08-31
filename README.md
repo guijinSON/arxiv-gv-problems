@@ -96,22 +96,32 @@ verify(inst, answer)      -> (bool, reason)  # never reads inst["answer"]
 random_candidate(inst,rng)-> answer          # for empirical P(guess)
 search_space(inst)        -> int | None
 enumerate_all(inst)       -> int | None
+canonical_key(inst)       -> str             # equal iff same problem up to relabelling
+escalate(params)          -> params | None   # strictly harder, or None if it cannot be
 selftest()                -> dict            # all gates, with numbers
 ```
 
 Gates a module must pass: planted verifies · corruption rejected · parse round-trips ·
 **P(random guess) < 1e-6** · solutions sparse · survives an adversary panel · scales with `n`
-· **and `gpt-5.6-terra` at medium reasoning effort fails to solve it**.
+· **and a four-vendor oracle pool at medium reasoning effort all fail to solve it**.
 
 | role | model | effort |
 |---|---|---|
 | builder (Codex CLI, writes the module) | `gpt-5.6-sol` | `xhigh` |
-| hardening oracle (the solver we must defeat) | `gpt-5.6-terra` | `medium` |
+| hardening oracle (the solvers we must defeat) | a four-vendor pool, redrawn per call | `medium` |
 
-Builder and oracle are deliberately different models — see `CODEX.md`.
+The pool lives in `scripts/harden.py` (`ORACLE_POOL`, overridable via the environment)
+and deliberately excludes the builder model: a family checked only against its own
+author, or only against one vendor, is fitted to that model's blind spots rather than
+shown to be hard. Each difficulty level is asked of three distinct models on three
+drawn seeds and is held only if **all three fail**; when one solves it the harness
+escalates, and after three escalations the family is given up on.
 
-See `examples/1912.09051/` for a complete worked result, and `prompts/codex_task.md`
-for the prompt that produces them.
+The loop is owned by `scripts/harden.py`, not by the builder — see `CODEX.md`.
+
+See `examples/1912.09051/` for a complete worked result — built under the pre-`harden.py`
+rules and tagged `schema_version: 1`, so read it for the shape of a result and not for
+the current interface — and `prompts/codex_task.md` for the prompt that produces them.
 
 ## Layout
 
@@ -121,6 +131,7 @@ STATUS.md                    progress board (generated; do not hand-edit)
 prompts/codex_task.md        the per-paper Codex prompt
 scripts/claim.sh             reserve the next free paper (race-safe via git)
 scripts/run_codex.sh         build one generator/verifier
+scripts/harden.py            the oracle loop: model pool, escalation, give-up verdict
 scripts/submit.sh            interface-check, emit, commit, push
 scripts/status.sh            progress board  (--write regenerates STATUS.md)
 scripts/emit.sh              emit dataset instances from a finished module
@@ -131,6 +142,8 @@ results/<id>/README.md       what the problem is, why it is hard, caveats — wr
 results/<id>/gen_<id>.py     the generator/verifier module
 results/<id>/                selftest_report.json, llm_loop_transcript.jsonl, codex_run.log
 artifacts/<id>.jsonl         emitted instances: question + answer + params
+results/<id>/.meta.json      run metadata: schema version, master seeds, oracle pool,
+                             hardening verdict, duplicate rate (generated)
 examples/1912.09051/         a finished example
 CODEX.md                     sandbox, keys, quota — read this
 CLAUDE.md                    playbook for Claude Code

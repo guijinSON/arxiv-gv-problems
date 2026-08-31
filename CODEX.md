@@ -36,9 +36,12 @@ CODEX_MODEL=gpt-5.5 CODEX_EFFORT=high bash scripts/run_codex.sh <arxiv_id>
 Do not drop below `high` — the module has to satisfy seven gates and an adversary panel,
 and lower effort produces modules that pass the easy gates and fail the hard ones.
 
-Note this is separate from the **hardening oracle**, which is the model we try to defeat:
-that stays `gpt-5.6-terra` at `medium` effort (see `prompts/codex_task.md`, Step 4).
-Builder and oracle are deliberately different models.
+Note this is separate from the **hardening oracle**, which is what we try to defeat.
+That is no longer one model: `scripts/harden.py` holds a four-vendor pool in
+`ORACLE_POOL` and draws from it afresh on every call, at `medium` effort. Override it
+per run with `ORACLE_POOL=a,b,c` if a member goes away — `google/gemini-3.1-pro-preview`
+is on a preview channel and will eventually. The builder model is excluded from the
+pool on purpose.
 
 ## Budget
 
@@ -114,7 +117,7 @@ The hardening loop needs an LLM API key:
 ```bash
 export OPENAI_API_KEY=sk-...            # preferred
 # or, if you use OpenRouter instead:
-export OPENROUTER_API_KEY=sk-or-v1-...  # model id becomes openai/gpt-5.6-terra
+export OPENROUTER_API_KEY=sk-or-v1-...  # required: the oracle pool spans four vendors
 ```
 
 Either works; `OPENAI_API_KEY` wins when both are set.

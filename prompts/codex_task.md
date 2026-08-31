@@ -85,6 +85,32 @@ def search_space(inst) -> int | None
 def enumerate_all(inst) -> int | None
     """Exact count of valid answers by brute force; None if the space is too big.
     Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
 ```
 
 ---
@@ -184,41 +210,49 @@ crowding/density/size, never from making the planted object look different.
 
 ## STEP 4 — the LLM hardening loop (required)
 
-A key for the hardening oracle is in the environment. Use whichever is set:
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
 
-- **`OPENAI_API_KEY`** → OpenAI API, model `gpt-5.6-terra`, reasoning effort `medium`.
-- **`OPENROUTER_API_KEY`** → `POST https://openrouter.ai/api/v1/chat/completions`,
-  `Authorization: Bearer $OPENROUTER_API_KEY`, body
-  `{"model":"openai/gpt-5.6-terra","reasoning":{"effort":"medium"},
-    "messages":[{"role":"user","content":render(inst)}],"max_tokens":16000}`;
-  reply text is `choices[0].message.content`.
-
-Prefer `OPENAI_API_KEY` when both are set. Say in your report which you used.
-
-```
-for preset in ascending difficulty:
-    inst  = make_instance(**preset, seed=<fresh>)
-    reply = ask gpt-5.6-terra, reasoning effort "medium", with render(inst)
-    ans   = parse_answer(reply)
-    if ans is not None and verify(inst, ans)[0]:
-        -> TOO EASY. escalate (raise n / f / density / crowding) and repeat.
-    else:
-        -> record this preset as the shipping difficulty.
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
 ```
 
-Requirements:
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
 
-- Model `gpt-5.6-terra`, **reasoning effort medium**. Verify the exact parameter names
-  against the installed SDK before relying on them — check the SDK, do not guess the
-  request shape. If the reasoning/effort field is rejected, retry without it and say so.
-- This is the **oracle**, deliberately a different model from the one writing this module.
-- Try **at least 3 distinct seeds** per preset. One failure to solve is not evidence;
-  3/3 failures is weak evidence and that is all we are claiming.
-- Log the raw reply for each attempt. If `parse_answer` returns None on a reply that
-  visibly *contains* an answer, that is a **G3 bug in your renderer** — fix the
-  contract, do not celebrate a false negative.
-- If the model solves even the hardest preset you can construct, report the family
-  as **too easy** rather than shipping it.
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
 
 ---
 
@@ -231,9 +265,12 @@ readable.
 1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
 2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
    measured number (P(guess) as hits/total, solution counts, per-attack results).
-3. `llm_loop_transcript.jsonl` — one JSON object per oracle call:
-   `{"preset","seed","solved","parsed","reason","reply"}`. This is the evidence for
-   the hardness claim; keep the raw replies in it.
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
 4. A `NOTES` string in the module: which paper section fixed the definition, which
    result told you what makes it easy, what you did to defeat each attack.
 5. `README.md` — **you write this, by hand.** See below.

@@ -37,8 +37,10 @@ Prior triage (a hypothesis, not ground truth - verify it against the paper):
 """)
 PY
 
-if [ -z "${OPENAI_API_KEY:-}" ] && [ -z "${OPENROUTER_API_KEY:-}" ]; then
-  echo "ERROR: export OPENAI_API_KEY (or OPENROUTER_API_KEY) — needed for the hardening loop."
+# The hardening oracle is a four-vendor pool reached through OpenRouter, so an
+# OpenAI key can only serve one member of it.  See scripts/harden.py.
+if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+  echo "ERROR: export OPENROUTER_API_KEY — the hardening oracle pool spans four vendors."
   exit 3
 fi
 
@@ -65,6 +67,7 @@ fi
 python3 -c "
 import json,datetime
 json.dump({'paper':'$ID',
+           'schema_version':2,
            'model':'${CODEX_MODEL:-gpt-5.6-sol}',
            'effort':'${CODEX_EFFORT:-xhigh}',
            'codex_version':'$CV',

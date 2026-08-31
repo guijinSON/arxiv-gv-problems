@@ -1,3 +1,9 @@
+> **Historical copy — pre-`harden.py` rules.** This is the prompt as it stood when
+> this example was built: a single fixed oracle, a builder-written hardening loop, and
+> a seven-function interface. The current prompt is `prompts/codex_task.md`, where the
+> loop belongs to `scripts/harden.py` and the module must also supply `canonical_key`
+> and `escalate`. Read this for the worked result, not for the instructions.
+
 # TASK: turn this paper into a self-contained, verified problem generator
 
 You are given one arXiv paper. Produce a single Python module that manufactures an

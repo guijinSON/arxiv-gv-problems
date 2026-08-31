@@ -7,7 +7,8 @@ When the user says **"do a paper"** / **"process a paper"**, run this loop.
 1. `bash scripts/status.sh` — show where the effort stands.
 2. `bash scripts/claim.sh` — reserves the next free paper (or `scripts/claim.sh <id>`).
 3. `bash scripts/run_codex.sh <id>` — builds `results/<id>/` in the background using
-   `gpt-5.6-sol` at `xhigh` reasoning effort. Read `CODEX.md` first if the sandbox errors.
+   `gpt-5.6-sol` at `xhigh` reasoning effort. Needs `OPENROUTER_API_KEY`. Read
+   `CODEX.md` first if the sandbox errors.
 4. Poll `results/<id>/codex_run.log` until `ps -eo comm | grep -cx codex` is 0.
 5. **Audit the output yourself — do not trust the self-report.** See below.
 6. `bash scripts/submit.sh <id>` — interface check, emit, commit, push. It refuses a
@@ -28,6 +29,11 @@ Codex reports its own gate results. Independently confirm at least:
 - corrupted answers are rejected: drop one, duplicate, empty, out of range, wrong type
 - `parse_answer` round-trips, and takes the **last** `<answer>` block, not the first
   (models often emit a draft then a correction)
+- `canonical_key` actually keys on the instance — not on the seed, not on a hash of
+  `render(inst)`. Both of those make every instance look distinct and turn the
+  duplicate check into a no-op that always passes. `submit.sh` only checks that the
+  key is deterministic; whether it is invariant under relabelling is on you.
+- `escalate` moves along an axis that costs a solver, not just `n`
 - `enumerate_all` agrees with brute force at a small size, if feasible
 - `search_space` and `random_candidate` describe the *same* space, and that space is
   the one a **solver** would search — not a naive superset. A P(guess) measured over
@@ -39,6 +45,20 @@ Codex reports its own gate results. Independently confirm at least:
 If the family is genuinely unsuitable (in P, classified, no cheap verifier), record that
 in `results/<id>/REJECTED.md` with the reason and submit it. A documented rejection is a
 useful result.
+
+## The hardening loop is not the builder's
+
+`scripts/harden.py` owns it, and the builder only runs it. It draws an oracle afresh
+from a four-vendor pool on every call, holds a difficulty level only if **all three**
+models fail it, escalates when one solves it, and after **3 escalations** returns
+`verdict: "too_easy"`.
+
+A `too_easy` verdict means **give the paper up**. `submit.sh` refuses it. Write
+`REJECTED.md` saying which theorem or regime you were counting on and why it does not
+bite, then `bash scripts/submit.sh <id> --reject`. Do not hand-tune the presets past
+the verdict to get something shippable — a family that only clears the bar after you
+retune it by hand is tuned to that run, and that is exactly the outcome the pool and
+the escalation cap exist to catch.
 
 ## Notes
 
