@@ -61,7 +61,10 @@ if [ "$MODE" = "bypass" ]; then
   SANDBOX_ARGS=(--dangerously-bypass-approvals-and-sandbox)
   echo "WARNING: running WITHOUT sandbox. Only do this in a disposable VM/container."
 else
-  SANDBOX_ARGS=(--sandbox "$MODE")
+  # workspace-write blocks network by default; STEP 4's harden.py must reach
+  # openrouter.ai, and STEP 0 must reach arxiv.org.  Without this the run gets
+  # "curl: (6) Could not resolve host" and dies at the hardening loop.
+  SANDBOX_ARGS=(--sandbox "$MODE" -c sandbox_workspace_write.network_access=true)
 fi
 
 python3 -c "

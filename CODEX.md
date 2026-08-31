@@ -61,11 +61,19 @@ Use, in order of preference:
 
 ```bash
 codex exec --skip-git-repo-check --sandbox workspace-write \
+  -c sandbox_workspace_write.network_access=true \
   -m gpt-5.6-sol -c model_reasoning_effort="xhigh" "$(cat .task.md)"
 ```
 
-Writes are confined to the working directory and network is allowed. This is what
-`scripts/run_codex.sh` uses by default.
+Writes are confined to the working directory. **Network is OFF by default under
+`workspace-write`** — the `network_access` flag above is what turns it on, and
+without it the run fails with `curl: (6) Could not resolve host` at STEP 0 and
+again when `harden.py` tries to reach openrouter.ai. `scripts/run_codex.sh` passes
+the flag for you.
+
+The API key needs no flag: Codex runs commands through `/bin/zsh -lc`, a login
+shell, so anything exported from your shell profile is already visible. Verified
+on codex 0.150.1 — `network_access=true` alone yields `NET=200 KEY=SET`.
 
 ### 2. If bubblewrap is broken on your host
 
