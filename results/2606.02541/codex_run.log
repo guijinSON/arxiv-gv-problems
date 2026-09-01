@@ -1,0 +1,1611 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a05b0f-44c0-74b2-a24d-7e8ec7a22e9e
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know its answer*, because you
+  sampled the answer first and constructed the problem around it.
+- **H — hard.** No known polynomial-time or closed-form method, and the answer space
+  is far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+The answer must be a **witness** — a structured object handed to a checker. Never an
+absence ("no solution exists"), never an optimum whose optimality is the claim,
+never a real number or an asymptotic rate.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the three things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, standard library only, deterministic given `(n, seed)`. No file IO, no
+network, no printing at import. Use `random.Random(seed)`, never global `random`.
+
+```python
+DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
+                            # each maps to kwargs for make_instance
+
+def make_instance(n, seed=0, **params) -> dict
+    """Inverse generation: sample the answer FIRST, then build the problem around
+    it. Returns a dict containing key "answer" (the planted witness) plus all data
+    the solver needs. `n` is the size parameter; larger n must mean harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT."""
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of the naive candidate space, or None if not countable."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship.**
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G6 adversary panel** | Write ≥3 cheap attacks and confirm each FAILS across ≥8 seeds. See below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+5. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard.** The specific theorem and parameter regime you are inside, and
+  — just as important — the easy regimes you had to avoid and the results that
+  identify them. Cite sections by number. This is the part only you know.
+- **A worked example.** A rendered instance small enough to read in full (use your
+  smallest preset), its answer, `verify` returning True on it, and `verify`
+  returning False with its reason on a corrupted variant.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2606.02541
+url: https://arxiv.org/abs/2606.02541
+title: Three-color van der Waerden numbers grow super-exponentially
+categories: math.CO math.NT
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: additive combinatorial structures
+  method: structural scan
+  candidate generator: choose k and construct a coloring avoiding monochromatic arithmetic progressions
+  candidate verifier: scan all k-term arithmetic progressions for monochromatic candidates
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+codex
+I’ll first verify the paper’s exact definition, hardness regime, and easy cases from the full text. I’m using the PDF skill because the paper’s theorem details—not the abstract—determine whether this family is admissible; after that I’ll implement and test only if G/H/V survive.
+hook: PreToolUse
+hook: PreToolUse Completed
+  → Read the full paper and identify an admissible witness family, hardness regime, and easy regimes
+  • Inspect repository harness contracts and implement the generator module
+  • Run and fix all self-test gates, then write selftest_report.json and README.md
+  • Run scripts/harden.py, interpret the oracle verdict, and finalize or reject honestly
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,260p' /Users/jang-wongi/.codex/plugins/cache/openai-primary-runtime/pdf/26.826.12353/skills/pdf/SKILL.md" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541
+ succeeded in 0ms:
+---
+name: "pdf"
+description: "Read, create, inspect, render, and verify PDF files where visual layout matters, including fillable AcroForms. Use Poppler rendering plus Python tools such as reportlab, pdfplumber, and pypdf for generation and extraction."
+---
+
+# PDF Skill
+
+## When To Use
+
+- Read or review PDF content where layout and visuals matter.
+- Create PDFs programmatically with reliable formatting.
+- Fill and validate interactive PDF forms.
+- Validate final rendering before delivery.
+
+## Tools + Contract Requirements
+
+Immediately before the first create/edit authoring command, run `mark_artifact_operation_started.mjs` successfully exactly once using the command below. Do not run it for read-only work. For edits, replace `create` with `edit`; adjust the expected count and output format to match the requested outputs.
+
+```bash
+node container_tools/mark_artifact_operation_started.mjs --operation-kind create --expected-output-count 1 --output-format pdf
+```
+
+## Workflow
+
+1. Prefer visual review: render PDF pages to PNGs and inspect them.
+   - Use `pdftoppm` from the bundled runtime or system Poppler when available.
+   - If unavailable, install Poppler or ask the user to review the output locally.
+2. Use `reportlab` to generate PDFs when creating new documents.
+3. Use `pdfplumber` or `pypdf` for text extraction and quick checks; do not rely on text extraction for layout fidelity.
+4. After each meaningful update, re-render pages and verify alignment, spacing, and legibility.
+
+## Fill And Validate AcroForms
+
+Visual review alone is not a correctness check for a fillable PDF. A page `/Widget` annotation can render a value from its appearance stream while the canonical `/AcroForm/Fields` tree is missing or contains a stale value.
+
+1. Keep the result interactive by default; set `flatten=True` only when the user explicitly requests a completed, static form. Preserve the source PDF, and do not flatten a signed PDF without an explicit workflow decision.
+2. Inspect both representations before filling: enumerate fields from `reader.get_fields()` and `/Widget` annotations from every page's `/Annots`, following `/Parent` and `/Kids`. If a widget and a canonical field have the same name but are distinct objects with no `/Parent` relationship, do not call `reattach_fields()` blindly: it can create a second top-level field with the same name. Report the ambiguity or produce a static result.
+3. Recover genuinely orphaned widgets, fill all pages, and write the result with `pypdf`:
+
+```python
+from pypdf import PdfReader, PdfWriter
+from pypdf.generic import NameObject
+
+reader = PdfReader(input_pdf)
+writer = PdfWriter()
+writer.clone_document_from_reader(reader)
+
+# Restores widgets that are missing from /AcroForm/Fields.
+writer.reattach_fields()
+fields = writer.get_fields() or {}
+missing = set(expected_values) - set(fields)
+if missing:
+    raise ValueError(f"Form fields not found after repair: {sorted(missing)}")
+
+values_to_write = dict(expected_values)
+if flatten:
+    # Paint every existing value before removing every widget.
+    values_to_write = {
+        name: field.get("/V", "/Off" if field.get("/FT") == "/Btn" else "")
+        for name, field in fields.items()
+    }
+    values_to_write.update(expected_values)
+
+writer.update_page_form_field_values(
+    None, values_to_write, auto_regenerate=False, flatten=flatten
+)
+
+if flatten:
+    # pypdf's flatten=True paints appearances but does not remove widgets.
+    writer.remove_annotations(subtypes="/Widget")
+    writer.root_object.pop(NameObject("/AcroForm"), None)
+
+with open(output_pdf, "wb") as stream:
+    writer.write(stream)
+```
+
+4. Reopen the written PDF before delivery. For an interactive result, require every expected field to be present in `get_fields()` with the expected `/V`, enumerate page widgets again, and confirm their effective `/V` (the widget value or inherited `/Parent` value) agrees. Confirm each updated widget has a non-empty `/AP` `/N` appearance and render the final pages to catch stale or clipped appearances. Do not rely on `/NeedAppearances` or a successful PNG render as proof that logical field data was updated.
+5. For a flattened result, require zero `/Widget` annotations and no remaining `/AcroForm` field tree after reopening, then render the final pages. Keep an editable copy when the user may need to revise the form.
+
+## Temp And Output Conventions
+
+- Use `tmp/pdfs/` for intermediate files; delete them when done.
+- Write final artifacts under `output/pdf/` when working in this repo.
+- Keep filenames stable and descriptive.
+
+## Dependencies
+
+Prefer the Codex bundled workspace/runtime dependencies when available. The primary runtime is expected to include:
+
+- Python packages: `reportlab`, `pdfplumber`, `pypdf`
+- Rendering tools: `pdftoppm` and `pdfinfo` from Poppler
+
+If a dependency is missing, install only what is needed.
+
+Python packages:
+
+```bash
+uv pip install reportlab pdfplumber pypdf
+```
+
+If `uv` is unavailable:
+
+```bash
+python3 -m pip install reportlab pdfplumber pypdf
+```
+
+System tools for rendering:
+
+```bash
+# macOS (Homebrew)
+brew install poppler
+
+# Ubuntu/Debian
+sudo apt-get install -y poppler-utils
+```
+
+If installation is not possible in this environment, tell the user which dependency is missing and how to install it locally.
+
+## Environment
+
+No required environment variables.
+
+## Rendering Command
+
+```bash
+pdftoppm -png "$INPUT_PDF" "$OUTPUT_PREFIX"
+```
+
+## Quality Expectations
+
+- Maintain polished visual design: consistent typography, spacing, margins, and section hierarchy.
+- Avoid rendering issues: clipped text, overlapping elements, broken tables, black squares, or unreadable glyphs.
+- Charts, tables, and images must be sharp, aligned, and clearly labeled.
+- Use ASCII hyphens only. Avoid U+2011 and other Unicode dashes.
+- Citations and references must be human-readable; never leave tool tokens or placeholder strings.
+
+## Final Checks
+
+- Do not deliver until the latest PNG inspection shows zero visual or formatting defects.
+- Confirm headers, footers, page numbering, and section transitions look polished.
+- Keep intermediate files organized or remove them after final approval.
+
+## Final response citations
+
+Place `:codex-file-citation{...}` inline in prose, not in a trailing list. Use `purpose="source"` for Q&amp;A/no-op and `purpose="output"` for create/edit.
+
+- [HARD REQUIREMENT] Create/edit: cite each final PDF exactly once with a plain output citation. Summarize representative changes; do not cite every page or add a separate filename, path, or Markdown link. Example: `Created :codex-file-citation{path="/abs/path/report.pdf" purpose="output"}, with the completed analysis and appendix.`
+- Q&amp;A/no-op: do not edit or re-export. Inspect the complete relevant pages, preserve material headings, table/figure labels, footnotes, sources, and sample sizes, and cite each source PDF once with a plain source citation.
+
+PDF citations currently support only plain file citations. Do not add `artifact_kind`, `page_number`, or other locators. Never cite rendered PNGs, scratch files, builders, or QA intermediates unless asked.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: https://arxiv.org/abs/2606.02541
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: 
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: 
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The paper’s main object is existential—an avoidance coloring of an entire interval or cyclic group—not an arbitrary input structure. I’m checking the construction sections carefully now, because the key issue is whether they give a finite inverse generator or merely prove that a coloring exists at astronomically large parameters.
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: 'algorithm'
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "pwd && rg --files -uu . | sed -n '1,160p' && rg --files ../../scripts | sed -n '1,160p'" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541
+ succeeded in 0ms:
+/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541
+./codex_run.log
+./.task.md
+./.meta.json
+../../scripts/submit.sh
+../../scripts/harden.py
+../../scripts/status.sh
+../../scripts/fetch_paper.sh
+../../scripts/emit.sh
+../../scripts/run_codex.sh
+../../scripts/claim.sh
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,260p' ../../scripts/harden.py && sed -n '1,260p' ../../scripts/submit.sh && sed -n '1,220p' .meta.json" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541
+ succeeded in 0ms:
+#!/usr/bin/env python3
+"""The LLM hardening loop.  Usage: python3 scripts/harden.py <path to gen_*.py>
+
+This file, not the builder, owns the loop.  The builder writes gen_<id>.py and
+runs this; everything about which model is asked, with which seed, and when a
+family is declared too easy is decided here.  That is deliberate: a builder that
+reports its own hardening result has an obvious incentive not to report a
+failure, and a transcript whose schema is chosen per run cannot be validated.
+
+Requires OPENROUTER_API_KEY.  The oracle pool spans four vendors, so a single
+OpenAI key is not enough.  Standard library only.
+"""
+
+import importlib.util
+import json
+import os
+import random
+import sys
+import time
+import ssl
+import urllib.error
+import urllib.request
+
+# --- configuration ----------------------------------------------------------
+# The oracle pool.  Four vendors at the same price tier as the model this
+# replaced (openai/gpt-5.6-terra, $2/$12 per M tokens).  A model is drawn afresh
+# for every single call: a family that only defeats one model's blind spots is
+# not hard, it is overfitted to.
+#
+# openai/gpt-5.6-sol is deliberately absent — it is the builder model, and a
+# family checked against its own author proves nothing.
+DEFAULT_POOL = [
+    "openai/gpt-5.6-terra",
+    "anthropic/claude-sonnet-5",
+    "google/gemini-3.1-pro-preview",
+    "x-ai/grok-4.6",
+]
+ORACLE_POOL = [m.strip() for m in os.environ.get(
+    "ORACLE_POOL", ",".join(DEFAULT_POOL)).split(",") if m.strip()]
+
+ORACLE_EFFORT = os.environ.get("ORACLE_EFFORT", "medium")
+ATTEMPTS_PER_PRESET = 3      # distinct models per difficulty level
+MAX_ESCALATIONS = 3          # raises of difficulty before the family is given up on
+MAX_ERROR_RETRIES = 3        # per attempt; API errors do not count as attempts
+MAX_TOKENS = int(os.environ.get("ORACLE_MAX_TOKENS", "32000"))
+# Reasoning tokens are billed against max_tokens on some vendors, so a budget
+# sized for the answer alone comes back HTTP 200 with an empty body — observed
+# live at 16000 against claude-sonnet-5 on a 2030-character statement.
+REQUEST_TIMEOUT = 900
+
+ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _ssl_context():
+    """A context with a CA bundle that actually exists.
+
+    A python.org build on macOS whose "Install Certificates.command" was never
+    run has openssl_cafile pointing at a file that is not there, and every call
+    dies with CERTIFICATE_VERIFY_FAILED.  The loop treats that as an API error
+    and refuses to make a hardness claim, which is the right failure, but it is
+    a failure of the machine and not of the family — so find a usable bundle
+    first.  Never fall back to an unverified context: this call carries an API
+    key.
+    """
+    ctx = ssl.create_default_context()
+    if ctx.cert_store_stats().get("x509_ca", 0) > 0:
+        return ctx
+    candidates = [os.environ.get("SSL_CERT_FILE"), "/etc/ssl/cert.pem",
+                  "/etc/pki/tls/certs/ca-bundle.crt",
+                  "/etc/ssl/certs/ca-certificates.crt"]
+    try:
+        import certifi
+        candidates.append(certifi.where())
+    except ImportError:
+        pass
+    for path in candidates:
+        if path and os.path.exists(path):
+            try:
+                return ssl.create_default_context(cafile=path)
+            except Exception:                                 # noqa: BLE001
+                continue
+    sys.exit("ERROR: no usable CA bundle — TLS verification would fail for every "
+             "oracle call. On a python.org build, run the bundled "
+             "'Install Certificates.command', or set SSL_CERT_FILE.")
+
+
+SSL_CONTEXT = None
+SCHEMA_VERSION = 2
+
+TRANSCRIPT = "llm_loop_transcript.jsonl"
+META = ".meta.json"
+
+
+# --- module loading ---------------------------------------------------------
+def load_module(path):
+    spec = importlib.util.spec_from_file_location("gen", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for fn in ("make_instance", "render", "parse_answer", "verify", "escalate"):
+        if not callable(getattr(mod, fn, None)):
+            sys.exit(f"ERROR: {path} has no callable {fn}() — see prompts/codex_task.md STEP 1")
+    if not isinstance(getattr(mod, "DIFFICULTY", None), dict) or not mod.DIFFICULTY:
+        sys.exit(f"ERROR: {path} has no non-empty DIFFICULTY dict")
+    return mod
+
+
+# --- metadata ---------------------------------------------------------------
+def read_meta():
+    try:
+        with open(META) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def update_meta(**fields):
+    meta = read_meta()
+    meta.update(fields)
+    with open(META, "w") as f:
+        json.dump(meta, f, indent=1)
+
+
+# --- the oracle call --------------------------------------------------------
+def ask(model, prompt, key):
+    """Return (reply_text, http_status, finish_reason, error, empty).
+
+    Exactly one of reply/error is set.  An empty body is NOT an API error: it is
+    flagged via `empty`, and attempt() scores it as an unsolved attempt.  A model
+    that spends its whole budget on reasoning and emits nothing did not produce a
+    witness under the conditions the pool is measured at, so it consumes its slot
+    rather than being redrawn.  The diagnostic is preserved in verify_reason so a
+    level hardened this way can still be told apart from one hardened on wrong
+    answers -- if ORACLE_MAX_TOKENS is the real constraint, raise it and re-run.
+
+    Every model in the default pool accepts OpenRouter's normalised `reasoning`
+    field, so no per-vendor body mapping is needed.  A model that rejects it is
+    reported as an error rather than silently retried without it — dropping the
+    effort setting would change what the hardness claim means.
+    """
+    body = json.dumps({
+        "model": model,
+        "reasoning": {"effort": ORACLE_EFFORT},
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": MAX_TOKENS,
+    }).encode()
+    req = urllib.request.Request(
+        ENDPOINT, data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT,
+                                    context=SSL_CONTEXT) as resp:
+            status = resp.status
+            payload = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        return None, e.code, None, f"http {e.code}: {e.read()[:400].decode('utf-8', 'replace')}", False
+    except Exception as e:                                    # noqa: BLE001
+        return None, None, None, f"{type(e).__name__}: {e}", False
+    try:
+        choice = payload["choices"][0]
+        text = choice["message"]["content"]
+        finish = choice.get("finish_reason") or choice.get("native_finish_reason")
+    except (KeyError, IndexError, TypeError):
+        return None, status, None, f"unparseable response: {json.dumps(payload)[:400]}", False
+    if not (text or "").strip():
+        usage = payload.get("usage") or {}
+        return None, status, finish, (
+            f"empty reply (finish_reason={finish}, usage={json.dumps(usage)[:160]}) — "
+            f"the model returned no content, most likely because reasoning consumed "
+            f"max_tokens={MAX_TOKENS}; raise ORACLE_MAX_TOKENS"), True
+    return text, status, finish, None, False
+
+
+def attempt(mod, model, params, seed, key):
+    """One oracle call.  Returns the transcript record for it."""
+    inst = mod.make_instance(seed=seed, **params)
+    t0 = time.time()
+    reply, status, finish, error, empty = ask(model, mod.render(inst), key)
+    elapsed = round(time.time() - t0, 2)
+
+    rec = {
+        "schema_version": SCHEMA_VERSION,
+        "model": model,
+        "effort": ORACLE_EFFORT,
+        "params": dict(params),
+        "seed": seed,
+        "solved": "error",
+        "parsed": False,
+        "verify_ok": None,
+        "verify_reason": None,
+        "reply": reply,
+        "error": error,
+        "elapsed_sec": elapsed,
+        "http_status": status,
+        "finish_reason": finish,
+    }
+    if empty:
+        # Scored as an unsolved attempt, not an API error: the model returned no
+        # witness within its budget.  error stays None so the invariant
+        # "error is not None => solved == 'error'" holds.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = f"empty length-limited response ({error})"
+        rec["error"] = None
+        return rec
+    if error is not None:
+        return rec
+
+    ans = mod.parse_answer(reply)
+    rec["parsed"] = ans is not None
+    if ans is None:
+        # Not an error, and not evidence of hardness either: a reply that
+        # visibly contains an answer but does not parse is a renderer bug.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = "parse_answer returned None"
+        return rec
+
+    ok, why = mod.verify(inst, ans)
+    rec["verify_ok"] = bool(ok)
+    rec["verify_reason"] = why
+    rec["solved"] = "solved" if ok else "failed"
+    return rec
+
+
+# --- the loop ---------------------------------------------------------------
+def run_level(mod, params, preset, escalation_round, rng, key, out):
+    """Ask the pool to solve this difficulty.  Returns True if any model solved it.
+
+    Draws distinct models where the pool allows, so three failures are three
+    vendors failing rather than one vendor failing three times.  A call that
+    errors out is redrawn against a different model and does not consume an
+    attempt: an API outage must never be recorded as the model failing to solve,
+    which is exactly how a hardness claim gets manufactured out of a 500.  An
+    empty length-limited reply is NOT an error -- it is scored as a failure and
+    consumes its slot (see ask()).
+    """
+    k = min(ATTEMPTS_PER_PRESET, len(ORACLE_POOL))
+    schedule = rng.sample(ORACLE_POOL, k)
+    while len(schedule) < ATTEMPTS_PER_PRESET:
+        schedule.append(rng.choice(ORACLE_POOL))
+
+    # A redraw after an error has to keep the level spread across vendors.  One
+    # model that reliably errors on a family — a reasoning budget it never
+    # escapes at this size, say — would otherwise hand its slot to a vendor that
+    # is either already here or queued next, and "three vendors failed" quietly
+    # becomes "two vendors failed, one of them twice".  Observed live: at n=80 a
+    # sonnet-5 timeout put gpt-5.6-terra in two of three slots.  So a substitute
+    # must avoid whoever has spoken AND whoever is still pending.
+    spoke = set()
+    solved_any = False
+    for slot in range(len(schedule)):
+        model = schedule[slot]
+        pending = set(schedule[slot + 1:])
+        tried, rec = 0, None
+        while tried <= MAX_ERROR_RETRIES:
+            seed = rng.randrange(1, 2**31 - 1)
+            if tried == 0:
+                use = model
+            else:
+                fresh = [m for m in ORACLE_POOL if m not in spoke and m not in pending]
+                use = rng.choice(fresh or [m for m in ORACLE_POOL if m not in spoke]
+#!/usr/bin/env bash
+# Submit a finished paper.  Usage: scripts/submit.sh <arxiv_id>
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
+D="results/$ID"
+[ -d "$D" ] || { echo "ERROR: $D missing."; exit 1; }
+
+if [ -n "$REJECT" ]; then
+  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+  python3 -c "
+import json,datetime,os
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='rejected'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d,open(p,'w'))"
+  rm -f "$D/.orkey" "$D/.task.md"; rm -rf "$D/__pycache__"
+  bash scripts/status.sh --write >/dev/null
+  git add "$D" "claims/$ID.json" STATUS.md
+  git commit -q -m "reject $ID"
+  git pull -q --rebase origin main && bash scripts/status.sh --write >/dev/null && git add STATUS.md \
+    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+    echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+  exit 0
+fi
+
+MOD="$(ls "$D"/gen_*.py 2>/dev/null | head -1)"
+[ -n "$MOD" ] || { echo "ERROR: no gen_*.py in $D — nothing to submit."; exit 2; }
+
+# The builder writes these; a result nobody can read or re-check is not a result.
+for f in README.md selftest_report.json llm_loop_transcript.jsonl; do
+  [ -s "$D/$f" ] || { echo "ERROR: $D/$f missing or empty — see prompts/codex_task.md STEP 5."; exit 7; }
+done
+if [ "$(wc -l < "$D/README.md")" -lt 25 ]; then
+  echo "ERROR: $D/README.md is too short to explain the task — see STEP 5."; exit 7
+fi
+
+# Gate results are the builder's to produce, but "the file exists" is not evidence
+# it ran them.  G8 gets named explicitly: it is the one gate nothing downstream can
+# reconstruct, because a canonical_key built on the seed or on hash(render(inst))
+# passes the diversity count below while making it meaningless.
+python3 - "$D/selftest_report.json" <<'PYGATE' || exit 7
+import json, sys
+try:
+    rep = json.load(open(sys.argv[1]))
+except Exception as e:
+    print(f"ERROR: selftest_report.json is not readable JSON: {e}"); sys.exit(1)
+if not isinstance(rep, dict):
+    print("ERROR: selftest_report.json must be a JSON object"); sys.exit(1)
+gates = {k: v for k, v in rep.items() if k.startswith("G") and k[1:2].isdigit()}
+if not gates:
+    print("ERROR: selftest_report.json records no G* gates — see STEP 3."); sys.exit(1)
+failed = [k for k, v in sorted(gates.items())
+          if not (isinstance(v, dict) and v.get("pass"))]
+if failed:
+    print("ERROR: gates not passing in selftest_report.json: " + ", ".join(failed)); sys.exit(1)
+if rep.get("all_passed") is False:
+    print("ERROR: selftest_report.json says all_passed=false"); sys.exit(1)
+if not any(k.startswith("G8") for k in gates):
+    print("ERROR: no G8 gate in selftest_report.json — canonical_key invariance was\n"
+          "       never tested.  submit.sh counts distinct keys but cannot tell a real\n"
+          "       invariant from a hash of the seed.  See prompts/codex_task.md, G8.")
+    sys.exit(1)
+print(f"== gates ==\n  {len(gates)} gates pass, G8 canonical_key present")
+PYGATE
+
+echo "== hardening transcript =="
+python3 - "$D" <<'PY'
+import json, os, sys
+D = sys.argv[1]
+try:
+    meta = json.load(open(os.path.join(D, ".meta.json")))
+except (OSError, ValueError):
+    meta = {}
+ver = meta.get("schema_version", 1)
+rows = [json.loads(l) for l in open(os.path.join(D, "llm_loop_transcript.jsonl")) if l.strip()]
+
+if ver < 2:
+    # Built before scripts/harden.py existed: single fixed oracle, builder-authored
+    # transcript.  Grandfathered rather than re-run, and tagged so that nobody has
+    # to guess later which rules it was checked against.
+    print(f"  schema_version={ver} (legacy, pre-harden.py) — {len(rows)} calls, not re-validated")
+    sys.exit(0)
+
+NEED = {"schema_version","model","effort","preset","params","seed","escalation_round",
+        "solved","parsed","verify_ok","verify_reason","reply","error","elapsed_sec",
+        "http_status","finish_reason"}
+fail = []
+for n, r in enumerate(rows, 1):
+    missing = NEED - set(r)
+    if missing:
+        fail.append(f"line {n}: missing keys {sorted(missing)}")
+if not rows:
+    fail.append("transcript is empty")
+
+models = {r.get("model") for r in rows}
+if len(models) < 3:
+    fail.append(f"only {len(models)} distinct oracle model(s) used: {sorted(models)} — "
+                "the pool must be redrawn per call")
+seeds = [r.get("seed") for r in rows]
+if len(set(seeds)) != len(seeds):
+    fail.append("repeated seeds — every attempt must use a distinct instance")
+rounds = [r.get("escalation_round", 0) for r in rows]
+cap = meta.get("max_escalations", 3)
+if rounds and max(rounds) > cap:
+    fail.append(f"escalation_round reached {max(rounds)}, above the cap of {cap}")
+# The hardness claim rests on the level that held, not on the run as a whole:
+# a transcript can show four vendors overall while the shipping level was decided
+# by two of them.
+verdict = meta.get("harden_verdict", {})
+if verdict.get("verdict") == "hardened" and rows:
+    top = max(rounds)
+    deciders = {r.get("model") for r in rows
+                if r.get("escalation_round") == top and r.get("solved") != "error"}
+    want = min(3, len(meta.get("oracle_pool") or []) or 3)
+    if len(deciders) < want:
+        fail.append(f"the shipping level was decided by only {len(deciders)} distinct "
+                    f"vendor(s) {sorted(deciders)}; the all-fail claim needs {want}")
+if verdict.get("verdict") == "too_easy":
+    fail.append("harden.py returned verdict too_easy — this family is given up on; "
+                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+
+if fail:
+    print("TRANSCRIPT INVALID:")
+    for f in fail: print("  -", f)
+    sys.exit(1)
+print(f"  {len(rows)} calls | {len(models)} distinct models | "
+      f"{max(rounds)+1} difficulty level(s) | verdict "
+      f"{meta.get('harden_verdict',{}).get('verdict')}")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — see prompts/codex_task.md STEP 4."; exit 8; }
+
+echo "== interface check =="
+python3 - "$MOD" <<'PY'
+import importlib.util, sys
+p=sys.argv[1]
+s=importlib.util.spec_from_file_location("m",p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
+need=["make_instance","render","parse_answer","verify","random_candidate","search_space",
+      "enumerate_all","canonical_key","escalate"]
+miss=[f for f in need if not callable(getattr(m,f,None))]
+if miss: print("MISSING:", miss); sys.exit(1)
+i=m.make_instance(**(getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})), seed=0)
+ok,why=m.verify(i, i["answer"])
+if not ok: print("G1 FAIL: planted answer does not verify:", why); sys.exit(1)
+rt = m.parse_answer(f"<answer>{', '.join(map(str,i['answer']))}</answer>") == i["answer"] \
+     if isinstance(i["answer"], list) else True
+# canonical_key must be a function of the instance, not of the call.  A key that
+# is not deterministic cannot detect a duplicate; we cannot check the harder
+# property (invariance under relabelling) without family-specific machinery, so
+# the README caveats have to carry that one.
+params = getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})
+k1 = m.canonical_key(m.make_instance(**params, seed=4242))
+k2 = m.canonical_key(m.make_instance(**params, seed=4242))
+if not isinstance(k1,str) or k1 != k2:
+    print("canonical_key FAIL: not deterministic or not a str:", repr(k1), repr(k2)); sys.exit(1)
+if m.canonical_key(m.make_instance(**params, seed=4243)) == k1:
+    print("canonical_key FAIL: two different seeds collide — the key ignores the instance"); sys.exit(1)
+print("  interface OK | planted verifies | parse round-trip:", rt, "| canonical_key deterministic")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — fix the module first."; exit 3; }
+
+rm -f "$D/.orkey" "$D/.task.md"; rm -rf "$D/__pycache__"
+echo "== emitting sample instances =="
+bash scripts/emit.sh "$ID" "${EMIT_N:-20}" || { echo "SUBMIT BLOCKED — emit failed."; exit 5; }
+
+# emit.sh already resamples past duplicates; this re-checks the file it produced,
+# so the thing that generates the instances is not the only thing that vouches
+# for them.
+echo "== diversity =="
+python3 - "$MOD" "artifacts/$ID.jsonl" <<'PY'
+import importlib.util, json, sys
+mod_path, art = sys.argv[1], sys.argv[2]
+s = importlib.util.spec_from_file_location("m", mod_path)
+m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+recs = [json.loads(l) for l in open(art) if l.strip()]
+keys = [m.canonical_key(m.make_instance(**r["params"])) for r in recs]
+dupes = len(keys) - len(set(keys))
+if dupes:
+    print(f"  {dupes} duplicate instance(s) out of {len(keys)} — isomorphic problems in "
+          f"the dataset"); sys.exit(1)
+print(f"  {len(set(keys))}/{len(keys)} distinct canonical keys")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — duplicate instances."; exit 9; }
+
+
+python3 -c "
+import json,os,datetime
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='done'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d, open(p,'w'))"
+bash scripts/status.sh --write >/dev/null
+git add "$D" "artifacts/$ID.jsonl" "claims/$ID.json" STATUS.md
+git commit -q -m "result $ID"
+# STATUS.md is generated: on conflict, regenerate rather than merge
+git pull -q --rebase origin main 2>/dev/null || { git checkout --ours STATUS.md 2>/dev/null; git add STATUS.md 2>/dev/null; git rebase --continue >/dev/null 2>&1 || true; }
+bash scripts/status.sh --write >/dev/null; git add STATUS.md
+git diff --cached --quiet 2>/dev/null || git commit -q --amend --no-edit 2>/dev/null
+git push -q origin main && echo "SUBMITTED $ID" || {
+  echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+{
+ "paper": "2606.02541",
+ "schema_version": 2,
+ "model": "gpt-5.6-sol",
+ "effort": "xhigh",
+ "codex_version": "0.150.1",
+ "started_at": "2026-09-01T03:42:01Z"
+}
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The family fails the acceptance test before implementation. At fixed \((k,N,r)\), the native task has no seed-dependent instance data to construct around a sampled coloring; the paper instead proves existence through probabilistic/recursive constructions whose valid regime makes the explicit witness and exact scan astronomically large. I’m documenting the rejection with the precise section-level reasons rather than manufacturing a different planted hypergraph problem.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "git status --short && sed -n '300,365p' <(curl -Ls https://arxiv.org/html/2606.02541) 2>/dev/null | sed -n '1,80p'" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541
+ succeeded in 637ms:
+</div>
+<div id="S1.SS2.p2" class="ltx_para">
+<p id="S1.SS2.p2.1" class="ltx_p">We suspect that the techniques developed here should be implementable to obtain new lower bound constructions for small van der Waerden numbers with at least three colors. See the Wikipedia page <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib33" title="" class="ltx_ref">33</a>]</cite> for current known lower bounds.</p>
+</div>
+<div id="S1.SS2.p3" class="ltx_para ltx_noindent">
+<p id="S1.SS2.p3.1" class="ltx_p"><span id="S1.SS2.p3.1.1" class="ltx_text ltx_font_bold">Organization.</span> In the next section, we present constructions of very dense sets without <math id="S1.SS2.p3.m1" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-term arithmetic progressions in both the interval and cyclic setting. In Section <a href="#S3" title="3 Lovász local lemma consequences ‣ Three-color van der Waerden numbers grow super-exponentially" class="ltx_ref"><span class="ltx_text ltx_ref_tag">3</span></a>, we present a simple consequence of the Lovász local lemma that shows there are set colorings which are far from containing monochromatic <math id="S1.SS2.p3.m2" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-term arithmetic progressions. In Section <a href="#S4" title="4 Random Shifted Product Constructions ‣ Three-color van der Waerden numbers grow super-exponentially" class="ltx_ref"><span class="ltx_text ltx_ref_tag">4</span></a>, we provide several different variants of our random shifted product construction. In Section <a href="#S5" title="5 Lower bounds on van der Waerden numbers ‣ Three-color van der Waerden numbers grow super-exponentially" class="ltx_ref"><span class="ltx_text ltx_ref_tag">5</span></a>, we combine the various tools from the previous sections to obtain Theorems <a href="#Thmthm1" title="Theorem 1. ‣ 1 Introduction ‣ Three-color van der Waerden numbers grow super-exponentially" class="ltx_ref"><span class="ltx_text ltx_ref_tag">1</span></a> and <a href="#Thmthm2" title="Theorem 2. ‣ 1 Introduction ‣ Three-color van der Waerden numbers grow super-exponentially" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2</span></a> giving lower bounds on van der Waerden numbers.</p>
+</div>
+<div id="S1.SS2.p4" class="ltx_para">
+<p id="S1.SS2.p4.1" class="ltx_p">All logarithms are base <math id="S1.SS2.p4.m1" class="ltx_Math" alttext="e" display="inline" intent=":literal"><semantics><mi>e</mi><annotation encoding="application/x-tex">e</annotation></semantics></math> unless otherwise specified. We also sometimes omit floor and ceiling signs when this has no effect on the argument.</p>
+</div>
+<div id="S1.SS2.p5" class="ltx_para ltx_noindent">
+<p id="S1.SS2.p5.1" class="ltx_p"><span id="S1.SS2.p5.1.1" class="ltx_text ltx_font_bold">Disclosure.</span> The authors used Chat GPT Pro 5.5 for copyediting assistance during the final edits of this paper. All mathematical arguments and results in this paper were human-deduced.</p>
+</div>
+</section>
+</section>
+<section id="S2" class="ltx_section">
+<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">2 </span>Very dense sets without long arithmetic progressions</h2>
+
+<div id="S2.p1" class="ltx_para">
+<p id="S2.p1.1" class="ltx_p">Erdős and Turán <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib16" title="" class="ltx_ref">16</a>]</cite> gave the following simple construction of a set of nonnegative integers with no long arithmetic progressions. For a prime <math id="S2.p1.m1" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, let <math id="S2.p1.m2" class="ltx_Math" alttext="T_{p}" display="inline" intent=":literal"><semantics><msub><mi>T</mi><mi>p</mi></msub><annotation encoding="application/x-tex">T_{p}</annotation></semantics></math> denote the set of nonnegative integers which, when written in base <math id="S2.p1.m3" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, has no digit equal to <math id="S2.p1.m4" class="ltx_Math" alttext="p-1" display="inline" intent=":literal"><semantics><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">p-1</annotation></semantics></math>. The set <math id="S2.p1.m5" class="ltx_Math" alttext="T_{p}" display="inline" intent=":literal"><semantics><msub><mi>T</mi><mi>p</mi></msub><annotation encoding="application/x-tex">T_{p}</annotation></semantics></math> has no <math id="S2.p1.m6" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>-term arithmetic progression. Indeed, if otherwise, letting <math id="S2.p1.m7" class="ltx_Math" alttext="a,a+d,\ldots,a+(p-1)d" display="inline" intent=":literal"><semantics><mrow><mi>a</mi><mo>,</mo><mrow><mi>a</mi><mo>+</mo><mi>d</mi></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi>a</mi><mo>+</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mo lspace="0em" rspace="0em">​</mo><mi>d</mi></mrow></mrow></mrow><annotation encoding="application/x-tex">a,a+d,\ldots,a+(p-1)d</annotation></semantics></math> be a <math id="S2.p1.m8" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>-term arithmetic progression with elements in <math id="S2.p1.m9" class="ltx_Math" alttext="T_{p}" display="inline" intent=":literal"><semantics><msub><mi>T</mi><mi>p</mi></msub><annotation encoding="application/x-tex">T_{p}</annotation></semantics></math>, consider the position <math id="S2.p1.m10" class="ltx_Math" alttext="i" display="inline" intent=":literal"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math> of the least nonzero digit in base <math id="S2.p1.m11" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math> of the common difference <math id="S2.p1.m12" class="ltx_Math" alttext="d" display="inline" intent=":literal"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math>. As we go through the elements of the arithmetic progression, we get every element of <math id="S2.p1.m13" class="ltx_Math" alttext="\{0,1,\ldots,p-1\}" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></mrow><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{0,1,\ldots,p-1\}</annotation></semantics></math> appearing exactly once in position <math id="S2.p1.m14" class="ltx_Math" alttext="i" display="inline" intent=":literal"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math> in base <math id="S2.p1.m15" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>. One can also check that <math id="S2.p1.m16" class="ltx_Math" alttext="T_{p}" display="inline" intent=":literal"><semantics><msub><mi>T</mi><mi>p</mi></msub><annotation encoding="application/x-tex">T_{p}</annotation></semantics></math> is precisely the greedy construction of a set of nonnegative integers which has no <math id="S2.p1.m17" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>-term arithmetic progression, so it is natural to suspect that it is rather dense (or at least at the beginning). Note that <math id="S2.p1.m18" class="ltx_Math" alttext="T_{p}" display="inline" intent=":literal"><semantics><msub><mi>T</mi><mi>p</mi></msub><annotation encoding="application/x-tex">T_{p}</annotation></semantics></math> contains exactly <math id="S2.p1.m19" class="ltx_Math" alttext="(p-1)^{t}" display="inline" intent=":literal"><semantics><msup><mrow><mo stretchy="false">(</mo><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mi>t</mi></msup><annotation encoding="application/x-tex">(p-1)^{t}</annotation></semantics></math> elements from <math id="S2.p1.m20" class="ltx_Math" alttext="\{0,1,\ldots,p^{t}-1\}" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><msup><mi>p</mi><mi>t</mi></msup><mo>−</mo><mn>1</mn></mrow></mrow><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{0,1,\ldots,p^{t}-1\}</annotation></semantics></math>, which is the set of nonnegative integers with at most <math id="S2.p1.m21" class="ltx_Math" alttext="t" display="inline" intent=":literal"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math> digits when written in base <math id="S2.p1.m22" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>. In particular, if <math id="S2.p1.m23" class="ltx_Math" alttext="N=p^{t}" display="inline" intent=":literal"><semantics><mrow><mi>N</mi><mo>=</mo><msup><mi>p</mi><mi>t</mi></msup></mrow><annotation encoding="application/x-tex">N=p^{t}</annotation></semantics></math>, we have <math id="S2.p1.m24" class="ltx_Math" alttext="|T_{p}\cap\{0,1,\ldots,N-1\}|/N=(1-1/p)^{t}" display="inline" intent=":literal"><semantics><mrow><mrow><mrow><mo stretchy="false">|</mo><mrow><msub><mi>T</mi><mi>p</mi></msub><mo>∩</mo><mrow><mo stretchy="false">{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow></mrow><mo stretchy="false">}</mo></mrow></mrow><mo stretchy="false">|</mo></mrow><mo>/</mo><mi>N</mi></mrow><mo>=</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>1</mn><mo>/</mo><mi>p</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mi>t</mi></msup></mrow><annotation encoding="application/x-tex">|T_{p}\cap\{0,1,\ldots,N-1\}|/N=(1-1/p)^{t}</annotation></semantics></math>. More generally, it follows from a simple induction argument on <math id="S2.p1.m25" class="ltx_Math" alttext="t" display="inline" intent=":literal"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math> that if a positive integer <math id="S2.p1.m26" class="ltx_Math" alttext="N" display="inline" intent=":literal"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math> is such that <math id="S2.p1.m27" class="ltx_Math" alttext="N-1" display="inline" intent=":literal"><semantics><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">N-1</annotation></semantics></math> has at most <math id="S2.p1.m28" class="ltx_Math" alttext="t" display="inline" intent=":literal"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math> digits when written in base <math id="S2.p1.m29" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, then <math id="S2.p1.m30" class="ltx_Math" alttext="|T_{p}\cap\{0,1,\ldots,N-1\}|/N\geq(1-1/p)^{t}" display="inline" intent=":literal"><semantics><mrow><mrow><mrow><mo stretchy="false">|</mo><mrow><msub><mi>T</mi><mi>p</mi></msub><mo>∩</mo><mrow><mo stretchy="false">{</mo><mrow><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow></mrow><mo stretchy="false">}</mo></mrow></mrow><mo stretchy="false">|</mo></mrow><mo>/</mo><mi>N</mi></mrow><mo>≥</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>1</mn><mo>/</mo><mi>p</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mi>t</mi></msup></mrow><annotation encoding="application/x-tex">|T_{p}\cap\{0,1,\ldots,N-1\}|/N\geq(1-1/p)^{t}</annotation></semantics></math>.</p>
+</div>
+<div id="S2.p2" class="ltx_para">
+<p id="S2.p2.1" class="ltx_p">The function <math id="S2.p2.m1" class="ltx_Math" alttext="r_{k}(N)" display="inline" intent=":literal"><semantics><mrow><msub><mi>r</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">r_{k}(N)</annotation></semantics></math> is the maximum size of a subset of <math id="S2.p2.m2" class="ltx_Math" alttext="[N]" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">[</mo><mi>N</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[N]</annotation></semantics></math> which contains no <math id="S2.p2.m3" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-term arithmetic progression. Szemerédi’s theorem <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib32" title="" class="ltx_ref">32</a>]</cite> states that for every fixed <math id="S2.p2.m4" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>, we have <math id="S2.p2.m5" class="ltx_Math" alttext="r_{k}(N)=o(N)" display="inline" intent=":literal"><semantics><mrow><mrow><msub><mi>r</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow><mo>=</mo><mrow><mi>o</mi><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow></mrow><annotation encoding="application/x-tex">r_{k}(N)=o(N)</annotation></semantics></math>. From the above discussion, we have the following corollary.</p>
+</div>
+<div id="S2.Thmresult1" class="ltx_theorem ltx_theorem_cor">
+<h6 class="ltx_title ltx_runin ltx_title_theorem"><span class="ltx_tag ltx_tag_theorem"><span id="S2.Thmresult1.2" class="ltx_text ltx_font_bold">Corollary 2.1</span></span><span id="S2.Thmresult1.3" class="ltx_text ltx_font_bold">.</span></h6>
+<div id="S2.Thmresult1.p1" class="ltx_para">
+<p id="S2.Thmresult1.p1.1" class="ltx_p"><span id="S2.Thmresult1.p1.1.1" class="ltx_text ltx_font_italic">If <math id="S2.Thmresult1.p1.m1" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math> is prime, <math id="S2.Thmresult1.p1.m2" class="ltx_Math" alttext="t" display="inline" intent=":literal"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math> is a positive integer, and <math id="S2.Thmresult1.p1.m3" class="ltx_Math" alttext="N\leq p^{t}" display="inline" intent=":literal"><semantics><mrow><mi>N</mi><mo>≤</mo><msup><mi>p</mi><mi>t</mi></msup></mrow><annotation encoding="application/x-tex">N\leq p^{t}</annotation></semantics></math>, then <math id="S2.Thmresult1.p1.m4" class="ltx_Math" alttext="r_{p}(N)\geq(1-1/p)^{t}N" display="inline" intent=":literal"><semantics><mrow><mrow><msub><mi>r</mi><mi>p</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow><mo>≥</mo><mrow><msup><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>1</mn><mo>/</mo><mi>p</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mi>t</mi></msup><mo lspace="0em" rspace="0em">​</mo><mi>N</mi></mrow></mrow><annotation encoding="application/x-tex">r_{p}(N)\geq(1-1/p)^{t}N</annotation></semantics></math>.</span></p>
+</div>
+</div>
+<div id="S2.p3" class="ltx_para">
+<p id="S2.p3.1" class="ltx_p">If <math id="S2.p3.m1" class="ltx_Math" alttext="k=\Theta(\log N)" display="inline" intent=":literal"><semantics><mrow><mi>k</mi><mo>=</mo><mrow><mi mathvariant="normal">Θ</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mrow><mi>log</mi><mo lspace="0.167em">⁡</mo><mi>N</mi></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow><annotation encoding="application/x-tex">k=\Theta(\log N)</annotation></semantics></math> we get <math id="S2.p3.m2" class="ltx_Math" alttext="r_{k}(N)\geq(1-\Theta(1/\log N))N" display="inline" intent=":literal"><semantics><mrow><mrow><msub><mi>r</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow><mo>≥</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mi mathvariant="normal">Θ</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>/</mo><mrow><mi>log</mi><mo lspace="0.167em">⁡</mo><mi>N</mi></mrow></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow><mo stretchy="false">)</mo></mrow><mo lspace="0em" rspace="0em">​</mo><mi>N</mi></mrow></mrow><annotation encoding="application/x-tex">r_{k}(N)\geq(1-\Theta(1/\log N))N</annotation></semantics></math> from Corollary <a href="#S2.Thmresult1" title="Corollary 2.1. ‣ 2 Very dense sets without long arithmetic progressions ‣ Three-color van der Waerden numbers grow super-exponentially" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a> and Bertrand’s postulate. In particular, in this case there are subsets of <math id="S2.p3.m3" class="ltx_Math" alttext="[N]" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">[</mo><mi>N</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[N]</annotation></semantics></math> of density <math id="S2.p3.m4" class="ltx_Math" alttext="1-o(1)" display="inline" intent=":literal"><semantics><mrow><mn>1</mn><mo>−</mo><mrow><mi>o</mi><mo>⁡</mo><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></mrow></mrow><annotation encoding="application/x-tex">1-o(1)</annotation></semantics></math> that do not contain a <math id="S2.p3.m5" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-term arithmetic progression. Such sets are a useful starting point for randomized shifted product constructions. However, for technical reasons, it is much more convenient to transition from the setting of discrete intervals to cyclic groups, so let us introduce some more notation.</p>
+</div>
+<div id="S2.p4" class="ltx_para">
+<p id="S2.p4.1" class="ltx_p">All groups we consider here are abelian. In an abelian group, a <math id="S2.p4.m1" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-term arithmetic progression (<math id="S2.p4.m2" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-AP for short) is a sequence <math id="S2.p4.m3" class="ltx_Math" alttext="a,a+d,a+2d,\ldots,a+(k-1)d" display="inline" intent=":literal"><semantics><mrow><mi>a</mi><mo>,</mo><mrow><mi>a</mi><mo>+</mo><mi>d</mi></mrow><mo>,</mo><mrow><mi>a</mi><mo>+</mo><mrow><mn>2</mn><mo lspace="0em" rspace="0em">​</mo><mi>d</mi></mrow></mrow><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><mi>a</mi><mo>+</mo><mrow><mrow><mo stretchy="false">(</mo><mrow><mi>k</mi><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow><mo lspace="0em" rspace="0em">​</mo><mi>d</mi></mrow></mrow></mrow><annotation encoding="application/x-tex">a,a+d,a+2d,\ldots,a+(k-1)d</annotation></semantics></math> with <math id="S2.p4.m4" class="ltx_Math" alttext="d" display="inline" intent=":literal"><semantics><mi>d</mi><annotation encoding="application/x-tex">d</annotation></semantics></math> nonzero. We say a subset of the group is <math id="S2.p4.m5" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math><span id="S2.p4.1.1" class="ltx_text ltx_font_italic">-AP-free</span> if it does not contain a <math id="S2.p4.m6" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-AP. The following is an analogue of the Erdős-Turán construction in certain cyclic groups.</p>
+</div>
+<div id="S2.Thmresult2" class="ltx_theorem ltx_theorem_lem">
+<h6 class="ltx_title ltx_runin ltx_title_theorem"><span class="ltx_tag ltx_tag_theorem"><span id="S2.Thmresult2.2" class="ltx_text ltx_font_bold">Lemma 2.2</span></span><span id="S2.Thmresult2.3" class="ltx_text ltx_font_bold">.</span></h6>
+<div id="S2.Thmresult2.p1" class="ltx_para">
+<p id="S2.Thmresult2.p1.1" class="ltx_p"><span id="S2.Thmresult2.p1.1.1" class="ltx_text ltx_font_italic">Consider primes <math id="S2.Thmresult2.p1.m1" class="ltx_Math" alttext="p_{1},\ldots,p_{s}\leq k" display="inline" intent=":literal"><semantics><mrow><msub><mi>p</mi><mn>1</mn></msub><mo>,</mo><mi mathvariant="normal">…</mi><mo>,</mo><mrow><msub><mi>p</mi><mi>s</mi></msub><mo>≤</mo><mi>k</mi></mrow></mrow><annotation encoding="application/x-tex">p_{1},\ldots,p_{s}\leq k</annotation></semantics></math> (not necessarily distinct). Let <math id="S2.Thmresult2.p1.m2" class="ltx_Math" alttext="N=\prod_{i=1}^{s}p_{i}" display="inline" intent=":literal"><semantics><mrow><mi>N</mi><mo rspace="0.111em">=</mo><mrow><msubsup><mo>∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>s</mi></msubsup><msub><mi>p</mi><mi>i</mi></msub></mrow></mrow><annotation encoding="application/x-tex">N=\prod_{i=1}^{s}p_{i}</annotation></semantics></math> and <math id="S2.Thmresult2.p1.m3" class="ltx_Math" alttext="m=\min_{i\in[s]}p_{i}" display="inline" intent=":literal"><semantics><mrow><mi>m</mi><mo>=</mo><mrow><msub><mi>min</mi><mrow><mi>i</mi><mo>∈</mo><mrow><mo stretchy="false">[</mo><mi>s</mi><mo stretchy="false">]</mo></mrow></mrow></msub><mo lspace="0.167em">⁡</mo><msub><mi>p</mi><mi>i</mi></msub></mrow></mrow><annotation encoding="application/x-tex">m=\min_{i\in[s]}p_{i}</annotation></semantics></math>. There is a subset <math id="S2.Thmresult2.p1.m4" class="ltx_Math" alttext="S\subset\mathbb{Z}_{N}" display="inline" intent=":literal"><semantics><mrow><mi>S</mi><mo>⊂</mo><msub><mi>ℤ</mi><mi>N</mi></msub></mrow><annotation encoding="application/x-tex">S\subset\mathbb{Z}_{N}</annotation></semantics></math> of size <math id="S2.Thmresult2.p1.m5" class="ltx_Math" alttext="|S|=\prod_{i=1}^{s}(p_{i}-1)\geq(1-1/m)^{s}N" display="inline" intent=":literal"><semantics><mrow><mrow><mo stretchy="false">|</mo><mi>S</mi><mo stretchy="false">|</mo></mrow><mo rspace="0.111em">=</mo><mrow><msubsup><mo rspace="0em">∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>s</mi></msubsup><mrow><mo stretchy="false">(</mo><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow><mo>≥</mo><mrow><msup><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>1</mn><mo>/</mo><mi>m</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mi>s</mi></msup><mo lspace="0em" rspace="0em">​</mo><mi>N</mi></mrow></mrow><annotation encoding="application/x-tex">|S|=\prod_{i=1}^{s}(p_{i}-1)\geq(1-1/m)^{s}N</annotation></semantics></math> that is <math id="S2.Thmresult2.p1.m6" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-AP-free.</span></p>
+</div>
+</div>
+<div id="S2.p5" class="ltx_para">
+<ul id="S2.p5.1" class="ltx_itemize">
+</ul>
+</div>
+<div id="S2.p6" class="ltx_para">
+<p id="S2.p6.1" class="ltx_p">We can write <math id="S2.p6.m1" class="ltx_Math" alttext="\mathbb{Z}_{N}" display="inline" intent=":literal"><semantics><msub><mi>ℤ</mi><mi>N</mi></msub><annotation encoding="application/x-tex">\mathbb{Z}_{N}</annotation></semantics></math> as a product of cyclic groups, each of prime power order with distinct primes, and these primes are each at most <math id="S2.p6.m2" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>. Note that it suffices to prove the lemma in the case <math id="S2.p6.m3" class="ltx_Math" alttext="N" display="inline" intent=":literal"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math> is such a prime power, as we can get the desired set <math id="S2.p6.m4" class="ltx_Math" alttext="S" display="inline" intent=":literal"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math> in the general case by taking the product of the sets we get in the prime power case. So suppose <math id="S2.p6.m5" class="ltx_Math" alttext="N=p^{s}" display="inline" intent=":literal"><semantics><mrow><mi>N</mi><mo>=</mo><msup><mi>p</mi><mi>s</mi></msup></mrow><annotation encoding="application/x-tex">N=p^{s}</annotation></semantics></math> with <math id="S2.p6.m6" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math> prime, <math id="S2.p6.m7" class="ltx_Math" alttext="p\leq k" display="inline" intent=":literal"><semantics><mrow><mi>p</mi><mo>≤</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">p\leq k</annotation></semantics></math>, and <math id="S2.p6.m8" class="ltx_Math" alttext="s" display="inline" intent=":literal"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math> a positive integer. We view the elements of <math id="S2.p6.m9" class="ltx_Math" alttext="\mathbb{Z}_{N}" display="inline" intent=":literal"><semantics><msub><mi>ℤ</mi><mi>N</mi></msub><annotation encoding="application/x-tex">\mathbb{Z}_{N}</annotation></semantics></math> as <math id="S2.p6.m10" class="ltx_Math" alttext="\{0,1\ldots,N-1\}" display="inline" intent=":literal"><semantics><mrow><mo stretchy="false">{</mo><mrow><mn>0</mn><mo>,</mo><mrow><mn>1</mn><mo lspace="0em" rspace="0em">​</mo><mi mathvariant="normal">…</mi></mrow><mo>,</mo><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow></mrow><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">\{0,1\ldots,N-1\}</annotation></semantics></math>, and let <math id="S2.p6.m11" class="ltx_Math" alttext="S\subset\mathbb{Z}_{N}" display="inline" intent=":literal"><semantics><mrow><mi>S</mi><mo>⊂</mo><msub><mi>ℤ</mi><mi>N</mi></msub></mrow><annotation encoding="application/x-tex">S\subset\mathbb{Z}_{N}</annotation></semantics></math> consist of those elements that have no digit equal to <math id="S2.p6.m12" class="ltx_Math" alttext="p-1" display="inline" intent=":literal"><semantics><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">p-1</annotation></semantics></math> when written in base <math id="S2.p6.m13" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>. The same argument as in the integer case gives that <math id="S2.p6.m14" class="ltx_Math" alttext="S" display="inline" intent=":literal"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math> has no <math id="S2.p6.m15" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>-term arithmetic progression. As <math id="S2.p6.m16" class="ltx_Math" alttext="p\leq k" display="inline" intent=":literal"><semantics><mrow><mi>p</mi><mo>≤</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">p\leq k</annotation></semantics></math>, <math id="S2.p6.m17" class="ltx_Math" alttext="S" display="inline" intent=":literal"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math> also has no <math id="S2.p6.m18" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-term arithmetic progression. In this case, the size of <math id="S2.p6.m19" class="ltx_Math" alttext="S" display="inline" intent=":literal"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math> is <math id="S2.p6.m20" class="ltx_Math" alttext="(1-1/p)^{s}N\geq(1-1/m)^{s}N" display="inline" intent=":literal"><semantics><mrow><mrow><msup><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>1</mn><mo>/</mo><mi>p</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mi>s</mi></msup><mo lspace="0em" rspace="0em">​</mo><mi>N</mi></mrow><mo>≥</mo><mrow><msup><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>1</mn><mo>/</mo><mi>m</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mi>s</mi></msup><mo lspace="0em" rspace="0em">​</mo><mi>N</mi></mrow></mrow><annotation encoding="application/x-tex">(1-1/p)^{s}N\geq(1-1/m)^{s}N</annotation></semantics></math>.
+∎</p>
+</div>
+<div id="S2.p7" class="ltx_para">
+<p id="S2.p7.1" class="ltx_p">Let <math id="S2.p7.m1" class="ltx_Math" alttext="\delta_{k}(N):=\min_{M\leq N}\{\frac{r_{k}(M)}{M}\}" display="inline" intent=":literal"><semantics><mrow><mrow><msub><mi>δ</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow><mo>:=</mo><mrow><msub><mi>min</mi><mrow><mi>M</mi><mo>≤</mo><mi>N</mi></mrow></msub><mo>⁡</mo><mrow><mo stretchy="false">{</mo><mfrac><mrow><msub><mi>r</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>M</mi><mo stretchy="false">)</mo></mrow></mrow><mi>M</mi></mfrac><mo stretchy="false">}</mo></mrow></mrow></mrow><annotation encoding="application/x-tex">\delta_{k}(N):=\min_{M\leq N}\{\frac{r_{k}(M)}{M}\}</annotation></semantics></math>. The reason for this choice is to make <math id="S2.p7.m2" class="ltx_Math" alttext="\delta_{k}(N)" display="inline" intent=":literal"><semantics><mrow><msub><mi>δ</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow><annotation encoding="application/x-tex">\delta_{k}(N)</annotation></semantics></math> monotone decreasing. Indeed, note that <math id="S2.p7.m3" class="ltx_Math" alttext="r_{k}(N)/N" display="inline" intent=":literal"><semantics><mrow><mrow><msub><mi>r</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow><mo>/</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">r_{k}(N)/N</annotation></semantics></math> is not monotone, as <math id="S2.p7.m4" class="ltx_Math" alttext="\frac{r_{k}(2k-1)}{2k-1}=1-1/(2k-1)&gt;1-1/k=\frac{r_{k}(k)}{k}" display="inline" intent=":literal"><semantics><mrow><mfrac><mrow><msub><mi>r</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">​</mo><mi>k</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow><mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">​</mo><mi>k</mi></mrow><mo>−</mo><mn>1</mn></mrow></mfrac><mo>=</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>1</mn><mo>/</mo><mrow><mo stretchy="false">(</mo><mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">​</mo><mi>k</mi></mrow><mo>−</mo><mn>1</mn></mrow><mo stretchy="false">)</mo></mrow></mrow></mrow><mo>&gt;</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>1</mn><mo>/</mo><mi>k</mi></mrow></mrow><mo>=</mo><mfrac><mrow><msub><mi>r</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>k</mi><mo stretchy="false">)</mo></mrow></mrow><mi>k</mi></mfrac></mrow><annotation encoding="application/x-tex">\frac{r_{k}(2k-1)}{2k-1}=1-1/(2k-1)&gt;1-1/k=\frac{r_{k}(k)}{k}</annotation></semantics></math>.</p>
+</div>
+<div id="S2.p8" class="ltx_para">
+<p id="S2.p8.1" class="ltx_p">By Bertrand’s postulate, for every integer <math id="S2.p8.m1" class="ltx_Math" alttext="N\geq 2" display="inline" intent=":literal"><semantics><mrow><mi>N</mi><mo>≥</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">N\geq 2</annotation></semantics></math>, there is a prime <math id="S2.p8.m2" class="ltx_Math" alttext="p" display="inline" intent=":literal"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math> satisfying <math id="S2.p8.m3" class="ltx_Math" alttext="N/2\leq p\leq N" display="inline" intent=":literal"><semantics><mrow><mrow><mi>N</mi><mo>/</mo><mn>2</mn></mrow><mo>≤</mo><mi>p</mi><mo>≤</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">N/2\leq p\leq N</annotation></semantics></math>. From this and Corollary <a href="#S2.Thmresult1" title="Corollary 2.1. ‣ 2 Very dense sets without long arithmetic progressions ‣ Three-color van der Waerden numbers grow super-exponentially" class="ltx_ref"><span class="ltx_text ltx_ref_tag">2.1</span></a>, we have the following corollary.</p>
+</div>
+<div id="S2.Thmresult3" class="ltx_theorem ltx_theorem_cor">
+<h6 class="ltx_title ltx_runin ltx_title_theorem"><span class="ltx_tag ltx_tag_theorem"><span id="S2.Thmresult3.2" class="ltx_text ltx_font_bold">Corollary 2.3</span></span><span id="S2.Thmresult3.3" class="ltx_text ltx_font_bold">.</span></h6>
+<div id="S2.Thmresult3.p1" class="ltx_para">
+<p id="S2.Thmresult3.p1.1" class="ltx_p"><span id="S2.Thmresult3.p1.1.1" class="ltx_text ltx_font_italic">For all integers <math id="S2.Thmresult3.p1.m1" class="ltx_Math" alttext="k,t\geq 2" display="inline" intent=":literal"><semantics><mrow><mrow><mi>k</mi><mo>,</mo><mi>t</mi></mrow><mo>≥</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k,t\geq 2</annotation></semantics></math> and <math id="S2.Thmresult3.p1.m2" class="ltx_Math" alttext="N\leq(k/2)^{t}" display="inline" intent=":literal"><semantics><mrow><mi>N</mi><mo>≤</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mi>k</mi><mo>/</mo><mn>2</mn></mrow><mo stretchy="false">)</mo></mrow><mi>t</mi></msup></mrow><annotation encoding="application/x-tex">N\leq(k/2)^{t}</annotation></semantics></math>, we have <math id="S2.Thmresult3.p1.m3" class="ltx_Math" alttext="\delta_{k}(N)\geq(1-2/k)^{t}" display="inline" intent=":literal"><semantics><mrow><mrow><msub><mi>δ</mi><mi>k</mi></msub><mo lspace="0em" rspace="0em">​</mo><mrow><mo stretchy="false">(</mo><mi>N</mi><mo stretchy="false">)</mo></mrow></mrow><mo>≥</mo><msup><mrow><mo stretchy="false">(</mo><mrow><mn>1</mn><mo>−</mo><mrow><mn>2</mn><mo>/</mo><mi>k</mi></mrow></mrow><mo stretchy="false">)</mo></mrow><mi>t</mi></msup></mrow><annotation encoding="application/x-tex">\delta_{k}(N)\geq(1-2/k)^{t}</annotation></semantics></math>.</span></p>
+</div>
+</div>
+<div id="S2.p9" class="ltx_para">
+<p id="S2.p9.1" class="ltx_p">For all <math id="S2.p9.m1" class="ltx_Math" alttext="N" display="inline" intent=":literal"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>, we get two <math id="S2.p9.m2" class="ltx_Math" alttext="k" display="inline" intent=":literal"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-AP-free sets that together cover most of the elements <math id="S2.p9.m3" class="ltx_Math" alttext="\mathbb{Z}_{N}" display="inline" intent=":literal"><semantics><msub><mi>ℤ</mi><mi>N</mi></msub><annotation encoding="application/x-tex">\mathbb{Z}_{N}</annotation></semantics></math>.</p>
+</div>
+<div id="S2.Thmresult4" class="ltx_theorem ltx_theorem_lem">
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+apply patch
+patch: completed
+/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541/REJECTED.md
+diff --git a/results/2606.02541/REJECTED.md b/results/2606.02541/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ba5a0b37f330582e72678382973f3b8e4773cdc3
+--- /dev/null
++++ b/results/2606.02541/REJECTED.md
+@@ -0,0 +1,78 @@
++# Rejected: arXiv:2606.02541
++
++Paper: Jacob Fox and Zach Hunter, [*Three-color van der Waerden numbers grow
++super-exponentially*](https://arxiv.org/abs/2606.02541), arXiv:2606.02541v1.
++
++## Decision
++
++I did not create `gen_2606_02541.py`.  The paper's native witness problem does
++not meet the required G/H/V combination, and replacing its complete family of
++arithmetic progressions by a planted list of selected constraints would be a
++different, generic hypergraph-coloring problem whose hardness does not come from
++this paper.
++
++| Requirement | Result | Reason |
++|---|---:|---|
++| G - inverse-generatable | **fail** | A native instance is only `(N, k, r)` (or a specified abelian group and `k, r`).  It contains *every* relevant arithmetic progression.  Sampling a coloring first does not create or vary that instance, and an arbitrary sampled coloring almost never avoids all progressions.  The paper proves existence after fixing the group; it does not construct the problem around a sampled answer. |
++| H - hard | **not established** | Theorems 1, 2, 4, and 5 are extremal existence/lower-bound results, not computational-hardness results.  The paper gives no NP-hardness theorem, search lower bound, or hard finite parameter window.  Treating a large van der Waerden number as evidence of computational search hardness would be unjustified. |
++| V - exact verification | **formal pass, practical fail in the theorem regime** | A proposed coloring can be checked exactly by scanning all progressions.  For an explicit interval this involves about `N^2/(2(k-1))` progressions and an answer of `N` color symbols.  In the only regime supported by the main theorem, `N >= 2^(k log* k / 4)` and `k` is sufficiently large, so neither materializing the witness nor performing the scan is a usable generator/checker operation. |
++
++Because G and H fail (and practical V fails in the supported regime), Step 0's
++instruction to reject and stop applies.  No self-test or LLM-hardening transcript
++was manufactured.
++
++## What the paper actually defines
++
++Section 1 defines `w(k; r)` as the least `N` for which every `r`-coloring of
++`[N] = {1, ..., N}` has a monochromatic `k`-term arithmetic progression.  Section
++2 uses the cyclic version: in an abelian group a `k`-AP is
++`a, a+d, ..., a+(k-1)d` with nonzero `d`.  The most natural witness would therefore
++be a complete coloring of `[N]` or `Z_N` with no monochromatic `k`-AP.
++
++Theorem 1 only states that, for sufficiently large `k`, such a three-coloring
++exists for an interval of length `2^(k log* k / 4)`.  The proof in Section 5 goes
++through Theorem 4: for a fixed sufficiently small `epsilon` and positive `b`, it
++requires
++
++```text
++k >= T_(3b)(1/epsilon),
++q_i distinct primes in [2^(0.9k), 2^(0.9k+1)],
++N = product(q_i).
++```
++
++Thus the theorem-backed parameters are far outside any range in which a standard-
++library module can emit the explicit coloring or exhaustively verify it.
++
++## Constructions and easy/unsupported regimes checked
++
++- Section 2 begins with the explicit Erdos-Turan digit construction: for prime
++  `p`, the integers whose base-`p` expansion omits digit `p-1` are `p`-AP-free.
++  Lemma 2.2 gives the corresponding product construction in cyclic groups.  A
++  proposed generator based directly on this rule would expose a closed-form
++  witness and fail H.
++- Lemmas 2.8 and 2.9 are probabilistic hitting-set constructions.  Lemma 2.9
++  samples residue classes and proves success by a union bound, but requires
++  `k >= exp(36/epsilon)` and allows `N` as large as `2.5^k`.  It is not inverse
++  planting, and exact validation again requires scanning a huge AP family.
++- Corollary 3.3 obtains suitable set-colorings from the Lovasz local lemma.
++  This is an existence result after the group has been fixed, not a sampled-answer-
++  first instance generator or a hardness theorem.
++- Lemmas 4.1-4.3 give product and random-shifted product constructions.  Supplying
++  the factor colorings/shifts as instance data would reveal a direct construction;
++  omitting them leaves the module with the same nonconstructive base-coloring
++  problem.
++- Section 1.2 explicitly says only that the techniques are *suspected* to be
++  implementable for small van der Waerden lower-bound constructions.  Therefore
++  using practical small `k` would leave the paper's proved regime and would not
++  support an H claim.
++
++## Why the tempting planted variant was not used
++
++One can sample a coloring and then retain only arithmetic-progression constraints
++that are nonmonochromatic under it.  That produces a planted uniform-hypergraph
++coloring/CSP instance.  It is not the paper's complete AP-coloring problem, since
++the statement must now include an arbitrary selected edge list.  Its difficulty
++would come from generic hypergraph colorability, while the selection process can
++also leak the planted partition statistically.  Calling that a family from this
++paper would overstate both provenance and hardness.
++
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2606.02541/REJECTED.md b/results/2606.02541/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ba5a0b37f330582e72678382973f3b8e4773cdc3
+--- /dev/null
++++ b/results/2606.02541/REJECTED.md
+@@ -0,0 +1,78 @@
++# Rejected: arXiv:2606.02541
++
++Paper: Jacob Fox and Zach Hunter, [*Three-color van der Waerden numbers grow
++super-exponentially*](https://arxiv.org/abs/2606.02541), arXiv:2606.02541v1.
++
++## Decision
++
++I did not create `gen_2606_02541.py`.  The paper's native witness problem does
++not meet the required G/H/V combination, and replacing its complete family of
++arithmetic progressions by a planted list of selected constraints would be a
++different, generic hypergraph-coloring problem whose hardness does not come from
++this paper.
++
++| Requirement | Result | Reason |
++|---|---:|---|
++| G - inverse-generatable | **fail** | A native instance is only `(N, k, r)` (or a specified abelian group and `k, r`).  It contains *every* relevant arithmetic progression.  Sampling a coloring first does not create or vary that instance, and an arbitrary sampled coloring almost never avoids all progressions.  The paper proves existence after fixing the group; it does not construct the problem around a sampled answer. |
++| H - hard | **not established** | Theorems 1, 2, 4, and 5 are extremal existence/lower-bound results, not computational-hardness results.  The paper gives no NP-hardness theorem, search lower bound, or hard finite parameter window.  Treating a large van der Waerden number as evidence of computational search hardness would be unjustified. |
++| V - exact verification | **formal pass, practical fail in the theorem regime** | A proposed coloring can be checked exactly by scanning all progressions.  For an explicit interval this involves about `N^2/(2(k-1))` progressions and an answer of `N` color symbols.  In the only regime supported by the main theorem, `N >= 2^(k log* k / 4)` and `k` is sufficiently large, so neither materializing the witness nor performing the scan is a usable generator/checker operation. |
++
++Because G and H fail (and practical V fails in the supported regime), Step 0's
++instruction to reject and stop applies.  No self-test or LLM-hardening transcript
++was manufactured.
++
++## What the paper actually defines
++
++Section 1 defines `w(k; r)` as the least `N` for which every `r`-coloring of
++`[N] = {1, ..., N}` has a monochromatic `k`-term arithmetic progression.  Section
++2 uses the cyclic version: in an abelian group a `k`-AP is
++`a, a+d, ..., a+(k-1)d` with nonzero `d`.  The most natural witness would therefore
++be a complete coloring of `[N]` or `Z_N` with no monochromatic `k`-AP.
++
++Theorem 1 only states that, for sufficiently large `k`, such a three-coloring
++exists for an interval of length `2^(k log* k / 4)`.  The proof in Section 5 goes
++through Theorem 4: for a fixed sufficiently small `epsilon` and positive `b`, it
++requires
++
++```text
++k >= T_(3b)(1/epsilon),
++q_i distinct primes in [2^(0.9k), 2^(0.9k+1)],
++N = product(q_i).
++```
++
++Thus the theorem-backed parameters are far outside any range in which a standard-
++library module can emit the explicit coloring or exhaustively verify it.
++
++## Constructions and easy/unsupported regimes checked
++
++- Section 2 begins with the explicit Erdos-Turan digit construction: for prime
++  `p`, the integers whose base-`p` expansion omits digit `p-1` are `p`-AP-free.
++  Lemma 2.2 gives the corresponding product construction in cyclic groups.  A
++  proposed generator based directly on this rule would expose a closed-form
++  witness and fail H.
++- Lemmas 2.8 and 2.9 are probabilistic hitting-set constructions.  Lemma 2.9
++  samples residue classes and proves success by a union bound, but requires
++  `k >= exp(36/epsilon)` and allows `N` as large as `2.5^k`.  It is not inverse
++  planting, and exact validation again requires scanning a huge AP family.
++- Corollary 3.3 obtains suitable set-colorings from the Lovasz local lemma.
++  This is an existence result after the group has been fixed, not a sampled-answer-
++  first instance generator or a hardness theorem.
++- Lemmas 4.1-4.3 give product and random-shifted product constructions.  Supplying
++  the factor colorings/shifts as instance data would reveal a direct construction;
++  omitting them leaves the module with the same nonconstructive base-coloring
++  problem.
++- Section 1.2 explicitly says only that the techniques are *suspected* to be
++  implementable for small van der Waerden lower-bound constructions.  Therefore
++  using practical small `k` would leave the paper's proved regime and would not
++  support an H claim.
++
++## Why the tempting planted variant was not used
++
++One can sample a coloring and then retain only arithmetic-progression constraints
++that are nonmonochromatic under it.  That produces a planted uniform-hypergraph
++coloring/CSP instance.  It is not the paper's complete AP-coloring problem, since
++the statement must now include an arbitrary selected edge list.  Its difficulty
++would come from generic hypergraph colorability, while the selection process can
++also leak the planted partition statistically.  Calling that a family from this
++paper would overstate both provenance and hardness.
++
+
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,260p' REJECTED.md && git diff -- REJECTED.md && test "'! -e gen_2606_02541.py && echo '"'generator intentionally absent'" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541
+ succeeded in 0ms:
+# Rejected: arXiv:2606.02541
+
+Paper: Jacob Fox and Zach Hunter, [*Three-color van der Waerden numbers grow
+super-exponentially*](https://arxiv.org/abs/2606.02541), arXiv:2606.02541v1.
+
+## Decision
+
+I did not create `gen_2606_02541.py`.  The paper's native witness problem does
+not meet the required G/H/V combination, and replacing its complete family of
+arithmetic progressions by a planted list of selected constraints would be a
+different, generic hypergraph-coloring problem whose hardness does not come from
+this paper.
+
+| Requirement | Result | Reason |
+|---|---:|---|
+| G - inverse-generatable | **fail** | A native instance is only `(N, k, r)` (or a specified abelian group and `k, r`).  It contains *every* relevant arithmetic progression.  Sampling a coloring first does not create or vary that instance, and an arbitrary sampled coloring almost never avoids all progressions.  The paper proves existence after fixing the group; it does not construct the problem around a sampled answer. |
+| H - hard | **not established** | Theorems 1, 2, 4, and 5 are extremal existence/lower-bound results, not computational-hardness results.  The paper gives no NP-hardness theorem, search lower bound, or hard finite parameter window.  Treating a large van der Waerden number as evidence of computational search hardness would be unjustified. |
+| V - exact verification | **formal pass, practical fail in the theorem regime** | A proposed coloring can be checked exactly by scanning all progressions.  For an explicit interval this involves about `N^2/(2(k-1))` progressions and an answer of `N` color symbols.  In the only regime supported by the main theorem, `N >= 2^(k log* k / 4)` and `k` is sufficiently large, so neither materializing the witness nor performing the scan is a usable generator/checker operation. |
+
+Because G and H fail (and practical V fails in the supported regime), Step 0's
+instruction to reject and stop applies.  No self-test or LLM-hardening transcript
+was manufactured.
+
+## What the paper actually defines
+
+Section 1 defines `w(k; r)` as the least `N` for which every `r`-coloring of
+`[N] = {1, ..., N}` has a monochromatic `k`-term arithmetic progression.  Section
+2 uses the cyclic version: in an abelian group a `k`-AP is
+`a, a+d, ..., a+(k-1)d` with nonzero `d`.  The most natural witness would therefore
+be a complete coloring of `[N]` or `Z_N` with no monochromatic `k`-AP.
+
+Theorem 1 only states that, for sufficiently large `k`, such a three-coloring
+exists for an interval of length `2^(k log* k / 4)`.  The proof in Section 5 goes
+through Theorem 4: for a fixed sufficiently small `epsilon` and positive `b`, it
+requires
+
+```text
+k >= T_(3b)(1/epsilon),
+q_i distinct primes in [2^(0.9k), 2^(0.9k+1)],
+N = product(q_i).
+```
+
+Thus the theorem-backed parameters are far outside any range in which a standard-
+library module can emit the explicit coloring or exhaustively verify it.
+
+## Constructions and easy/unsupported regimes checked
+
+- Section 2 begins with the explicit Erdos-Turan digit construction: for prime
+  `p`, the integers whose base-`p` expansion omits digit `p-1` are `p`-AP-free.
+  Lemma 2.2 gives the corresponding product construction in cyclic groups.  A
+  proposed generator based directly on this rule would expose a closed-form
+  witness and fail H.
+- Lemmas 2.8 and 2.9 are probabilistic hitting-set constructions.  Lemma 2.9
+  samples residue classes and proves success by a union bound, but requires
+  `k >= exp(36/epsilon)` and allows `N` as large as `2.5^k`.  It is not inverse
+  planting, and exact validation again requires scanning a huge AP family.
+- Corollary 3.3 obtains suitable set-colorings from the Lovasz local lemma.
+  This is an existence result after the group has been fixed, not a sampled-answer-
+  first instance generator or a hardness theorem.
+- Lemmas 4.1-4.3 give product and random-shifted product constructions.  Supplying
+  the factor colorings/shifts as instance data would reveal a direct construction;
+  omitting them leaves the module with the same nonconstructive base-coloring
+  problem.
+- Section 1.2 explicitly says only that the techniques are *suspected* to be
+  implementable for small van der Waerden lower-bound constructions.  Therefore
+  using practical small `k` would leave the paper's proved regime and would not
+  support an H claim.
+
+## Why the tempting planted variant was not used
+
+One can sample a coloring and then retain only arithmetic-progression constraints
+that are nonmonochromatic under it.  That produces a planted uniform-hypergraph
+coloring/CSP instance.  It is not the paper's complete AP-coloring problem, since
+the statement must now include an arbitrary selected edge list.  Its difficulty
+would come from generic hypergraph colorability, while the selection process can
+also leak the planted partition statistically.  Calling that a family from this
+paper would overstate both provenance and hardness.
+
+generator intentionally absent
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+Step 0 rejected the native family: it cannot be inverse-generated in the paper's exact formulation, no computational hardness regime is established, and theorem-backed witnesses are impractically large. Per the task, implementation and hardening stop here.
+  ✓ Read the full paper and identify an admissible witness family, hardness regime, and easy regimes
+  ✓ Inspect repository harness contracts and implement the generator module
+  ✓ Run and fix all self-test gates, then write selftest_report.json and README.md
+  ✓ Run scripts/harden.py, interpret the oracle verdict, and finalize or reject honestly
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2606.02541/REJECTED.md b/results/2606.02541/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ba5a0b37f330582e72678382973f3b8e4773cdc3
+--- /dev/null
++++ b/results/2606.02541/REJECTED.md
+@@ -0,0 +1,78 @@
++# Rejected: arXiv:2606.02541
++
++Paper: Jacob Fox and Zach Hunter, [*Three-color van der Waerden numbers grow
++super-exponentially*](https://arxiv.org/abs/2606.02541), arXiv:2606.02541v1.
++
++## Decision
++
++I did not create `gen_2606_02541.py`.  The paper's native witness problem does
++not meet the required G/H/V combination, and replacing its complete family of
++arithmetic progressions by a planted list of selected constraints would be a
++different, generic hypergraph-coloring problem whose hardness does not come from
++this paper.
++
++| Requirement | Result | Reason |
++|---|---:|---|
++| G - inverse-generatable | **fail** | A native instance is only `(N, k, r)` (or a specified abelian group and `k, r`).  It contains *every* relevant arithmetic progression.  Sampling a coloring first does not create or vary that instance, and an arbitrary sampled coloring almost never avoids all progressions.  The paper proves existence after fixing the group; it does not construct the problem around a sampled answer. |
++| H - hard | **not established** | Theorems 1, 2, 4, and 5 are extremal existence/lower-bound results, not computational-hardness results.  The paper gives no NP-hardness theorem, search lower bound, or hard finite parameter window.  Treating a large van der Waerden number as evidence of computational search hardness would be unjustified. |
++| V - exact verification | **formal pass, practical fail in the theorem regime** | A proposed coloring can be checked exactly by scanning all progressions.  For an explicit interval this involves about `N^2/(2(k-1))` progressions and an answer of `N` color symbols.  In the only regime supported by the main theorem, `N >= 2^(k log* k / 4)` and `k` is sufficiently large, so neither materializing the witness nor performing the scan is a usable generator/checker operation. |
++
++Because G and H fail (and practical V fails in the supported regime), Step 0's
++instruction to reject and stop applies.  No self-test or LLM-hardening transcript
++was manufactured.
++
++## What the paper actually defines
++
++Section 1 defines `w(k; r)` as the least `N` for which every `r`-coloring of
++`[N] = {1, ..., N}` has a monochromatic `k`-term arithmetic progression.  Section
++2 uses the cyclic version: in an abelian group a `k`-AP is
++`a, a+d, ..., a+(k-1)d` with nonzero `d`.  The most natural witness would therefore
++be a complete coloring of `[N]` or `Z_N` with no monochromatic `k`-AP.
++
++Theorem 1 only states that, for sufficiently large `k`, such a three-coloring
++exists for an interval of length `2^(k log* k / 4)`.  The proof in Section 5 goes
++through Theorem 4: for a fixed sufficiently small `epsilon` and positive `b`, it
++requires
++
++```text
++k >= T_(3b)(1/epsilon),
++q_i distinct primes in [2^(0.9k), 2^(0.9k+1)],
++N = product(q_i).
++```
++
++Thus the theorem-backed parameters are far outside any range in which a standard-
++library module can emit the explicit coloring or exhaustively verify it.
++
++## Constructions and easy/unsupported regimes checked
++
++- Section 2 begins with the explicit Erdos-Turan digit construction: for prime
++  `p`, the integers whose base-`p` expansion omits digit `p-1` are `p`-AP-free.
++  Lemma 2.2 gives the corresponding product construction in cyclic groups.  A
++  proposed generator based directly on this rule would expose a closed-form
++  witness and fail H.
++- Lemmas 2.8 and 2.9 are probabilistic hitting-set constructions.  Lemma 2.9
++  samples residue classes and proves success by a union bound, but requires
++  `k >= exp(36/epsilon)` and allows `N` as large as `2.5^k`.  It is not inverse
++  planting, and exact validation again requires scanning a huge AP family.
++- Corollary 3.3 obtains suitable set-colorings from the Lovasz local lemma.
++  This is an existence result after the group has been fixed, not a sampled-answer-
++  first instance generator or a hardness theorem.
++- Lemmas 4.1-4.3 give product and random-shifted product constructions.  Supplying
++  the factor colorings/shifts as instance data would reveal a direct construction;
++  omitting them leaves the module with the same nonconstructive base-coloring
++  problem.
++- Section 1.2 explicitly says only that the techniques are *suspected* to be
++  implementable for small van der Waerden lower-bound constructions.  Therefore
++  using practical small `k` would leave the paper's proved regime and would not
++  support an H claim.
++
++## Why the tempting planted variant was not used
++
++One can sample a coloring and then retain only arithmetic-progression constraints
++that are nonmonochromatic under it.  That produces a planted uniform-hypergraph
++coloring/CSP instance.  It is not the paper's complete AP-coloring problem, since
++the statement must now include an arbitrary selected edge list.  Its difficulty
++would come from generic hypergraph colorability, while the selection process can
++also leak the planted partition statistically.  Calling that a family from this
++paper would overstate both provenance and hardness.
++
+
+codex
+Rejected at Step 0 and documented in [REJECTED.md](/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541/REJECTED.md).
+
+Reasons:
+
+- **G fails:** native instances contain every arithmetic progression and cannot be constructed around a sampled coloring.
+- **H is unsupported:** the paper proves extremal existence bounds, not computational hardness.
+- **V is impractical in the proved regime:** Theorem 1 requires exponentially large explicit colorings, while Theorem 4 begins at tower-sized \(k\). [Full paper](https://arxiv.org/html/2606.02541)
+- Practical small-\(k\) constructions are outside the proved regime; Section 2 also supplies explicit digit/product constructions that would undermine hardness.
+
+I did not create a generator, fabricate gate reports, or run the LLM hardener, as required by the task’s rejection rule.
+diff --git a/results/2606.02541/REJECTED.md b/results/2606.02541/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ba5a0b37f330582e72678382973f3b8e4773cdc3
+--- /dev/null
++++ b/results/2606.02541/REJECTED.md
+@@ -0,0 +1,78 @@
++# Rejected: arXiv:2606.02541
++
++Paper: Jacob Fox and Zach Hunter, [*Three-color van der Waerden numbers grow
++super-exponentially*](https://arxiv.org/abs/2606.02541), arXiv:2606.02541v1.
++
++## Decision
++
++I did not create `gen_2606_02541.py`.  The paper's native witness problem does
++not meet the required G/H/V combination, and replacing its complete family of
++arithmetic progressions by a planted list of selected constraints would be a
++different, generic hypergraph-coloring problem whose hardness does not come from
++this paper.
++
++| Requirement | Result | Reason |
++|---|---:|---|
++| G - inverse-generatable | **fail** | A native instance is only `(N, k, r)` (or a specified abelian group and `k, r`).  It contains *every* relevant arithmetic progression.  Sampling a coloring first does not create or vary that instance, and an arbitrary sampled coloring almost never avoids all progressions.  The paper proves existence after fixing the group; it does not construct the problem around a sampled answer. |
++| H - hard | **not established** | Theorems 1, 2, 4, and 5 are extremal existence/lower-bound results, not computational-hardness results.  The paper gives no NP-hardness theorem, search lower bound, or hard finite parameter window.  Treating a large van der Waerden number as evidence of computational search hardness would be unjustified. |
++| V - exact verification | **formal pass, practical fail in the theorem regime** | A proposed coloring can be checked exactly by scanning all progressions.  For an explicit interval this involves about `N^2/(2(k-1))` progressions and an answer of `N` color symbols.  In the only regime supported by the main theorem, `N >= 2^(k log* k / 4)` and `k` is sufficiently large, so neither materializing the witness nor performing the scan is a usable generator/checker operation. |
++
++Because G and H fail (and practical V fails in the supported regime), Step 0's
++instruction to reject and stop applies.  No self-test or LLM-hardening transcript
++was manufactured.
++
++## What the paper actually defines
++
++Section 1 defines `w(k; r)` as the least `N` for which every `r`-coloring of
++`[N] = {1, ..., N}` has a monochromatic `k`-term arithmetic progression.  Section
++2 uses the cyclic version: in an abelian group a `k`-AP is
++`a, a+d, ..., a+(k-1)d` with nonzero `d`.  The most natural witness would therefore
++be a complete coloring of `[N]` or `Z_N` with no monochromatic `k`-AP.
++
++Theorem 1 only states that, for sufficiently large `k`, such a three-coloring
++exists for an interval of length `2^(k log* k / 4)`.  The proof in Section 5 goes
++through Theorem 4: for a fixed sufficiently small `epsilon` and positive `b`, it
++requires
++
++```text
++k >= T_(3b)(1/epsilon),
++q_i distinct primes in [2^(0.9k), 2^(0.9k+1)],
++N = product(q_i).
++```
++
++Thus the theorem-backed parameters are far outside any range in which a standard-
++library module can emit the explicit coloring or exhaustively verify it.
++
++## Constructions and easy/unsupported regimes checked
++
++- Section 2 begins with the explicit Erdos-Turan digit construction: for prime
++  `p`, the integers whose base-`p` expansion omits digit `p-1` are `p`-AP-free.
++  Lemma 2.2 gives the corresponding product construction in cyclic groups.  A
++  proposed generator based directly on this rule would expose a closed-form
++  witness and fail H.
++- Lemmas 2.8 and 2.9 are probabilistic hitting-set constructions.  Lemma 2.9
++  samples residue classes and proves success by a union bound, but requires
++  `k >= exp(36/epsilon)` and allows `N` as large as `2.5^k`.  It is not inverse
++  planting, and exact validation again requires scanning a huge AP family.
++- Corollary 3.3 obtains suitable set-colorings from the Lovasz local lemma.
++  This is an existence result after the group has been fixed, not a sampled-answer-
++  first instance generator or a hardness theorem.
++- Lemmas 4.1-4.3 give product and random-shifted product constructions.  Supplying
++  the factor colorings/shifts as instance data would reveal a direct construction;
++  omitting them leaves the module with the same nonconstructive base-coloring
++  problem.
++- Section 1.2 explicitly says only that the techniques are *suspected* to be
++  implementable for small van der Waerden lower-bound constructions.  Therefore
++  using practical small `k` would leave the paper's proved regime and would not
++  support an H claim.
++
++## Why the tempting planted variant was not used
++
++One can sample a coloring and then retain only arithmetic-progression constraints
++that are nonmonochromatic under it.  That produces a planted uniform-hypergraph
++coloring/CSP instance.  It is not the paper's complete AP-coloring problem, since
++the statement must now include an arbitrary selected edge list.  Its difficulty
++would come from generic hypergraph colorability, while the selection process can
++also leak the planted partition statistically.  Calling that a family from this
++paper would overstate both provenance and hardness.
++
+
+hook: Stop
+hook: Stop Completed
+tokens used
+89,473
+Rejected at Step 0 and documented in [REJECTED.md](/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2606.02541/REJECTED.md).
+
+Reasons:
+
+- **G fails:** native instances contain every arithmetic progression and cannot be constructed around a sampled coloring.
+- **H is unsupported:** the paper proves extremal existence bounds, not computational hardness.
+- **V is impractical in the proved regime:** Theorem 1 requires exponentially large explicit colorings, while Theorem 4 begins at tower-sized \(k\). [Full paper](https://arxiv.org/html/2606.02541)
+- Practical small-\(k\) constructions are outside the proved regime; Section 2 also supplies explicit digit/product constructions that would undermine hardness.
+
+I did not create a generator, fabricate gate reports, or run the LLM hardener, as required by the task’s rejection rule.
