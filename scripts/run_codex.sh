@@ -79,15 +79,17 @@ json.dump({'paper':'$ID',
 
 cd "$OUT"
 
-# "Selected model is at capacity" kills the run seconds in.  Because we detach, that
-# fails silently and leaves a result dir with no module and no REJECTED.md -- it looks
-# like a build that produced nothing rather than one that never started.  Retry.
+# "Selected model is at capacity" kills the run at any point.  Because we detach, that
+# fails silently and leaves a half-built result dir.  Retry until the deliverables are
+# actually complete -- a gen_*.py alone is NOT the finish line: a run killed after the
+# module but before the gates, oracle loop and README leaves exactly that, and treating
+# it as done silently ships a paper whose hardness was never measured.
 {
   echo '#!/usr/bin/env bash'
   echo 'for attempt in $(seq 1 8); do'
   printf '  %s exec --skip-git-repo-check %s -m %s -c model_reasoning_effort=%s "$(cat .task.md)" >> codex_run.log 2>&1\n' \
     "$CODEX_BIN" "${SANDBOX_ARGS[*]}" "${CODEX_MODEL:-gpt-5.6-sol}" "${CODEX_EFFORT:-xhigh}"
-  echo '  { ls gen_*.py >/dev/null 2>&1 || [ -f REJECTED.md ]; } && break'
+  echo '  if { [ -f README.md ] && [ -f selftest_report.json ] && [ -f llm_loop_transcript.jsonl ]; } || [ -f REJECTED.md ]; then break; fi'
   echo '  tail -5 codex_run.log | grep -q "at capacity" || break'
   echo '  echo "[runner] model at capacity - retry $attempt of 8 in 90s" >> codex_run.log'
   echo '  sleep 90'
