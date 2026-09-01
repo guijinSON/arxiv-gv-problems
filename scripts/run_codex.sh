@@ -78,9 +78,22 @@ json.dump({'paper':'$ID',
           open('$OUT/.meta.json','w'), indent=1)"
 
 cd "$OUT"
-setsid nohup "$CODEX_BIN" exec --skip-git-repo-check "${SANDBOX_ARGS[@]}" \
-  -m "${CODEX_MODEL:-gpt-5.6-sol}" -c model_reasoning_effort="${CODEX_EFFORT:-xhigh}" \
-  "$(cat .task.md)" > codex_run.log 2>&1 < /dev/null &
+
+# "Selected model is at capacity" kills the run seconds in.  Because we detach, that
+# fails silently and leaves a result dir with no module and no REJECTED.md -- it looks
+# like a build that produced nothing rather than one that never started.  Retry.
+{
+  echo '#!/usr/bin/env bash'
+  echo 'for attempt in $(seq 1 8); do'
+  printf '  %s exec --skip-git-repo-check %s -m %s -c model_reasoning_effort=%s "$(cat .task.md)" >> codex_run.log 2>&1\n' \
+    "$CODEX_BIN" "${SANDBOX_ARGS[*]}" "${CODEX_MODEL:-gpt-5.6-sol}" "${CODEX_EFFORT:-xhigh}"
+  echo '  { ls gen_*.py >/dev/null 2>&1 || [ -f REJECTED.md ]; } && break'
+  echo '  tail -5 codex_run.log | grep -q "at capacity" || break'
+  echo '  echo "[runner] model at capacity - retry $attempt of 8 in 90s" >> codex_run.log'
+  echo '  sleep 90'
+  echo 'done'
+} > .runner.sh
+setsid nohup bash .runner.sh > /dev/null 2>&1 < /dev/null &
 sleep 10
 echo "started $ID  codex=$CV model=${CODEX_MODEL:-gpt-5.6-sol} effort=${CODEX_EFFORT:-xhigh}"
 echo "  log: $OUT/codex_run.log"

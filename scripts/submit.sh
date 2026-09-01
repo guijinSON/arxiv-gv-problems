@@ -16,7 +16,7 @@ d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
 d['status']='rejected'
 d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 json.dump(d,open(p,'w'))"
-  rm -f "$D/.orkey" "$D/.task.md"; rm -rf "$D/__pycache__"
+  rm -f "$D/.orkey" "$D/.task.md" "$D/.runner.sh"; rm -rf "$D/__pycache__"
   bash scripts/status.sh --write >/dev/null
   git add "$D" "claims/$ID.json" STATUS.md
   git commit -q -m "reject $ID"
@@ -161,7 +161,7 @@ print("  interface OK | planted verifies | parse round-trip:", rt, "| canonical_
 PY
 [ $? -eq 0 ] || { echo "SUBMIT BLOCKED — fix the module first."; exit 3; }
 
-rm -f "$D/.orkey" "$D/.task.md"; rm -rf "$D/__pycache__"
+rm -f "$D/.orkey" "$D/.task.md" "$D/.runner.sh"; rm -rf "$D/__pycache__"
 echo "== emitting sample instances =="
 bash scripts/emit.sh "$ID" "${EMIT_N:-20}" || { echo "SUBMIT BLOCKED — emit failed."; exit 5; }
 
