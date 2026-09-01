@@ -1,0 +1,1805 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/2211.12582
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a05d9d-c858-7df0-8d73-1fb72f6171d0
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know its answer*, because you
+  sampled the answer first and constructed the problem around it.
+- **H — hard.** No known polynomial-time or closed-form method, and the answer space
+  is far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+The answer must be a **witness** — a structured object handed to a checker. Never an
+absence ("no solution exists"), never an optimum whose optimality is the claim,
+never a real number or an asymptotic rate.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the three things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, standard library only, deterministic given `(n, seed)`. No file IO, no
+network, no printing at import. Use `random.Random(seed)`, never global `random`.
+
+```python
+DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
+                            # each maps to kwargs for make_instance
+
+def make_instance(n, seed=0, **params) -> dict
+    """Inverse generation: sample the answer FIRST, then build the problem around
+    it. Returns a dict containing key "answer" (the planted witness) plus all data
+    the solver needs. `n` is the size parameter; larger n must mean harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT."""
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of the naive candidate space, or None if not countable."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship.**
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G6 adversary panel** | Write ≥3 cheap attacks and confirm each FAILS across ≥8 seeds. See below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+5. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard.** The specific theorem and parameter regime you are inside, and
+  — just as important — the easy regimes you had to avoid and the results that
+  identify them. Cite sections by number. This is the part only you know.
+- **A worked example.** A rendered instance small enough to read in full (use your
+  smallest preset), its answer, `verify` returning True on it, and `verify`
+  returning False with its reason on a corrupted variant.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2211.12582
+url: https://arxiv.org/abs/2211.12582
+title: Spectral conditions for spherical two-distance sets
+categories: math.CO math.MG
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: geometric configurations
+  method: structural scan
+  candidate generator: construct points on sphere with exactly two pairwise distances
+  candidate verifier: check norms and enumerate all pairwise distances
+codex
+I’ll first read the full paper and locate the exact definitions, hardness regime, and easy cases. The key risk here is that the paper may be structural rather than computational—if it provides no hard witness-search family satisfying G/H/V, I’ll document an honest rejection instead of forcing an unsuitable generator.
+web search: 
+web search: https://arxiv.org/abs/2211.12582
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!**/.git/**'"' . .. ../.. | head -80 && curl -L --fail --silent --show-error https://arxiv.org/e-print/2211.12582 -o /tmp/arxiv_2211.12582.tar && file /tmp/arxiv_2211.12582.tar && tar -tf /tmp/arxiv_2211.12582.tar | sed -n '1,120p'" in /home/gson/gvrepo/results/2211.12582
+ succeeded in 670ms:
+/tmp/arxiv_2211.12582.tar: gzip compressed data, last modified: Wed Feb  4 02:14:20 2026, from Unix, original size modulo 2^32 81920
+00README.json
+abstract.tex
+biblio.bib
+main.tex
+paper.tex
+style.bst
+
+exec
+/bin/bash -lc 'tmpdir=$(mktemp -d /tmp/arxiv2211.XXXXXX); tar -xf /tmp/arxiv_2211.12582.tar -C "$tmpdir"; printf '"'%s\\n' \""'$tmpdir"; wc -l "$tmpdir"/*.tex; sed -n '"'1,260p' \""'$tmpdir/main.tex"; sed -n '"'1,1000p' \""'$tmpdir/paper.tex"' in /home/gson/gvrepo/results/2211.12582
+ succeeded in 0ms:
+/tmp/arxiv2211.Zj5e8e
+    1 /tmp/arxiv2211.Zj5e8e/abstract.tex
+   89 /tmp/arxiv2211.Zj5e8e/main.tex
+  381 /tmp/arxiv2211.Zj5e8e/paper.tex
+  471 total
+\pdfoutput=1
+\documentclass[reqno,11pt]{amsart}
+
+\usepackage[letterpaper, margin=1in]{geometry}
+\linespread{1.1}
+
+\usepackage{microtype}
+
+\usepackage{amsmath, amssymb, amsthm, bm}
+\usepackage[shortlabels]{enumitem}
+
+\usepackage{hyperref}
+
+\usepackage{parskip}
+\usepackage[center]{caption}
+
+\usepackage[utf8]{inputenc}
+\usepackage{float}
+%\usepackage[english]{babel}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{example}{Example}[section]
+\newtheorem{remark}{Remark}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{prop}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newenvironment{claimproof}[1]{\par\noindent\underline{Proof:}\space#1}{\hfill $\blacksquare$}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\setcounter{secnumdepth}{3}
+\usepackage[noabbrev,capitalize]{cleveref}
+	\crefname{claim}{Claim}{Claims}
+	\Crefname{claim}{Claim}{Claims}
+	\crefname{app-corollary}{Corollary}{Corollaries}
+	\Crefname{app-corollary}{Corollary}{Corollaries}
+	\crefname{app-definition}{Definition}{Definitions}
+	\Crefname{app-definition}{Definition}{Definitions}
+	\crefname{figure}{Figure}{Figures}
+	\Crefname{figure}{Figure}{Figures}
+	\crefname{lemma}{Lemma}{Lemmata}
+	\Crefname{lemma}{Lemma}{Lemmata}
+	\crefname{app-lemma}{Lemma}{Lemmata}
+	\Crefname{app-lemma}{Lemma}{Lemmata}
+	\crefname{app-proposition}{Proposition}{Proposition}
+	\Crefname{app-proposition}{Proposition}{Proposition}
+	\crefname{app-theorem}{Theorem}{Theorems}
+	\Crefname{app-theorem}{Theorem}{Theorems}
+	\newcommand{\creflastconjunction}{, and~} %Implments the Oxford comma for non-compressed lists in \cref
+	\newcommand{\crefrangeconjunction}{--} %Implements n-dash for compressed lists in \cref
+
+\newcommand{\rn}{\mathbb{R}^n}
+\newcommand{\rk}{\mathbb{R}^k}
+\newcommand{\rd}{\mathbb{R}^d}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\onep}{\mathbf{1}^{\perp}}
+\newcommand{\bg}{\overline{B_G}}
+\DeclareMathOperator{\rank}{rank}
+
+\makeatletter
+\newcommand{\setword}[2]{%
+  \phantomsection
+  #1\def\@currentlabel{\unexpanded{#1}}\label{#2}%
+}
+\makeatother
+
+%\title{On Spherical 2-Distance Sets in $n$-Dimensional Euclidean Space}
+\title{Spectral Conditions for Spherical 2-Distance Sets}
+
+\author{Iliyas Noman}
+\author{Yuan Yao}
+\thanks{Noman was sponsored by HSSIMI, Sts. Cyril \& Methodius International Foundation, and Foundation for support of children Mariyana Palanchova. Yao was supported by the MIT Math Department.}
+
+\email{iliyas@mit.edu, yyao1@mit.edu}
+
+\begin{document}
+
+\begin{abstract}
+\input{abstract}
+\end{abstract}
+
+\maketitle
+
+\input{paper}
+%\include{biblio}
+\bibliographystyle{style}
+
+\bibliography{biblio}
+
+\end{document}\section{Introduction}
+The problem of sets with few distances is considered to be naturally emerging in discrete geometry and coding theory.
+The simplest case is the one of \emph{2-distance sets}, i.e. sets of points in $n$-dimensional space with only two possible distances between its elements.
+
+The study of 2-distance sets began in 1947 when Kelly \cite{kelly1947elementary} showed that a 2-distance set in the plane can have at most 5 points. In 1963, Croft \cite{croft19639} showed that a 2-distance set in $\mathbb{R}^3$ can have at most 6 points. Larman, Rogers, and Seidel \cite{larman1977two} found an upper bound on the size of a 2-distance set in $\mathbb{R}^d$ that is asymptotically tight, essentially resolving this question. 
+
+The other extreme case, the ``minimal'' 2-distance sets, has also been extensively studied.
+There are infinitely many non-isomorphic 2-distance sets with $d+1$ points or fewer, so the smallest interesting case is $d+2$ points. 
+In 1966, Einhorn and Schoenberg \cite{einhorn1966euclidean} showed that there is a finite number of 2-distance sets in $\rd$ with $d+2$ points and gave a combinatorial interpretation for the number of such ``small" sets (see \cref{main}). 
+% Computational results have been obtained starting with Sz{\"o}ll{\H{o}}si and {\"O}sterg{\aa}rd \cite{szollHosi2018constructions} from 2018 on an algorithm used for the enumeration of 2-distance sets and spherical 2-distance sets, used later in 2018 by Sz{\"o}ll{\H{o}}si \cite{szollHosi2018two} for enumeration of all 2-distance sets on $n+2$ points in $\rn$ for $n = 4$ and finding the spherical ones among them. 
+
+    
+% It was motivated by the 24-cell conjecture \cite{musin2018towards} --- a sphere packing problem which has been solved in dimensions $2$ and $3$ but not in 4-dimensional space. 
+% In 2018, Musin \cite{musin2018towards} showed the relation between the 24-cell cell conjecture in $\mathbb{R}^4$ and spherical 2-distance sets in $\mathbb{R}^4$ and proposed a method for enumerating the 2-distance sets in $\mathbb{R}^4$ based on his paper \cite{musin2019graphs}. 
+
+Motivated by \cref{main}, we are interested in characterizing the 2-distance sets whose points lie on the unit sphere. We call those sets \emph{spherical}. A previous characterization of the spherical 2-distance sets was completed in 2012 by Nozaki and Shinohara \cite{nozaki2012geometrical}, who gave a necessary and sufficient condition for a graph to correspond to a spherical 2-distance set in some Euclidean space (see Definition~\ref{sphericalrep}) based on Roy's previous results \cite{roy2010minimal}. The conditions in \cite[Theorem~2.4]{nozaki2012geometrical} involve bulky expressions that use the eigenvalues of the adjacency matrix and the angles of its eigenvectors with the all-ones vector.
+In contrast, here we focus on the ``small" spherical graphs (with exactly $d+2$ vertices in $\rd$) and obtain a much cleaner necessary and sufficient condition for a graph to have a spherical representation in this case, only using the eigenvalues of the adjacency matrix and the eigenvalues of its projection onto a subspace.
+\begin{theorem}\label{mainres}
+    Let $d$ a be positive integer, and let $G$ be a graph on $d+2$ vertices whose adjacency matrix $A_G$ has eigenvalues $\lambda_1 \geq \lambda_2 \geq \dots \geq \lambda_{d+2}$. Let $J$ be the all-ones matrix and $P = I - \frac{1}{d+2}J$ be the projection matrix onto the subspace orthogonal to the all-ones vector. Then $G$ has a spherical representation in $\rd$ if and only if the maximum eigenvalue of $PA_GP$ is equal to $\lambda_2$ and the multiplicity of the eigenvalue $\lambda_2$ is equal in $A_G$ (excluding $\lambda_1$ if $\lambda_1 = \lambda_2$) and $PA_GP$.
+\end{theorem}
+
+In fact, the lowest dimensional space in which a given spherically representable graph $G$ is also determined by the multiplicity of the second eigenvalue of $G$.
+
+\begin{prop}\label{lowestdimensionspherical}
+    Let $n \leq d$ be a positive integer. If a graph $G$ on $d+2$ vertices is spherically representable in $\rd$, then it is (spherically) representable in $\rn$ if and only if the multiplicity of $\lambda_2$ in its adjacency matrix $A_G$ (excluding $\lambda_1$ if $\lambda_1 = \lambda_2$) is at least $d+1-n$. 
+\end{prop}
+
+The paper is organized as follows. In Section~\ref{preliminaries}, we define (spherical) 2-distance sets and (spherically) representable graphs, and recall two results from the literature that we use in the paper. In Section~\ref{conditions}, we give four initial conditions for a graph on $d+2$ vertices to be representable as a spherical 2-distance set in $\rd$. In Section~\ref{secondeigen}, we rephrase the four conditions from Section~\ref{conditions} in terms of another matrix, and find a formula for the matrix that depends on the second eigenvalue of the adjacency matrix of the graph. In Section~\ref{reduction}, we further reduce the positive-semidefinite conditions, which we use to prove Theorem~\ref{mainres} and Proposition~\ref{lowestdimensionspherical} in Section~\ref{finsec}.
+
+\section{Preliminaries}\label{preliminaries}
+First, we formally define a 2-distance set and some related concepts.
+\begin{definition}
+A set of points $S$ in $\rd$ is a \emph{2-distance set} if 
+\begin{equation*}
+    |D| = 2, \text{ where } D = \{ ||p_i - p_j|| \text{ for } p_i, p_j(\neq p_i) \in S\}.
+\end{equation*}
+Let $D = \{\alpha_1, \alpha_2\}$ such that $\alpha_1 > \alpha_2$. Denote by $k=\alpha_1 / \alpha_2 > 1$ the \emph{distance ratio} of $S$. Two 2-distance sets are \emph{equivalent} if one can obtain one from the other via isometries and scaling.
+\end{definition}
+
+The structure of a 2-distance set can be naturally encoded with a graph.
+
+\begin{definition}
+For a 2-distance set $S$, we define its \emph{associated graph} $G = G(S)$ to be a graph whose vertices correspond  points in $S$, and two vertices are adjacent if and only if the distance between their corresponding points in $S$ is $\alpha_1$ (i.e. the longer distance of the two).
+\end{definition}
+
+We are also interested in the opposite direction, i.e. when a graph has an associated 2-distance set.
+
+\begin{definition}
+A graph $G$ is \emph{representable in $\rd$ with ratio $k>1$} if there exists a 2-distance set $S$ in $\rd$ with distance ratio $k>1$ such that $G = G(S)$ is the associated graph of $S$.
+\end{definition}
+
+There are infinitely many non-equivalent 2-distance sets on at most $d+1$ points. For instance, we can generate infinitely many 2-distance sets by taking a regular simplex on $d$ points in a hyperplane of dimension $d-1$ and an arbitrary point on the line through the center of the simplex that is perpendicular to the $(d-1)$-dimensional hyperplane of the simplex. 
+
+The following theorem gives a necessary and sufficient condition for a graph of size $d+2$ to be representable in $\rd$, thus proving that there are finitely many 2-distance sets with $d+2$ points. It is a direct implication from the proof of Theorem 1 in \cite{einhorn1966euclidean}.
+
+\begin{theorem}[Einhorn--Schoenberg \cite{einhorn1966euclidean}]\label{main}
+    Let $G$ be a graph on $d+2$ vertices. If $G$ is a complete multipartite graph, then $G$ is not representable in $\rd$ for any value of $k>1$. If $G$ is not a complete multipartite graph, then there exists a unique value $k>1$ for which $G$ is representable in $\rd$ with ratio $k$. 
+\end{theorem}
+\cref{main} allows us to work with the graph of the 2-distance set, which is a much simpler structure than the 2-distance set. We also cite the following lemma which was used to prove Theorem~\ref{main}. It gives us a necessary and sufficient condition for the existence of points with a fixed set of distances between them in a Euclidean space of dimension $d$.
+
+\begin{lemma}[Schoenberg \cite{schoenberg1935remarks}] \label{ns}
+Let $\{m_{ij}\}_{i,j = 1}^n$ be nonnegative real numbers such that $m_{ij} = m_{ji}$ for all $i,j$ and $m_{ii} = 0$ for $i = 1,2\dots n$. There exist points $p_1, \dots, p_n \in \mathbb{R}^d$ with $||p_i - p_j|| = m_{ij}$ for all $i, j$ if and only if the $(n-1) \times (n-1)$ matrix $B'$ with 
+$$b_{ij}' = m_{1i}^2 + m_{1j}^2 - m_{ij}^2$$
+is positive semidefinite (which we denote by $B' \succeq 0$) and $\rank(B') \leq d$. Moreover, this configuration is unique up to congruence.
+\end{lemma}
+Now we give a definition for a spherical 2-distance set, the main focus of this paper. A similar definition is used in the literature (\cite{musin2009spherical}, \cite{musin2019graphs}).
+
+\begin{definition}\label{sphericalrep}
+A 2-distance set $S$ in $\rd$ is called \emph{spherical} if all of its points lie on an $(d-1)$-dimensional sphere in $\rd$. A graph $G$ is \emph{spherical} or has a \emph{spherical representation} in $\rd$ if there exists a spherical 2-distance set $S\subset \rd$ whose associated graph is $G$.
+\end{definition}
+
+Finally, we denote by $A_G$ the adjacency matrix of a graph $G(V,E)$ and its eigenvalues by $\lambda_1 \geq \lambda_2 \geq \dots \geq \lambda_{|V|}$. For the remainder of the paper, $\lambda_i$ will always refer to the $i$-th eigenvalue of $A_G$.
+
+
+\section{Conditions for spherical 2-distance sets}\label{conditions}
+
+In this section we give a set of four necessary and sufficient conditions for a graph to have a spherical representation. Note that similar conditions have been studied for general spherical point sets, see \cite{tarazaga1996circum} and \cite{neumaier1981distance}.
+
+First, we define the matrix $B_G$ which encodes the pairwise distances of the corresponding 2-distance set. 
+\begin{definition}
+Given a \emph{representable} graph $G(V, E)$ on $d+2$ vertices with ratio $k$, denote by $B_G = B_G(k)$ the $(d+2)\times(d+2)$ matrix with entries
+    $$b_{ij} = 
+    \begin{cases} 
+        0 \text{, if } i = j\\
+        -1 \text{, if } \{ i,j\} \not \in E\\
+        -k^2 \text{, if } \{ i,j\} \in E.
+    \end{cases}
+$$
+\end{definition}
+Next, we gives an exact characterization of graphs with $d+2$ vertices that are representable in $\rd$. This characterization is symmetric with respect to all vertices, in contrast with Lemma~\ref{ns}, in which one vertex has to be used as a reference. Let $\one$ be the all-ones vector and $\one^{\perp}$ be the orthogonal complement of the span of $\one$. 
+\begin{prop} \label{1and2}
+    Let $G$ be a graph on $d+2$ vertices. Then $G$ is representable in $\rd$ with ratio $k$ if and only if the following two conditions hold.
+    \begin{enumerate}[label={$(\arabic*)$}]
+        \item For all vectors $w\in \one^{\perp}$ we have $w^TB_G(k)w \geq 0$.
+        \item There exists a nonzero vector $w\in \one^{\perp}$ such that $B_G(k)w = \gamma \one$ for a real number $\gamma$.
+    \end{enumerate} 
+
+\end{prop}
+\begin{proof}
+We define $B_G' = \left(I - \one e_1^T\right)B_G\left(I - e_1\one^T\right)$, which is equivalent to the definition in Lemma~\ref{ns}. Thus, $G$ is representable in $\rd$ if and only if 
+$$B_G' \succeq 0 \text{ and } \rank(B_G') \leq d.$$
+We show that these two conditions are equivalent to conditions \ref{eq: 1} and \ref{eq: 2}, respectively.
+
+The condition $B_G' \succeq 0$ is equivalent to $v^T B_G' v \geq 0$ for all vectors $v$. This gives us
+$$v^T \left(I - \one e_1^T\right)B_G\left(I - e_1\one^T\right) v \geq 0$$
+$$	\Leftrightarrow w^TB_Gw \geq 0, \text{ where } w = \left(I - e_1\one^T\right) v.$$
+Note that $w_1 = -\sum_{i = 2}^n v_{i}, w_2 = v_2, w_3 = v_3, \dots, w_{d+2} = v_{d+2},$
+so $w$ is a vector in $\one^{\perp}$ and hence condition \ref{eq: 1} implies $B_G' \succeq 0$. Conversely, every vector in $\onep$ can be expressed in this form, so $B_G' \succeq 0$ implies condition  \ref{eq: 1} as well.
+
+The condition $\rank(B_G') \leq d $ is equivalent to $\dim \operatorname{null}(B_G') \geq 2$. Observe that $e_1 \in \operatorname{null}(B_G')$, so there exists a vector $v$ independent with $e_1$ such that $\left(I - \one e_1^T\right)B_G\left(I - e_1\one^T\right) v = 0$. This means that there exists $w\perp \one$ such that $\left(I - \one e_1^T\right)B_Gw = 0$, so $B_Gw \in \operatorname{null} \left(I - \one e_1^T\right) = \operatorname{span}(\one)$, thus there exists a real number $\gamma$ such that $B_G w = \gamma \one$. Conversely, if there exists a vector satisfying condition \ref{eq: 2}, then it is in the nullspace of $B_G'$ and is independent of $e_1$, so $\rank (B_G') \leq d$. 
+\end{proof}
+\begin{corollary} \label{nullspace}
+    The nullspace of $B'_G$ consists of the vector $e_1$ and the space of vectors $w\in \onep$ such that $B_G(k)w = \gamma \one$ for some real number $\gamma$.
+\end{corollary}
+We now consider the conditions for a graph to be spherical. Denote by $J$ the all-ones matrix.
+
+\begin{lemma} \label{3and4}
+Let $G$ be a graph on $d+2$ vertices that is representable in $\rd$ with ratio $k$. It has a spherical representation with ratio $k$ if and only if the following two conditions hold:
+\begin{enumerate}[label={$(\arabic*)$}]
+    \setcounter{enumi}{2}
+    \item $\det(xJ + B_G)$ is the zero polynomial.
+    \item There exists $r_0 = r_0(B_G)\in \mathbb{R}$ such that $rJ+B_G  \succeq 0$ for all $r\geq r_0$.
+\end{enumerate} 
+\end{lemma}
+\begin{proof}
+    We first show the only if direction. Suppose that $G$ is a graph on $d+2$ vertices which can be representable in $\rd$ with ratio $k$, and its corresponding 2-distance set is spherical. Take the center $O$ of the sphere and take a point $O_1$ on the line in $\mathbb{R}^{d+1}$ through $O$ that is orthogonal to the subspace $\rd$ where $G$ is representable. The distance between every point from the 2-distance set and $O_1$ is the same and is denoted by $x_1$. Note that we can choose any $x_1\geq \sqrt{r_0/2}$ where $r_0$ is the radius of the circumsphere of the 2-distance set that corresponds to $G$. By Lemma~\ref{ns}, we see that $B' = 2x_1^2J+B_G \succeq 0$ for all $x_1 \geq \sqrt{r_0/2}$, so condition \ref{eq: 4} holds for $r\geq r_0$, and $\rank(B') \leq d+1$, i.e., $\det(B') = 0$. Since $\det(B')$ is a polynomial in $x_1$ which vanishes for all $x_1 \geq \sqrt{r_0/2}$, it must be the zero polynomial, so condition \ref{eq: 3} holds.
+    
+    We now show the if direction. Suppose that $G$ is representable in $\rd$ with ratio $k$ and conditions \ref{eq: 3} and \ref{eq: 4} hold. Take $r = r_0$. Since $rJ + B_G$ is positive semidefnite and $\rank(rJ+B_G) \leq d+1$, by Lemma~\ref{ns} the 2-distance set corresponding to $G$ is inscribed in a sphere with radius $r$ in $\mathbb{R}^{d+1}$ but it also lies on a subspace isomorphic to $\rd$, so it lies in the intersection of the sphere and an $d$-dimensional hyperplane, which is isomorphic to a sphere in $\rd$. This means that the 2-distance set corresponding to $G$ is spherical.
+\end{proof}
+By combining Proposition~\ref{1and2} and Lemma~\ref{3and4}, we obtain a set of four conditions that is necessary and sufficient for $G$ to be representable in $\rd$ with ratio $k$ using only the matrix $B_G$. 
+\begin{enumerate}[label={(\arabic*)}]
+    \item \label{eq: 1} For all vectors $w\in \one^{\perp}$ we have $w^TB_Gw \geq 0$.
+    \item \label{eq: 2} There exists a nonzero vector $w\in \one^{\perp}$ such that $B_Gw = \gamma \one$ for a real number $\gamma$.
+    \item \label{eq: 3} $\det(xJ + B_G)$ is the zero polynomial. 
+    \item \label{eq: 4} There exists $r_0 = r_0(B_G)\in \mathbb{R}$ such that $rJ+B_G  \succeq 0$ for all $r\geq r_0$.
+\end{enumerate}
+
+We first simplify condition~\ref{eq: 3}:
+
+\begin{lemma} \label{remr}
+If a graph $G$ on $d+2$ vertices with a distance ratio $k$ satisfies condition \ref{eq: 2}, then \ref{eq: 3} holds if and only if $\det(B_G) = 0$.
+\end{lemma}
+\begin{proof}
+
+It is clear that condition \ref{eq: 3} implies $\det(B_G) = 0$, so we only need to show the converse.
+
+Assume that $\det(B_G) = 0$. Thus, there exists a vector $u \neq 0$ such that $B_Gu = 0$. From \ref{eq: 2}, there exists $w\in \one^{\perp}$ such that $B_Gw = \gamma \one$. It therefore suffices to show that for every $x$, there exists a nonzero vector $v$ such that $(xJ+B_G)v = 0$. 
+
+First, if $\gamma = 0$, then $(xJ+B_G)w = 0$ for every $x$. Otherwise, take $\beta = -\frac{x \langle u, 1 \rangle}{\gamma}$. Then,
+    \begin{align*}
+        (xJ+B_G)(u+\beta w) & = xJu + \beta xJw + B_Gu + \beta B_Gw\\
+        & = x \langle u, \one \rangle \one + \beta x \mathbf{0} + \mathbf{0} + \beta \gamma \one \\
+        & = (x \langle u, \one \rangle + \beta \gamma)\one  = 0.
+    \end{align*}
+Note that $u+\beta w \neq 0$ because otherwise $u$ and $w$ would have been collinear, which gives us $Bw = 0$, so $\gamma = 0$. Thus, for every $x$ there exists a nonzero vector $v$ such that $(xJ+B_G)v = 0$, as needed.
+\end{proof}
+\section{Second eigenvalue of the adjacency matrix}\label{secondeigen}
+
+From Lemma~\ref{remr}, we can find a formula for $B_G$ which does not depend on the ratio of the 2-distance set. Conversely, if this formula for $B_G$ holds, then we prove that condition \ref{eq: 1} implies condition \ref{eq: 2} and $\det(B_G) = 0$.  
+
+First, we transform the matrix $B_G$ to a new matrix $\overline{B_G}$ which is more closely related to the adjacency matrix $A_G$ and rewrite conditions \ref{eq: 1}-\ref{eq: 4} in terms of $\bg$.
+
+\begin{prop} \label{prop:newconds}
+A graph $G$ on $d+2$ vertices is spherical in $\mathbb{R}^d$ with distance ratio $k$ if and only if the following conditions hold for $\bg = \bg(k) = \frac{1}{k^2-1} (B_G+J) = \frac{1}{k^2-1}I - A_G$:
+\begin{enumerate}[label={$\overline{(\arabic*)}$}]
+    \item \label{1bar} For all $w \in \onep$ we have $w^T\bg w \geq 0$.
+    \item \label{2bar} There exists a nonzero vector $w\in \one^{\perp}$ such that $\bg w =\gamma \one$ for some real number $\gamma$.
+    \item \label{3bar} $\det(\bg) = 0$.
+    \item \label{4bar}There exists $r_0\in \mathbb{R}$ such that for all $r\geq r_0$ we have $rJ + \bg \succeq 0$.
+\end{enumerate}
+\end{prop}
+
+\begin{proof}
+It suffices to show that the conditions \ref{1bar}, \ref{2bar}, \ref{3bar}, and \ref{4bar} are equivalent to conditions \ref{eq: 1}, \ref{eq: 2}, \ref{eq: 3}, and \ref{eq: 4} respectively. 
+The first two are clearly equivalent to the original conditions because $\bg w = \frac{1}{k^2-1}(B_G+J)w = \frac{1}{k^2-1} B_G w$ for all $w \in \onep$. 
+Condition \ref{eq: 3} is equivalent to $\det(xJ +\bg) \equiv 0$ by a change of variable: \[\det \left(xJ + \frac{1}{k^2 - 1}(B_G + J) \right) = \left(\frac{1}{k^2-1}\right)^{d+2} \det \big((x(k^2-1)+1)J + B_G\big).\] By the same proof as in Lemma~\ref{remr} we see that this is also equivalent to condition \ref{3bar}. 
+Condition \ref{4bar} is equivalent to $B_G + (r(k^2-1)+1)J \succeq 0$ for sufficiently large $r$, which is the same as condition \ref{eq: 4}.
+\end{proof}
+
+
+We now find a formula for $\bg$ in terms of the second eigenvalue of the adjacency matrix. This also gives us a formula for $B_G$ that does not depend on $k$.
+\begin{lemma} \label{lbd2}
+Let $G$ be a graph on $d+2$ vertices. Suppose that it satisfies conditions \ref{1bar},  \ref{2bar}, and \ref{3bar} for some $k>1$, then 
+$B_G = I - \frac{1}{\lambda_2}A_G -J $.
+\end{lemma}
+\begin{proof}
+Let $m = \frac{1}{k^2-1}$, so $\bg = mI - A_G$. Since $\det(\bg) = 0$, so there exists an eigenvector $v$ of $A_G$ that has eigenvalue $m = \lambda_i$ for some $i$. By condition \ref{1bar}, $x^T\bg x \geq 0$ for $x\in \onep$ which is equivalent to $x^TA_G x \leq mx^Tx$, i.e., $\frac{x^TA_Gx}{x^Tx} \leq m$ for every $x\in \onep$. So, by the Courant–Fischer–Weyl min-max principle \cite{horn2012matrix} we have
+    $$\lambda_2 = \min_{\substack{U \\ \dim(U) = d-1}} \left\{ \max_{x\in U} \frac{x^TA_Gx}{x^Tx} \right\} \leq \max_{x\in \one^{\perp} } \frac{x^TA_Gx}{x^Tx} \leq m.$$
+By condition \ref{2bar}, there exists a vector $x_1 \in \one^{\perp}$ such that $x_1^T(mI - A_G)x_1 = 0$ or equivalently $m = \frac{x_1^TA_Gx_1}{x_1^Tx_1}$. But $m = \lambda_i$ for some $i$, so $m\leq \lambda_1$.
+
+If $\lambda_1 = \lambda_2$, then $m = \frac{x_1^TA_G x_1}{x_1^Tx_1}\leq \lambda_1 = \lambda_2$ by the min-max principle.
+
+If $\lambda_1 > \lambda_2$, then $v_1 \not \in \onep$ because $\lambda_1$'s eigenvector $v_1$ has nonnegative coordinates. Since $\frac{x^TA_Gx}{x^Tx} = \lambda_1$ holds if and only if $x\in \operatorname{span}(v_1)$ and $x_1 \not \in \operatorname{span} (v_1)$, so $m < \lambda_1$ thus $m \leq \lambda_2$.
+
+Therefore $\lambda_2 \leq m \leq \lambda_2$, so $m = \lambda_2$. Undoing the transformations of $B_G$, we obtain $B_G = I - \frac{1}{\lambda_2}A_G -J$, as needed.
+\end{proof}
+
+This gives us a formula for $k$ in terms of $\lambda_2$.
+
+\begin{corollary}
+Given graph $G$ on $d+2$ vertices. If $G$ is spherical, then the distance ratio is $\sqrt{\frac{1}{\lambda_2} + 1}$. (In particular, this implies that $\lambda_2 > 0$.)
+\end{corollary}
+
+\begin{proof}
+From the proof of Lemma~\ref{lbd2}, we have $\frac{1}{k^2 - 1} = m = \lambda_2$, so we have $k = \sqrt{\frac{1}{\lambda_2} + 1}$.
+\end{proof}
+
+Therefore, we can rephrase Proposition \ref{prop:newconds} with the definition $\bg = \lambda_2 I - A_G$ instead of the original definition, which removes the need to consider $k$ altogether.
+
+Using Lemma~\ref{lbd2} we can also prove that one of the eigenvectors of $\lambda_2$ is in $\onep$.
+
+\begin{lemma}\label{v2}
+Let $G$ be a graph on $d+2$ vertices with ratio $k$ that satisfies conditions \ref{1bar}, \ref{2bar}, and \ref{3bar}. 
+There exists an eigenvector  $v_2$ of $\lambda_2$ that is orthogonal to $\one$.
+\end{lemma}
+
+\begin{proof}
+Let $v_1$ be an eigenvector of $\lambda_1$ and $v_2$ be an eigenvector of $\lambda_2$ such that $\langle v_1, v_2 \rangle = 0$ and let $|| v_1|| = ||v_2|| = 1$. The subspace $\operatorname{span}(v_1, v_2)$ has dimension 2, so it intersects $\one^{\perp}$ in a line or a plane. This means that there exist real numbers $\alpha$ and $\beta$ such that $\alpha v_1 + \beta v_2 \in \one^{\perp}$ (where $\alpha$ and $\beta$ are not both equal to $0$). The matrix $\bg = \lambda_2 I - A_G$ by Lemma~\ref{lbd2}, so it has $v_2$ in its nullspace. By condition~\ref{1bar},
+\begin{align*}
+    0 & \leq (\alpha v_1 + \beta v_2)^T \bg (\alpha v_1 + \beta v_2)\\
+    & = \alpha^2 v_1^T\bg v_1 + \beta^2 v_2^T\bg v_2+ \alpha \beta (v_1^T\bg v_2 + v_2^T\bg v_1) \\
+    & = \alpha^2 (\lambda_2 v_1^T v_1 - v_1^TA_Gv_1) + \beta^2 v_2^T\bg v_2 + \alpha \beta v_1^T\bg v_2 + \alpha \beta (v_1^T\bg v_2)^T\\
+    & = \alpha^2 (\lambda_2 v_1^T v_1 - v_1^TA_Gv_1)\\ 
+    & = \alpha^2 (\lambda_2 - \lambda_1).
+\end{align*}
+
+Since $\alpha^2 (\lambda_2 - \lambda_1)$ is clearly nonpositive, this means that either $\lambda_1 = \lambda_2$ or $\alpha = 0$. In the first case $\lambda_2$'s eigenspace has dimension at least 2, so there is a nonzero intersection with $\one^{\perp}$, so we can set $v_2 \in \one^{\perp}$. In the second case we have $\beta v_2 \in \onep$, and $\beta \neq 0$, so $v_2 \in \onep$.
+\end{proof}
+
+\begin{corollary}\label{cor2}
+    If $G$ is a graph with ratio $k$ that satisfies conditions \ref{1bar}, \ref{2bar}, and \ref{3bar} then if $\lambda_1 > \lambda_2$, all eigenvectors of $\lambda_2$ are in $\onep$, and if $\lambda_1 = \lambda_2$, then all but one vector of the eigenbasis of $\lambda_2$ can be chosen to be in $\onep$.
+\end{corollary}
+
+\begin{proof}
+From the proof of Lemma~\ref{v2}, we can see that the eigenspace of $\lambda_2$ is in $\onep$ when $\lambda_1 > \lambda_2$. If $\lambda_1 = \lambda_2$, we can choose the eigenbasis of $\lambda_2$ so that at most one of the basis vectors is not in $\onep$, so we can assign it to be the eigenvector for $\lambda_1$.
+\end{proof}
+
+Now, we are ready to prove that condition \ref{1bar} implies conditions \ref{2bar} and \ref{3bar}, so we can remove the latter as the information from them is captured in the new formula for $\bg$.
+
+\begin{lemma}\label{1l}
+Given a graph $G$ on $d+2$ vertices and $\bg = \lambda_2 I - A_G$. If for every $w \in \onep$ $w^T\bg w \geq 0$, then conditions \ref{2bar} and \ref{3bar} are satisfied. 
+\end{lemma}
+\begin{proof}
+    By the proof of Lemma~\ref{v2}, if condition \ref{1bar} is true for the matrix $\bg = \lambda_2 I - A_G$, then the eigenvector $v_2$ of the second largest eigenvalue is in $\onep$. From this we can deduce that $\bg v_2 = 0$, which implies both conditions \ref{2bar} and \ref{3bar}.
+\end{proof}
+
+\section{Reduction of the positive-semidefinite condition} \label{reduction}
+
+In this section we simplify condition \ref{4bar}. To do this, we use condition~\ref{1bar} to reduce condition \ref{4bar} to the existence of an upper bound on $\displaystyle \frac{(\one^T A_G v)^2}{\lambda_2 v^T v - v^TA_G v}$ for $v\in \onep$. Lemma~\ref{pom} gives a necessary and sufficient condition for the existence of this bound.
+\begin{lemma}\label{pom}
+Let $G$ be a graph on $d+2$ vertices such that $\bg = \lambda_2 I - A_G$, and $\bg$ satisfies condition \ref{1bar}, and let $V$ be a subspace of $\onep$. There exists a real number $r$ such that
+\begin{equation}\label{ineq}
+    r(d+2)^2(\lambda_2v^Tv - v^TA_Gv) \geq (\one^T A_G v)^2 \text{ for every } v\in V
+\end{equation}
+if and only if $\one^TA_Gv = 0$ for all vectors $v\in V$ such that $\lambda_2 v^Tv = v^TA_Gv$.
+\end{lemma}
+\begin{proof}
+    The forward direction is straightforward.
+    For the reverse direction, we induct on the dimension of $V$. The base case $\dim (V) = 0$ is trivial.    For the inductive step, assume that $V$ has dimension at least one and that the statement holds for all subspaces of $\onep$ with lower dimension. Divide both sides of inequality \eqref{ineq} by $v^Tv$ to obtain 
+    \begin{equation*}
+        r(d+2)^2\left(\lambda_2 - \frac{v^TA_Gv}{v^Tv}\right) \geq \frac{(\one^T A_G v)^2}{v^Tv}.
+    \end{equation*} By Cauchy-Schwartz’s inequality, we can bound the absolute value of the right-hand side $\left|\frac{(\one^TA_G v)^2}{v^Tv}\right| \leq ||\one^T A_G||^2$. Denote by 
+    \begin{equation*}
+    f(v) = \lambda_2 - \frac{v^TA_Gv}{v^Tv}.
+    \end{equation*} 
+    Let $L = \displaystyle \inf_{\substack{v\in V \\ v\neq 0}} f(v)$. Note that $L\geq 0$ by condition \ref{1bar}. If $L>0$, the inequality is true for every $r \geq \frac{||1^TA_G||^2}{(d+2)^2L}$. If $L = 0$, then as $f$ is invariant under scaling, so $L$ is also the infimum of $f$ on the unit sphere, which is compact. Therefore, this infimum is achieved, i.e., there exists a unit vector $w$ such that $f(w) = 0$ (so $\lambda_2 - w^TA_Gw = 0$). 
+    
+    We show that $A_G w = \lambda_2 w$, i.e.\ $w$ is an eigenvector of $A_G$. Note that \(P^T\overline{B}_G P\) is positive semidefinite, where \(P\) is the orthogonal projection matrix onto $\onep$, and $P^T = P$ holds. For $v\in \onep$, we have
+    \begin{equation*}
+        v^T \overline{B}_G v \;=\; v^T P^T \overline{B}_G P v \;=\; 0
+    \end{equation*}
+    if and only if $v$ is an eigenvector of $P^T\overline{B}_G P$ with eigenvalue $0$. Since $w$ is an eigenvector of $P^T\bg P$ with eigenvalue $0$, and hence
+    \begin{equation*}
+            0 = \bigl(P^T \bg P\bigr)w = P^T\bg w.
+    \end{equation*}
+    From the assumption $\bg w\in \onep$, it follows that
+    \begin{equation*}
+        \bg w = P^T\bigl(\bg w\bigr) = 0,
+    \end{equation*}
+    and hence $w$ is an eigenvector corresponding to $\lambda_2$, so $A_G w = \lambda_2 w$.
+
+    By the inductive hypothesis, the inequality \eqref{ineq} holds for all $v \in V\cap \operatorname{span}(w)^{\perp}$. If $v$ is not perpendicular to $w$, by scaling $v$ we can write $v = w + \varepsilon x$ where $||x|| = 1$ and $x\perp w$. The inequality becomes 
+    $$ r(d+2)^2(\lambda_2 + \lambda_2 \varepsilon^2 - w^TA_Gw - 2\varepsilon x^TA_Gw - \varepsilon^2 x^TA_Gx) \geq (\one^T A_G w + \varepsilon \one^T A_G x)^2 $$
+    \begin{equation} \label{quadratic}
+        r(d+2)^2(\lambda_2 \varepsilon^2 - 2\varepsilon x^TA_Gw - \varepsilon^2 x^TA_Gx) \geq (\varepsilon \one^T A_G x)^2.
+    \end{equation} 
+    % If $x^TA_Gw \neq 0$, then taking $\varepsilon \rightarrow 0^+$ or $\varepsilon \rightarrow 0^-$ contradicts $\lambda_2 \varepsilon^2 - 2\varepsilon x^TA_Gw - \varepsilon^2 x^TA_Gx \geq 0$ that follows from condition \ref{eq: 1}.
+
+    As $x \perp w$, it follows that $x^T A_G w = \lambda_2 x^T w = 0$. Dividing both sides of the inequality \eqref{quadratic} by $\varepsilon^2$ gives \begin{equation*}
+        r(d+2)^2(\lambda_2 - x^TA_Gx) \geq (\one^T A_G x)^2
+    \end{equation*} for $x \in V\cap \operatorname{span}(w)^{\perp}$ that has lower dimension than $V$, so the inductive step is completed.
+    % which is the same inequality but now $x$ is a vector in $V\cap \operatorname{span}(w)^{\perp}$ which has lower dimension, so we can apply the inductive hypothesis on it.
+\end{proof}
+We are now equipped to simplify condition \ref{4bar}. We prove that it is equivalent to condition \ref{1bar} combined with a new condition \ref{eq: 5}.
+\begin{lemma}\label{ref4}
+A graph $G$ on $d+2$ vertices is spherical if and only if $w^T\bg w \geq 0$ for all vectors $w \in \one^{\perp}$ where $\bg = \lambda_2 I - A_G$, and 
+\begin{enumerate}[label={$\overline{(\arabic*)}$}]
+\setcounter{enumi}{4}
+\item \label{eq: 5} $\one ^T A_Gw = 0$ for all vectors $w\in \one^{\perp}$ such that $w^T\bg w = 0$.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+    We can easily see that condition \ref{4bar} implies condition \ref{1bar}, so if we know that  \ref{4bar} holds for the matrix $\bg = \lambda_2 I - A_G$, then by Lemma~\ref{1l} we also have conditions \ref{2bar} and \ref{3bar}, so $G$ has a spherical representation.
+    
+    Thus, we need to check that condition \ref{1bar} combined with the fact that  $\one^TA_Gw = 0$ for all vectors $w\in \one^{\perp}$ such that $\lambda_2 w^Tw = w^TA_Gw$ is equivalent to condition \ref{4bar}.
+    
+    Every vector $u$ can be expressed as $\alpha \one + \beta v$ where $v \in \onep$. So, condition \ref{4bar} states that for all $\alpha, \beta, v$ and sufficiently large $r$
+    \begin{align*}
+        0 & \leq (\alpha \one + \beta v)^T(rJ + \lambda_2 I - A_G)(\alpha \one + \beta v) \\
+         & = r (\alpha \one + \beta v)^T J (\alpha \one + \beta v) + (\alpha \one + \beta v)^T(\lambda_2 I - A_G)(\alpha \one + \beta v).
+    \end{align*}
+    
+    As $\operatorname{span}(J) = \operatorname{span}(\one)$, the right-hand side expression is equal to 
+    \begin{align*}
+    & \alpha^2 r(d+2)^2 + (\alpha \one + \beta v)^T(\lambda_2 I - A_G)(\alpha \one + \beta v) \\
+    =\  & \alpha^2 r(d+2)^2 + \lambda_2 (\alpha \one + \beta v)^T(\alpha \one + \beta v) - (\alpha \one + \beta v)^TA_G(\alpha \one + \beta v)\\
+    =\  & \alpha^2 r(d+2)^2 + \lambda_2 \alpha^2 (d+2) + \lambda_2 \beta^2v^Tv - (\alpha \one + \beta v)^TA_G(\alpha \one + \beta v)\\
+    =\  & \alpha^2 r(d+2)^2 + \lambda_2 \alpha^2 (d+2) + \lambda_2 \beta^2v^Tv - \alpha^2 \one^TA_G\one - \beta^2 v^TA_Gv - 2\alpha \beta \one^T A_G v \\
+    =\  & \alpha^2\left( \lambda_2  (d+2) - \one^TA_G\one + r(d+2)^2\right) - 2\alpha \beta \one^T A_G v + \beta^2(\lambda_2 v^Tv -  v^TA_Gv).
+     \end{align*}
+If $\alpha = 0$ this becomes condition \ref{1bar}. 
+
+Assume that $\alpha\neq 0$. The first two terms in the coefficient of $\alpha^2$ are constants, so we can ignore them and increase $r$ by a constant. So, we want 
+\begin{equation*}
+    \alpha^2 r(d+2)^2 - 2\alpha \beta \one^T A_G v + \beta^2(\lambda_2 v^Tv -  v^TA_Gv) \geq 0.
+\end{equation*}
+Thus the discriminant of the quadratic polynomial should be non-positive. That is \begin{equation*}
+    r(d+2)^2(\lambda_2 v^Tv -  v^TA_Gv) \geq (\one^T A_G v)^2 
+\end{equation*}for sufficiently large $r$, which reduces the lemma to Lemma~\ref{pom}.
+\end{proof}
+
+We can simplify condition \ref{eq: 5} even further.
+
+\begin{lemma}\label{last}
+Let $G$ be a graph on $d+2$ vertices. Then $G$ has a spherical representation if and only if condition \ref{1bar} holds for $\bg = \lambda_2 I - A_G$, and for every vector $w \in \onep$ such that $w^T\bg w = 0$ we have $\bg w = 0$.
+\end{lemma}
+\begin{proof}
+
+It suffices to show that if $w^T\bg w = 0$ for some $w\in \onep$ then $1^TA_Gw = 0$ if and only if $\bg w = 0$. Since $w^T\bg w = 0$ is equivalent to $w^TA_G w = \lambda_2 w^Tw$, by the proof of Lemma~\ref{pom} we see that if $A_Gw \in \onep$ then $A_Gw = \lambda_2 w$ and hence $\bg w = 0$. On the other hand, if $\bg w = 0$, then $\one^TA_Gw = \lambda_2 \one^T w = 0$.
+\end{proof}
+
+\section{Proof of the main theorem}\label{finsec}
+We now use Lemma~\ref{last} to prove Theorem~\ref{mainres} and Proposition~\ref{lowestdimensionspherical}.
+
+\begin{proof}[Proof of Theorem~\ref{mainres}]
+    Let the eigenvalues of $PA_G P$ be $\mu_1\geq \mu_2 \geq \dots \geq \mu_{d+1}$ and 0 where 0 corresponds to the eigenvector $\one$. The matrices $PA_GP$ and $P\bg P$ have the same set of eigenvectors ($\bg = \lambda_2I - A_G$ and $P$ is a projection matrix). Suppose that the maximum eigenvalue of $PA_GP$ is $\lambda_2$. Therefore the spectrum of $P\bg P$ is the set $\lambda_2 - \mu_1, \lambda_2 - \mu_2, \dots, \lambda_2 - \mu_{d+1}, \lambda_2$. Thus all eigenvalues of $P\bg P$ are nonnegative, so condition \ref{1bar} holds for $\bg$. Conversely, if condition~\ref{1bar} holds, then $\mu_1 \leq \lambda_2$. Furthermore, by Lemma~\ref{1l}, conditions \ref{2bar} and \ref{3bar} hold. So, by Lemma~\ref{v2}, there is an eigenvector with an eigenvalue $\lambda_2$ of $A_G$ such that $v_2\in \onep$, thus $v_2$ is an eigenvector of $PA_GP$ and $P\bg P$, so $\mu_1 \geq \lambda_2$. Thus $\mu_1 = \lambda_2$.
+    
+    Now, by Lemma~\ref{last}, we have to prove that if we assume condition \ref{1bar} holds for $\bg$, then the following two conditions are equivalent.
+    \begin{itemize}
+        \item [(a)]The multiplicity of $\lambda_2$ in $A_G$ (excluding $\lambda_1$ if $\lambda_1 = \lambda_2$) is equal the multiplicity of $\lambda_2$ in $PA_G$.
+        \item [(b)] We have $w^T\bg w = 0$ if and only if $\bg w = 0$ for all $w\in \onep$.
+    \end{itemize}
+    
+    Condition \ref{1bar} holds for $\bg$, so by Lemma~\ref{1l}, conditions \ref{2bar} and \ref{3bar} hold, thus Corollary~\ref{cor2} holds and every eigenvector of $\lambda_2$ (except the eigenvector of $\lambda_1$ when $\lambda_1 = \lambda_2$) is also an eigenvector of $PA_GP$, thus the multiplicity of $\lambda_2$ in $A_G$ (excluding $\lambda_1$ when $\lambda_1 = \lambda_2$) is at most the multiplicity of $\lambda_2$ in $P A_G P$. By condition \ref{1bar} $w^T\bg w = 0$ if and only if $w$ is an null vector of $P\bg P$, i.e., an eigenvector of $\lambda_2$ in $A_G$. So, if $w^T\bg w = 0$ is true only if $\bg w = 0$, i.e., $w$ is an eigenvector of $\lambda_2$ in $A_G$, then the the multiplicity of $\lambda_2$ in $A_G$ (excluding $\lambda_1$ when $\lambda_1 = \lambda_2$) is at least the multiplicity of $\lambda_2$ in $P A_G P$, so they are equal. The reverse also holds.
+\end{proof}
+    We can combine \cref{mainres} with Corollary~\ref{nullspace} to obtain the lowest dimensional space in which a given 2-distance set is representable. 
+\begin{proof}[Proof of Proposition~\ref{lowestdimensionspherical}]
+    By Lemma~\ref{main}, $G$ is representable in $\rn$ if and only if $\rank (B'_G) \leq n$ where $B'_G= \left(I - \one e_1^T\right)B_G\left(I - e_1\one^T\right).$ Let $S$ be the space of vectors $w\in \onep$ such that $B_Gw = \gamma \one$ for some real number $\gamma$. By Corollary~\ref{nullspace}, $\rank (B'_G) = d+2 - 1 - \rank(S) = d+1 - \rank(S)$. Note that the nullspace of $PB_GP$ which is $\one \cup S$, thus $\rank(PB_GP) = d+2 - 1 -\rank (S) = d+1-\rank(S) = \rank (B'_G)$, so $\rank (B'_G) \leq n$, but the nullspace of $PB_GP$ is the union of $\one$ and eigenspace of $\lambda_2$ in $PA_GP$.  For spherically representable graphs the multiplicity of $\lambda_2$ in $PA_GP$ is the same as the multiplicity of $\lambda_2$ in $A_G$. Therefore, $G$ is representable in $\rn$ if the multiplicity of $\lambda_2$ in $A_G$ is at least $d+1-n$.
+\end{proof}
+We also give an equivalent formulation of \cref{mainres} using the Cauchy interlacing theorem, which gives a more intuitive understanding of what \cref{mainres} means.
+\begin{theorem}[Cauchy interlacing theorem \cite{hwang2004cauchy}]
+    Let $A$ be a symmetric $n \times n$ matrix and $B$ be an $m \times m$ matrix with $B = PAP^*$ where $P$ is an orthogonal projection onto a subspace of dimension $m$. Then if the eigenvalues of $A$ are $\alpha_1 \geq \alpha_2 \geq \dots \geq \alpha_n$ and the eigenvalues of $B$ are $\beta_1 \geq \beta_2 \geq \dots \geq \beta_m$, then for all $j \leq m$
+    $$\alpha_j \geq \beta_j \geq \alpha_{j+n-m}.$$
+\end{theorem}
+In our case, if the eigenvalues of $PA_GP$ are $\mu_1 \geq \mu_2 \geq \dots \geq \mu_{n-1}$, then \[\lambda_1 \geq \mu_1 \geq \lambda_2 \geq \mu_2 \geq \dots \geq \lambda_k \geq \mu_k \geq \lambda_{k+1} \geq \dots \geq \lambda_n.\]
+The condition of \cref{mainres} is therefore equivalent to $\mu_1 = \lambda_2$ and $\mu_k < \lambda_k$, where $k$ is such that $\lambda_{k+1} < \lambda_k = \lambda_2$. Proposition~\ref{lowestdimensionspherical} implies that the lowest representable dimension of a spherical graph on $n$ vertices is $n - k$.
+
+The main theorem also implies that all small regular graphs have a spherical representation: 
+\begin{corollary}
+    If $G$ is a regular graph on $d+2$ vertices that is not complete multipartite, then $G$ has a spherical representation in $\rd$. 
+\end{corollary}
+\begin{proof}
+    If $G$ is a regular graph, then the eigenvector of the first eigenvalue is $\one$, thus $\mu_i = \lambda_{i+1}$ for $i = 1,2\dots, n-1$, which clearly satisfies \cref{mainres}.
+\end{proof}
+
+It may be possible to derive more necessary or sufficient combinatorial conditions for a graph to be spherical based on our main theorem.
+
+\smallskip
+
+\paragraph{\bfseries Acknowledgments.} 
+The bulk of this research was conducted during Research Science Institute (RSI) hosted by the Center for Excellence in Education (CEE) at Massachusetts Institute of Technology (MIT), where the first author was a participant and the second author was a research mentor. We thank Dr.~Tanya Khovanova, Prof.~David Jerison and Prof.~Ankur Moitra for helpful discussions during the RSI program. We thank Eli Meyers for his help with various technical issues during the project, and Dr.~John Rickert and Yunseo Choi for their feedback on earlier versions of this paper. We are also grateful to the anonymous reviewer for suggesting a simpler proof that \(w\) is an eigenvector of \(A_G\). We are thankful to HSSIMI, Sts.\ Cyril \& Methodius International Foundation, Foundation for Support of Children Mariyana Palanchova, and the MIT Math Department for funding our research.
+
+exec
+/bin/bash -lc "sed -n '120,270p' /tmp/arxiv2211.Zj5e8e/paper.tex" in /home/gson/gvrepo/results/2211.12582
+ succeeded in 0ms:
+    \setcounter{enumi}{2}
+    \item $\det(xJ + B_G)$ is the zero polynomial.
+    \item There exists $r_0 = r_0(B_G)\in \mathbb{R}$ such that $rJ+B_G  \succeq 0$ for all $r\geq r_0$.
+\end{enumerate} 
+\end{lemma}
+\begin{proof}
+    We first show the only if direction. Suppose that $G$ is a graph on $d+2$ vertices which can be representable in $\rd$ with ratio $k$, and its corresponding 2-distance set is spherical. Take the center $O$ of the sphere and take a point $O_1$ on the line in $\mathbb{R}^{d+1}$ through $O$ that is orthogonal to the subspace $\rd$ where $G$ is representable. The distance between every point from the 2-distance set and $O_1$ is the same and is denoted by $x_1$. Note that we can choose any $x_1\geq \sqrt{r_0/2}$ where $r_0$ is the radius of the circumsphere of the 2-distance set that corresponds to $G$. By Lemma~\ref{ns}, we see that $B' = 2x_1^2J+B_G \succeq 0$ for all $x_1 \geq \sqrt{r_0/2}$, so condition \ref{eq: 4} holds for $r\geq r_0$, and $\rank(B') \leq d+1$, i.e., $\det(B') = 0$. Since $\det(B')$ is a polynomial in $x_1$ which vanishes for all $x_1 \geq \sqrt{r_0/2}$, it must be the zero polynomial, so condition \ref{eq: 3} holds.
+    
+    We now show the if direction. Suppose that $G$ is representable in $\rd$ with ratio $k$ and conditions \ref{eq: 3} and \ref{eq: 4} hold. Take $r = r_0$. Since $rJ + B_G$ is positive semidefnite and $\rank(rJ+B_G) \leq d+1$, by Lemma~\ref{ns} the 2-distance set corresponding to $G$ is inscribed in a sphere with radius $r$ in $\mathbb{R}^{d+1}$ but it also lies on a subspace isomorphic to $\rd$, so it lies in the intersection of the sphere and an $d$-dimensional hyperplane, which is isomorphic to a sphere in $\rd$. This means that the 2-distance set corresponding to $G$ is spherical.
+\end{proof}
+By combining Proposition~\ref{1and2} and Lemma~\ref{3and4}, we obtain a set of four conditions that is necessary and sufficient for $G$ to be representable in $\rd$ with ratio $k$ using only the matrix $B_G$. 
+\begin{enumerate}[label={(\arabic*)}]
+    \item \label{eq: 1} For all vectors $w\in \one^{\perp}$ we have $w^TB_Gw \geq 0$.
+    \item \label{eq: 2} There exists a nonzero vector $w\in \one^{\perp}$ such that $B_Gw = \gamma \one$ for a real number $\gamma$.
+    \item \label{eq: 3} $\det(xJ + B_G)$ is the zero polynomial. 
+    \item \label{eq: 4} There exists $r_0 = r_0(B_G)\in \mathbb{R}$ such that $rJ+B_G  \succeq 0$ for all $r\geq r_0$.
+\end{enumerate}
+
+We first simplify condition~\ref{eq: 3}:
+
+\begin{lemma} \label{remr}
+If a graph $G$ on $d+2$ vertices with a distance ratio $k$ satisfies condition \ref{eq: 2}, then \ref{eq: 3} holds if and only if $\det(B_G) = 0$.
+\end{lemma}
+\begin{proof}
+
+It is clear that condition \ref{eq: 3} implies $\det(B_G) = 0$, so we only need to show the converse.
+
+Assume that $\det(B_G) = 0$. Thus, there exists a vector $u \neq 0$ such that $B_Gu = 0$. From \ref{eq: 2}, there exists $w\in \one^{\perp}$ such that $B_Gw = \gamma \one$. It therefore suffices to show that for every $x$, there exists a nonzero vector $v$ such that $(xJ+B_G)v = 0$. 
+
+First, if $\gamma = 0$, then $(xJ+B_G)w = 0$ for every $x$. Otherwise, take $\beta = -\frac{x \langle u, 1 \rangle}{\gamma}$. Then,
+    \begin{align*}
+        (xJ+B_G)(u+\beta w) & = xJu + \beta xJw + B_Gu + \beta B_Gw\\
+        & = x \langle u, \one \rangle \one + \beta x \mathbf{0} + \mathbf{0} + \beta \gamma \one \\
+        & = (x \langle u, \one \rangle + \beta \gamma)\one  = 0.
+    \end{align*}
+Note that $u+\beta w \neq 0$ because otherwise $u$ and $w$ would have been collinear, which gives us $Bw = 0$, so $\gamma = 0$. Thus, for every $x$ there exists a nonzero vector $v$ such that $(xJ+B_G)v = 0$, as needed.
+\end{proof}
+\section{Second eigenvalue of the adjacency matrix}\label{secondeigen}
+
+From Lemma~\ref{remr}, we can find a formula for $B_G$ which does not depend on the ratio of the 2-distance set. Conversely, if this formula for $B_G$ holds, then we prove that condition \ref{eq: 1} implies condition \ref{eq: 2} and $\det(B_G) = 0$.  
+
+First, we transform the matrix $B_G$ to a new matrix $\overline{B_G}$ which is more closely related to the adjacency matrix $A_G$ and rewrite conditions \ref{eq: 1}-\ref{eq: 4} in terms of $\bg$.
+
+\begin{prop} \label{prop:newconds}
+A graph $G$ on $d+2$ vertices is spherical in $\mathbb{R}^d$ with distance ratio $k$ if and only if the following conditions hold for $\bg = \bg(k) = \frac{1}{k^2-1} (B_G+J) = \frac{1}{k^2-1}I - A_G$:
+\begin{enumerate}[label={$\overline{(\arabic*)}$}]
+    \item \label{1bar} For all $w \in \onep$ we have $w^T\bg w \geq 0$.
+    \item \label{2bar} There exists a nonzero vector $w\in \one^{\perp}$ such that $\bg w =\gamma \one$ for some real number $\gamma$.
+    \item \label{3bar} $\det(\bg) = 0$.
+    \item \label{4bar}There exists $r_0\in \mathbb{R}$ such that for all $r\geq r_0$ we have $rJ + \bg \succeq 0$.
+\end{enumerate}
+\end{prop}
+
+\begin{proof}
+It suffices to show that the conditions \ref{1bar}, \ref{2bar}, \ref{3bar}, and \ref{4bar} are equivalent to conditions \ref{eq: 1}, \ref{eq: 2}, \ref{eq: 3}, and \ref{eq: 4} respectively. 
+The first two are clearly equivalent to the original conditions because $\bg w = \frac{1}{k^2-1}(B_G+J)w = \frac{1}{k^2-1} B_G w$ for all $w \in \onep$. 
+Condition \ref{eq: 3} is equivalent to $\det(xJ +\bg) \equiv 0$ by a change of variable: \[\det \left(xJ + \frac{1}{k^2 - 1}(B_G + J) \right) = \left(\frac{1}{k^2-1}\right)^{d+2} \det \big((x(k^2-1)+1)J + B_G\big).\] By the same proof as in Lemma~\ref{remr} we see that this is also equivalent to condition \ref{3bar}. 
+Condition \ref{4bar} is equivalent to $B_G + (r(k^2-1)+1)J \succeq 0$ for sufficiently large $r$, which is the same as condition \ref{eq: 4}.
+\end{proof}
+
+
+We now find a formula for $\bg$ in terms of the second eigenvalue of the adjacency matrix. This also gives us a formula for $B_G$ that does not depend on $k$.
+\begin{lemma} \label{lbd2}
+Let $G$ be a graph on $d+2$ vertices. Suppose that it satisfies conditions \ref{1bar},  \ref{2bar}, and \ref{3bar} for some $k>1$, then 
+$B_G = I - \frac{1}{\lambda_2}A_G -J $.
+\end{lemma}
+\begin{proof}
+Let $m = \frac{1}{k^2-1}$, so $\bg = mI - A_G$. Since $\det(\bg) = 0$, so there exists an eigenvector $v$ of $A_G$ that has eigenvalue $m = \lambda_i$ for some $i$. By condition \ref{1bar}, $x^T\bg x \geq 0$ for $x\in \onep$ which is equivalent to $x^TA_G x \leq mx^Tx$, i.e., $\frac{x^TA_Gx}{x^Tx} \leq m$ for every $x\in \onep$. So, by the Courant–Fischer–Weyl min-max principle \cite{horn2012matrix} we have
+    $$\lambda_2 = \min_{\substack{U \\ \dim(U) = d-1}} \left\{ \max_{x\in U} \frac{x^TA_Gx}{x^Tx} \right\} \leq \max_{x\in \one^{\perp} } \frac{x^TA_Gx}{x^Tx} \leq m.$$
+By condition \ref{2bar}, there exists a vector $x_1 \in \one^{\perp}$ such that $x_1^T(mI - A_G)x_1 = 0$ or equivalently $m = \frac{x_1^TA_Gx_1}{x_1^Tx_1}$. But $m = \lambda_i$ for some $i$, so $m\leq \lambda_1$.
+
+If $\lambda_1 = \lambda_2$, then $m = \frac{x_1^TA_G x_1}{x_1^Tx_1}\leq \lambda_1 = \lambda_2$ by the min-max principle.
+
+If $\lambda_1 > \lambda_2$, then $v_1 \not \in \onep$ because $\lambda_1$'s eigenvector $v_1$ has nonnegative coordinates. Since $\frac{x^TA_Gx}{x^Tx} = \lambda_1$ holds if and only if $x\in \operatorname{span}(v_1)$ and $x_1 \not \in \operatorname{span} (v_1)$, so $m < \lambda_1$ thus $m \leq \lambda_2$.
+
+Therefore $\lambda_2 \leq m \leq \lambda_2$, so $m = \lambda_2$. Undoing the transformations of $B_G$, we obtain $B_G = I - \frac{1}{\lambda_2}A_G -J$, as needed.
+\end{proof}
+
+This gives us a formula for $k$ in terms of $\lambda_2$.
+
+\begin{corollary}
+Given graph $G$ on $d+2$ vertices. If $G$ is spherical, then the distance ratio is $\sqrt{\frac{1}{\lambda_2} + 1}$. (In particular, this implies that $\lambda_2 > 0$.)
+\end{corollary}
+
+\begin{proof}
+From the proof of Lemma~\ref{lbd2}, we have $\frac{1}{k^2 - 1} = m = \lambda_2$, so we have $k = \sqrt{\frac{1}{\lambda_2} + 1}$.
+\end{proof}
+
+Therefore, we can rephrase Proposition \ref{prop:newconds} with the definition $\bg = \lambda_2 I - A_G$ instead of the original definition, which removes the need to consider $k$ altogether.
+
+Using Lemma~\ref{lbd2} we can also prove that one of the eigenvectors of $\lambda_2$ is in $\onep$.
+
+\begin{lemma}\label{v2}
+Let $G$ be a graph on $d+2$ vertices with ratio $k$ that satisfies conditions \ref{1bar}, \ref{2bar}, and \ref{3bar}. 
+There exists an eigenvector  $v_2$ of $\lambda_2$ that is orthogonal to $\one$.
+\end{lemma}
+
+\begin{proof}
+Let $v_1$ be an eigenvector of $\lambda_1$ and $v_2$ be an eigenvector of $\lambda_2$ such that $\langle v_1, v_2 \rangle = 0$ and let $|| v_1|| = ||v_2|| = 1$. The subspace $\operatorname{span}(v_1, v_2)$ has dimension 2, so it intersects $\one^{\perp}$ in a line or a plane. This means that there exist real numbers $\alpha$ and $\beta$ such that $\alpha v_1 + \beta v_2 \in \one^{\perp}$ (where $\alpha$ and $\beta$ are not both equal to $0$). The matrix $\bg = \lambda_2 I - A_G$ by Lemma~\ref{lbd2}, so it has $v_2$ in its nullspace. By condition~\ref{1bar},
+\begin{align*}
+    0 & \leq (\alpha v_1 + \beta v_2)^T \bg (\alpha v_1 + \beta v_2)\\
+    & = \alpha^2 v_1^T\bg v_1 + \beta^2 v_2^T\bg v_2+ \alpha \beta (v_1^T\bg v_2 + v_2^T\bg v_1) \\
+    & = \alpha^2 (\lambda_2 v_1^T v_1 - v_1^TA_Gv_1) + \beta^2 v_2^T\bg v_2 + \alpha \beta v_1^T\bg v_2 + \alpha \beta (v_1^T\bg v_2)^T\\
+    & = \alpha^2 (\lambda_2 v_1^T v_1 - v_1^TA_Gv_1)\\ 
+    & = \alpha^2 (\lambda_2 - \lambda_1).
+\end{align*}
+
+Since $\alpha^2 (\lambda_2 - \lambda_1)$ is clearly nonpositive, this means that either $\lambda_1 = \lambda_2$ or $\alpha = 0$. In the first case $\lambda_2$'s eigenspace has dimension at least 2, so there is a nonzero intersection with $\one^{\perp}$, so we can set $v_2 \in \one^{\perp}$. In the second case we have $\beta v_2 \in \onep$, and $\beta \neq 0$, so $v_2 \in \onep$.
+\end{proof}
+
+\begin{corollary}\label{cor2}
+    If $G$ is a graph with ratio $k$ that satisfies conditions \ref{1bar}, \ref{2bar}, and \ref{3bar} then if $\lambda_1 > \lambda_2$, all eigenvectors of $\lambda_2$ are in $\onep$, and if $\lambda_1 = \lambda_2$, then all but one vector of the eigenbasis of $\lambda_2$ can be chosen to be in $\onep$.
+\end{corollary}
+
+\begin{proof}
+From the proof of Lemma~\ref{v2}, we can see that the eigenspace of $\lambda_2$ is in $\onep$ when $\lambda_1 > \lambda_2$. If $\lambda_1 = \lambda_2$, we can choose the eigenbasis of $\lambda_2$ so that at most one of the basis vectors is not in $\onep$, so we can assign it to be the eigenvector for $\lambda_1$.
+\end{proof}
+
+Now, we are ready to prove that condition \ref{1bar} implies conditions \ref{2bar} and \ref{3bar}, so we can remove the latter as the information from them is captured in the new formula for $\bg$.
+
+\begin{lemma}\label{1l}
+Given a graph $G$ on $d+2$ vertices and $\bg = \lambda_2 I - A_G$. If for every $w \in \onep$ $w^T\bg w \geq 0$, then conditions \ref{2bar} and \ref{3bar} are satisfied. 
+\end{lemma}
+\begin{proof}
+    By the proof of Lemma~\ref{v2}, if condition \ref{1bar} is true for the matrix $\bg = \lambda_2 I - A_G$, then the eigenvector $v_2$ of the second largest eigenvalue is in $\onep$. From this we can deduce that $\bg v_2 = 0$, which implies both conditions \ref{2bar} and \ref{3bar}.
+\end{proof}
+
+\section{Reduction of the positive-semidefinite condition} \label{reduction}
+
+In this section we simplify condition \ref{4bar}. To do this, we use condition~\ref{1bar} to reduce condition \ref{4bar} to the existence of an upper bound on $\displaystyle \frac{(\one^T A_G v)^2}{\lambda_2 v^T v - v^TA_G v}$ for $v\in \onep$. Lemma~\ref{pom} gives a necessary and sufficient condition for the existence of this bound.
+\begin{lemma}\label{pom}
+Let $G$ be a graph on $d+2$ vertices such that $\bg = \lambda_2 I - A_G$, and $\bg$ satisfies condition \ref{1bar}, and let $V$ be a subspace of $\onep$. There exists a real number $r$ such that
+\begin{equation}\label{ineq}
+    r(d+2)^2(\lambda_2v^Tv - v^TA_Gv) \geq (\one^T A_G v)^2 \text{ for every } v\in V
+\end{equation}
+if and only if $\one^TA_Gv = 0$ for all vectors $v\in V$ such that $\lambda_2 v^Tv = v^TA_Gv$.
+\end{lemma}
+\begin{proof}
+    The forward direction is straightforward.
+    For the reverse direction, we induct on the dimension of $V$. The base case $\dim (V) = 0$ is trivial.    For the inductive step, assume that $V$ has dimension at least one and that the statement holds for all subspaces of $\onep$ with lower dimension. Divide both sides of inequality \eqref{ineq} by $v^Tv$ to obtain 
+    \begin{equation*}
+        r(d+2)^2\left(\lambda_2 - \frac{v^TA_Gv}{v^Tv}\right) \geq \frac{(\one^T A_G v)^2}{v^Tv}.
+    \end{equation*} By Cauchy-Schwartz’s inequality, we can bound the absolute value of the right-hand side $\left|\frac{(\one^TA_G v)^2}{v^Tv}\right| \leq ||\one^T A_G||^2$. Denote by 
+    \begin{equation*}
+    f(v) = \lambda_2 - \frac{v^TA_Gv}{v^Tv}.
+    \end{equation*} 
+    Let $L = \displaystyle \inf_{\substack{v\in V \\ v\neq 0}} f(v)$. Note that $L\geq 0$ by condition \ref{1bar}. If $L>0$, the inequality is true for every $r \geq \frac{||1^TA_G||^2}{(d+2)^2L}$. If $L = 0$, then as $f$ is invariant under scaling, so $L$ is also the infimum of $f$ on the unit sphere, which is compact. Therefore, this infimum is achieved, i.e., there exists a unit vector $w$ such that $f(w) = 0$ (so $\lambda_2 - w^TA_Gw = 0$). 
+    
+    We show that $A_G w = \lambda_2 w$, i.e.\ $w$ is an eigenvector of $A_G$. Note that \(P^T\overline{B}_G P\) is positive semidefinite, where \(P\) is the orthogonal projection matrix onto $\onep$, and $P^T = P$ holds. For $v\in \onep$, we have
+    \begin{equation*}
+        v^T \overline{B}_G v \;=\; v^T P^T \overline{B}_G P v \;=\; 0
+
+codex
+The full text points toward rejection: the paper proves an exact spectral characterization, not a hard search problem. I’m checking every section and theorem for any separate hardness regime before I write the machine-readable rejection.
+exec
+/bin/bash -lc "rg -n -i 'hard|complex|algorithm|polynomial|NP|FPT|parameter|construct|enumerat|unique|spherical|representable|regular graph|lowest dimension' /tmp/arxiv2211.Zj5e8e/paper.tex; sed -n '260,430p' /tmp/arxiv2211.Zj5e8e/paper.tex; find . -maxdepth 2 -type f -printf '%P\\n' | sort" in /home/gson/gvrepo/results/2211.12582
+ succeeded in 0ms:
+10:% Computational results have been obtained starting with Sz{\"o}ll{\H{o}}si and {\"O}sterg{\aa}rd \cite{szollHosi2018constructions} from 2018 on an algorithm used for the enumeration of 2-distance sets and spherical 2-distance sets, used later in 2018 by Sz{\"o}ll{\H{o}}si \cite{szollHosi2018two} for enumeration of all 2-distance sets on $n+2$ points in $\rn$ for $n = 4$ and finding the spherical ones among them. 
+14:% In 2018, Musin \cite{musin2018towards} showed the relation between the 24-cell cell conjecture in $\mathbb{R}^4$ and spherical 2-distance sets in $\mathbb{R}^4$ and proposed a method for enumerating the 2-distance sets in $\mathbb{R}^4$ based on his paper \cite{musin2019graphs}. 
+16:Motivated by \cref{main}, we are interested in characterizing the 2-distance sets whose points lie on the unit sphere. We call those sets \emph{spherical}. A previous characterization of the spherical 2-distance sets was completed in 2012 by Nozaki and Shinohara \cite{nozaki2012geometrical}, who gave a necessary and sufficient condition for a graph to correspond to a spherical 2-distance set in some Euclidean space (see Definition~\ref{sphericalrep}) based on Roy's previous results \cite{roy2010minimal}. The conditions in \cite[Theorem~2.4]{nozaki2012geometrical} involve bulky expressions that use the eigenvalues of the adjacency matrix and the angles of its eigenvectors with the all-ones vector.
+17:In contrast, here we focus on the ``small" spherical graphs (with exactly $d+2$ vertices in $\rd$) and obtain a much cleaner necessary and sufficient condition for a graph to have a spherical representation in this case, only using the eigenvalues of the adjacency matrix and the eigenvalues of its projection onto a subspace.
+19:    Let $d$ a be positive integer, and let $G$ be a graph on $d+2$ vertices whose adjacency matrix $A_G$ has eigenvalues $\lambda_1 \geq \lambda_2 \geq \dots \geq \lambda_{d+2}$. Let $J$ be the all-ones matrix and $P = I - \frac{1}{d+2}J$ be the projection matrix onto the subspace orthogonal to the all-ones vector. Then $G$ has a spherical representation in $\rd$ if and only if the maximum eigenvalue of $PA_GP$ is equal to $\lambda_2$ and the multiplicity of the eigenvalue $\lambda_2$ is equal in $A_G$ (excluding $\lambda_1$ if $\lambda_1 = \lambda_2$) and $PA_GP$.
+22:In fact, the lowest dimensional space in which a given spherically representable graph $G$ is also determined by the multiplicity of the second eigenvalue of $G$.
+24:\begin{prop}\label{lowestdimensionspherical}
+25:    Let $n \leq d$ be a positive integer. If a graph $G$ on $d+2$ vertices is spherically representable in $\rd$, then it is (spherically) representable in $\rn$ if and only if the multiplicity of $\lambda_2$ in its adjacency matrix $A_G$ (excluding $\lambda_1$ if $\lambda_1 = \lambda_2$) is at least $d+1-n$. 
+28:The paper is organized as follows. In Section~\ref{preliminaries}, we define (spherical) 2-distance sets and (spherically) representable graphs, and recall two results from the literature that we use in the paper. In Section~\ref{conditions}, we give four initial conditions for a graph on $d+2$ vertices to be representable as a spherical 2-distance set in $\rd$. In Section~\ref{secondeigen}, we rephrase the four conditions from Section~\ref{conditions} in terms of another matrix, and find a formula for the matrix that depends on the second eigenvalue of the adjacency matrix of the graph. In Section~\ref{reduction}, we further reduce the positive-semidefinite conditions, which we use to prove Theorem~\ref{mainres} and Proposition~\ref{lowestdimensionspherical} in Section~\ref{finsec}.
+49:A graph $G$ is \emph{representable in $\rd$ with ratio $k>1$} if there exists a 2-distance set $S$ in $\rd$ with distance ratio $k>1$ such that $G = G(S)$ is the associated graph of $S$.
+54:The following theorem gives a necessary and sufficient condition for a graph of size $d+2$ to be representable in $\rd$, thus proving that there are finitely many 2-distance sets with $d+2$ points. It is a direct implication from the proof of Theorem 1 in \cite{einhorn1966euclidean}.
+57:    Let $G$ be a graph on $d+2$ vertices. If $G$ is a complete multipartite graph, then $G$ is not representable in $\rd$ for any value of $k>1$. If $G$ is not a complete multipartite graph, then there exists a unique value $k>1$ for which $G$ is representable in $\rd$ with ratio $k$. 
+64:is positive semidefinite (which we denote by $B' \succeq 0$) and $\rank(B') \leq d$. Moreover, this configuration is unique up to congruence.
+66:Now we give a definition for a spherical 2-distance set, the main focus of this paper. A similar definition is used in the literature (\cite{musin2009spherical}, \cite{musin2019graphs}).
+68:\begin{definition}\label{sphericalrep}
+69:A 2-distance set $S$ in $\rd$ is called \emph{spherical} if all of its points lie on an $(d-1)$-dimensional sphere in $\rd$. A graph $G$ is \emph{spherical} or has a \emph{spherical representation} in $\rd$ if there exists a spherical 2-distance set $S\subset \rd$ whose associated graph is $G$.
+75:\section{Conditions for spherical 2-distance sets}\label{conditions}
+77:In this section we give a set of four necessary and sufficient conditions for a graph to have a spherical representation. Note that similar conditions have been studied for general spherical point sets, see \cite{tarazaga1996circum} and \cite{neumaier1981distance}.
+81:Given a \emph{representable} graph $G(V, E)$ on $d+2$ vertices with ratio $k$, denote by $B_G = B_G(k)$ the $(d+2)\times(d+2)$ matrix with entries
+90:Next, we gives an exact characterization of graphs with $d+2$ vertices that are representable in $\rd$. This characterization is symmetric with respect to all vertices, in contrast with Lemma~\ref{ns}, in which one vertex has to be used as a reference. Let $\one$ be the all-ones vector and $\one^{\perp}$ be the orthogonal complement of the span of $\one$. 
+92:    Let $G$ be a graph on $d+2$ vertices. Then $G$ is representable in $\rd$ with ratio $k$ if and only if the following two conditions hold.
+93:    \begin{enumerate}[label={$(\arabic*)$}]
+96:    \end{enumerate} 
+100:We define $B_G' = \left(I - \one e_1^T\right)B_G\left(I - e_1\one^T\right)$, which is equivalent to the definition in Lemma~\ref{ns}. Thus, $G$ is representable in $\rd$ if and only if 
+115:We now consider the conditions for a graph to be spherical. Denote by $J$ the all-ones matrix.
+118:Let $G$ be a graph on $d+2$ vertices that is representable in $\rd$ with ratio $k$. It has a spherical representation with ratio $k$ if and only if the following two conditions hold:
+119:\begin{enumerate}[label={$(\arabic*)$}]
+121:    \item $\det(xJ + B_G)$ is the zero polynomial.
+123:\end{enumerate} 
+126:    We first show the only if direction. Suppose that $G$ is a graph on $d+2$ vertices which can be representable in $\rd$ with ratio $k$, and its corresponding 2-distance set is spherical. Take the center $O$ of the sphere and take a point $O_1$ on the line in $\mathbb{R}^{d+1}$ through $O$ that is orthogonal to the subspace $\rd$ where $G$ is representable. The distance between every point from the 2-distance set and $O_1$ is the same and is denoted by $x_1$. Note that we can choose any $x_1\geq \sqrt{r_0/2}$ where $r_0$ is the radius of the circumsphere of the 2-distance set that corresponds to $G$. By Lemma~\ref{ns}, we see that $B' = 2x_1^2J+B_G \succeq 0$ for all $x_1 \geq \sqrt{r_0/2}$, so condition \ref{eq: 4} holds for $r\geq r_0$, and $\rank(B') \leq d+1$, i.e., $\det(B') = 0$. Since $\det(B')$ is a polynomial in $x_1$ which vanishes for all $x_1 \geq \sqrt{r_0/2}$, it must be the zero polynomial, so condition \ref{eq: 3} holds.
+128:    We now show the if direction. Suppose that $G$ is representable in $\rd$ with ratio $k$ and conditions \ref{eq: 3} and \ref{eq: 4} hold. Take $r = r_0$. Since $rJ + B_G$ is positive semidefnite and $\rank(rJ+B_G) \leq d+1$, by Lemma~\ref{ns} the 2-distance set corresponding to $G$ is inscribed in a sphere with radius $r$ in $\mathbb{R}^{d+1}$ but it also lies on a subspace isomorphic to $\rd$, so it lies in the intersection of the sphere and an $d$-dimensional hyperplane, which is isomorphic to a sphere in $\rd$. This means that the 2-distance set corresponding to $G$ is spherical.
+130:By combining Proposition~\ref{1and2} and Lemma~\ref{3and4}, we obtain a set of four conditions that is necessary and sufficient for $G$ to be representable in $\rd$ with ratio $k$ using only the matrix $B_G$. 
+131:\begin{enumerate}[label={(\arabic*)}]
+134:    \item \label{eq: 3} $\det(xJ + B_G)$ is the zero polynomial. 
+136:\end{enumerate}
+164:A graph $G$ on $d+2$ vertices is spherical in $\mathbb{R}^d$ with distance ratio $k$ if and only if the following conditions hold for $\bg = \bg(k) = \frac{1}{k^2-1} (B_G+J) = \frac{1}{k^2-1}I - A_G$:
+165:\begin{enumerate}[label={$\overline{(\arabic*)}$}]
+170:\end{enumerate}
+201:Given graph $G$ on $d+2$ vertices. If $G$ is spherical, then the distance ratio is $\sqrt{\frac{1}{\lambda_2} + 1}$. (In particular, this implies that $\lambda_2 > 0$.)
+227:Since $\alpha^2 (\lambda_2 - \lambda_1)$ is clearly nonpositive, this means that either $\lambda_1 = \lambda_2$ or $\alpha = 0$. In the first case $\lambda_2$'s eigenspace has dimension at least 2, so there is a nonzero intersection with $\one^{\perp}$, so we can set $v_2 \in \one^{\perp}$. In the second case we have $\beta v_2 \in \onep$, and $\beta \neq 0$, so $v_2 \in \onep$.
+296:A graph $G$ on $d+2$ vertices is spherical if and only if $w^T\bg w \geq 0$ for all vectors $w \in \one^{\perp}$ where $\bg = \lambda_2 I - A_G$, and 
+297:\begin{enumerate}[label={$\overline{(\arabic*)}$}]
+300:\end{enumerate}
+303:    We can easily see that condition \ref{4bar} implies condition \ref{1bar}, so if we know that  \ref{4bar} holds for the matrix $\bg = \lambda_2 I - A_G$, then by Lemma~\ref{1l} we also have conditions \ref{2bar} and \ref{3bar}, so $G$ has a spherical representation.
+327:Thus the discriminant of the quadratic polynomial should be non-positive. That is \begin{equation*}
+335:Let $G$ be a graph on $d+2$ vertices. Then $G$ has a spherical representation if and only if condition \ref{1bar} holds for $\bg = \lambda_2 I - A_G$, and for every vector $w \in \onep$ such that $w^T\bg w = 0$ we have $\bg w = 0$.
+343:We now use Lemma~\ref{last} to prove Theorem~\ref{mainres} and Proposition~\ref{lowestdimensionspherical}.
+356:    We can combine \cref{mainres} with Corollary~\ref{nullspace} to obtain the lowest dimensional space in which a given 2-distance set is representable. 
+357:\begin{proof}[Proof of Proposition~\ref{lowestdimensionspherical}]
+358:    By Lemma~\ref{main}, $G$ is representable in $\rn$ if and only if $\rank (B'_G) \leq n$ where $B'_G= \left(I - \one e_1^T\right)B_G\left(I - e_1\one^T\right).$ Let $S$ be the space of vectors $w\in \onep$ such that $B_Gw = \gamma \one$ for some real number $\gamma$. By Corollary~\ref{nullspace}, $\rank (B'_G) = d+2 - 1 - \rank(S) = d+1 - \rank(S)$. Note that the nullspace of $PB_GP$ which is $\one \cup S$, thus $\rank(PB_GP) = d+2 - 1 -\rank (S) = d+1-\rank(S) = \rank (B'_G)$, so $\rank (B'_G) \leq n$, but the nullspace of $PB_GP$ is the union of $\one$ and eigenspace of $\lambda_2$ in $PA_GP$.  For spherically representable graphs the multiplicity of $\lambda_2$ in $PA_GP$ is the same as the multiplicity of $\lambda_2$ in $A_G$. Therefore, $G$ is representable in $\rn$ if the multiplicity of $\lambda_2$ in $A_G$ is at least $d+1-n$.
+366:The condition of \cref{mainres} is therefore equivalent to $\mu_1 = \lambda_2$ and $\mu_k < \lambda_k$, where $k$ is such that $\lambda_{k+1} < \lambda_k = \lambda_2$. Proposition~\ref{lowestdimensionspherical} implies that the lowest representable dimension of a spherical graph on $n$ vertices is $n - k$.
+368:The main theorem also implies that all small regular graphs have a spherical representation: 
+370:    If $G$ is a regular graph on $d+2$ vertices that is not complete multipartite, then $G$ has a spherical representation in $\rd$. 
+373:    If $G$ is a regular graph, then the eigenvector of the first eigenvalue is $\one$, thus $\mu_i = \lambda_{i+1}$ for $i = 1,2\dots, n-1$, which clearly satisfies \cref{mainres}.
+376:It may be possible to derive more necessary or sufficient combinatorial conditions for a graph to be spherical based on our main theorem.
+    \begin{equation*}
+        r(d+2)^2\left(\lambda_2 - \frac{v^TA_Gv}{v^Tv}\right) \geq \frac{(\one^T A_G v)^2}{v^Tv}.
+    \end{equation*} By Cauchy-Schwartz’s inequality, we can bound the absolute value of the right-hand side $\left|\frac{(\one^TA_G v)^2}{v^Tv}\right| \leq ||\one^T A_G||^2$. Denote by 
+    \begin{equation*}
+    f(v) = \lambda_2 - \frac{v^TA_Gv}{v^Tv}.
+    \end{equation*} 
+    Let $L = \displaystyle \inf_{\substack{v\in V \\ v\neq 0}} f(v)$. Note that $L\geq 0$ by condition \ref{1bar}. If $L>0$, the inequality is true for every $r \geq \frac{||1^TA_G||^2}{(d+2)^2L}$. If $L = 0$, then as $f$ is invariant under scaling, so $L$ is also the infimum of $f$ on the unit sphere, which is compact. Therefore, this infimum is achieved, i.e., there exists a unit vector $w$ such that $f(w) = 0$ (so $\lambda_2 - w^TA_Gw = 0$). 
+    
+    We show that $A_G w = \lambda_2 w$, i.e.\ $w$ is an eigenvector of $A_G$. Note that \(P^T\overline{B}_G P\) is positive semidefinite, where \(P\) is the orthogonal projection matrix onto $\onep$, and $P^T = P$ holds. For $v\in \onep$, we have
+    \begin{equation*}
+        v^T \overline{B}_G v \;=\; v^T P^T \overline{B}_G P v \;=\; 0
+    \end{equation*}
+    if and only if $v$ is an eigenvector of $P^T\overline{B}_G P$ with eigenvalue $0$. Since $w$ is an eigenvector of $P^T\bg P$ with eigenvalue $0$, and hence
+    \begin{equation*}
+            0 = \bigl(P^T \bg P\bigr)w = P^T\bg w.
+    \end{equation*}
+    From the assumption $\bg w\in \onep$, it follows that
+    \begin{equation*}
+        \bg w = P^T\bigl(\bg w\bigr) = 0,
+    \end{equation*}
+    and hence $w$ is an eigenvector corresponding to $\lambda_2$, so $A_G w = \lambda_2 w$.
+
+    By the inductive hypothesis, the inequality \eqref{ineq} holds for all $v \in V\cap \operatorname{span}(w)^{\perp}$. If $v$ is not perpendicular to $w$, by scaling $v$ we can write $v = w + \varepsilon x$ where $||x|| = 1$ and $x\perp w$. The inequality becomes 
+    $$ r(d+2)^2(\lambda_2 + \lambda_2 \varepsilon^2 - w^TA_Gw - 2\varepsilon x^TA_Gw - \varepsilon^2 x^TA_Gx) \geq (\one^T A_G w + \varepsilon \one^T A_G x)^2 $$
+    \begin{equation} \label{quadratic}
+        r(d+2)^2(\lambda_2 \varepsilon^2 - 2\varepsilon x^TA_Gw - \varepsilon^2 x^TA_Gx) \geq (\varepsilon \one^T A_G x)^2.
+    \end{equation} 
+    % If $x^TA_Gw \neq 0$, then taking $\varepsilon \rightarrow 0^+$ or $\varepsilon \rightarrow 0^-$ contradicts $\lambda_2 \varepsilon^2 - 2\varepsilon x^TA_Gw - \varepsilon^2 x^TA_Gx \geq 0$ that follows from condition \ref{eq: 1}.
+
+    As $x \perp w$, it follows that $x^T A_G w = \lambda_2 x^T w = 0$. Dividing both sides of the inequality \eqref{quadratic} by $\varepsilon^2$ gives \begin{equation*}
+        r(d+2)^2(\lambda_2 - x^TA_Gx) \geq (\one^T A_G x)^2
+    \end{equation*} for $x \in V\cap \operatorname{span}(w)^{\perp}$ that has lower dimension than $V$, so the inductive step is completed.
+    % which is the same inequality but now $x$ is a vector in $V\cap \operatorname{span}(w)^{\perp}$ which has lower dimension, so we can apply the inductive hypothesis on it.
+\end{proof}
+We are now equipped to simplify condition \ref{4bar}. We prove that it is equivalent to condition \ref{1bar} combined with a new condition \ref{eq: 5}.
+\begin{lemma}\label{ref4}
+A graph $G$ on $d+2$ vertices is spherical if and only if $w^T\bg w \geq 0$ for all vectors $w \in \one^{\perp}$ where $\bg = \lambda_2 I - A_G$, and 
+\begin{enumerate}[label={$\overline{(\arabic*)}$}]
+\setcounter{enumi}{4}
+\item \label{eq: 5} $\one ^T A_Gw = 0$ for all vectors $w\in \one^{\perp}$ such that $w^T\bg w = 0$.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+    We can easily see that condition \ref{4bar} implies condition \ref{1bar}, so if we know that  \ref{4bar} holds for the matrix $\bg = \lambda_2 I - A_G$, then by Lemma~\ref{1l} we also have conditions \ref{2bar} and \ref{3bar}, so $G$ has a spherical representation.
+    
+    Thus, we need to check that condition \ref{1bar} combined with the fact that  $\one^TA_Gw = 0$ for all vectors $w\in \one^{\perp}$ such that $\lambda_2 w^Tw = w^TA_Gw$ is equivalent to condition \ref{4bar}.
+    
+    Every vector $u$ can be expressed as $\alpha \one + \beta v$ where $v \in \onep$. So, condition \ref{4bar} states that for all $\alpha, \beta, v$ and sufficiently large $r$
+    \begin{align*}
+        0 & \leq (\alpha \one + \beta v)^T(rJ + \lambda_2 I - A_G)(\alpha \one + \beta v) \\
+         & = r (\alpha \one + \beta v)^T J (\alpha \one + \beta v) + (\alpha \one + \beta v)^T(\lambda_2 I - A_G)(\alpha \one + \beta v).
+    \end{align*}
+    
+    As $\operatorname{span}(J) = \operatorname{span}(\one)$, the right-hand side expression is equal to 
+    \begin{align*}
+    & \alpha^2 r(d+2)^2 + (\alpha \one + \beta v)^T(\lambda_2 I - A_G)(\alpha \one + \beta v) \\
+    =\  & \alpha^2 r(d+2)^2 + \lambda_2 (\alpha \one + \beta v)^T(\alpha \one + \beta v) - (\alpha \one + \beta v)^TA_G(\alpha \one + \beta v)\\
+    =\  & \alpha^2 r(d+2)^2 + \lambda_2 \alpha^2 (d+2) + \lambda_2 \beta^2v^Tv - (\alpha \one + \beta v)^TA_G(\alpha \one + \beta v)\\
+    =\  & \alpha^2 r(d+2)^2 + \lambda_2 \alpha^2 (d+2) + \lambda_2 \beta^2v^Tv - \alpha^2 \one^TA_G\one - \beta^2 v^TA_Gv - 2\alpha \beta \one^T A_G v \\
+    =\  & \alpha^2\left( \lambda_2  (d+2) - \one^TA_G\one + r(d+2)^2\right) - 2\alpha \beta \one^T A_G v + \beta^2(\lambda_2 v^Tv -  v^TA_Gv).
+     \end{align*}
+If $\alpha = 0$ this becomes condition \ref{1bar}. 
+
+Assume that $\alpha\neq 0$. The first two terms in the coefficient of $\alpha^2$ are constants, so we can ignore them and increase $r$ by a constant. So, we want 
+\begin{equation*}
+    \alpha^2 r(d+2)^2 - 2\alpha \beta \one^T A_G v + \beta^2(\lambda_2 v^Tv -  v^TA_Gv) \geq 0.
+\end{equation*}
+Thus the discriminant of the quadratic polynomial should be non-positive. That is \begin{equation*}
+    r(d+2)^2(\lambda_2 v^Tv -  v^TA_Gv) \geq (\one^T A_G v)^2 
+\end{equation*}for sufficiently large $r$, which reduces the lemma to Lemma~\ref{pom}.
+\end{proof}
+
+We can simplify condition \ref{eq: 5} even further.
+
+\begin{lemma}\label{last}
+Let $G$ be a graph on $d+2$ vertices. Then $G$ has a spherical representation if and only if condition \ref{1bar} holds for $\bg = \lambda_2 I - A_G$, and for every vector $w \in \onep$ such that $w^T\bg w = 0$ we have $\bg w = 0$.
+\end{lemma}
+\begin{proof}
+
+It suffices to show that if $w^T\bg w = 0$ for some $w\in \onep$ then $1^TA_Gw = 0$ if and only if $\bg w = 0$. Since $w^T\bg w = 0$ is equivalent to $w^TA_G w = \lambda_2 w^Tw$, by the proof of Lemma~\ref{pom} we see that if $A_Gw \in \onep$ then $A_Gw = \lambda_2 w$ and hence $\bg w = 0$. On the other hand, if $\bg w = 0$, then $\one^TA_Gw = \lambda_2 \one^T w = 0$.
+\end{proof}
+
+\section{Proof of the main theorem}\label{finsec}
+We now use Lemma~\ref{last} to prove Theorem~\ref{mainres} and Proposition~\ref{lowestdimensionspherical}.
+
+\begin{proof}[Proof of Theorem~\ref{mainres}]
+    Let the eigenvalues of $PA_G P$ be $\mu_1\geq \mu_2 \geq \dots \geq \mu_{d+1}$ and 0 where 0 corresponds to the eigenvector $\one$. The matrices $PA_GP$ and $P\bg P$ have the same set of eigenvectors ($\bg = \lambda_2I - A_G$ and $P$ is a projection matrix). Suppose that the maximum eigenvalue of $PA_GP$ is $\lambda_2$. Therefore the spectrum of $P\bg P$ is the set $\lambda_2 - \mu_1, \lambda_2 - \mu_2, \dots, \lambda_2 - \mu_{d+1}, \lambda_2$. Thus all eigenvalues of $P\bg P$ are nonnegative, so condition \ref{1bar} holds for $\bg$. Conversely, if condition~\ref{1bar} holds, then $\mu_1 \leq \lambda_2$. Furthermore, by Lemma~\ref{1l}, conditions \ref{2bar} and \ref{3bar} hold. So, by Lemma~\ref{v2}, there is an eigenvector with an eigenvalue $\lambda_2$ of $A_G$ such that $v_2\in \onep$, thus $v_2$ is an eigenvector of $PA_GP$ and $P\bg P$, so $\mu_1 \geq \lambda_2$. Thus $\mu_1 = \lambda_2$.
+    
+    Now, by Lemma~\ref{last}, we have to prove that if we assume condition \ref{1bar} holds for $\bg$, then the following two conditions are equivalent.
+    \begin{itemize}
+        \item [(a)]The multiplicity of $\lambda_2$ in $A_G$ (excluding $\lambda_1$ if $\lambda_1 = \lambda_2$) is equal the multiplicity of $\lambda_2$ in $PA_G$.
+        \item [(b)] We have $w^T\bg w = 0$ if and only if $\bg w = 0$ for all $w\in \onep$.
+    \end{itemize}
+    
+    Condition \ref{1bar} holds for $\bg$, so by Lemma~\ref{1l}, conditions \ref{2bar} and \ref{3bar} hold, thus Corollary~\ref{cor2} holds and every eigenvector of $\lambda_2$ (except the eigenvector of $\lambda_1$ when $\lambda_1 = \lambda_2$) is also an eigenvector of $PA_GP$, thus the multiplicity of $\lambda_2$ in $A_G$ (excluding $\lambda_1$ when $\lambda_1 = \lambda_2$) is at most the multiplicity of $\lambda_2$ in $P A_G P$. By condition \ref{1bar} $w^T\bg w = 0$ if and only if $w$ is an null vector of $P\bg P$, i.e., an eigenvector of $\lambda_2$ in $A_G$. So, if $w^T\bg w = 0$ is true only if $\bg w = 0$, i.e., $w$ is an eigenvector of $\lambda_2$ in $A_G$, then the the multiplicity of $\lambda_2$ in $A_G$ (excluding $\lambda_1$ when $\lambda_1 = \lambda_2$) is at least the multiplicity of $\lambda_2$ in $P A_G P$, so they are equal. The reverse also holds.
+\end{proof}
+    We can combine \cref{mainres} with Corollary~\ref{nullspace} to obtain the lowest dimensional space in which a given 2-distance set is representable. 
+\begin{proof}[Proof of Proposition~\ref{lowestdimensionspherical}]
+    By Lemma~\ref{main}, $G$ is representable in $\rn$ if and only if $\rank (B'_G) \leq n$ where $B'_G= \left(I - \one e_1^T\right)B_G\left(I - e_1\one^T\right).$ Let $S$ be the space of vectors $w\in \onep$ such that $B_Gw = \gamma \one$ for some real number $\gamma$. By Corollary~\ref{nullspace}, $\rank (B'_G) = d+2 - 1 - \rank(S) = d+1 - \rank(S)$. Note that the nullspace of $PB_GP$ which is $\one \cup S$, thus $\rank(PB_GP) = d+2 - 1 -\rank (S) = d+1-\rank(S) = \rank (B'_G)$, so $\rank (B'_G) \leq n$, but the nullspace of $PB_GP$ is the union of $\one$ and eigenspace of $\lambda_2$ in $PA_GP$.  For spherically representable graphs the multiplicity of $\lambda_2$ in $PA_GP$ is the same as the multiplicity of $\lambda_2$ in $A_G$. Therefore, $G$ is representable in $\rn$ if the multiplicity of $\lambda_2$ in $A_G$ is at least $d+1-n$.
+\end{proof}
+We also give an equivalent formulation of \cref{mainres} using the Cauchy interlacing theorem, which gives a more intuitive understanding of what \cref{mainres} means.
+\begin{theorem}[Cauchy interlacing theorem \cite{hwang2004cauchy}]
+    Let $A$ be a symmetric $n \times n$ matrix and $B$ be an $m \times m$ matrix with $B = PAP^*$ where $P$ is an orthogonal projection onto a subspace of dimension $m$. Then if the eigenvalues of $A$ are $\alpha_1 \geq \alpha_2 \geq \dots \geq \alpha_n$ and the eigenvalues of $B$ are $\beta_1 \geq \beta_2 \geq \dots \geq \beta_m$, then for all $j \leq m$
+    $$\alpha_j \geq \beta_j \geq \alpha_{j+n-m}.$$
+\end{theorem}
+In our case, if the eigenvalues of $PA_GP$ are $\mu_1 \geq \mu_2 \geq \dots \geq \mu_{n-1}$, then \[\lambda_1 \geq \mu_1 \geq \lambda_2 \geq \mu_2 \geq \dots \geq \lambda_k \geq \mu_k \geq \lambda_{k+1} \geq \dots \geq \lambda_n.\]
+The condition of \cref{mainres} is therefore equivalent to $\mu_1 = \lambda_2$ and $\mu_k < \lambda_k$, where $k$ is such that $\lambda_{k+1} < \lambda_k = \lambda_2$. Proposition~\ref{lowestdimensionspherical} implies that the lowest representable dimension of a spherical graph on $n$ vertices is $n - k$.
+
+The main theorem also implies that all small regular graphs have a spherical representation: 
+\begin{corollary}
+    If $G$ is a regular graph on $d+2$ vertices that is not complete multipartite, then $G$ has a spherical representation in $\rd$. 
+\end{corollary}
+\begin{proof}
+    If $G$ is a regular graph, then the eigenvector of the first eigenvalue is $\one$, thus $\mu_i = \lambda_{i+1}$ for $i = 1,2\dots, n-1$, which clearly satisfies \cref{mainres}.
+\end{proof}
+
+It may be possible to derive more necessary or sufficient combinatorial conditions for a graph to be spherical based on our main theorem.
+
+\smallskip
+
+\paragraph{\bfseries Acknowledgments.} 
+The bulk of this research was conducted during Research Science Institute (RSI) hosted by the Center for Excellence in Education (CEE) at Massachusetts Institute of Technology (MIT), where the first author was a participant and the second author was a research mentor. We thank Dr.~Tanya Khovanova, Prof.~David Jerison and Prof.~Ankur Moitra for helpful discussions during the RSI program. We thank Eli Meyers for his help with various technical issues during the project, and Dr.~John Rickert and Yunseo Choi for their feedback on earlier versions of this paper. We are also grateful to the anonymous reviewer for suggesting a simpler proof that \(w\) is an eigenvector of \(A_G\). We are thankful to HSSIMI, Sts.\ Cyril \& Methodius International Foundation, Foundation for Support of Children Mariyana Palanchova, and the MIT Math Department for funding our research.
+.meta.json
+.runner.sh
+.task.md
+codex_run.log
+
+exec
+/bin/bash -lc 'find .. -maxdepth 2 -name REJECTED.md -print | head -20' in /home/gson/gvrepo/results/2211.12582
+ succeeded in 0ms:
+../2502.14674/REJECTED.md
+../2302.04718/REJECTED.md
+
+exec
+/bin/bash -lc "sed -n '1,240p' ../2502.14674/REJECTED.md; sed -n '1,240p' ../2302.04718/REJECTED.md" in /home/gson/gvrepo/results/2211.12582
+ succeeded in 0ms:
+# Rejected: arXiv 2502.14674
+
+Paper: [*Some new results on permutation trinomials over finite fields with even characteristic*](https://arxiv.org/abs/2502.14674), Kirpa Garg, Sartaj Ul Hasan, and Chandan Kumar Vishwakarma.
+
+## Decision
+
+This paper does not supply a problem family satisfying G, H, and V simultaneously. The prior triage suggestion—ask for parameters of a permutation trinomial and verify that it permutes the field—fails both **H (hardness)** and, under direct checking, **V (cheap verification)**. I therefore stopped before writing a generator or running the LLM hardening loop, as required by Step 0.
+
+## What the full paper actually proves
+
+Section 2 defines a permutation polynomial as one whose evaluation map is a bijection of the entire field. Its unit-circle criterion (Lemma 2.2) reduces permutation of
+
+\[
+X^r h(X^{q-1}) \quad\text{on } \mathbb F_{q^2}
+\]
+
+to a gcd test and permutation of a rational map on the order-\(q+1\) unit circle.
+
+Section 3 does not present an open-ended search space. It proves exact classifications for three fixed exponent triples:
+
+| polynomial over \(\mathbb F_{q^2}\), \(q=2^m\) | exact condition |
+|---|---|
+| \(X^{11}(X^{10(q-1)}+X^{4(q-1)}+1)\) | \(m\not\equiv0\pmod5\) |
+| \(X^9(X^{8(q-1)}+X^{6(q-1)}+1)\) | \(m\) odd |
+| \(X^7(X^{7(q-1)}+X^{5(q-1)}+1)\) | \(m\) even and \(m\not\equiv0\pmod3\) |
+
+Thus a solver asked to return a valid \((r,\alpha,\beta)\) can choose among only three published constants and apply a congruence test. Increasing \(m\) increases the field but does not enlarge or conceal the answer. This is a closed-form lookup, so **H fails** and the answer space is far too small to be guess-resistant.
+
+## Why nearby witness formulations also fail
+
+- **“Return a polynomial that permutes the field.”** Knowing the answer first is easy using Section 3, but the same theorem makes finding it trivial. Directly verifying bijectivity by evaluating all \(2^{2m}\) field elements is exponential in the natural input length \(m\), so it is not the requested cheap substitution-style verifier. Using the Section 3 theorem as the checker restores cheap verification only by turning the task into the same three-entry lookup.
+- **“Return a preimage under one of the permutation trinomials.”** A submitted preimage is cheaply checked, and it can be planted by choosing \(x\) before computing \(F(x)\). However, Lemma 2.2 reduces inversion first to a fixed-degree equation on the unit circle and then to a fixed-degree field equation. Standard finite-field polynomial root finding solves those equations in randomized polynomial time in \(m\). Hence **H fails**.
+- **“Return a collision for the non-permutation trinomial.”** Section 5 studies the fixed map with \((r,\alpha,\beta)=(9,7,3)\). A collision is cheaply checked, but finding one again reduces to roots of an explicit bounded-degree polynomial over a finite field. For \(7\mid m\), the proof even gives the immediate source of collisions: roots of \(X^7+X^3+X^2+X+1\). For the remaining cases the paper proves existence via an absolutely irreducible curve and the Hasse–Weil bound, but finite-field root/factor algorithms still defeat the bounded-degree search formulation. It also does not provide an answer-first inverse generator for arbitrary sampled collisions without changing the paper's fixed family.
+- **“Return a QM-equivalence witness.”** Section 4 defines the witness as an exponent \(d\) and two nonzero scalars, but exponent supports have size three, so all six support matchings can be tried with modular arithmetic. More decisively, Section 6 explicitly computes the relevant \(d\) using CRT. This is polynomial-time/closed-form, so **H fails**.
+- **Factorizations or irreducibility proofs.** The factorizations used in Section 3 are bounded-degree and computable by standard algebra algorithms. The absolute-irreducibility argument in Section 5 is a proof, not the bounded structured witness required by the task.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G — inverse-generatable | Possible only for formulations that fail H or V |
+| H — no known polynomial/closed-form method and large answer space | **Fail** |
+| V — cheap exact witness verification | Collision/preimage witnesses pass V; permutation recognition by exhaustive evaluation does not |
+
+No `gen_2502_14674.py`, `selftest_report.json`, or oracle transcript was created. Running `harden.py` would be inappropriate after the analytical H/V rejection and would contradict the task's instruction to stop when a family fails G, H, or V.
+# Rejected: arXiv 2302.04718
+
+Paper: Sam Adriaensen, [*A note on small weight codewords of projective geometric codes and on the smallest sets of even type*](https://arxiv.org/abs/2302.04718).
+
+## Decision
+
+The proposed projective-incidence-code family satisfies **G (inverse generation)** and **V (cheap exact verification)**, but it fails **H (hardness)**. The paper gives both a closed-form construction of a valid witness and, in the highlighted regime `q in {4, 8}`, a complete classification of all minimum witnesses. I therefore stopped at Step 0, before writing a generator, fabricating gate measurements, or running the LLM hardening loop.
+
+## Exact problem in the paper
+
+Section 2 defines `C_k(n,q)` over the prime field `F_p`, where `q = p^h`, as the row span of the point-versus-`k`-space incidence matrix of `PG(n,q)`. A vector is in the dual precisely when its coordinate sum on every `k`-space is zero in `F_p`.
+
+For even `q`, Section 3.2 specializes this to binary vectors. The support of a dual codeword of `C_1(n,q)` is a **set of even type**: a point set meeting every projective line in an even number of points. Result 3.4 states that a smallest nonempty such set has exactly
+
+```text
+(q + 2) q^(n - 2)
+```
+
+points. Thus a natural witness would be a list of exactly that many point labels, checked by counting its intersection with every supplied line modulo two. That check is deterministic, exact, and does not need the planted answer.
+
+## Why the proposed family is easy
+
+Construction 3.5 explicitly constructs a minimum set of even type for every even `q`: choose a plane `pi`, an `(n-3)`-space `tau` skew to it, and a hyperoval `O` in `pi`; then return the union of the joins `<P,tau>` for `P in O`, with `tau` removed. For `q in {4,8}`, the paper gives the regular hyperoval directly as
+
+```text
+{(s^2, s t, t^2) : (s,t) in PG(1,q)} union {(0,1,0)}.
+```
+
+Consequently, a solver does not have to recover the planted codeword. It can independently construct another correct answer from the instance's projective coordinates.
+
+This is not merely one easy subfamily. Theorem 1.1 proves that for `q in {4,8}` every minimum set of even type is a hypercylinder over a regular hyperoval. Result 3.1 reduces minimum dual codewords for general `k` to the line case, and Corollary 3.16 says that the minimum codewords are exactly characteristic vectors of these embedded hypercylinders. The same corollary gives their count and states that they form one automorphism orbit. The paper's classification therefore exposes, rather than hides, the complete structure of the requested witnesses.
+
+Randomly renumbering points would not repair H. Relabelling is a symmetry, not a new mathematical instance. With point-line incidence supplied, one may choose a plane, find one of its constant-size hyperovals for fixed `q = 4` or `8`, and build the cone using incidence. Brute force inside the plane is constant work with respect to growing `n`; all remaining incidence operations are polynomial in the explicitly listed geometry. Supplying standard coordinates makes the displayed formula an even more immediate solution.
+
+## Why nearby formulations do not qualify
+
+- **Use larger even `q`.** Construction 3.5 still supplies a regular hyperoval and hence a minimum hypercylinder in closed form. Section 5 notes that non-regular hyperovals exist for even `q > 8`, but asking for *any* minimum witness remains easy.
+- **Require a non-hypercylinder.** Problem 5.1 asks whether minimum even sets different from hypercylinders exist for `q = 2^h > 8`. Their existence is not guaranteed by the paper, so an inverse generator cannot know such a witness in general; this fails G.
+- **Use odd, non-prime `q`.** Problems 5.2 and 5.3 leave the minimum weight and structure open. The paper does not provide an answer-first construction in the unknown minimum regime. Making minimum weight or optimality part of the submitted claim is also forbidden by the task's witness contract.
+- **Ask for a small primal-code word.** Section 4 proves that every nonzero word of `C_(n-1)(n,q)` of weight at most `2 q^(n-1)` is a scalar hyperplane characteristic vector or a scalar difference of two such vectors. These are again closed-form witnesses.
+- **Replace projective geometry by an arbitrary planted binary matrix.** Section 2 uses general incidence structures for definitions, but the paper proves no computational-hardness result or hard planted distribution for arbitrary matrices. That substitution would be a generic planted low-weight-codeword problem, not a parameter regime established by this paper, and the planting mechanism would need an independent average-case hardness analysis.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G — sample a witness first | Pass: sample a plane, vertex, and regular hyperoval, then form its hypercylinder |
+| H — no known polynomial-time or closed-form method | **Fail: Construction 3.5 is closed form, and Theorem 1.1 classifies all minimum witnesses for `q in {4,8}`** |
+| V — cheap exact witness check | Pass: check the required cardinality and every line-intersection parity |
+
+No `gen_2302_04718.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Running `scripts/harden.py` after the analytical H rejection would contradict the instruction to stop when any of G, H, or V fails.
+
+codex
+The decisive failure is H. Section 6 turns spherical representability and minimum dimension into eigenvalue/multiplicity tests, while Section 2’s Schoenberg lemma gives the reconstruction route. I’m recording that result and the nearby formulations that also fail, and I will not fabricate a module, gate report, or oracle transcript.
+apply patch
+patch: completed
+/home/gson/gvrepo/results/2211.12582/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..b33539d7d8598ac7a6dde3332012e0fd0a0b8db6
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,62 @@
++# Rejected: arXiv 2211.12582
++
++Paper: Iliyas Noman and Yuan Yao, [*Spectral conditions for spherical two-distance sets*](https://arxiv.org/abs/2211.12582) (v2, 3 February 2026).
++
++## Decision
++
++This paper does not provide a problem family satisfying **G, H, and V** simultaneously. The suggested family—construct or recognize points on a sphere having exactly two pairwise distances—can be generated and checked, but it fails **H (hardness)** in the parameter regime studied by the paper. The paper's main contribution is a necessary-and-sufficient spectral characterization, and its other main result reads the minimum representation dimension directly from an eigenvalue multiplicity. I therefore stopped at Step 0, before creating a generator, claiming gate measurements, or running the LLM hardening loop.
++
++## What the paper actually studies
++
++Definition 2.1 calls a finite set in `R^d` a two-distance set when the distances between distinct points take exactly two values. Definition 2.2 encodes it by a graph: an edge represents the longer of the two distances. Definition 2.4 calls the set spherical when all points lie on a `(d-1)`-sphere in `R^d` (scaling can make this the unit sphere).
++
++The paper focuses on the "small" regime of a graph with exactly `d+2` vertices represented in `R^d`. It supplies progressively simpler exact characterizations:
++
++- Theorem 2.1 (Einhorn--Schoenberg) says that a graph on `d+2` vertices is not representable precisely in the complete-multipartite exception; otherwise it has a unique admissible distance ratio.
++- Lemma 2.2 (Schoenberg) reduces realization of a prescribed distance matrix to positive semidefiniteness and a rank bound, and states that the configuration is unique up to congruence.
++- Sections 3--5 rewrite spherical representability as positive-semidefinite, nullspace, and eigenvalue conditions.
++- Theorem 1.1, proved in Section 6, says that spherical representability is determined by the second eigenvalue of the adjacency matrix and the spectrum of its projection onto the all-ones vector's orthogonal complement.
++- Proposition 1.2, also proved in Section 6, gives the lowest representation dimension directly from the multiplicity of the second adjacency eigenvalue.
++- The final corollary makes an especially broad regime immediate: every regular graph on `d+2` vertices that is not complete multipartite has a spherical representation in `R^d`.
++
++These are finite-dimensional linear-algebra computations, not a hard witness-search regime. The paper contains no NP-hardness result, no planted average-case hardness claim, and no parameter range in which finding a representation is asserted to be hard.
++
++## Why the proposed generator fails
++
++### Recognize a spherical two-distance graph
++
++Given the adjacency matrix, Theorem 1.1 is an explicit decision procedure: compute the spectra of `A` and `P A P`, compare the relevant eigenvalue and multiplicities. Exact versions can use characteristic-polynomial and rational/algebraic linear algebra. This is polynomial-time linear algebra, so **H fails**. Asking for the minimum dimension is even more directly defeated by Proposition 1.2.
++
++### Construct a spherical two-distance realization
++
++Sampling a graph first would satisfy inverse generation, and a submitted exact Gram/distance matrix could be checked by substitution, rank, and positive-semidefiniteness. But Theorem 2.1, Lemma 2.2, and Section 4's formula
++
++```text
++k = sqrt(1/lambda_2 + 1)
++```
++
++give the distance ratio and a standard spectral/Gram-matrix reconstruction route. A solver need not recover a hidden plant. For regular non-complete-multipartite graphs the paper's final corollary even decides existence immediately. Thus **H fails** again.
++
++There is a second contract problem if ordinary coordinates are requested: the natural coordinates and distance ratio can be irrational algebraic numbers. A floating-point answer is not an exact witness, while an exact algebraic-number representation and checker would require machinery beyond the requested standard-library substitution-style interface. Restricting the generator to rational constructions would improve V but would not repair H.
++
++### Recover information from already supplied points
++
++If the points are supplied and the witness is their two distances, the associated graph, or confirmation that the points are spherical, the solver only computes norms and all pairwise distances. That costs polynomial time and is exactly the proposed verifier, so it also supplies the solving algorithm. Returning the two distances would additionally make the answer a real-valued object, which the witness contract forbids.
++
++### Nearby formulations do not rescue the family
++
++- A yes/no existence answer is not a witness, and Theorem 1.1 makes it a spectral lookup anyway.
++- An eigenvector, null vector, Gram factor, or multiplicity certificate is found by standard linear algebra; changing the output from a decision to a certificate does not create hardness.
++- Asking for an optimal or maximum-cardinality two-distance set would make optimality the claim and violate the witness requirement; the paper also does not give an answer-first generator for such optima.
++- Hiding a vertex permutation and asking the solver to recover it would append a graph-isomorphism puzzle not studied or shown hard in this paper. Its difficulty would come from the added encoding, not from the spherical two-distance results, so it would not be an honest use of the paper's regime.
++- Moving to arbitrary numbers of vertices abandons the paper's `d+2` characterization regime. The paper proves no computational-hardness theorem or inverse-generation distribution there.
++
++## Gate outcome
++
++| requirement | result |
++|---|---|
++| G -- sample the answer first | Possible for explicit point/Gram constructions |
++| H -- no known polynomial-time or closed-form method | **Fail: Theorem 1.1, Proposition 1.2, and Lemma 2.2 reduce the natural tasks to spectral and PSD/rank computations** |
++| V -- cheap exact witness checking | Possible for exact distance/Gram data; problematic for unrestricted irrational coordinates |
++
++No `gen_2211_12582.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Running `scripts/harden.py` after this analytical H rejection would contradict the instruction to stop as soon as a family fails G, H, or V.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..b33539d7d8598ac7a6dde3332012e0fd0a0b8db6
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,62 @@
++# Rejected: arXiv 2211.12582
++
++Paper: Iliyas Noman and Yuan Yao, [*Spectral conditions for spherical two-distance sets*](https://arxiv.org/abs/2211.12582) (v2, 3 February 2026).
++
++## Decision
++
++This paper does not provide a problem family satisfying **G, H, and V** simultaneously. The suggested family—construct or recognize points on a sphere having exactly two pairwise distances—can be generated and checked, but it fails **H (hardness)** in the parameter regime studied by the paper. The paper's main contribution is a necessary-and-sufficient spectral characterization, and its other main result reads the minimum representation dimension directly from an eigenvalue multiplicity. I therefore stopped at Step 0, before creating a generator, claiming gate measurements, or running the LLM hardening loop.
++
++## What the paper actually studies
++
++Definition 2.1 calls a finite set in `R^d` a two-distance set when the distances between distinct points take exactly two values. Definition 2.2 encodes it by a graph: an edge represents the longer of the two distances. Definition 2.4 calls the set spherical when all points lie on a `(d-1)`-sphere in `R^d` (scaling can make this the unit sphere).
++
++The paper focuses on the "small" regime of a graph with exactly `d+2` vertices represented in `R^d`. It supplies progressively simpler exact characterizations:
++
++- Theorem 2.1 (Einhorn--Schoenberg) says that a graph on `d+2` vertices is not representable precisely in the complete-multipartite exception; otherwise it has a unique admissible distance ratio.
++- Lemma 2.2 (Schoenberg) reduces realization of a prescribed distance matrix to positive semidefiniteness and a rank bound, and states that the configuration is unique up to congruence.
++- Sections 3--5 rewrite spherical representability as positive-semidefinite, nullspace, and eigenvalue conditions.
++- Theorem 1.1, proved in Section 6, says that spherical representability is determined by the second eigenvalue of the adjacency matrix and the spectrum of its projection onto the all-ones vector's orthogonal complement.
++- Proposition 1.2, also proved in Section 6, gives the lowest representation dimension directly from the multiplicity of the second adjacency eigenvalue.
++- The final corollary makes an especially broad regime immediate: every regular graph on `d+2` vertices that is not complete multipartite has a spherical representation in `R^d`.
++
++These are finite-dimensional linear-algebra computations, not a hard witness-search regime. The paper contains no NP-hardness result, no planted average-case hardness claim, and no parameter range in which finding a representation is asserted to be hard.
++
++## Why the proposed generator fails
++
++### Recognize a spherical two-distance graph
++
++Given the adjacency matrix, Theorem 1.1 is an explicit decision procedure: compute the spectra of `A` and `P A P`, compare the relevant eigenvalue and multiplicities. Exact versions can use characteristic-polynomial and rational/algebraic linear algebra. This is polynomial-time linear algebra, so **H fails**. Asking for the minimum dimension is even more directly defeated by Proposition 1.2.
++
++### Construct a spherical two-distance realization
++
++Sampling a graph first would satisfy inverse generation, and a submitted exact Gram/distance matrix could be checked by substitution, rank, and positive-semidefiniteness. But Theorem 2.1, Lemma 2.2, and Section 4's formula
++
++```text
++k = sqrt(1/lambda_2 + 1)
++```
++
++give the distance ratio and a standard spectral/Gram-matrix reconstruction route. A solver need not recover a hidden plant. For regular non-complete-multipartite graphs the paper's final corollary even decides existence immediately. Thus **H fails** again.
++
++There is a second contract problem if ordinary coordinates are requested: the natural coordinates and distance ratio can be irrational algebraic numbers. A floating-point answer is not an exact witness, while an exact algebraic-number representation and checker would require machinery beyond the requested standard-library substitution-style interface. Restricting the generator to rational constructions would improve V but would not repair H.
++
++### Recover information from already supplied points
++
++If the points are supplied and the witness is their two distances, the associated graph, or confirmation that the points are spherical, the solver only computes norms and all pairwise distances. That costs polynomial time and is exactly the proposed verifier, so it also supplies the solving algorithm. Returning the two distances would additionally make the answer a real-valued object, which the witness contract forbids.
++
++### Nearby formulations do not rescue the family
++
++- A yes/no existence answer is not a witness, and Theorem 1.1 makes it a spectral lookup anyway.
++- An eigenvector, null vector, Gram factor, or multiplicity certificate is found by standard linear algebra; changing the output from a decision to a certificate does not create hardness.
++- Asking for an optimal or maximum-cardinality two-distance set would make optimality the claim and violate the witness requirement; the paper also does not give an answer-first generator for such optima.
++- Hiding a vertex permutation and asking the solver to recover it would append a graph-isomorphism puzzle not studied or shown hard in this paper. Its difficulty would come from the added encoding, not from the spherical two-distance results, so it would not be an honest use of the paper's regime.
++- Moving to arbitrary numbers of vertices abandons the paper's `d+2` characterization regime. The paper proves no computational-hardness theorem or inverse-generation distribution there.
++
++## Gate outcome
++
++| requirement | result |
++|---|---|
++| G -- sample the answer first | Possible for explicit point/Gram constructions |
++| H -- no known polynomial-time or closed-form method | **Fail: Theorem 1.1, Proposition 1.2, and Lemma 2.2 reduce the natural tasks to spectral and PSD/rank computations** |
++| V -- cheap exact witness checking | Possible for exact distance/Gram data; problematic for unrestricted irrational coordinates |
++
++No `gen_2211_12582.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Running `scripts/harden.py` after this analytical H rejection would contradict the instruction to stop as soon as a family fails G, H, or V.
+
+exec
+/bin/bash -lc "sed -n '1,280p' REJECTED.md; git status --short; git diff --check -- REJECTED.md" in /home/gson/gvrepo/results/2211.12582
+ exited 129 in 0ms:
+# Rejected: arXiv 2211.12582
+
+Paper: Iliyas Noman and Yuan Yao, [*Spectral conditions for spherical two-distance sets*](https://arxiv.org/abs/2211.12582) (v2, 3 February 2026).
+
+## Decision
+
+This paper does not provide a problem family satisfying **G, H, and V** simultaneously. The suggested family—construct or recognize points on a sphere having exactly two pairwise distances—can be generated and checked, but it fails **H (hardness)** in the parameter regime studied by the paper. The paper's main contribution is a necessary-and-sufficient spectral characterization, and its other main result reads the minimum representation dimension directly from an eigenvalue multiplicity. I therefore stopped at Step 0, before creating a generator, claiming gate measurements, or running the LLM hardening loop.
+
+## What the paper actually studies
+
+Definition 2.1 calls a finite set in `R^d` a two-distance set when the distances between distinct points take exactly two values. Definition 2.2 encodes it by a graph: an edge represents the longer of the two distances. Definition 2.4 calls the set spherical when all points lie on a `(d-1)`-sphere in `R^d` (scaling can make this the unit sphere).
+
+The paper focuses on the "small" regime of a graph with exactly `d+2` vertices represented in `R^d`. It supplies progressively simpler exact characterizations:
+
+- Theorem 2.1 (Einhorn--Schoenberg) says that a graph on `d+2` vertices is not representable precisely in the complete-multipartite exception; otherwise it has a unique admissible distance ratio.
+- Lemma 2.2 (Schoenberg) reduces realization of a prescribed distance matrix to positive semidefiniteness and a rank bound, and states that the configuration is unique up to congruence.
+- Sections 3--5 rewrite spherical representability as positive-semidefinite, nullspace, and eigenvalue conditions.
+- Theorem 1.1, proved in Section 6, says that spherical representability is determined by the second eigenvalue of the adjacency matrix and the spectrum of its projection onto the all-ones vector's orthogonal complement.
+- Proposition 1.2, also proved in Section 6, gives the lowest representation dimension directly from the multiplicity of the second adjacency eigenvalue.
+- The final corollary makes an especially broad regime immediate: every regular graph on `d+2` vertices that is not complete multipartite has a spherical representation in `R^d`.
+
+These are finite-dimensional linear-algebra computations, not a hard witness-search regime. The paper contains no NP-hardness result, no planted average-case hardness claim, and no parameter range in which finding a representation is asserted to be hard.
+
+## Why the proposed generator fails
+
+### Recognize a spherical two-distance graph
+
+Given the adjacency matrix, Theorem 1.1 is an explicit decision procedure: compute the spectra of `A` and `P A P`, compare the relevant eigenvalue and multiplicities. Exact versions can use characteristic-polynomial and rational/algebraic linear algebra. This is polynomial-time linear algebra, so **H fails**. Asking for the minimum dimension is even more directly defeated by Proposition 1.2.
+
+### Construct a spherical two-distance realization
+
+Sampling a graph first would satisfy inverse generation, and a submitted exact Gram/distance matrix could be checked by substitution, rank, and positive-semidefiniteness. But Theorem 2.1, Lemma 2.2, and Section 4's formula
+
+```text
+k = sqrt(1/lambda_2 + 1)
+```
+
+give the distance ratio and a standard spectral/Gram-matrix reconstruction route. A solver need not recover a hidden plant. For regular non-complete-multipartite graphs the paper's final corollary even decides existence immediately. Thus **H fails** again.
+
+There is a second contract problem if ordinary coordinates are requested: the natural coordinates and distance ratio can be irrational algebraic numbers. A floating-point answer is not an exact witness, while an exact algebraic-number representation and checker would require machinery beyond the requested standard-library substitution-style interface. Restricting the generator to rational constructions would improve V but would not repair H.
+
+### Recover information from already supplied points
+
+If the points are supplied and the witness is their two distances, the associated graph, or confirmation that the points are spherical, the solver only computes norms and all pairwise distances. That costs polynomial time and is exactly the proposed verifier, so it also supplies the solving algorithm. Returning the two distances would additionally make the answer a real-valued object, which the witness contract forbids.
+
+### Nearby formulations do not rescue the family
+
+- A yes/no existence answer is not a witness, and Theorem 1.1 makes it a spectral lookup anyway.
+- An eigenvector, null vector, Gram factor, or multiplicity certificate is found by standard linear algebra; changing the output from a decision to a certificate does not create hardness.
+- Asking for an optimal or maximum-cardinality two-distance set would make optimality the claim and violate the witness requirement; the paper also does not give an answer-first generator for such optima.
+- Hiding a vertex permutation and asking the solver to recover it would append a graph-isomorphism puzzle not studied or shown hard in this paper. Its difficulty would come from the added encoding, not from the spherical two-distance results, so it would not be an honest use of the paper's regime.
+- Moving to arbitrary numbers of vertices abandons the paper's `d+2` characterization regime. The paper proves no computational-hardness theorem or inverse-generation distribution there.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G -- sample the answer first | Possible for explicit point/Gram constructions |
+| H -- no known polynomial-time or closed-form method | **Fail: Theorem 1.1, Proposition 1.2, and Lemma 2.2 reduce the natural tasks to spectral and PSD/rank computations** |
+| V -- cheap exact witness checking | Possible for exact distance/Gram data; problematic for unrestricted irrational coordinates |
+
+No `gen_2211_12582.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Running `scripts/harden.py` after this analytical H rejection would contradict the instruction to stop as soon as a family fails G, H, or V.
+fatal: not a git repository (or any of the parent directories): .git
+warning: Not a git repository. Use --no-index to compare two paths outside a working tree
+usage: git diff --no-index [<options>] <path> <path>
+
+Diff output format options
+    -p, --patch           generate patch
+    -s, --no-patch        suppress diff output
+    -u                    generate patch
+    -U, --unified[=<n>]   generate diffs with <n> lines context
+    -W, --[no-]function-context
+                          generate diffs with <n> lines context
+    --raw                 generate the diff in raw format
+    --patch-with-raw      synonym for '-p --raw'
+    --patch-with-stat     synonym for '-p --stat'
+    --numstat             machine friendly --stat
+    --shortstat           output only the last line of --stat
+    -X, --dirstat[=<param1,param2>...]
+                          output the distribution of relative amount of changes for each sub-directory
+    --cumulative          synonym for --dirstat=cumulative
+    --dirstat-by-file[=<param1,param2>...]
+                          synonym for --dirstat=files,param1,param2...
+    --check               warn if changes introduce conflict markers or whitespace errors
+    --summary             condensed summary such as creations, renames and mode changes
+    --name-only           show only names of changed files
+    --name-status         show only names and status of changed files
+    --stat[=<width>[,<name-width>[,<count>]]]
+                          generate diffstat
+    --stat-width <width>  generate diffstat with a given width
+    --stat-name-width <width>
+                          generate diffstat with a given name width
+    --stat-graph-width <width>
+                          generate diffstat with a given graph width
+    --stat-count <count>  generate diffstat with limited lines
+    --[no-]compact-summary
+                          generate compact summary in diffstat
+    --binary              output a binary diff that can be applied
+    --[no-]full-index     show full pre- and post-image object names on the "index" lines
+    --[no-]color[=<when>] show colored diff
+    --ws-error-highlight <kind>
+                          highlight whitespace errors in the 'context', 'old' or 'new' lines in the diff
+    -z                    do not munge pathnames and use NULs as output field terminators in --raw or --numstat
+    --[no-]abbrev[=<n>]   use <n> digits to display object names
+    --src-prefix <prefix> show the given source prefix instead of "a/"
+    --dst-prefix <prefix> show the given destination prefix instead of "b/"
+    --line-prefix <prefix>
+                          prepend an additional prefix to every line of output
+    --no-prefix           do not show any source or destination prefix
+    --default-prefix      use default prefixes a/ and b/
+    --inter-hunk-context <n>
+                          show context between diff hunks up to the specified number of lines
+    --output-indicator-new <char>
+                          specify the character to indicate a new line instead of '+'
+    --output-indicator-old <char>
+                          specify the character to indicate an old line instead of '-'
+    --output-indicator-context <char>
+                          specify the character to indicate a context instead of ' '
+
+Diff rename options
+    -B, --break-rewrites[=<n>[/<m>]]
+                          break complete rewrite changes into pairs of delete and create
+    -M, --find-renames[=<n>]
+                          detect renames
+    -D, --irreversible-delete
+                          omit the preimage for deletes
+    -C, --find-copies[=<n>]
+                          detect copies
+    --[no-]find-copies-harder
+                          use unmodified files as source to find copies
+    --no-renames          disable rename detection
+    --[no-]rename-empty   use empty blobs as rename source
+    --[no-]follow         continue listing the history of a file beyond renames
+    -l <n>                prevent rename/copy detection if the number of rename/copy targets exceeds given limit
+
+Diff algorithm options
+    --minimal             produce the smallest possible diff
+    -w, --ignore-all-space
+                          ignore whitespace when comparing lines
+    -b, --ignore-space-change
+                          ignore changes in amount of whitespace
+    --ignore-space-at-eol ignore changes in whitespace at EOL
+    --ignore-cr-at-eol    ignore carrier-return at the end of line
+    --ignore-blank-lines  ignore changes whose lines are all blank
+    -I, --[no-]ignore-matching-lines <regex>
+                          ignore changes whose all lines match <regex>
+    --[no-]indent-heuristic
+                          heuristic to shift diff hunk boundaries for easy reading
+    --patience            generate diff using the "patience diff" algorithm
+    --histogram           generate diff using the "histogram diff" algorithm
+    --diff-algorithm <algorithm>
+                          choose a diff algorithm
+    --anchored <text>     generate diff using the "anchored diff" algorithm
+    --word-diff[=<mode>]  show word diff, using <mode> to delimit changed words
+    --word-diff-regex <regex>
+                          use <regex> to decide what a word is
+    --color-words[=<regex>]
+                          equivalent to --word-diff=color --word-diff-regex=<regex>
+    --[no-]color-moved[=<mode>]
+                          moved lines of code are colored differently
+    --[no-]color-moved-ws <mode>
+                          how white spaces are ignored in --color-moved
+
+Other diff options
+    --[no-]relative[=<prefix>]
+                          when run from subdir, exclude changes outside and show relative paths
+    -a, --[no-]text       treat all files as text
+    -R                    swap two inputs, reverse the diff
+    --[no-]exit-code      exit with 1 if there were differences, 0 otherwise
+    --[no-]quiet          disable all output of the program
+    --[no-]ext-diff       allow an external diff helper to be executed
+    --[no-]textconv       run external text conversion filters when comparing binary files
+    --ignore-submodules[=<when>]
+                          ignore changes to submodules in the diff generation
+    --submodule[=<format>]
+                          specify how differences in submodules are shown
+    --ita-invisible-in-index
+                          hide 'git add -N' entries from the index
+    --ita-visible-in-index
+                          treat 'git add -N' entries as real in the index
+    -S <string>           look for differences that change the number of occurrences of the specified string
+    -G <regex>            look for differences that change the number of occurrences of the specified regex
+    --pickaxe-all         show all changes in the changeset with -S or -G
+    --pickaxe-regex       treat <string> in -S as extended POSIX regular expression
+    -O <file>             control the order in which files appear in the output
+    --rotate-to <path>    show the change in the specified path first
+    --skip-to <path>      skip the output to the specified path
+    --find-object <object-id>
+                          look for differences that change the number of occurrences of the specified object
+    --diff-filter [(A|C|D|M|R|T|U|X|B)...[*]]
+                          select files by diff type
+    --output <file>       output to a specific file
+
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..b33539d7d8598ac7a6dde3332012e0fd0a0b8db6
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,62 @@
++# Rejected: arXiv 2211.12582
++
++Paper: Iliyas Noman and Yuan Yao, [*Spectral conditions for spherical two-distance sets*](https://arxiv.org/abs/2211.12582) (v2, 3 February 2026).
++
++## Decision
++
++This paper does not provide a problem family satisfying **G, H, and V** simultaneously. The suggested family—construct or recognize points on a sphere having exactly two pairwise distances—can be generated and checked, but it fails **H (hardness)** in the parameter regime studied by the paper. The paper's main contribution is a necessary-and-sufficient spectral characterization, and its other main result reads the minimum representation dimension directly from an eigenvalue multiplicity. I therefore stopped at Step 0, before creating a generator, claiming gate measurements, or running the LLM hardening loop.
++
++## What the paper actually studies
++
++Definition 2.1 calls a finite set in `R^d` a two-distance set when the distances between distinct points take exactly two values. Definition 2.2 encodes it by a graph: an edge represents the longer of the two distances. Definition 2.4 calls the set spherical when all points lie on a `(d-1)`-sphere in `R^d` (scaling can make this the unit sphere).
++
++The paper focuses on the "small" regime of a graph with exactly `d+2` vertices represented in `R^d`. It supplies progressively simpler exact characterizations:
++
++- Theorem 2.1 (Einhorn--Schoenberg) says that a graph on `d+2` vertices is not representable precisely in the complete-multipartite exception; otherwise it has a unique admissible distance ratio.
++- Lemma 2.2 (Schoenberg) reduces realization of a prescribed distance matrix to positive semidefiniteness and a rank bound, and states that the configuration is unique up to congruence.
++- Sections 3--5 rewrite spherical representability as positive-semidefinite, nullspace, and eigenvalue conditions.
++- Theorem 1.1, proved in Section 6, says that spherical representability is determined by the second eigenvalue of the adjacency matrix and the spectrum of its projection onto the all-ones vector's orthogonal complement.
++- Proposition 1.2, also proved in Section 6, gives the lowest representation dimension directly from the multiplicity of the second adjacency eigenvalue.
++- The final corollary makes an especially broad regime immediate: every regular graph on `d+2` vertices that is not complete multipartite has a spherical representation in `R^d`.
++
++These are finite-dimensional linear-algebra computations, not a hard witness-search regime. The paper contains no NP-hardness result, no planted average-case hardness claim, and no parameter range in which finding a representation is asserted to be hard.
++
++## Why the proposed generator fails
++
++### Recognize a spherical two-distance graph
++
++Given the adjacency matrix, Theorem 1.1 is an explicit decision procedure: compute the spectra of `A` and `P A P`, compare the relevant eigenvalue and multiplicities. Exact versions can use characteristic-polynomial and rational/algebraic linear algebra. This is polynomial-time linear algebra, so **H fails**. Asking for the minimum dimension is even more directly defeated by Proposition 1.2.
++
++### Construct a spherical two-distance realization
++
++Sampling a graph first would satisfy inverse generation, and a submitted exact Gram/distance matrix could be checked by substitution, rank, and positive-semidefiniteness. But Theorem 2.1, Lemma 2.2, and Section 4's formula
++
++```text
++k = sqrt(1/lambda_2 + 1)
++```
++
++give the distance ratio and a standard spectral/Gram-matrix reconstruction route. A solver need not recover a hidden plant. For regular non-complete-multipartite graphs the paper's final corollary even decides existence immediately. Thus **H fails** again.
++
++There is a second contract problem if ordinary coordinates are requested: the natural coordinates and distance ratio can be irrational algebraic numbers. A floating-point answer is not an exact witness, while an exact algebraic-number representation and checker would require machinery beyond the requested standard-library substitution-style interface. Restricting the generator to rational constructions would improve V but would not repair H.
++
++### Recover information from already supplied points
++
++If the points are supplied and the witness is their two distances, the associated graph, or confirmation that the points are spherical, the solver only computes norms and all pairwise distances. That costs polynomial time and is exactly the proposed verifier, so it also supplies the solving algorithm. Returning the two distances would additionally make the answer a real-valued object, which the witness contract forbids.
++
++### Nearby formulations do not rescue the family
++
++- A yes/no existence answer is not a witness, and Theorem 1.1 makes it a spectral lookup anyway.
++- An eigenvector, null vector, Gram factor, or multiplicity certificate is found by standard linear algebra; changing the output from a decision to a certificate does not create hardness.
++- Asking for an optimal or maximum-cardinality two-distance set would make optimality the claim and violate the witness requirement; the paper also does not give an answer-first generator for such optima.
++- Hiding a vertex permutation and asking the solver to recover it would append a graph-isomorphism puzzle not studied or shown hard in this paper. Its difficulty would come from the added encoding, not from the spherical two-distance results, so it would not be an honest use of the paper's regime.
++- Moving to arbitrary numbers of vertices abandons the paper's `d+2` characterization regime. The paper proves no computational-hardness theorem or inverse-generation distribution there.
++
++## Gate outcome
++
++| requirement | result |
++|---|---|
++| G -- sample the answer first | Possible for explicit point/Gram constructions |
++| H -- no known polynomial-time or closed-form method | **Fail: Theorem 1.1, Proposition 1.2, and Lemma 2.2 reduce the natural tasks to spectral and PSD/rank computations** |
++| V -- cheap exact witness checking | Possible for exact distance/Gram data; problematic for unrestricted irrational coordinates |
++
++No `gen_2211_12582.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Running `scripts/harden.py` after this analytical H rejection would contradict the instruction to stop as soon as a family fails G, H, or V.
+
+codex
+Rejected at Step 0 because **H fails**.
+
+The paper’s Theorem 1.1 gives an exact spectral characterization of spherical representability for graphs with \(d+2\) vertices. Proposition 1.2 derives the minimum dimension from eigenvalue multiplicity, while Schoenberg’s lemma provides the Gram-matrix reconstruction route. Thus the natural recognition and construction tasks reduce to standard spectral, PSD, and rank computations rather than hard witness search. The paper establishes no separate computational-hardness regime. [Full paper](https://arxiv.org/pdf/2211.12582)
+
+The detailed analysis is in [REJECTED.md](/home/gson/gvrepo/results/2211.12582/REJECTED.md). Per the instructions, I did not create a generator, fabricate gate results, or run the LLM hardening loop.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..b33539d7d8598ac7a6dde3332012e0fd0a0b8db6
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,62 @@
++# Rejected: arXiv 2211.12582
++
++Paper: Iliyas Noman and Yuan Yao, [*Spectral conditions for spherical two-distance sets*](https://arxiv.org/abs/2211.12582) (v2, 3 February 2026).
++
++## Decision
++
++This paper does not provide a problem family satisfying **G, H, and V** simultaneously. The suggested family—construct or recognize points on a sphere having exactly two pairwise distances—can be generated and checked, but it fails **H (hardness)** in the parameter regime studied by the paper. The paper's main contribution is a necessary-and-sufficient spectral characterization, and its other main result reads the minimum representation dimension directly from an eigenvalue multiplicity. I therefore stopped at Step 0, before creating a generator, claiming gate measurements, or running the LLM hardening loop.
++
++## What the paper actually studies
++
++Definition 2.1 calls a finite set in `R^d` a two-distance set when the distances between distinct points take exactly two values. Definition 2.2 encodes it by a graph: an edge represents the longer of the two distances. Definition 2.4 calls the set spherical when all points lie on a `(d-1)`-sphere in `R^d` (scaling can make this the unit sphere).
++
++The paper focuses on the "small" regime of a graph with exactly `d+2` vertices represented in `R^d`. It supplies progressively simpler exact characterizations:
++
++- Theorem 2.1 (Einhorn--Schoenberg) says that a graph on `d+2` vertices is not representable precisely in the complete-multipartite exception; otherwise it has a unique admissible distance ratio.
++- Lemma 2.2 (Schoenberg) reduces realization of a prescribed distance matrix to positive semidefiniteness and a rank bound, and states that the configuration is unique up to congruence.
++- Sections 3--5 rewrite spherical representability as positive-semidefinite, nullspace, and eigenvalue conditions.
++- Theorem 1.1, proved in Section 6, says that spherical representability is determined by the second eigenvalue of the adjacency matrix and the spectrum of its projection onto the all-ones vector's orthogonal complement.
++- Proposition 1.2, also proved in Section 6, gives the lowest representation dimension directly from the multiplicity of the second adjacency eigenvalue.
++- The final corollary makes an especially broad regime immediate: every regular graph on `d+2` vertices that is not complete multipartite has a spherical representation in `R^d`.
++
++These are finite-dimensional linear-algebra computations, not a hard witness-search regime. The paper contains no NP-hardness result, no planted average-case hardness claim, and no parameter range in which finding a representation is asserted to be hard.
++
++## Why the proposed generator fails
++
++### Recognize a spherical two-distance graph
++
++Given the adjacency matrix, Theorem 1.1 is an explicit decision procedure: compute the spectra of `A` and `P A P`, compare the relevant eigenvalue and multiplicities. Exact versions can use characteristic-polynomial and rational/algebraic linear algebra. This is polynomial-time linear algebra, so **H fails**. Asking for the minimum dimension is even more directly defeated by Proposition 1.2.
++
++### Construct a spherical two-distance realization
++
++Sampling a graph first would satisfy inverse generation, and a submitted exact Gram/distance matrix could be checked by substitution, rank, and positive-semidefiniteness. But Theorem 2.1, Lemma 2.2, and Section 4's formula
++
++```text
++k = sqrt(1/lambda_2 + 1)
++```
++
++give the distance ratio and a standard spectral/Gram-matrix reconstruction route. A solver need not recover a hidden plant. For regular non-complete-multipartite graphs the paper's final corollary even decides existence immediately. Thus **H fails** again.
++
++There is a second contract problem if ordinary coordinates are requested: the natural coordinates and distance ratio can be irrational algebraic numbers. A floating-point answer is not an exact witness, while an exact algebraic-number representation and checker would require machinery beyond the requested standard-library substitution-style interface. Restricting the generator to rational constructions would improve V but would not repair H.
++
++### Recover information from already supplied points
++
++If the points are supplied and the witness is their two distances, the associated graph, or confirmation that the points are spherical, the solver only computes norms and all pairwise distances. That costs polynomial time and is exactly the proposed verifier, so it also supplies the solving algorithm. Returning the two distances would additionally make the answer a real-valued object, which the witness contract forbids.
++
++### Nearby formulations do not rescue the family
++
++- A yes/no existence answer is not a witness, and Theorem 1.1 makes it a spectral lookup anyway.
++- An eigenvector, null vector, Gram factor, or multiplicity certificate is found by standard linear algebra; changing the output from a decision to a certificate does not create hardness.
++- Asking for an optimal or maximum-cardinality two-distance set would make optimality the claim and violate the witness requirement; the paper also does not give an answer-first generator for such optima.
++- Hiding a vertex permutation and asking the solver to recover it would append a graph-isomorphism puzzle not studied or shown hard in this paper. Its difficulty would come from the added encoding, not from the spherical two-distance results, so it would not be an honest use of the paper's regime.
++- Moving to arbitrary numbers of vertices abandons the paper's `d+2` characterization regime. The paper proves no computational-hardness theorem or inverse-generation distribution there.
++
++## Gate outcome
++
++| requirement | result |
++|---|---|
++| G -- sample the answer first | Possible for explicit point/Gram constructions |
++| H -- no known polynomial-time or closed-form method | **Fail: Theorem 1.1, Proposition 1.2, and Lemma 2.2 reduce the natural tasks to spectral and PSD/rank computations** |
++| V -- cheap exact witness checking | Possible for exact distance/Gram data; problematic for unrestricted irrational coordinates |
++
++No `gen_2211_12582.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Running `scripts/harden.py` after this analytical H rejection would contradict the instruction to stop as soon as a family fails G, H, or V.
+
+tokens used
+63,683
+Rejected at Step 0 because **H fails**.
+
+The paper’s Theorem 1.1 gives an exact spectral characterization of spherical representability for graphs with \(d+2\) vertices. Proposition 1.2 derives the minimum dimension from eigenvalue multiplicity, while Schoenberg’s lemma provides the Gram-matrix reconstruction route. Thus the natural recognition and construction tasks reduce to standard spectral, PSD, and rank computations rather than hard witness search. The paper establishes no separate computational-hardness regime. [Full paper](https://arxiv.org/pdf/2211.12582)
+
+The detailed analysis is in [REJECTED.md](/home/gson/gvrepo/results/2211.12582/REJECTED.md). Per the instructions, I did not create a generator, fabricate gate results, or run the LLM hardening loop.
