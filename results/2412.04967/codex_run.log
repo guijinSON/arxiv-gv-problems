@@ -1,0 +1,2694 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a05b79-b2ef-7951-8752-3254950a89e8
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know its answer*, because you
+  sampled the answer first and constructed the problem around it.
+- **H — hard.** No known polynomial-time or closed-form method, and the answer space
+  is far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+The answer must be a **witness** — a structured object handed to a checker. Never an
+absence ("no solution exists"), never an optimum whose optimality is the claim,
+never a real number or an asymptotic rate.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the three things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, standard library only, deterministic given `(n, seed)`. No file IO, no
+network, no printing at import. Use `random.Random(seed)`, never global `random`.
+
+```python
+DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
+                            # each maps to kwargs for make_instance
+
+def make_instance(n, seed=0, **params) -> dict
+    """Inverse generation: sample the answer FIRST, then build the problem around
+    it. Returns a dict containing key "answer" (the planted witness) plus all data
+    the solver needs. `n` is the size parameter; larger n must mean harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT."""
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of the naive candidate space, or None if not countable."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship.**
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G6 adversary panel** | Write ≥3 cheap attacks and confirm each FAILS across ≥8 seeds. See below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+5. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard.** The specific theorem and parameter regime you are inside, and
+  — just as important — the easy regimes you had to avoid and the results that
+  identify them. Cite sections by number. This is the part only you know.
+- **A worked example.** A rendered instance small enough to read in full (use your
+  smallest preset), its answer, `verify` returning True on it, and `verify`
+  returning False with its reason on a corrupted variant.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2412.04967
+url: https://arxiv.org/abs/2412.04967
+title: Deterministic Algorithms to Solve the $(n,k)$-Complete Hidden Subset Sum   Problem
+categories: math.CO math.NT
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: additive combinatorial structures
+  method: inverse construction
+  candidate generator: choose hidden integer multiset and publish all k-subset sums
+  candidate verifier: recompute candidate k-subset sums and compare multisets
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+codex
+I’m starting with the full paper and its exact hardness/easiness results. I’ll use the PDF-reading workflow to inspect the complete text, then either build and test the generator end to end or stop with a documented rejection if the family misses G, H, or V.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/jang-wongi/.codex/plugins/cache/openai-primary-runtime/pdf/26.826.12353/skills/pdf/SKILL.md" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+---
+name: "pdf"
+description: "Read, create, inspect, render, and verify PDF files where visual layout matters, including fillable AcroForms. Use Poppler rendering plus Python tools such as reportlab, pdfplumber, and pypdf for generation and extraction."
+---
+
+# PDF Skill
+
+## When To Use
+
+- Read or review PDF content where layout and visuals matter.
+- Create PDFs programmatically with reliable formatting.
+- Fill and validate interactive PDF forms.
+- Validate final rendering before delivery.
+
+## Tools + Contract Requirements
+
+Immediately before the first create/edit authoring command, run `mark_artifact_operation_started.mjs` successfully exactly once using the command below. Do not run it for read-only work. For edits, replace `create` with `edit`; adjust the expected count and output format to match the requested outputs.
+
+```bash
+node container_tools/mark_artifact_operation_started.mjs --operation-kind create --expected-output-count 1 --output-format pdf
+```
+
+## Workflow
+
+1. Prefer visual review: render PDF pages to PNGs and inspect them.
+   - Use `pdftoppm` from the bundled runtime or system Poppler when available.
+   - If unavailable, install Poppler or ask the user to review the output locally.
+2. Use `reportlab` to generate PDFs when creating new documents.
+3. Use `pdfplumber` or `pypdf` for text extraction and quick checks; do not rely on text extraction for layout fidelity.
+4. After each meaningful update, re-render pages and verify alignment, spacing, and legibility.
+
+## Fill And Validate AcroForms
+
+Visual review alone is not a correctness check for a fillable PDF. A page `/Widget` annotation can render a value from its appearance stream while the canonical `/AcroForm/Fields` tree is missing or contains a stale value.
+
+1. Keep the result interactive by default; set `flatten=True` only when the user explicitly requests a completed, static form. Preserve the source PDF, and do not flatten a signed PDF without an explicit workflow decision.
+2. Inspect both representations before filling: enumerate fields from `reader.get_fields()` and `/Widget` annotations from every page's `/Annots`, following `/Parent` and `/Kids`. If a widget and a canonical field have the same name but are distinct objects with no `/Parent` relationship, do not call `reattach_fields()` blindly: it can create a second top-level field with the same name. Report the ambiguity or produce a static result.
+3. Recover genuinely orphaned widgets, fill all pages, and write the result with `pypdf`:
+
+```python
+from pypdf import PdfReader, PdfWriter
+from pypdf.generic import NameObject
+
+reader = PdfReader(input_pdf)
+writer = PdfWriter()
+writer.clone_document_from_reader(reader)
+
+# Restores widgets that are missing from /AcroForm/Fields.
+writer.reattach_fields()
+fields = writer.get_fields() or {}
+missing = set(expected_values) - set(fields)
+if missing:
+    raise ValueError(f"Form fields not found after repair: {sorted(missing)}")
+
+values_to_write = dict(expected_values)
+if flatten:
+    # Paint every existing value before removing every widget.
+    values_to_write = {
+        name: field.get("/V", "/Off" if field.get("/FT") == "/Btn" else "")
+        for name, field in fields.items()
+    }
+    values_to_write.update(expected_values)
+
+writer.update_page_form_field_values(
+    None, values_to_write, auto_regenerate=False, flatten=flatten
+)
+
+if flatten:
+    # pypdf's flatten=True paints appearances but does not remove widgets.
+    writer.remove_annotations(subtypes="/Widget")
+    writer.root_object.pop(NameObject("/AcroForm"), None)
+
+with open(output_pdf, "wb") as stream:
+    writer.write(stream)
+```
+
+4. Reopen the written PDF before delivery. For an interactive result, require every expected field to be present in `get_fields()` with the expected `/V`, enumerate page widgets again, and confirm their effective `/V` (the widget value or inherited `/Parent` value) agrees. Confirm each updated widget has a non-empty `/AP` `/N` appearance and render the final pages to catch stale or clipped appearances. Do not rely on `/NeedAppearances` or a successful PNG render as proof that logical field data was updated.
+5. For a flattened result, require zero `/Widget` annotations and no remaining `/AcroForm` field tree after reopening, then render the final pages. Keep an editable copy when the user may need to revise the form.
+
+## Temp And Output Conventions
+
+- Use `tmp/pdfs/` for intermediate files; delete them when done.
+- Write final artifacts under `output/pdf/` when working in this repo.
+- Keep filenames stable and descriptive.
+
+## Dependencies
+
+Prefer the Codex bundled workspace/runtime dependencies when available. The primary runtime is expected to include:
+
+- Python packages: `reportlab`, `pdfplumber`, `pypdf`
+- Rendering tools: `pdftoppm` and `pdfinfo` from Poppler
+
+If a dependency is missing, install only what is needed.
+
+Python packages:
+
+```bash
+uv pip install reportlab pdfplumber pypdf
+```
+
+If `uv` is unavailable:
+
+```bash
+python3 -m pip install reportlab pdfplumber pypdf
+```
+
+System tools for rendering:
+
+```bash
+# macOS (Homebrew)
+brew install poppler
+
+# Ubuntu/Debian
+sudo apt-get install -y poppler-utils
+```
+
+If installation is not possible in this environment, tell the user which dependency is missing and how to install it locally.
+
+## Environment
+
+No required environment variables.
+
+## Rendering Command
+
+```bash
+pdftoppm -png "$INPUT_PDF" "$OUTPUT_PREFIX"
+```
+
+## Quality Expectations
+
+- Maintain polished visual design: consistent typography, spacing, margins, and section hierarchy.
+- Avoid rendering issues: clipped text, overlapping elements, broken tables, black squares, or unreadable glyphs.
+- Charts, tables, and images must be sharp, aligned, and clearly labeled.
+- Use ASCII hyphens only. Avoid U+2011 and other Unicode dashes.
+- Citations and references must be human-readable; never leave tool tokens or placeholder strings.
+
+## Final Checks
+
+- Do not deliver until the latest PNG inspection shows zero visual or formatting defects.
+- Confirm headers, footers, page numbering, and section transitions look polished.
+- Keep intermediate files organized or remove them after final approval.
+
+## Final response citations
+
+Place `:codex-file-citation{...}` inline in prose, not in a trailing list. Use `purpose="source"` for Q&amp;A/no-op and `purpose="output"` for create/edit.
+
+- [HARD REQUIREMENT] Create/edit: cite each final PDF exactly once with a plain output citation. Summarize representative changes; do not cite every page or add a separate filename, path, or Markdown link. Example: `Created :codex-file-citation{path="/abs/path/report.pdf" purpose="output"}, with the completed analysis and appendix.`
+- Q&amp;A/no-op: do not edit or re-export. Inspect the complete relevant pages, preserve material headings, table/figure labels, footnotes, sources, and sample sizes, and cite each source PDF once with a plain source citation.
+
+PDF citations currently support only plain file citations. Do not add `artifact_kind`, `page_number`, or other locators. Never cite rendered PNGs, scratch files, builders, or QA intermediates unless asked.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: https://arxiv.org/abs/2412.04967
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: 
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: https://arxiv.org/html/2412.04967v2
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "mkdir -p tmp/pdfs && curl -L --fail --silent --show-error https://arxiv.org/pdf/2412.04967 -o tmp/pdfs/2412.04967.pdf && pdfinfo tmp/pdfs/2412.04967.pdf | sed -n '1,24p' && pdftotext -layout tmp/pdfs/2412.04967.pdf tmp/pdfs/2412.04967.txt && wc -l tmp/pdfs/2412.04967.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 888ms:
+Title:           
+Subject:         
+Keywords:        
+Author:          
+Creator:         LaTeX with hyperref
+Producer:        GPL Ghostscript 10.01.2
+CreationDate:    Tue Feb 25 11:34:31 2025 KST
+ModDate:         Tue Feb 25 11:34:31 2025 KST
+Custom Metadata: no
+Metadata Stream: yes
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           26
+Encrypted:       no
+Page size:       612 x 792 pts (letter)
+Page rot:        0
+File size:       288097 bytes
+Optimized:       no
+PDF version:     1.4
+    1317 tmp/pdfs/2412.04967.txt
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The full 26-page v2 PDF is now local and extracted. I’m checking the formal definition, stated complexity bounds, uniqueness caveats, and any special cases that would make planted instances easy; the abstract already suggests the paper may undermine the “hard” requirement by giving a deterministic reconstruction algorithm, so I’m treating rejection as a live possibility.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "rg -n '"'^'"\\s*(Abstract|[0-9]+\\.?\\s|Definition|Theorem|Corollary|Lemma|Proposition|Remark|Algorithm|Conclusion|References)|NP|complex|polynomial|unique|uniqueness|recover|deterministic|brute|FPT|hard' tmp/pdfs/2412.04967.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+12:                                                                                 Abstract
+13:                                                       The Hidden Subset Sum Problem (HSSP) is a significant NP-
+16:                                                   where a target multiset must be recovered from its all k-subset sums,
+17:                                                   existing algorithms face limitations due to high complexity or in-
+18:                                                   tractability. This paper proposes two deterministic algorithms: a
+19:                                                   brute-force approach, and a novel method
+22:                                                                                                         3    n
+26:                                                   gree polynomial via Vieta’s formulas, whose roots correspond to the
+28:                                                   mogeneous symmetric polynomial rings is of independent interest.
+31:                                           1       Introduction
+47:ied under various names and contexts, including as the multiset recovery
+51:Definitions of HSSP Let G be an Abelian group. The general definition
+78:multiset recovery problems in a review article [6], dedicated for memorizing
+83:prove that the solution to the (n, 2)-complete HSSP is unique if and only
+87:vided a sufficient condition for the uniqueness of the solution through a
+92:                            is referred to as the Moser polynomials [6]. Here, u
+94:(n, k)-complete HSSP has a unique solution. However, if (n, k) satisfies at
+104:Recently, Ciprietti and Glaudo examined the uniqueness of the solution for
+109:gorithms have been proposed to solve it exclusively. In fact, deterministic
+112:knowledge, no deterministic algorithms have been proposed for solving the
+114:    This paper focuses on developing deterministic algorithms for solving the
+125:    Two types of deterministic algorithms are proposed in this work. The
+126:first is based on brute-force search. By leveraging the ordering rela-
+127:tionships of subset sums, we have reduced the complexity of the direct
+128:brute-force search algorithm. The result is formalized in the following theo-
+132:Theorem 1. There is a deterministic algorithm to solve the (n, k)-complete
+133:HSSP defined over R via brute-force search, with a time complexity of
+141:Vieta’s formulas. First, the elementary symmetric polynomials of all ele-
+142:ments in X are computed from all k-subset sums of X. Then, X is recovered
+143:by finding the roots of a univariate polynomial equation constructed using
+146:Theorem 2. For an (n, k)-complete HSSP defined over R, if ui=1 (−1)i−1 (i−
+150:               6= 0 for u = 1, 2, . . . , n, there is a deterministic algorithm,
+151:called symmetric subset sum recovery algorithm, to solve it with a
+152:time complexity of
+162:different research areas. Besides being referred to as the multiset recovery
+167:NP-completeness [2]. Some greedy heuristic algorithms have been proposed
+179:the NS algorithm, obtaining a polynomial-time probabilistic version [19–21].
+188:forms the input recovery attack into an instance of HSSP, connecting AI
+191:work focuses on developing deterministic algorithms for solving the (n, k)-
+196:the brute-force search algorithm for solving the (n, k)-complete HSSP. Section
+197:4 discusses the proposed algorithm based on symmetric polynomials theory
+202:2     Background
+203:Symmetric polynomials and Vieta’s formulas
+205:Definition 1. [23] Let x1 , x2 , . . . , xn be algebraically independent elements
+206:over R and Sn be the symmetric group on n letters. A polynomial f (x1 , x2 , . . . , xn )
+214:    Consider the polynomial f (x) :=             i=1 (x−xi ) = x +           i=n−1 (−1)         en−i xi .
+226:mials in x1 , x2 , . . . , xn , known as elementary symmetric polynomials.
+229:Definition 2. [24] A partition of positive integer u, also called an integer
+235:Definition 3. [24] The partition function p(u) is defined as a function
+237:Definition 4. Define p(u, ≤ k) to be the number of all partitions of a positive
+241:Definition 5. [25] A Stirling number of the second kind or Stirling
+255:          1 u−1 u                       1
+261:3           Brute-force search
+267:brute-force approach can be extremely time-consuming.
+274:approve or reject the candidates of X. It is known that the time complexity
+275:of solving the system of linear equations  is O(n3 ) [26] and the complexity
+276:of checking the rest sums is O( nk − n). Thus, the total time complexity is
+285:brute-force search algorithm can be described as follows.
+287:    1. Initialization and sorting:
+294:    2. Constructing matrix equation:
+318:  3. Traversing and solving:
+332:complexity, we show that the inverse matrix of Ak+1 could be calculated
+334:Lemma 1. For the matrix Ak+1 = (aij ) where
+336:                                     1 i + j 6= k + 2
+338:                                     0 i+j =k+2
+352:Algorithm 1 Brute-force search
+422:                                        algorithm, the time complexity for
+429:time complexity of each iteration is O (k + 1)2 + nk − k − 1 . Therefore,
+432:the total time complexity is:
+456:4      The approach based on Vieta’s formulas
+461:as n variates, Pj ’s are symmetric polynomial of {x1 , x2 , . . . , xn }. In the fol-
+470:be the other symmetric polynomials with exponent form (j1 , j2 , . . . , jℓ ), where
+471:1 ≤ j1 ≤ j2 ≤ · · · ≤ jℓ ≤ n. (j1 , j2 , . . . , jℓ ) could be taken as a partition
+487:symmetric polynomials of X could be computed, particularly the elementary
+488:symmetric polynomials, a univariate polynomial having all elements of X as
+491:4.2      Constructing the polynomial we needed
+492:To apply Vieta’s formulas to construct the polynomial we needed, it is nec-
+493:essary to compute the values of the elementary symmetric polynomials of X
+504:                         1    2        k
+506:then the value of P1 can be determined uniquely with S1 given.
+517:             1   2      k
+524:                                   1          1      P(1,1)             P12
+528:                   1       1
+529:be determined uniquely with S2 and P1 given.
+557:                                       1                                               2
+558:                                                                                         3 ⌋     (⌊ u3 ⌋,⌊ 2 3 ⌋,u−⌊ u
+565:                                                                                     3        2     ⌋, u − ⌊ u ⌋ − ⌊
+566:                                                                                                            3          2      ⌋
+588:                                                                         1      ℓ
+626:      1    ν                          ··· ν        u                 u      ν                        ···     1
+640:uniquely with Su , P1 , P2 , . . . , Pu−1 given. In Matrix (1), each row and each column
+652:invertible, then the corresponding P(1,1,...,1) ’s can be determined uniquely. Con-
+653:sequently, the elementary symmetric polynomials ei ’s of x1 , x2 , . . . , xn can be de-
+666:   Then the polynomial
+675:could be determined uniquely, then the multiset X is recovered by find-
+676:ing all roots of the polynomial f (x).
+685:Theorem 3. The determinant of Matrix (1) is
+733:               1      1       0        0            0      ... 0       c1     0
+747:               1 S(u, 2) S(u, 3) S(u, 4) S(u, 5) . . . 1              cu      0
+779:Lemma 2. P   For any square matrix M = (mij ) of order m, its determinant could
+793:     In fact, the determinant of Matrix (1) is equal to the Moser polynomial [6,10]:
+809:Remark 1. For any positive integers k, u ≤ n, the following equality holds:
+844:Remark 2. For fixed k and u, the Morse polynomial can be viewed as a k − 1-
+846:degree polynomial in n, with a leading coefficient of (k−1)! and a constant term of
+865:    2           1                                  2
+867:            1 3
+873:4.4      Symmetric subset sum recovery algorithm
+876:lowing algorithm, which is called symmetric subset sum recovery algorithm, for
+878:Algorithm 2 Symmetric subset sum recovery algorithm
+932:32: Find the n roots of the polynomial xn + i=n−1 (−1)n−i E[n − i + 1]xi of degree
+937:    The time complexity of computing all Su ’s is O nk n . The time complexity
+949:angle can be precomputed with a time complexity P     of O(n2 ) [27]. The overall time
+950:complexity for computing all v(p1 , p2 ) values is O( nu=1 p(u, ≤ k)2 min(u, k)2 ) us-
+951:ing a dynamic programming approach. Consequently, the time complexity of con-
+962:equations takes O     u=1 p(u, ≤ k)   time [26]. Using the characteristic polynomial
+963:method, the time complexity of finding all roots of a univariate polynomial of
+964:degree n is O(n3 ) [26, 28]. Thus, the total time complexity, ignoring some lower-
+965:complexity computations, becomes
+985:     Algorithm 2 can be generalized to the (n, k)-complete HSSP defined over other
+1009:                              1             2u
+1023:Theorem 4. Let Xn,k be the multiset of all k-subset sums of finite multiset X =
+1039:4.6      The homogeneous symmetric polynomial rings
+1042:cases, it is not possible to uniquely determine the value for any one partition of
+1047:can we still uniquely determine the values for the partitions of v where v ≥ u by
+1051:polynomial ring of degree u, denoted here by Ru , and prove the following theorem.
+1053:Theorem 5. For a positive integer of u > 1 and the homogeneous symmetric
+1054:polynomial ring Ru of degree u over R. A basis of Ru can be constructed by Su
+1069:metric polynomials of lower degree. From the structure of Matrix (1), it could be
+1077:all k-subset sums of n elements. Consequently, Su can be uniquely determined for
+1086:If we can not determine the value of any Pp of degree u uniquely with this choice,
+1093:Theorem 6. If there exists 1 < u0 < n such that Matrix (1) is non-invertible
+1132:then cannot determine any Pp , where p is a partition of v for any v ≥ u0 , uniquely.
+1141:5      Conclusion and future work
+1142:Conclusion In this paper, we present two deterministic algorithms (Algorithm
+1143:1 and Algorithm 2) for solving the (n, k)-complete HSSP. A comparison of the
+1148:     Algorithms                                                                      Requirements
+1149:                                     complexity                     ministic?
+1150: Original brute-force
+1174:                                                                                   with unique solution
+1200:References
+1222:     Algorithmics of Wireless Networks, pages 46–60. Springer, 2024.
+1224: [6] Dmitri V Fomin. Is the multiset of n integers uniquely determined by the
+1235: [9] Richard Guy. Unsolved problems in number theory, volume 1. Springer Science
+1251:[14] Jan Boman and Svante Linusson. Examples of non-uniqueness for the com-
+1266:[18] Phong Nguyen and Jacques Stern. The hardness of the hidden subset
+1276:[19] Jean-Sébastien Coron and Agnese Gini. A polynomial-time algorithm for
+1284:[21] Agnese Gini. On the hardness of the hidden subset sum problem: algebraic and
+1297:[25] Richard P Stanley. Enumerative Combinatorics Volume 1 second edition.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,210p' tmp/pdfs/2412.04967.txt && sed -n '250,455p' tmp/pdfs/2412.04967.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+                                                Deterministic Algorithms to Solve the
+
+
+
+
+arXiv:2412.04967v2 [math.CO] 24 Feb 2025
+                                            (n, k)-Complete Hidden Subset Sum Problem
+                                                            Lixia Luo∗, Changheng Li †, Qiongxiu Li ‡
+
+
+
+                                                                                 Abstract
+                                                       The Hidden Subset Sum Problem (HSSP) is a significant NP-
+                                                   complete problem in number theory and combinatorics, with applica-
+                                                   tions in cryptography and AI privacy. For the (n, k)-complete HSSP,
+                                                   where a target multiset must be recovered from its all k-subset sums,
+                                                   existing algorithms face limitations due to high complexity or in-
+                                                   tractability. This paper proposes two deterministic algorithms: a
+                                                   brute-force approach, and a novel method
+                                                                                          Pnleveraging symmetric
+                                                                                                                 poly-
+                                                                                                         3    n
+                                                   nomials and Vieta’s formulas with O      u=1 p(u, ≤ k) + k n com-
+                                                   plexity, where p(u, ≤ k) counts the number of partitions of a positive
+                                                   integer u into at most k parts. The latter constructs an n-th de-
+                                                   gree polynomial via Vieta’s formulas, whose roots correspond to the
+                                                   hidden multiset elements. Additionally, the discussion about the ho-
+                                                   mogeneous symmetric polynomial rings is of independent interest.
+
+
+                                           1       Introduction
+                                           The Hidden Subset Sum Problem (HSSP) is a classic and intriguing
+                                           problem in additive number theory, additive combinatorics, and combinato-
+                                           rial number theory. Its broad practical applications span various fields such
+                                           as cryptography [1], medical radiation oncology [2], AI privacy [3, 4], and
+                                               ∗
+                                                Department of Mathematics and Statistics, Hunan University of Science and Technol-
+                                           ogy, China (luolixia@hnust.edu.cn)
+                                              †
+                                                EEMCS department, Delft University of Technology, the Netherlands (L.Li-
+                                           7@tudelft.nl)
+                                              ‡
+                                                Department of Electronic System, Aalborg University, Denmark (qili@es.aau.dk)
+
+                                                                                     1
+Wi-Fi channel allocation [5]. Notably, HSSP has been independently stud-
+ied under various names and contexts, including as the multiset recovery
+problem [6] and, in some cases, as a special instance of the generating set
+problem [2].
+
+Definitions of HSSP Let G be an Abelian group. The general definition
+of HSSP defined over G is as follows:
+    Given a multiset B of G consisting of m elements, the goal is to find a
+finite multiset X of cardinality n(n ≤ m) such that every element of B is a
+subset sum of elements from the original multiset X.
+    Unlike ordinary sets, multisets allow elements to have multiplicities, mean-
+ing the same element can appear multiple times within the set [7]. In contrast
+to the Subset Sum Problem (SSP), where given a finite multiset X and
+a value b, the goal is to find a subset of X such that the sum of its elements
+equals b, HSSP hides the multiset X and typically only provides several sub-
+set sums. In particular, if the multiset consists of all k-subset sums of G
+(i.e., sums formed from subsets of G containing exactly k elements), it is
+referred to as an (n, k)-complete HSSP, which is the case we focus on in
+this article. Additionally, HSSP can also be formulated as follows:
+    Given an m-dimensional vector B = (b1 , b2 , . . . , bm ) ∈ Gm , find a matrix
+A ∈ {0, 1}m×n and an n-dimensional vector X = (x1 , x2 , . . . , xn ) ∈ Gn such
+that AX = B.
+    Moreover, the underlying group structure can be generalized to a ring
+or field framework while ensuring that the problem remains well-defined,
+thereby leading to different variations of HSSP.
+
+Related works of (n, k)-complete HSSP The study of (n, k)-complete
+HSSP has a rich history dating back to 1957 when Moser first published
+a solution for the (5, 2) case and discussed potential multiple solutions for
+the (4, 2) variant [8]. This early work laid the groundwork for subsequent
+investigations into the multi-solution nature of these problems. In 2019,
+Fomin summarized and formalized these types of inquiries under the name
+multiset recovery problems in a review article [6], dedicated for memorizing
+Izhboldin. This class of problems also finds its place among the unsolved
+challenges in additive number theory, as noted by Guy in his comprehensive
+compendium, Unsolved Problems in Number Theory [9].
+   In 1958, Selfridge and Straus [10] applied symmetric function theory to
+prove that the solution to the (n, 2)-complete HSSP is unique if and only
+
+                                        2
+if n is not a power of 2. For the general case where k 6= 2, they pro-
+vided a sufficient condition for the uniqueness of the solution through a
+family
+Pk       of Diophantine    equations of the form P (n, k) = 0, where P (n, k) =
+            i−1 u−1 n
+   i=1 (−1)    i    k−i
+                            is referred to as the Moser polynomials [6]. Here, u
+ranges over 1, 2, . . . , n. If (n, k) does not satisfy any of these equations, the
+(n, k)-complete HSSP has a unique solution. However, if (n, k) satisfies at
+least one of these equations, it is unclear whether multiple solutions exist.
+    In 1962, Gordon, Fraenkel, and Straus [11] proved that for (n, k)-complete
+HSSP defined on torsion-free Abelian groups, there are only finitely many val-
+ues of n for which multiple solutions exist, given a fixed k. They also provided
+an upper bound on the number of solutions in some cases. These parame-
+ter pairs (n, k) that yield multiple solutions are referred to as as singular
+pairs. Subsequent research by Ewell, Fomin, Izhboldin, and others further
+investigated the determination of singular pairs and the upper bounds on the
+number of corresponding solutions, leading to several open questions [12–15].
+Recently, Ciprietti and Glaudo examined the uniqueness of the solution for
+HSSP when the multiset is a subset sum of all subsets of a given set [16].
+
+Our Contributions While the multi-solution nature of the (n, k)-complete
+HSSP has been extensively studied using symmetric function theory, no al-
+gorithms have been proposed to solve it exclusively. In fact, deterministic
+algorithms for solving the (n, k)-complete HSSP are crucial for experimen-
+tally investigating its multi-solution properties. However, to the best of our
+knowledge, no deterministic algorithms have been proposed for solving the
+(n, k)-complete HSSP.
+    This paper focuses on developing deterministic algorithms for solving the
+(n, k)-complete HSSP. In this article, let Xn,k denote the multiset consisting
+of all k-subset sums. Without loss of generality, we assume k ≤ n/2 as the
+sum of all xi ’s can be determined from Xn,k . Consequently, all (n − k)-subset
+sums can be obtained by subtracting each k-subset sum from the total sum
+of xi ’s. Let X, Xn,k form the vectors X, Xn,k , respectively. Their relationship
+can be formulated as AX = Xn,k , where A is a nk × n binary matrix, with
+                                                      
+
+each row containing exactly k ones. For simplicity, we consider the (n, k)-
+complete HSSP defined over the field of real numbers R.
+    Two types of deterministic algorithms are proposed in this work. The
+first is based on brute-force search. By leveraging the ordering rela-
+tionships of subset sums, we have reduced the complexity of the direct
+brute-force search algorithm. The result is formalized in the following theo-
+
+                                        3
+rem:
+Theorem 1. There is a deterministic algorithm to solve the (n, k)-complete
+HSSP defined over R via brute-force search, with a time complexity of
+                          Y   k−1                !!
+                 n         n             n−k+i
+            O         log       +                    −i     .
+                 k          k     i=1
+                                             i
+
+    The second algorithm is based on symmetric function theory and
+Vieta’s formulas. First, the elementary symmetric polynomials of all ele-
+ments in X are computed from all k-subset sums of X. Then, X is recovered
+by finding the roots of a univariate polynomial equation constructed using
+Vieta’s formulas. Moreover, Newton’s identities are used to reduce com-
+putation. The result is summarized as follows:
+Theorem 2. For an (n, k)-complete HSSP defined over R, if ui=1 (−1)i−1 (i−
+                                                               P
+1)!S(u, i) n−i
+           k−i
+               6= 0 for u = 1, 2, . . . , n, there is a deterministic algorithm,
+called symmetric subset sum recovery algorithm, to solve it with a
+time complexity of
+                            n                     !
+                           X                      n
+                        O      p(u, ≤ k)3 +          n ,
+                           u=1
+                                                  k
+where p(u, ≤ k) denotes the partition function, which counts the number of
+partitions of a positive integer u into at most k parts.
+
+Related works of HSSP HSSP has appeared under various names across
+different research areas. Besides being referred to as the multiset recovery
+problem in studies on the multi-solution nature of (n, k)-complete HSSP,
+it is also a special instance of the generating set problem [2] in combi-
+natorial number theory. The generating set problem has been studied in
+various contexts, with one notable approach by Collins et al. proving its
+NP-completeness [2]. Some greedy heuristic algorithms have been proposed
+to address it [2, 17]. More recent works have explored connections between
+HSSP and graph theory, including Busson et al.’s transformation of the Wi-Fi
+access point channel allocation problem into a 1-extendable partition prob-
+lem [5], which is equivalent to the generating set problem.
+    In cryptography, the HSSP over the ring of residues modulo M has been
+applied to public-key cryptosystems, improving the efficiency of key genera-
+tion through the BPV generator [1]. Subsequently, Nguyen and Stern (1999)
+
+                                       4
+proposed the NS algorithm, based on orthogonal lattice attacks, to solve these
+instances of HSSP [18]. Gini and Coron followed their work and enhanced
+the NS algorithm, obtaining a polynomial-time probabilistic version [19–21].
+However, these methods rely on favorable properties of the matrix A and
+vector B, making them less effective for solving the (n, k)-complete HSSP.
+    Recent studies in AI privacy have linked HSSP to federated learning [3,4].
+While techniques like differential privacy, homomorphic encryption, and se-
+cure multi-party computation protect intermediate data [22], few address the-
+oretical privacy analysis from the shared updates. For example, [3] mapped
+the input data of the federated K-means clustering algorithm to a hidden
+multiset in HSSP, formulating intermediate results as subset sums. It trans-
+forms the input recovery attack into an instance of HSSP, connecting AI
+privacy with HSSP.
+    Unlike the aforementioned heuristic and probabilistic approaches, our
+work focuses on developing deterministic algorithms for solving the (n, k)-
+complete HSSP, offering a more structured and reliable solution framework.
+
+Organization The structure of the paper is as follows. Section 2 provides
+some necessary background. In Section 3, we present an optimized version of
+the brute-force search algorithm for solving the (n, k)-complete HSSP. Section
+4 discusses the proposed algorithm based on symmetric polynomials theory
+and Vieta’s formulas in detail. Conclusion and future work are outlined in
+Section 5.
+
+
+2     Background
+Symmetric polynomials and Vieta’s formulas
+
+Definition 1. [23] Let x1 , x2 , . . . , xn be algebraically independent elements
+over R and Sn be the symmetric group on n letters. A polynomial f (x1 , x2 , . . . , xn )
+in R[x1 , . . . , xn ] is called symmetric if
+
+                  f (xσ(1) , xσ(2) , . . . , xσ(n) ) = f (x1 , x2 , . . . , xn )
+
+Here are some examples of Stirling partition numbers:
+                                                          1
+   S(u, u) = 1, S(u, 1) = 1, S(u, 2) = 2u−1 − 1, S(u, 3) = (3u−1 − 2u + 1)
+                                                          2
+                                          6
+          1 u−1 u                       1
+S(u, 4) =    (4 −3 +3·2u−1−1), S(u, 5) = (5u−1 −4·4u−1 +6·3u−1 −4·2u−1+1).
+          3!                            4!
+Notice that S(u, i) = 0 for any u < i.
+
+
+3           Brute-force search
+Brute-force search, also known as exhaustive search, is a general problem-
+solving technique that systematically examines all possible candidates. For
+the (n, k)-complete HSSP, we know that each sum is the sum of k elements
+from X, but we do not know which k elements contribute to each sum. If we
+simply traverse all possible subsets of X and check the subset sums, such a
+brute-force approach can be extremely time-consuming.
+     Hence, we might as well fix an invertible binary matrix An whose rows
+each contain    exactly k ones, and select n possible subset sums from the
+total nk subset sums to identify the candidates of X. There are totally
+         
+ (nk) possible combinations. Afterward, check the unselected subset sums to
+    n
+approve or reject the candidates of X. It is known that the time complexity
+of solving the system of linear equations  is O(n3 ) [26] and the complexity
+of checking the rest sums is O( nk − n). Thus, the total time complexity is
+                                  
+
+O( (k ) (n3 + n − n)).
+     n         
+        n              k
+
+Proof of Theorem 1 Since R is an ordered field, the ordering relations can be
+used to reduce the number of possible traversals. The steps of the optimal
+brute-force search algorithm can be described as follows.
+
+    1. Initialization and sorting:
+
+              • Assume x1 ≤ x2 ≤ · · · ≤ xn . Define the square matrix Ak+1 of
+                order k + 1, where all elements are 1, except for the anti-diagonal
+                elements, which are 0.
+              • Sort all subset sums such that b1 ≤ b2 ≤ · · · ≤ bm .
+
+    2. Constructing matrix equation:
+            Consider
+                                      Ak+1Xk+1 = Bk+1,
+
+
+
+
+                                            7
+      where Bk+1 = (b′1 , b′2 , . . . , b′k+1 ). We have b′1 = b1 and b′2 = b2 since
+      Xk+1 is in an ascending order. For the remaining elements, we have
+
+           b′3 ∈ {b3 , b4 , . . . , b(n−k+2) }, b′3 ≤ b′4 ∈ {b4 , b5 , . . . , b(n−k+2)+1 }, . . . ,
+                                                                                   2
+
+
+      b′i−1 ≤ b′i ∈ {bi , . . . , b(n−(k−i+2))+1 }, . . . , b′k ≤ b′k+1 ∈ {bk+1 , . . . , b(n−1)+1 }.
+                                       i−2                                                  k−1
+
+
+      Hence, for i ≥ 3, we have n−(k−i+2)                 − i + 2 choices for b′i in the worst
+                                                       
+                                              i−2
+      case.
+
+  3. Traversing and solving:
+      Traverse all possible Bk+1 in step 2 and solve Ak+1Xk+1 = Bk+1 to get
+      Xk+1.
+      Now, scratching out the b′i for i = 1, 2, . . . , k + 1, the smallest sub-
+      set sum b′k+2 of {b1 , b2 , . . . , bm } \ b′1 , b′2 , · · · , b′k+1 is equal to x1 +
+      x2 + · · · + xk−1 + xk+2 , then we could get xk+2 . Generate subset
+      sums using x1 , x2 , . . . , xk+2 . If these sums belong to {b1 , b2 , . . . , bm } \
+        b′1 , b′2 , · · · , b′k+1 , scratch them out; otherwise, reject these xi ’s and
+      
+
+      turn to next possible Bk+1. Again, the smallest subset sum of residual
+      bi ’s is equal to x1 + x2 + · · · + xk−1 + xk+3 . Repeat this process until
+      all xi ’s are obtained.
+    In order to solve the matrix equation Ak+1Xk+1 = Bk+1 with reduced
+complexity, we show that the inverse matrix of Ak+1 could be calculated
+directly.
+Lemma 1. For the matrix Ak+1 = (aij ) where
+                                    (
+                                     1 i + j 6= k + 2
+               aij = 1 − δi,k+2−j =                   ,
+                                     0 i+j =k+2
+
+the inverse of Ak+1 is A−1
+                         k+1 = (bij ) where
+                             (
+                               1
+                                        i + j 6= k + 2
+                       bij = k k−1                     .
+                               − k      i+j =k+2
+
+Proof. It can be checked directly.
+   The algorithm could be also given as follows.
+
+                                                  8
+Algorithm 1 Brute-force search
+Input: Positive integers k, n satisfying           2 ≤ k ≤ n/2 and the multiset Xn,k =
+                                         n
+                                           
+    {b1 , b2 , . . . , bm } where m = k ;
+Output: The hidden multiset X = {x1 , x2 , . . . , xn };
+ 1: Sort the subset sums such that b1 ≤ b2(≤ · · · ≤ bm , and construct the
+                                                         1
+                                                                i + j 6= k + 2
+    inverse matrix A−1       k+1 where   A −1
+                                           k+1 [i, j] =  k
+                                                           k−1
+                                                                               ;
+                                                         − k    i+j =k+2
+ 2: Initialize an empty column vector Bk+1 = [] of length k + 1 and set
+    Bk+1[1] = b1 , Bk+1[2] = b2 ;
+ 3: Set c = [1, 2, . . . , k + 1]; s = 0;
+ 4: while s == 0 do
+ 5:   Set C = (b3 , b4 , . . . , bm );
+ 6:   for all i = 3, 4, . . . , k + 1 do
+ 7:        Set Bk+1[i] = bc[i] and remove bc[i] from C;
+ 8:   end for
+ 9:   Compute Xk+1 = A−1            k+1 Bk+1 and determine all i-subset sums of the
+      elements of Xk+1, denoted by the array Si , for all i = 1, 2, . . . , k − 1,
+      where Sk−1 [1] = Xk+1 [1] + Xk+1[2] + · · · + Xk+1[k − 1];
+10:   for all j = k + 2, k + 3, . . . , n do
+11:        Let x = C[1] − Sk−1 [1]; 
+                                      j−1
+12:        for all l = 1, 2, . . . , k−1    do
+13:            if Sk−1 [l] + x is not in C then
+14:                Break;
+15:            else if j == n and C == [] then
+16:                return S1 as a multiset. // The elements of S1 are exactly
+                   X’s.
+17:            else
+18:                Remove Sk−1 [l] + x from C;
+19:            end if
+20:        end for
+21:        Let S1 = [op(S1 ), x] and Si = [op(Si ), op(Si−1 + x)] for all i =
+           2, 3, . . . , k − 1; // op(S1 ) means opening the array S1 .
+22:   end for
+23:   for all i = k + 1, k, .. . , 4 do
+24:        if c[i] < n−(k−i+2)
+                             i−2
+                                     + 1 then
+25:            Let c[i] = c[i] + 1; break;
+
+
+                                          9
+                            n−(k−i+2)                           n−(k−i+1)
+                                                                       
+26:       else if c[i] ==      i−2
+                                           + 1 and c[i − 1] <      i−3
+                                                                            + 1 then
+27:         Let c[i − 1] = c[i − 1] + 1;
+28:         for all j = i, i + 1, . . . , k + 1 do
+29:            Let c[j] = c[j − 1] + 1;
+30:         end for
+31:         Break;
+32:       end if
+33:    end for
+34:    if i == 3 and c[3] > n − k then
+35:       Let s = 2;
+36:    end if
+37: end while
+38: if s == 2 then
+39:    return No solution!
+40: end if
+
+Complexity analysis Using the    heapsort
+                                        algorithm, the time complexity for
+                              n      n
+sorting the subset sums is O k log k [27].In the worst-case scenario,
+                                                                      the
+                                        Qk+1 n−(k−i+2)
+number of iterations is bounded by O     i=3      i−2
+                                                          − i + 2 , and the
+time complexity of each iteration is O (k + 1)2 + nk − k − 1 . Therefore,
+                                                              
+
+the total time complexity is:
+                                     k−1
+                                             Y n − k + i       !
+             n       n        n
+      O         log      +        + k2 + k                     −i    ,
+             k       k        k              i=1
+                                                        i
+
+which, by ignoring lower-order terms, is asymptotically equivalent to
+                            Y  k−1                !!
+                  n          n            n−k+i
+             O          log      +                   −i       .
+                   k         k     i=1
+                                             i
+
+This completes the proof of Theorem 1.
+    If Algorithm 1 is allowed to continue exploring all possibilities instead of
+terminating upon finding the first solution, it can be modified to output all
+solutions.
+
+
+
+
+                                          10
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '456,880p' tmp/pdfs/2412.04967.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+4      The approach based on Vieta’s formulas
+4.1      Some notations and the preliminary idea
+In this section, for the hidden multiset X = {x1 , x2 , . . . , xn }, let Pj = ni=1 xji
+                                                                                  P
+denote the j-th power sum of all elements of X. If we take {x1 , x2 , . . . , xn }
+as n variates, Pj ’s are symmetric polynomial of {x1 , x2 , . . . , xn }. In the fol-
+lowing, we do not distinguish between treating {x1 , x2 , . . . , xn } as a multiset
+or as variables. Let
+                                                                               
+                          X j      X                           X
+     P(j1 ,j2 ,...,jℓ ) =   xi11         xji22 · · ·                     xjiℓℓ 
+                      1≤i1 ≤n        1≤i2 ≤n,i2 6=i1          1≤iℓ ≤n,iℓ 6=i1 ,...,iℓ−1
+
+
+be the other symmetric polynomials with exponent form (j1 , j2 , . . . , jℓ ), where
+1 ≤ j1 ≤ j2 ≤ · · · ≤ jℓ ≤ n. (j1 , j2 , . . . , jℓ ) could be taken as a partition
+of j1 + j2 + · · · + jℓ with parts in ascending order. All the monomials in
+P(j1 ,j2 ,...,jℓ ) have the same coefficients, denoted by µ(j1 , j2 , . . . , jℓ ). In fact, let
+#(m) denote the multiplicity of any positive integer m in (j1 , j2 , . . . , jℓ ), then
+                                                     Y
+                               µ(j1 , . . . , jℓ ) =   #(m)!.
+                                                   j1 ≤m≤jℓ
+
+In addition, denote the u-th power sum of the multiset Xn,k consisting of all
+k-subset sums of X by
+                            X
+                 Su =               (xi1 + xi2 + · · · + xik )u .
+                            1≤i1 <i2 <···<ik ≤n
+
+The preliminary idea of this method
+    Since Su can be computed for any u using Xn,k , if the values of other
+symmetric polynomials of X could be computed, particularly the elementary
+symmetric polynomials, a univariate polynomial having all elements of X as
+its roots could be constructed.
+
+4.2      Constructing the polynomial we needed
+To apply Vieta’s formulas to construct the polynomial we needed, it is nec-
+essary to compute the values of the elementary symmetric polynomials of X
+using Xn,k .
+
+                                                  11
+4.2.1      Computing P1
+Consider
+                                                                      
+                             X                                    n−1
+              S1 =                  (xi1 + xi2 + · · · + xik ) =        P1 ,
+                   1≤i <i <···<i ≤n
+                                                                   k−1
+                         1    2        k
+
+then the value of P1 can be determined uniquely with S1 given.
+   In addition, we have P1 − Xn,k = Xn,n−k and if k = 1, the multiset X is
+not hidden. Hence, without losing generality, we assume 1 < k ≤ n/2.
+
+4.2.2      Computing P2 , P(1,1)
+Consider
+                                                                       
+                 X                                   n−1    2      n−2
+  S2 =                 (xi1 + xi2 + · · · + xik ) =          P2 +          P(1,1) ,
+       1≤i <i <···<i ≤n
+                                                      k − 1         k − 2
+             1   2      k
+
+
+and P12 = P2 + P(1,1) , then we have
+                       n−1 n−2                                       
+                                   k−1      k−2       P2                S2
+                                                                    =         .
+                                   1          1      P(1,1)             P12
+                        n−1            n−2
+                                             
+Since the matrix          k−2k−1is invertible, the values of P2 and P(1,1) can
+                   1       1
+be determined uniquely with S2 and P1 given.
+
+4.2.3      Computing Pp for any partition p of u
+Generally, consider
+                                                                 
+                 X
+                                                        u n−1
+Su =                     (xi1 + xi2 + · · · + xik ) =                Pu +
+                                                          k−1
+      1≤i1 <i2 <···<ik ≤n
+                                                        u
+                                                           
+                                                             P(⌊ u2 ⌋,u−⌊ u2 ⌋)
+               u              u
+                                                                                !
+                  P               P
+      
+  n−2          1   (1,u−1)         (2,u−2)            ⌊ u
+                                                          ⌋
+                           + 2              + ··· + 2 u                           +
+  k−2        µ(1, u − 1)      µ(2, u − 2)             µ(⌊ 2 ⌋, u − ⌊ u2 ⌋)
+                                                                                         u
+                                                                              u  u−⌊ u3 ⌋ 
+                                                                                                                                  
+               u u−1                 u u−1                                u     u−⌊    ⌋ P            u−⌊ u⌋           u−⌊  u⌋   .
+  n − 3  1 1 P(1,1,u−2)                     2 P(1,2,u−3)
+                                                                            ⌊3⌋ ⌊
+      
+                                       1                                               2
+                                                                                         3 ⌋     (⌊ u3 ⌋,⌊ 2 3 ⌋,u−⌊ u
+                                                                                                                     3
+                                                                                                                       ⌋−⌊ 2 3 ⌋ 
+                                   +                         +  ·  · · +                   u−⌊ u3 ⌋                  u−⌊ u3 ⌋
+  k−3            µ(1, 1, u − 2)           µ(1, 2, u − 3)
+                                                                                                                                  
+                                                                                µ(⌊ u ⌋, ⌊
+                                                                                     3        2     ⌋, u − ⌊ u ⌋ − ⌊
+                                                                                                            3          2      ⌋
+
++ ···+
+        u u−1       2
+                         
+  n − u 1 1 · · · 1 P(1,1,...,1)
+
+
+  k−u        µ(1, 1, . . . , 1)
+
+                                                   12
+     Notice that we assume m 1
+                               
+                            m2 = 0, if m1 < 0 or m2 < 0 in this article.
+     Consider
+                        P1 Pu−1 , P2 Pu−2 , . . . , P⌊ u2 ⌋ Pu−⌊ u2 ⌋ ,
+                                  P1 P1 Pu−2 , P1 P2 Pu−3 , . . . , P1u ,
+where they satisfy
+
+                                                             P(s,Pt∈{j ,...,j }−{s} ) + · · · + P(j1 ,...,jℓ )
+                                                X
+      Pj1 Pj2 · · · Pjℓ = Pj1 +···+jℓ +
+                                                                         1      ℓ
+                                           s∈{j1 ,...,jℓ }
+
+or                                                X
+                   Pj1 Pj2 · · · Pjℓ =                             v((j1 , j2 , . . . , jℓ ), p)Pp
+                                         all partitions p of u
+                                                                      Q
+where v(p1 , p2 ) denotes the coefficient of Pp2 in jr ∈p1 Pjr for any two partitions
+p1 , p2 of u. Specifically, v(p1 , p2 ) is equal to the number of ways to combine p1
+into p2 with v(p, p) = 1, for any partition p. For example, v((1, 1, 2), (1, 3)) = 2,
+v((1, 1, 1), (1, 2)) = 3, and v((1, 1, 1, 1), (2, 2)) = 3, v((1, 1, 1, 1), (1, 1, 2)) = 6.
+      Hence, the linear transformation matrix from (Pu , P(1,u−1) , . . . , P(1,1,...,1) )T to
+(Su , P1 Pu−1 , . . . , (P1 )u )T is given by
+                                                                                                                
+     n−1      n−2 ( 1 )
+                             u
+                                              n−2          (⌊ uu2 ⌋)                   u u−1
+                                                                              n−3 ( 1 )( 1 )               n−u
+ k−1           k−2 µ(1,u−1)          ···     k−2 µ(⌊ u2 ⌋,u−⌊ u         ⌋)   k−3 µ(1,1,u−2)         · · · k−u 
+                                                                       2
+ 1                      1            ···               0                             0              ···     0 
+                                                                                                                
+ .                      ..                             ..                            ..                     .. 
+ .                                   ..                                                             ..
+ .                       .               .              .                             .                 .    . 
+                                                                                                                 
+ 1                      0            · · ·             1                             0              · · ·   0
+                                                                                                                
+                                                                                                                 
+                                                                                                            ,
+               (1, 1, u − 2),                   (1, 1, u − 2),                                                  
+ 1        ν                          · · · ν      u                 u                1              · · ·   0   
+                  (1, u − 1)                   (⌊ 2 ⌋, u − ⌊ 2 ⌋)                                               
+ ..                      ..          ..                 ..                            ..            ..       .. 
+                                                                                                                
+ .                        .              .               .                             .                .     . 
+                                                                                                          
+               (1, 1, . . . , 1),               (1, 1, . . . , 1),             (1, 1, . . . , 1),               
+      1    ν                          ··· ν        u                 u      ν                        ···     1
+                   (1, u − 1)                   (⌊ 2 ⌋, u − ⌊ 2 ⌋)              (1, 1, u − 2)
+                                                                                                           (1)
+
+i.e. the matrix equation is
+                                                                   
+                                                    Pu  Su
+                                        P(1,u−1)  P1 Pu−1 
+                            Matrix (1)      ..    =  .. 
+                                                          
+                                             .        . 
+                                                P(1,1,...,1)                 (P1 )u
+
+If Matrix (1) is invertible, the values of Pp for all partitions p of u can be determined
+uniquely with Su , P1 , P2 , . . . , Pu−1 given. In Matrix (1), each row and each column
+
+                                                      13
+correspond to a partition, respectively. For example, the 2nd row corresponds to
+the partition (1, u), and the 1st column corresponds to the partition (u).
+           n−u
+    Since k−u = 0 when u > k, in this case, Matrix (1) can be replaced by its sub-
+matrix, which retains only the rows and columns corresponding to the partitions
+p of u into at most k parts, allowing us to obtain the corresponding Pu .
+
+4.2.4    Applying Newton’s identities and Vieta’s formulas
+If the linear transformation matrices (i.e., Matrix (1)) for u = 1, 2, . . . , n are all
+invertible, then the corresponding P(1,1,...,1) ’s can be determined uniquely. Con-
+sequently, the elementary symmetric polynomials ei ’s of x1 , x2 , . . . , xn can be de-
+                                                    P
+termined as follows: let e1 = P1 , and ei = (1,1,...,1) i!  for i = 2, 3, . . . , k, where
+(1, 1, . . . , 1) consists of i ones. By considering n−u
+                                                       k−u = 0 when u > k, the cor-
+responding Pu can be obtained, and we can reduce computation using Newton’s
+identities:
+                                         i
+                                         X
+                                   iei =   (−1)j−1 ei−j Pj ,
+                                      j=1
+
+where e0 = 1.
+   Then the polynomial
+                            n
+                            Y                 0
+                                              X
+                   f (x) :=                n
+                              (x − xi ) = x +   (−1)n−i en−i xi
+                            i=1                  i=n−1
+
+is what we needed by Vieta’s formulas. Hence, if the values of ei , i = 1, 2, . . . , n
+could be determined uniquely, then the multiset X is recovered by find-
+ing all roots of the polynomial f (x).
+
+
+4.3     The determinant of Matrix (1)
+Before presenting the algorithm, we first compute the determinant of Matrix (1).
+If Matrix (1) is not invertible, the algorithm fails. Therefore, we derive the de-
+terminant of the matrix and analyze the conditions under which the algorithm
+becomes invalid.
+
+Theorem 3. The determinant of Matrix (1) is
+                          u                          
+                          X
+                                i−1               n−i
+                            (−1) (i − 1)!S(u, i)       ,
+                                                  k−i
+                           i=1
+
+where S(u, i) is the Stirling partition number.
+
+                                            14
+Proof. First, consider the Laplace expansion along the first row of Matrix (1). Let
+li be the number of partitions with i elements. The determinant is then given by
+the following expression:
+                                         Qi−1 ui,j [t]      
+                           X              t=1 pi,j [t]    n−i
+                                    di,j                        ,
+                                           µ(pi,j )       k−i
+                       i=1,...,u,j=1,...,li
+
+where pi,j is the j-th partition into i parts, di,j is the algebraic cofactor of the
+item corresponding to pi,j , and ui,j [1] = u, ui,j [t] = ui,j [t − 1] − pi,j [t − 1] for
+t = 2, 3, . . . , i − 1. From the structure of Matrix (1), we observe that d1,1 = 1.
+    Matrix (1) is non-invertible if and only if there exists non-trivial
+                       c1,1 , c2,1 , . . . , c2,l2 , c3,1 , . . . , c3,l3 , . . . , cu,lu
+satisfying
+                                            X
+                                                           ci,j vi,j = 0
+                                   i=1,...,u,j=1,...,li
+
+where vi,j denotes the ( i−1
+                             P              
+                                t=1 lt ) + j -th column of Matrix (1), 0 denotes zero
+vector of appropriate size.
+    Let v̂i,j be the vector of removing the first entry of vi,j , the above equality also
+holds for all v̂i,j s, i.e.,
+                                       X
+                                                ci,j v̂i,j = 0.
+                                  i=1,...,u,j=1,...,li
+
+Considering only the first 1 + l2 rows of the above equation we have that
+                             ∀j = {1, . . . , l2 } : c1,1 + c2,j = 0.
+Thus all c2,j ’s are identical and equal to −c1,1 . Follow similarly as above, we have
+                    ∀j = {1, . . . , l3 } : c1,1 + S(3, 2)c2,j + c3,j = 0,
+thus all c3,j ’s are identical. Repeat the above process, we conclude that for all
+i = 2, . . . , u, all corresponding {ci,j }j=1,...,li are identical. For notatin simplicity
+we omit the j notation and remark that all constants c should satisfy the following
+                                                                     
+               1      1       0        0            0      ... 0       c1     0
+           1 S(3, 2)
+                             1        0            0      . . . 0 c2  0
+                                                                         
+                                                                                 
+                                                                    c3  0
+           1 S(4, 2) S(4, 3)          1            0      . . . 0     
+                                                                       =  .         (2)
+           
+                                                                    c4  0
+           1 S(5, 2) S(5, 3) S(5, 4)               1      . . . 0
+           
+           .         ..      ..       ..            ..    . . ..    .  .
+            ..        .       .        .             .        . .   ..   .. 
+               1 S(u, 2) S(u, 3) S(u, 4) S(u, 5) . . . 1              cu      0
+
+
+                                                      15
+     Without losing generality, set c1 = 1. Then we claim ci = (−1)i−1 (i − 1)! for
+all i. Next, we will use the recursive method to prove this claim:
+     If i = 2, since c1 + c2 = 0, we have c2 = −1 = (−1)1 1!. If i = 3, since
+c1 + c2 S(3, 2) + c3 = 0, we have c3 = −c1 − c2 S(3, 2) = −1 − (−1) · 3 = 2 = (−1)2 2!.
+Assume ci = (−1)i−1 (i − 1)! holds for 1 ≤ i < j, then we consider cj . From
+Equality (2), we obtain
+                  j−1
+                  X
+       cj = −            ck S(j, k) = (−1)j−1 (j − 1)!S(j − 1, j − 1) = (−1)j−1 (j − 1)!,
+                  k=1
+
+where the second equality holds by the alternating sum formula jk=1 (−1)j−1 (j −
+                                                                       P
+1)!S(j, k) = 0. Thus, the claim holds, i.e. ci = (−1)i−1 (i − 1)! for all i.
+     Since d1,1 = 1 = c1,1 , it follows that di,j = ci = (−1)i−1 (i − 1)! for all j by the
+following Lemma 2. Thus, the determinant of Matrix (1) is
+                                            Qi−1 ui,j [t]                 Xu                        
+       X
+                           i−1                t=1 pi,j [t]             n−i          i−1             n−i
+                       (−1)       (i−1)!                                    =   (−1) (i−1)!S(u, i)        ,
+                                                  µ(pi,j )             k−i                          k−i
+i=1,...,u,j=1,...,li                                                                 i=1
+
+                                           Qi−1      i,j [t]
+                         P                  t=1   (upi,j [t]
+                                                             )
+where S(u, i) =               j=1,...,li     µ(pi,j )            by definition.
+
+Lemma 2. P   For any square matrix M = (mij ) of order m, its determinant could
+be given as m   i=1 A1i m1i , where A1i is the algebraic cofactor of m1i . Consider the
+system of linear equations M′ (y2 , y3 , . . . , ym ) = (−m21 , −m31 , . . . , −mm1 ), where
+M′ is the invertible sub-matrix of M removing the first row and the first column,
+          A1i
+then yi = A 11
+               , i = 2, 3, . . . , m.
+
+                                                                               det(M′ )
+Proof. It follows from Cramer rule that yi = det(Mi′ ) where M′i is the matrix re-
+placing the (i − 1)-th column of the matrix M′ with (−m21 , −m31 , . . . , −mm1 )
+for all i = 2, 3, . . . , m. Since det(M′ ) = (−1)1+1 A11 = A11 and det(M′i ) =
+−(−1)i−2 (−1)i+1 A1i = A1i for all i = 2, 3, . . . , m. The lemma follows.
+
+     In fact, the determinant of Matrix (1) is equal to the Moser polynomial [6,10]:
+                                             k                                   
+                                             X
+                                                                 i−1 u−1        n
+                                                    (−1)           i                ,
+                                                                               k−i
+                                             i=1
+                                                                    Pk      j−1
+                                                                                    n−j         n
+                                                                                                   
+which can be verified using the identity                                j=i i−1       k−j    =   k−i   [12].
+
+
+
+
+                                                                   16
+Remark 1. For any positive integers k, u ≤ n, the following equality holds:
+          u                                        k                  
+          X
+                      i−1                    n−i     X
+                                                           j−1 u−1    n
+                 (−1)       (i − 1)!S(u, i)        =   (−1) j              .
+                                             k−i                     k−j
+           i=1                                                 j=1
+
+Proof.
+                     u                             
+                     X
+                               i−1             n−i
+                       (−1) (i − 1)!S(u, i)
+                                                k−i
+                   i=1
+                    k                      i                 
+                   X                    1X              i u   n−i
+                 =     (−1)i−1 (i − 1)!        (−1)i−j    j
+                                        i!              j     k−i
+                     i=1                         j=0
+                     k                     k                      
+                     X                     X     i−1           n−i
+                 =         (−1)j+1 j u−1
+                                                 j−1           k−i
+                     j=1                   i=j
+                     k                              
+                     X                          n
+                 =         (−1)j−1 j u−1
+                                               k−j
+                     j=1
+
+
+
+
+Remark 2. For fixed k and u, the Morse polynomial can be viewed as a k − 1-
+                                                        1
+degree polynomial in n, with a leading coefficient of (k−1)! and a constant term of
+(−1)k−1 ku−1 .
+Proof. The proof is straightforward and thus omitted.
+
+    Hence, when u and k are fixed, the values of n for which Matrix (1) is not
+invertible must satisfy n|(k − 1)!ku−1 .
+
+Some examples
+  Fixing k = 2 and any u, the determinant of Matrix (1) is
+
+                               (n − 1) − (2u−1 − 1) = n − 2u−1 .
+
+For this case, we know that only when n = 2u−1 the matrix is not invertible.
+   If k = 3, the determinant is
+                
+  n−1         n−2                                  1
+                     (2u−1 − 1) + (3u−1 − 2u + 1) = · n2 − (2u + 1)n + 2 · 3u−1 .
+                                                                               
+          −
+    2           1                                  2
+   If k = 4, the determinant is
+            1 3
+              n − 3(2u + 1)n2 + (2 · 3u + 3 · 2u−1 + 2)n − (6 · 4u−1 ) .
+                                                                      
+            6
+
+                                                     17
+4.4      Symmetric subset sum recovery algorithm
+Proof of Theorem 2
+    Incorporating the content mentioned above in this section, we have the fol-
+lowing algorithm, which is called symmetric subset sum recovery algorithm, for
+convenience.
+Algorithm 2 Symmetric subset sum recovery algorithm
+Input: Positive integers k, n satisfying             2 ≤ k ≤ n/2 and the multiset Xn,k =
+    {b1 , b2 , . . . , bm } where m = nk ;
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '873,1205p' tmp/pdfs/2412.04967.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+4.4      Symmetric subset sum recovery algorithm
+Proof of Theorem 2
+    Incorporating the content mentioned above in this section, we have the fol-
+lowing algorithm, which is called symmetric subset sum recovery algorithm, for
+convenience.
+Algorithm 2 Symmetric subset sum recovery algorithm
+Input: Positive integers k, n satisfying             2 ≤ k ≤ n/2 and the multiset Xn,k =
+    {b1 , b2 , . . . , bm } where m = nk ;
+                                            
+
+Output: The hidden multiset X = {x1 , x2 , . . . , xn };
+ 1: if n|(k − 1)!k n then
+ 2:    for uP    = 1, 2, ..., n do
+                    k         i−1 iu−1 n
+                                           
+ 3:        if       i=1 (−1)            k−i then
+ 4:            return The algorithm fails in this case!
+ 5:        end if
+ 6:    end for
+ 7: end if
+ 8: Set P = [] and E = [1];
+ 9: for all u = 1, 2, . . . , n do
+10:    Let the array L consist of all partitions of u into at most k parts, arranged in
+       ascending order by the cardinality of the partitions. Specifically, L[1] = (u),
+       L[n(L)] = (1, 1, . . . , 1), where n(L) denotes the length of the array L;
+11:    Initialize a square zero matrix M of order n(L);
+12:    for all j = 1, 2, . . . , n(L) do
+13:        if k > n(L[j]) then
+14:            break;
+15:        end if                           Qn(L[j])−1   ul
+                                                       (L[j][l])
+           Let M(1, j) = n−n(L[j])
+                                            l=1
+16:                              k−n(L[j])       µ(L[j])         with u1 = u, ul = ul−1 −L[j][l−1]
+           for l = 2, 3, . . . , n(L[j]) − 1 ;
+17:    end for
+18:    for all i = 2, 3, . . . , n(L) do
+19:        for all j = 1, 2, . . . , n(L) do
+20:            Let M(i, j) = v(L[i], L[j]);
+21:        end for
+22:    end for P
+23:    Let S = [ m                  u
+                          i=1 (B[i]) ];
+24:    for all i = 2, 3, . . . , n(L) do
+                                  Qn(L[i])
+25:        Let S = [op(S), j=1 PL[i][j]]
+26:    end for
+
+
+                                               18
+27:   Let P = [op(P), (M−1 S)[1]]
+28: end for
+29: for all i = 1, 2, . . . , ndo                       
+                          Pi
+30:    Let E = [op(E), 1i    j=1 (−1)
+                                     j−1 E[i − j + 1]P[j] ];
+
+31: end for
+                                             P0
+32: Find the n roots of the polynomial xn + i=n−1 (−1)n−i E[n − i + 1]xi of degree
+    n in one variable and let these roots form the multiset X;
+33: return X
+
+Complexity analysis
+    The time complexity of computing all Su ’s is O nk n . The time complexity
+                                                           
+
+of generating all partitions into at most k parts and computing all Pi1 Pi2 · · · Pik ’s
+is
+                                 n
+                                                       !
+                                X
+                            O       p(u, ≤ k) min(u, k) .
+                                u=1
+
+To facilitate efficient calculation of combinations, the first n rows of Pascal’s tri-
+angle can be precomputed with a time complexity P     of O(n2 ) [27]. The overall time
+complexity for computing all v(p1 , p2 ) values is O( nu=1 p(u, ≤ k)2 min(u, k)2 ) us-
+ing a dynamic programming approach. Consequently, the time complexity of con-
+structing all Matrix (1)’s can be expressed as
+                         n
+                                                                       !
+                        X
+             O n2 +         p(u, ≤ k)2 min(u, k)2 + p(u, ≤ k) min(u, k) .
+                      u=1
+
+Computing the inverse
+                    Pn of Matrix 3(1)
+                                     or solving the associated system of linear
+equations takes O     u=1 p(u, ≤ k)   time [26]. Using the characteristic polynomial
+method, the time complexity of finding all roots of a univariate polynomial of
+degree n is O(n3 ) [26, 28]. Thus, the total time complexity, ignoring some lower-
+complexity computations, becomes
+           n                                                              !
+          X                                                 n
+              p(u, ≤ k)3 + (p(u, ≤ k) min(u, k) + 1)2 +        n + n2 + n3 ,
+                                                      
+      O
+          u=1
+                                                            k
+
+which, by ignoring lower-order terms further, is asymptotically equivalent to
+                               n                 !
+                              X                  n
+                          O       p(u, ≤ k)3 +      n .
+                                                 k
+                                u=1
+
+This completes the proof of Theorem 2.
+
+
+                                          19
+     Algorithm 2 can be generalized to the (n, k)-complete HSSP defined over other
+fields or rings, where n! and every nonzero value of
+                         k                  
+                         X
+                               j−1 u−1    n
+                           (−1) j              ,              u = 1, 2, . . . , n,
+                                         k−j
+                         j=1
+
+are invertible and Vieta’s formulas hold.
+    As an additional note, the generating function [24] of p(u) is given by
+                          ∞
+                          X                 ∞ X
+                                            Y ∞               ∞
+                                                              Y
+                                p(u)xu =              xji =       (1 − xj )−1 .
+                          u=0               j=1 i=0           j=1
+
+Currently, no closed-form expression for the partition function is known, but it
+has both asymptotic expansions that accurately approximate it and recurrence
+relations by which it can be calculated exactly. As u becomes large, p(u) grows
+exponentially in the square root of its argument [24, 29]. Specifically, it has the
+asymptotic form:
+                                          r !
+                              1             2u
+                     p(u) ∽ √ exp π              as u → ∞.
+                            4u 3             3
+
+4.5       Nontrivial permutation-symmetric subset of Xn,k
+This method appears to be applicable to any permutation-symmetric subset of
+Xn,k , where permutation-symmetric means the subset of Xn,k remains invariant
+under any permutation of x1 , x2 , . . . , xn . However, we claim that Xn,k does not
+contain a nontrivial permutation-symmetric subset in which every element of X
+contributes to the subset sums. If some elements of X do not contribute to the
+subset sums of a subset of Xn,k , the subset might exhibit symmetry. However, we
+do not consider such cases, as they can be effectively treated as instances with a
+smaller n.
+
+Theorem 4. Let Xn,k be the multiset of all k-subset sums of finite multiset X =
+{x1 , x2 , . . . , xn } of cardinality n, then Xn,k does not have nontrivial permutation-
+symmetric subset with every element of X contributing to the subset sums.
+
+Proof. Suppose B is such a permutation-symmetric subset of Xn,k . Since B is
+not empty, there exists xi1 + xi2 + · · · + xik ∈ B. And since B 6= Xn,k , there
+exists xi′1 + xi′2 + · · · + xi′k ∈         / B. By the symmetry property, we could arbitrarily
+exchange the positions of any two elements of X. For any j = 1, 2, . . . , k, if
+{i1 , . . . , ik } ∩ {i′1 , . . . , i′k } = ∅, exchange xij and xi′j , then xi′1 + xi′2 + · · · + xi′k ∈ B,
+
+                                                   20
+which is a contradiction. If {i1 , . . . , ik }∩ {i′1 , . . . , i′k } is not empty, keep the indexes
+in the intersection set unchange, and exchange the other indexes. Then we could
+still obtain a contradiction.
+
+
+4.6      The homogeneous symmetric polynomial rings
+Fixing n and k, we compute Pu recursively from u = 1 to n as described above.
+However, the Matrix (1) may be non-invertible for certain values of u. In such
+cases, it is not possible to uniquely determine the value for any one partition of
+u without additional information in Algorithm 2, leading to the failure of the
+algorithms. This raises the following question:
+
+Question 1. When the Matrix (1) becomes non-invertible for certain values of u,
+can we still uniquely determine the values for the partitions of v where v ≥ u by
+modifying Algorithm 2 without additional information?
+
+   Before answering this question, let us first consider the homogeneous symmetric
+polynomial ring of degree u, denoted here by Ru , and prove the following theorem.
+
+Theorem 5. For a positive integer of u > 1 and the homogeneous symmetric
+polynomial ring Ru of degree u over R. A basis of Ru can be constructed by Su
+and the products of the elements of Rv , v < u if and only if Matrix (1) is invertible.
+This is is equivalent to
+                                 k                  
+                                 X
+                                       j−1 u−1    n
+                                   (−1) j              6= 0.
+                                                 k−j
+                                 j=1
+
+Proof. The ring Ru can be taken as a linear space over R, whose dimension is equal
+to the number of partitions of u. Matrix (1) is taken as the transformation ma-
+trix from the vector (Pu , P(1,u−1) , . . . , P(1,1,...,1) ) to the vector (Su , P1 Pu−1 , . . . , P1u ).
+The former vector always forms a basis of Ru . For the latter vector, except the
+first component, the other components are computed by the homogeneous sym-
+metric polynomials of lower degree. From the structure of Matrix (1), it could be
+observed that {P1 Pu−1 , . . . , P1u } are linearly independent. At this time, we could
+not obtain any new item, that is linearly independent of {P1 Pu−1 , . . . , P1u }, from
+Rv , v < u. And Su is linearly independent from {P1 Pu−1 , . . . , P1u } if and only if
+Matrix (1) is invertible. Thus, {Su , P1 Pu−1 , . . . , P1u } form a basis of Ru if and only
+if Matrix (1) is invertible. Proof of this theorem is thus complete.
+
+    Back to Question 1, the primary available data is the set Xn,k , which contains
+all k-subset sums of n elements. Consequently, Su can be uniquely determined for
+
+
+                                                  21
+any u ∈ Z>0 . Then, starting from u = 1 to larger values, we can get the values
+Pp of all partitions. Therefore, we can assume Rv ’s are known for all v < u before
+computing Ru . The proof of Theorem 5 shows that choosing {P1 Pu−1 , . . . , P1u } is
+the same as choosing other products of the elements of Rv , v < u to form a basis.
+Hence, {Su , P1 Pu−1 , . . . , P1u } is chosen to compute Pp , where p is a partition of u.
+If we can not determine the value of any Pp of degree u uniquely with this choice,
+neither could the others.
+    Furthermore, if there exists 1 < u0 < n such that Matrix (1) is non-invertible,
+then a basis of Ru0 cannot be constructed from Su for all u ≤ u0 . At this time,
+can a basis of Ru , where u ≥ u0 , be constructed from Sv for all v ≤ u? To answer
+this question, we have the following theorem.
+
+Theorem 6. If there exists 1 < u0 < n such that Matrix (1) is non-invertible
+when u = u0 and is invertible for all u < u0 , then a basis of Ru , where u < u0 ,
+can be constructed from Sv , v < u0 . But a basis of Ru , where u ≥ u0 , cannot be
+constructed from Sv , v ≤ u.
+
+Proof. The conclusion for the cases where u ≤ u0 follows from Theorem 5. We
+prove the conclusion for the cases u > u0 using a recursive method. When u =
+u0 + 1, now we aim to construct a basis of Ru0 +1 , which consists of p(u0 + 1)
+elements. First, we select p(u0 + 1) − 2 linearly independent elements
+
+                           P2 Pu0 −1 , P3 Pu0 −2 , . . . , P12 Pu0 −1 , . . . , P1v
+
+as the partial basis. At this time, for any ui ’s,vi ’s satisfying ui < u0 , vi < v0 and
+
+                           u1 + · · · + ur + v1 + · · · + vs = u0 + 1,
+
+the element Pp1 · · · Ppr Sv1 · · · Svs , where pi is a partition of ui , is linearly depen-
+dent with P2 Pu0 −1 , P3 Pu0 −2 , . . . , P12 Pu0 −1 , . . . , P1v , since every Ppi or Svi can be
+represented by a linear combination of P1 Pui −1 , . . . , P1ui or P1 Pvi −1 , . . . , P1vi . To
+find enough linearly dependent items, we must include Su0 +1 and P1 Su0 . How-
+ever, P1 Su0 is still linearly dependent with P2 Pu0 −1 , P3 Pu0 −2 , . . . , P12 Pu0 −1 , . . . , P1v .
+Hence, we cannot construct a basis of Ru0 +1 from Sv , v ≤ u0 + 1.
+    Assume the conclusion holds for u0 ≤ v < w, consider w. A basis of Rw consists
+                                                                                       eu0 −1
+of p(w) elements. First, we select all elements of the form P1e1 P2e2 · · · Pu0 −1            , where
+e1 + 2e2 + · · · + (u0 − 1)eu0 −1 = w, ei ∈ Z≥0 . This corresponds to the partition
+consisting of e1 parts of 1, e2 parts of 2, . . . , and eu0 −1 parts of u0 −1. Similar to the
+discussion of the case u = u0 + 1, any Pp1 · · · Ppr Sv1 · · · Svs , where pi is a partition
+of ui , ui < u0 , vi < u0 and u1 + · · · + ur + v1 + · · · + vs = v, is linearly dependent
+                      eu0 −1
+with P1e1 P2e2 · · · Pu0 −1  ’s. Then, Su0 , Su0 +1 , . . . , Sw must be used to construct the
+basis. Specially, to offer enough items, let w = gu0 + t, 0 ≤ t < u0 , the element
+
+                                                     22
+Pt Sug0 , which corresponds to the partition consisting of one part of t, g parts of u0 ,
+must be included to construct the basis. However, it is linearly dependent with
+                 eu0 −1
+P1e1 P2e2 · · · Pu0 −1  ’s. Thus, a basis of Rw cannot be constructed from Sv , v ≤ u.
+    Hence, by Theorem 6, we cannot get enough linearly independent items and
+then cannot determine any Pp , where p is a partition of v for any v ≥ u0 , uniquely.
+This means the answer to Question 1 is No with high probability!
+    The above discussion is based solely on the information of the set Xn,k . In
+actual scenarios, there might be supplementary data at hand, such as the range
+of elements. Since the rank of Matrix (1) is at least n − 1, when Matrix (1) is not
+invertible, the possible value of Pp is in the form of α + k0 β, k0 ∈ R, where α and
+β can be determined, hence we may get the value of Pp with its range known.
+
+
+5      Conclusion and future work
+Conclusion In this paper, we present two deterministic algorithms (Algorithm
+1 and Algorithm 2) for solving the (n, k)-complete HSSP. A comparison of the
+algorithms for solving HSSP is provided as follows:
+
+             Table 1: Comparison of algorithms for solving HSSP
+                                    (best) Time                      Deter-
+     Algorithms                                                                      Requirements
+                                     complexity                     ministic?
+ Original brute-force
+                                O( (k ) (n3 + n − n))
+                                    n         
+                                                                       yes        (n, k)-complete HSSP
+       search                          n            k
+
+                                                                                  (n, k)-complete HSSP
+    Our algorithm 1                                                    yes
+                                                     
+                              n
+                                     log n  + k−1    n−k+i
+                                             Q
+                        O                                   −i
+                              k          k    i=1      i
+                                                                                with ordering relationship
+  Greedy heuristic                                                                HSSP whose elements
+                                              \                        no
+  algorithms [2, 17]                                                               are positive integers
+ NS algorithms and                                                              HSSP over ZM satisfying
+                                           O(n9 )                      no
+ variations [18–21]                                                              some lattice properties
+                                  Pn              3  n
+                                                                                (n, k)-complete HSSP
+    Our algorithm 2         O        u=1 p(u, ≤ k) + k n               yes
+                                                                                   with unique solution
+
+    For the (n, k)-complete HSSP, our algorithm 1 demonstrates an advantage for
+small values of k, while NS algorithms and their variations perform well for n = 2k.
+In other scenarios, our algorithm 2 may provide competitive performance.
+
+Future work There are some future directions we are interested in regarding
+HSSP: 1) Singular Pair Characterization: A deeper analysis of parameter pairs
+(n, k) that admit multiple solutions, including the development of criteria to clas-
+sify such pairs beyond the current necessary conditions. 2) Applications in AI
+
+                                                  23
+Privacy: Optimizing these algorithms to analyze privacy risks in federated learn-
+ing scenarios, where HSSP-based attacks reconstruct private data from aggregated
+updates.
+
+
+Acknowledgements
+We would like to express our sincere gratitude to those who have supported and
+contributed to this paper. Special thanks go to Prof. Song Dai for his insightful
+discussions during the initial stages, which helped us to identify the right entry
+point for this paper. We are also deeply grateful to Dr. Agnese Gini for her
+valuable discussions and feedback throughout the process, which greatly improved
+the paper.
+
+
+References
+ [1] Victor Boyko, Marcus Peinado, and Ramarathnam Venkatesan. Speeding
+     up discrete log and factoring based schemes via precomputations. In Inter-
+     national Conference on the Theory and Applications of Cryptographic Tech-
+     niques, pages 221–235. Springer, 1998.
+
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '202,260p' tmp/pdfs/2412.04967.txt && sed -n '1200,1317p' tmp/pdfs/2412.04967.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+2     Background
+Symmetric polynomials and Vieta’s formulas
+
+Definition 1. [23] Let x1 , x2 , . . . , xn be algebraically independent elements
+over R and Sn be the symmetric group on n letters. A polynomial f (x1 , x2 , . . . , xn )
+in R[x1 , . . . , xn ] is called symmetric if
+
+                  f (xσ(1) , xσ(2) , . . . , xσ(n) ) = f (x1 , x2 , . . . , xn )
+
+holds for all σ ∈ Sn .
+                                              Qn                n
+                                                                          P0              n−i
+    Consider the polynomial f (x) :=             i=1 (x−xi ) = x +           i=n−1 (−1)         en−i xi .
+
+
+
+                                                5
+By Vieta’s formulas [23], the coefficients ei ’s satisfy:
+                  e1 := x1 + x2 + · · · + xn ,
+                  e2 := x1 x2 + x1 x3 + · · · + xn−1 xn ,
+                  e3 := x1 x2 x3 + x1 x2 x4 + · · · + xn−2 xn−1 xn ,
+                     ···
+                  en := x1 x2 · · · xn .
+This implies that the coefficients ei ’s can be expressed as symmetric polyno-
+mials in x1 , x2 , . . . , xn , known as elementary symmetric polynomials.
+
+Partitions
+Definition 2. [24] A partition of positive integer u, also called an integer
+partition, is a way of expressing u as a sum of positive integers. These
+positive integers are referred to as the parts of the partition.
+    Throughout this work, partitions will be represented as arrays of their
+parts, listed in ascending order. The number of parts in a partition p will be
+referred to as its length, denoted by n(p).
+Definition 3. [24] The partition function p(u) is defined as a function
+to count the number of all partitions of a positive integer u.
+Definition 4. Define p(u, ≤ k) to be the number of all partitions of a positive
+integer u into at most k parts.
+
+Stirling partition number
+Definition 5. [25] A Stirling number of the second kind or Stirling
+partition number S(u, i) is defined to be the number of ways to partition
+a set of n objects into k non-empty subsets.
+    The Stirling partition number can be calculated using the following ex-
+plicit formula:
+                                      i           
+                                  1X          i−j i
+                        S(u, i) =        (−1)       j u.
+                                  i! j=0          j
+Here are some examples of Stirling partition numbers:
+                                                          1
+   S(u, u) = 1, S(u, 1) = 1, S(u, 2) = 2u−1 − 1, S(u, 3) = (3u−1 − 2u + 1)
+                                                          2
+                                          6
+          1 u−1 u                       1
+S(u, 4) =    (4 −3 +3·2u−1−1), S(u, 5) = (5u−1 −4·4u−1 +6·3u−1 −4·2u−1+1).
+          3!                            4!
+Notice that S(u, i) = 0 for any u < i.
+
+
+References
+ [1] Victor Boyko, Marcus Peinado, and Ramarathnam Venkatesan. Speeding
+     up discrete log and factoring based schemes via precomputations. In Inter-
+     national Conference on the Theory and Applications of Cryptographic Tech-
+     niques, pages 221–235. Springer, 1998.
+
+ [2] Michael J Collins, David Kempe, Jared Saia, and Maxwell Young. Nonneg-
+     ative integral subset representations of integer sets. Information Processing
+     Letters, 101(3):129–133, 2007.
+
+ [3] Qiongxiu Li and Lixia Luo. On the privacy of federated clustering: A cryp-
+     tographic view. In ICASSP 2024-2024 IEEE International Conference on
+     Acoustics, Speech and Signal Processing (ICASSP), pages 4865–4869. IEEE,
+     2024.
+
+ [4] Qiongxiu Li, Lixia Luo, Agnese Gini, Changlong Ji, Zhanhao Hu, Xiao Li,
+     Chengfang Fang, Jie Shi, and Xiaolin Hu. Perfect gradient inversion in feder-
+     ated learning: A new paradigm from the hidden subset sum problem. arXiv
+     preprint arXiv:2409.14260, 2024.
+
+ [5] Anthony Busson, Malory Marin, and Rémi Watrigant. Channel allocation
+     revisited through 1-extendability of graphs. In International Symposium on
+     Algorithmics of Wireless Networks, pages 46–60. Springer, 2024.
+
+ [6] Dmitri V Fomin. Is the multiset of n integers uniquely determined by the
+     multiset of its s-sums? The American Mathematical Monthly, 126(5):400–
+     417, 2019.
+
+                                       24
+ [7] Wayne D Blizard. Multiset theory. Notre Dame Journal of formal logic,
+     30(1):36–66, 1989.
+
+ [8] Leo Moser. E1248. The American Mathematical Monthly, 64(7):507–507,
+     1957.
+
+ [9] Richard Guy. Unsolved problems in number theory, volume 1. Springer Science
+     & Business Media, 2004.
+
+[10] John L Selfridge and Ernst G Straus. On the determination of numbers by
+     their sums of a fixed order. Pacific J. Math., 8(4):847–856, 1958.
+
+[11] Basil Gordon, Aviezri S Fraenkel, and Ernst G Straus. On the determination
+     of sets by the sets of sums of a certain order. Pacific J. Math, 12(19621):187–
+     196, 1962.
+
+[12] John A Ewell. On the determination of sets by sets of sums of fixed order.
+     Canadian Journal of Mathematics, 20:596–611, 1968.
+
+[13] Dmitri V Fomin and Oleg T Izhboldin. Collections of multiple sums. Trans-
+     lations of the American Mathematical Society-Series 2, 166:201–214, 1995.
+
+[14] Jan Boman and Svante Linusson. Examples of non-uniqueness for the com-
+     binatorial radon transform modulo the symmetric group. Mathematica Scan-
+     dinavica, pages 207–212, 1996.
+
+[15] Javlon E Isomurodov and Konstantin P Kokhas. A set of 12 numbers is
+     not determined by the set of its 4-sums. Journal of Mathematical Sciences,
+     224:258–262, 2017.
+
+[16] Andrea Ciprietti and Federico Glaudo. On the determination of sets by their
+     subset sums. arXiv preprint arXiv:2301.04635, 2023.
+
+[17] Manuel Lozano, Manuel Laguna, Rafael Martı́, Francisco J Rodrı́guez, and
+     Carlos Garcı́a-Martı́nez. A genetic algorithm for the minimum generating set
+     problem. Applied Soft Computing, 48:254–264, 2016.
+
+[18] Phong Nguyen and Jacques Stern. The hardness of the hidden subset
+     sum problem and its cryptographic implications. In Advances in Cryptol-
+     ogy—CRYPTO’99: 19th Annual International Cryptology Conference Santa
+     Barbara, California, USA, August 15–19, 1999 Proceedings 19, pages 31–46.
+     Springer, 1999.
+
+
+
+
+                                        25
+[19] Jean-Sébastien Coron and Agnese Gini. A polynomial-time algorithm for
+     solving the hidden subset sum problem. In Annual International Cryptology
+     Conference, pages 3–31. Springer, 2020.
+
+[20] Jean-Sébastien Coron and Agnese Gini. Provably solving the hidden subset
+     sum problem via statistical learning. Mathematical Cryptology, 1(2):70–84,
+     2021.
+
+[21] Agnese Gini. On the hardness of the hidden subset sum problem: algebraic and
+     statistical attacks. PhD thesis, Unilu-University of Luxembourg, Luxembourg,
+     2022.
+
+[22] Xuefei Yin, Yanming Zhu, and Jiankun Hu. A comprehensive survey of
+     privacy-preserving federated learning: A taxonomy, review, and future di-
+     rections. ACM Computing Surveys (CSUR), 54(6):1–36, 2021.
+
+[23] Serge Lang. Algebra, volume 211. Springer Science & Business Media, 2012.
+
+[24] George E Andrews and Kimmo Eriksson. Integer partitions. Cambridge Uni-
+     versity Press, 2004.
+
+[25] Richard P Stanley. Enumerative Combinatorics Volume 1 second edition.
+     Cambridge studies in advanced mathematics, 2011.
+
+[26] Lloyd N Trefethen and David Bau. Numerical Linear Algebra. Society for
+     Industrial and Applied Mathematics, Philadelphia, PA, 1997.
+
+[27] Charles Eric Leiserson, Ronald L Rivest, Thomas H Cormen, and Clifford
+     Stein. Introduction to algorithms, volume 3. MIT press Cambridge, MA,
+     USA, 1994.
+
+[28] Alan Edelman and Hiroshi Murakami. Polynomial roots from companion
+     matrix eigenvalues. Mathematics of Computation, 64(210):763–776, 1995.
+
+[29] Godfrey H Hardy and Srinivasa Ramanujan. Asymptotic formulaæ in combi-
+     natory analysis. Proceedings of the London Mathematical Society, 2(1):75–115,
+     1918.
+
+
+
+
+                                       26
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'pdftoppm -f 4 -l 4 -png -r 130 tmp/pdfs/2412.04967.pdf tmp/pdfs/paper >/dev/null 2>&1 && pdftoppm -f 18 -l 19 -png -r 130 tmp/pdfs/2412.04967.pdf tmp/pdfs/paper >/dev/null 2>&1 && pdftoppm -f 23 -l 23 -png -r 130 tmp/pdfs/2412.04967.pdf tmp/pdfs/paper >/dev/null 2>&1 && ls -1 tmp/pdfs/paper-*.png' in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 886ms:
+tmp/pdfs/paper-04.png
+tmp/pdfs/paper-18.png
+tmp/pdfs/paper-19.png
+tmp/pdfs/paper-23.png
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "pwd && rg --files -g '"'!tmp/**'"' | sed -n '1,120p' && find ../.. -maxdepth 2 -type f -path '*/scripts/*' -print | sort | sed -n '1,160p' && if [[ -n "'${OPENROUTER_API_KEY:-} ]]; then echo OPENROUTER_API_KEY=set; else echo OPENROUTER_API_KEY=missing; fi' in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+codex_run.log
+../../scripts/claim.sh
+../../scripts/emit.sh
+../../scripts/fetch_paper.sh
+../../scripts/harden.py
+../../scripts/run_codex.sh
+../../scripts/status.sh
+../../scripts/submit.sh
+OPENROUTER_API_KEY=set
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The paper rules out the proposed family as a trustworthy hard generator. In the paper’s nonsingular regime, Theorem 2 gives an exact deterministic recovery algorithm; measured against the explicit input length \(M=\binom{n}{k}\), its partition-sized systems are still polynomially bounded. The exceptional singular regime is not a substitute: its classification is explicitly left open, fixed-\(k\) exceptions do not provide a scalable family, and the paper gives no hardness theorem for them. I’m documenting this as a rejection and stopping before manufacturing misleading gate reports or an oracle transcript.
+hook: PreToolUse
+hook: PreToolUse Completed
+apply patch
+patch: completed
+/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967/REJECTED.md
+diff --git a/results/2412.04967/REJECTED.md b/results/2412.04967/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..03b63827994fefa6399b134c39ee6084f5163045
+--- /dev/null
++++ b/results/2412.04967/REJECTED.md
+@@ -0,0 +1,53 @@
++# Rejected: arXiv 2412.04967
++
++Paper: Lixia Luo, Changheng Li, and Qiongxiu Li, [*Deterministic Algorithms to Solve the \((n,k)\)-Complete Hidden Subset Sum Problem*](https://arxiv.org/abs/2412.04967), arXiv:2412.04967v2.
++
++## Decision
++
++The proposed inverse family passes **G** and **V**, but it does not pass **H**. I therefore did not create `gen_2412_04967.py`, did not claim any mandatory gate passed, and did not run `scripts/harden.py`.
++
++## Exact problem read from the paper
++
++Section 1 defines an \((n,k)\)-complete HSSP instance as the multiset of **all** \(\binom{n}{k}\) sums of exactly \(k\) distinct positions of an unknown cardinality-\(n\) multiset \(X\), over an Abelian group and then over \(\mathbb R\) for the paper's algorithms. The paper assumes \(2\le k\le n/2\): the total of \(X\) is determined by the input, and complementing each \(k\)-sum gives the \((n-k)\)-sums.
++
++Inverse generation would be immediate: sample an integer multiset \(X\) first and publish all exact \(k\)-subset sums. Verification would also be exact and cheap relative to the input: recompute those \(\binom{n}{k}\) sums from a candidate and compare multisets. Thus G and V are not the issue.
++
++## Why H fails
++
++Theorem 2 and Algorithm 2 (Sections 1 and 4.4) give a deterministic reconstruction procedure whenever the Moser-polynomial determinants are nonzero for every degree \(1,\ldots,n\). The procedure computes power sums from the published multiset, solves the partition-indexed linear systems, applies Newton identities, constructs the monic polynomial whose roots are the hidden elements, and recovers \(X\) from those roots. Table 1 in Section 5 describes this as the algorithm for the unique-solution regime.
++
++This is polynomial in the size of the explicitly published instance, not merely an algorithm that looks large as a function of the hidden cardinality. Let
++
++\[
++M=\binom{n}{k},\qquad 2\le k\le n/2.
++\]
++
++For every \(u\le n\), conjugating partitions and then forgetting their weighted sum gives
++
++\[
++p(u,\le k)\le \binom{u+k}{k}\le \binom{n+k}{k}\le M^2.
++\]
++
++The last inequality follows by comparing at \(n=2k\) (the ratio decreases with \(n\)); it is also a deliberately loose bound. Hence the paper's stated arithmetic-operation bound
++
++\[
++O\!\left(\sum_{u=1}^{n}p(u,\le k)^3+Mn\right)
++\]
++
++is at most \(O(nM^6+Mn)\), therefore polynomial in the explicit input length. For integer-planted instances, the intermediate quantities have polynomial bit length and exact integer-polynomial factorization/root recovery is also polynomial-time. For fixed \(k\), the conclusion is even more immediate: \(p(u,\le k)=O(u^{k-1})\), and Theorem 1's ordered brute-force algorithm is polynomial as well.
++
++## Why the singular cases do not rescue the family
++
++Algorithm 2 can fail when a Moser determinant vanishes, but the paper does **not** prove that this exceptional search problem is hard. Section 1 says singular-pair characterization remains incomplete and states that, for fixed \(k\), only finitely many \(n\) can have multiple solutions. Section 5 lists singular-pair characterization as future work. That is not a theorem-backed, scalable hard parameter regime from which an unlimited generator can honestly be built.
++
++The obvious infinite exceptional line \(n=2k\) is especially unsuitable as a fallback: complementing a \(k\)-subset makes every input invariant under a global reflection of the hidden multiset, and Section 5 specifically says the polynomial-time NS-family attacks perform well when \(n=2k\). The general HSSP NP-completeness cited in Section 1 concerns a different problem in which only an arbitrary collection of subset sums is supplied; it does not establish hardness for the complete all-\(k\)-sums restriction.
++
++## Failed gate
++
++| Gate | Result | Evidence |
++|---|---|---|
++| G | Would pass | Plant \(X\), then enumerate all exact \(k\)-subset sums. |
++| H | **Fail** | Theorem 2/Algorithm 2 reconstruct the nonsingular regime in time polynomial in the explicit input size; exceptional regimes have no hardness theorem or scalable classification in the paper. |
++| V | Would pass | Recompute and compare the complete multiset of sums exactly. |
++
++Running the LLM hardening loop cannot repair a theoretical H failure, and a model failing to execute the reconstruction inside one response would not turn this polynomial-time family into a hard one.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2412.04967/REJECTED.md b/results/2412.04967/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..03b63827994fefa6399b134c39ee6084f5163045
+--- /dev/null
++++ b/results/2412.04967/REJECTED.md
+@@ -0,0 +1,53 @@
++# Rejected: arXiv 2412.04967
++
++Paper: Lixia Luo, Changheng Li, and Qiongxiu Li, [*Deterministic Algorithms to Solve the \((n,k)\)-Complete Hidden Subset Sum Problem*](https://arxiv.org/abs/2412.04967), arXiv:2412.04967v2.
++
++## Decision
++
++The proposed inverse family passes **G** and **V**, but it does not pass **H**. I therefore did not create `gen_2412_04967.py`, did not claim any mandatory gate passed, and did not run `scripts/harden.py`.
++
++## Exact problem read from the paper
++
++Section 1 defines an \((n,k)\)-complete HSSP instance as the multiset of **all** \(\binom{n}{k}\) sums of exactly \(k\) distinct positions of an unknown cardinality-\(n\) multiset \(X\), over an Abelian group and then over \(\mathbb R\) for the paper's algorithms. The paper assumes \(2\le k\le n/2\): the total of \(X\) is determined by the input, and complementing each \(k\)-sum gives the \((n-k)\)-sums.
++
++Inverse generation would be immediate: sample an integer multiset \(X\) first and publish all exact \(k\)-subset sums. Verification would also be exact and cheap relative to the input: recompute those \(\binom{n}{k}\) sums from a candidate and compare multisets. Thus G and V are not the issue.
++
++## Why H fails
++
++Theorem 2 and Algorithm 2 (Sections 1 and 4.4) give a deterministic reconstruction procedure whenever the Moser-polynomial determinants are nonzero for every degree \(1,\ldots,n\). The procedure computes power sums from the published multiset, solves the partition-indexed linear systems, applies Newton identities, constructs the monic polynomial whose roots are the hidden elements, and recovers \(X\) from those roots. Table 1 in Section 5 describes this as the algorithm for the unique-solution regime.
++
++This is polynomial in the size of the explicitly published instance, not merely an algorithm that looks large as a function of the hidden cardinality. Let
++
++\[
++M=\binom{n}{k},\qquad 2\le k\le n/2.
++\]
++
++For every \(u\le n\), conjugating partitions and then forgetting their weighted sum gives
++
++\[
++p(u,\le k)\le \binom{u+k}{k}\le \binom{n+k}{k}\le M^2.
++\]
++
++The last inequality follows by comparing at \(n=2k\) (the ratio decreases with \(n\)); it is also a deliberately loose bound. Hence the paper's stated arithmetic-operation bound
++
++\[
++O\!\left(\sum_{u=1}^{n}p(u,\le k)^3+Mn\right)
++\]
++
++is at most \(O(nM^6+Mn)\), therefore polynomial in the explicit input length. For integer-planted instances, the intermediate quantities have polynomial bit length and exact integer-polynomial factorization/root recovery is also polynomial-time. For fixed \(k\), the conclusion is even more immediate: \(p(u,\le k)=O(u^{k-1})\), and Theorem 1's ordered brute-force algorithm is polynomial as well.
++
++## Why the singular cases do not rescue the family
++
++Algorithm 2 can fail when a Moser determinant vanishes, but the paper does **not** prove that this exceptional search problem is hard. Section 1 says singular-pair characterization remains incomplete and states that, for fixed \(k\), only finitely many \(n\) can have multiple solutions. Section 5 lists singular-pair characterization as future work. That is not a theorem-backed, scalable hard parameter regime from which an unlimited generator can honestly be built.
++
++The obvious infinite exceptional line \(n=2k\) is especially unsuitable as a fallback: complementing a \(k\)-subset makes every input invariant under a global reflection of the hidden multiset, and Section 5 specifically says the polynomial-time NS-family attacks perform well when \(n=2k\). The general HSSP NP-completeness cited in Section 1 concerns a different problem in which only an arbitrary collection of subset sums is supplied; it does not establish hardness for the complete all-\(k\)-sums restriction.
++
++## Failed gate
++
++| Gate | Result | Evidence |
++|---|---|---|
++| G | Would pass | Plant \(X\), then enumerate all exact \(k\)-subset sums. |
++| H | **Fail** | Theorem 2/Algorithm 2 reconstruct the nonsingular regime in time polynomial in the explicit input size; exceptional regimes have no hardness theorem or scalable classification in the paper. |
++| V | Would pass | Recompute and compare the complete multiset of sums exactly. |
++
++Running the LLM hardening loop cannot repair a theoretical H failure, and a model failing to execute the reconstruction inside one response would not turn this polynomial-time family into a hard one.
+
+hook: PreToolUse
+2026-09-01T05:42:10.679497Z ERROR codex_core::tools::router: error=exec_command failed for `/bin/zsh -lc "sed -n '1,260p' REJECTED.md && python3 - <<'PY'
+from math import comb
+for n in range(4,501):
+    for k in range(2,n//2+1):
+        if comb(n+k,k) > comb(n,k)**2:
+            raise SystemExit((n,k))
+print('binomial bound checked for 2 <= k <= n/2, n <= 500')
+PY
+rm -rf /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967/tmp/pdfs
+rmdir /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967/tmp 2>/dev/null || true
+git status --short"`: CreateProcess { message: "Rejected(\"`/bin/zsh -lc \\\"sed -n '1,260p' REJECTED.md && python3 - <<'PY'\\nfrom math import comb\\nfor n in range(4,501):\\n    for k in range(2,n//2+1):\\n        if comb(n+k,k) > comb(n,k)**2:\\n            raise SystemExit((n,k))\\nprint('binomial bound checked for 2 <= k <= n/2, n <= 500')\\nPY\\nrm -rf /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967/tmp/pdfs\\nrmdir /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967/tmp 2>/dev/null || true\\ngit status --short\\\"` rejected: rm -f style commands are not permitted. Use a safer approach\")" }
+hook: PreToolUse Completed
+diff --git a/results/2412.04967/REJECTED.md b/results/2412.04967/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..03b63827994fefa6399b134c39ee6084f5163045
+--- /dev/null
++++ b/results/2412.04967/REJECTED.md
+@@ -0,0 +1,53 @@
++# Rejected: arXiv 2412.04967
++
++Paper: Lixia Luo, Changheng Li, and Qiongxiu Li, [*Deterministic Algorithms to Solve the \((n,k)\)-Complete Hidden Subset Sum Problem*](https://arxiv.org/abs/2412.04967), arXiv:2412.04967v2.
++
++## Decision
++
++The proposed inverse family passes **G** and **V**, but it does not pass **H**. I therefore did not create `gen_2412_04967.py`, did not claim any mandatory gate passed, and did not run `scripts/harden.py`.
++
++## Exact problem read from the paper
++
++Section 1 defines an \((n,k)\)-complete HSSP instance as the multiset of **all** \(\binom{n}{k}\) sums of exactly \(k\) distinct positions of an unknown cardinality-\(n\) multiset \(X\), over an Abelian group and then over \(\mathbb R\) for the paper's algorithms. The paper assumes \(2\le k\le n/2\): the total of \(X\) is determined by the input, and complementing each \(k\)-sum gives the \((n-k)\)-sums.
++
++Inverse generation would be immediate: sample an integer multiset \(X\) first and publish all exact \(k\)-subset sums. Verification would also be exact and cheap relative to the input: recompute those \(\binom{n}{k}\) sums from a candidate and compare multisets. Thus G and V are not the issue.
++
++## Why H fails
++
++Theorem 2 and Algorithm 2 (Sections 1 and 4.4) give a deterministic reconstruction procedure whenever the Moser-polynomial determinants are nonzero for every degree \(1,\ldots,n\). The procedure computes power sums from the published multiset, solves the partition-indexed linear systems, applies Newton identities, constructs the monic polynomial whose roots are the hidden elements, and recovers \(X\) from those roots. Table 1 in Section 5 describes this as the algorithm for the unique-solution regime.
++
++This is polynomial in the size of the explicitly published instance, not merely an algorithm that looks large as a function of the hidden cardinality. Let
++
++\[
++M=\binom{n}{k},\qquad 2\le k\le n/2.
++\]
++
++For every \(u\le n\), conjugating partitions and then forgetting their weighted sum gives
++
++\[
++p(u,\le k)\le \binom{u+k}{k}\le \binom{n+k}{k}\le M^2.
++\]
++
++The last inequality follows by comparing at \(n=2k\) (the ratio decreases with \(n\)); it is also a deliberately loose bound. Hence the paper's stated arithmetic-operation bound
++
++\[
++O\!\left(\sum_{u=1}^{n}p(u,\le k)^3+Mn\right)
++\]
++
++is at most \(O(nM^6+Mn)\), therefore polynomial in the explicit input length. For integer-planted instances, the intermediate quantities have polynomial bit length and exact integer-polynomial factorization/root recovery is also polynomial-time. For fixed \(k\), the conclusion is even more immediate: \(p(u,\le k)=O(u^{k-1})\), and Theorem 1's ordered brute-force algorithm is polynomial as well.
++
++## Why the singular cases do not rescue the family
++
++Algorithm 2 can fail when a Moser determinant vanishes, but the paper does **not** prove that this exceptional search problem is hard. Section 1 says singular-pair characterization remains incomplete and states that, for fixed \(k\), only finitely many \(n\) can have multiple solutions. Section 5 lists singular-pair characterization as future work. That is not a theorem-backed, scalable hard parameter regime from which an unlimited generator can honestly be built.
++
++The obvious infinite exceptional line \(n=2k\) is especially unsuitable as a fallback: complementing a \(k\)-subset makes every input invariant under a global reflection of the hidden multiset, and Section 5 specifically says the polynomial-time NS-family attacks perform well when \(n=2k\). The general HSSP NP-completeness cited in Section 1 concerns a different problem in which only an arbitrary collection of subset sums is supplied; it does not establish hardness for the complete all-\(k\)-sums restriction.
++
++## Failed gate
++
++| Gate | Result | Evidence |
++|---|---|---|
++| G | Would pass | Plant \(X\), then enumerate all exact \(k\)-subset sums. |
++| H | **Fail** | Theorem 2/Algorithm 2 reconstruct the nonsingular regime in time polynomial in the explicit input size; exceptional regimes have no hardness theorem or scalable classification in the paper. |
++| V | Would pass | Recompute and compare the complete multiset of sums exactly. |
++
++Running the LLM hardening loop cannot repair a theoretical H failure, and a model failing to execute the reconstruction inside one response would not turn this polynomial-time family into a hard one.
+
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,260p' REJECTED.md && python3 - <<'PY'
+from math import comb
+for n in range(4,501):
+    for k in range(2,n//2+1):
+        if comb(n+k,k) > comb(n,k)**2:
+            raise SystemExit((n,k))
+print('binomial bound checked for 2 <= k <= n/2, n <= 500')
+PY
+git status --short" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 2018ms:
+binomial bound checked for 2 <= k <= n/2, n <= 500
+ M ../../claims/2412.04967.json
+?? ./
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2412.04967/REJECTED.md b/results/2412.04967/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..03b63827994fefa6399b134c39ee6084f5163045
+--- /dev/null
++++ b/results/2412.04967/REJECTED.md
+@@ -0,0 +1,53 @@
++# Rejected: arXiv 2412.04967
++
++Paper: Lixia Luo, Changheng Li, and Qiongxiu Li, [*Deterministic Algorithms to Solve the \((n,k)\)-Complete Hidden Subset Sum Problem*](https://arxiv.org/abs/2412.04967), arXiv:2412.04967v2.
++
++## Decision
++
++The proposed inverse family passes **G** and **V**, but it does not pass **H**. I therefore did not create `gen_2412_04967.py`, did not claim any mandatory gate passed, and did not run `scripts/harden.py`.
++
++## Exact problem read from the paper
++
++Section 1 defines an \((n,k)\)-complete HSSP instance as the multiset of **all** \(\binom{n}{k}\) sums of exactly \(k\) distinct positions of an unknown cardinality-\(n\) multiset \(X\), over an Abelian group and then over \(\mathbb R\) for the paper's algorithms. The paper assumes \(2\le k\le n/2\): the total of \(X\) is determined by the input, and complementing each \(k\)-sum gives the \((n-k)\)-sums.
++
++Inverse generation would be immediate: sample an integer multiset \(X\) first and publish all exact \(k\)-subset sums. Verification would also be exact and cheap relative to the input: recompute those \(\binom{n}{k}\) sums from a candidate and compare multisets. Thus G and V are not the issue.
++
++## Why H fails
++
++Theorem 2 and Algorithm 2 (Sections 1 and 4.4) give a deterministic reconstruction procedure whenever the Moser-polynomial determinants are nonzero for every degree \(1,\ldots,n\). The procedure computes power sums from the published multiset, solves the partition-indexed linear systems, applies Newton identities, constructs the monic polynomial whose roots are the hidden elements, and recovers \(X\) from those roots. Table 1 in Section 5 describes this as the algorithm for the unique-solution regime.
++
++This is polynomial in the size of the explicitly published instance, not merely an algorithm that looks large as a function of the hidden cardinality. Let
++
++\[
++M=\binom{n}{k},\qquad 2\le k\le n/2.
++\]
++
++For every \(u\le n\), conjugating partitions and then forgetting their weighted sum gives
++
++\[
++p(u,\le k)\le \binom{u+k}{k}\le \binom{n+k}{k}\le M^2.
++\]
++
++The last inequality follows by comparing at \(n=2k\) (the ratio decreases with \(n\)); it is also a deliberately loose bound. Hence the paper's stated arithmetic-operation bound
++
++\[
++O\!\left(\sum_{u=1}^{n}p(u,\le k)^3+Mn\right)
++\]
++
++is at most \(O(nM^6+Mn)\), therefore polynomial in the explicit input length. For integer-planted instances, the intermediate quantities have polynomial bit length and exact integer-polynomial factorization/root recovery is also polynomial-time. For fixed \(k\), the conclusion is even more immediate: \(p(u,\le k)=O(u^{k-1})\), and Theorem 1's ordered brute-force algorithm is polynomial as well.
++
++## Why the singular cases do not rescue the family
++
++Algorithm 2 can fail when a Moser determinant vanishes, but the paper does **not** prove that this exceptional search problem is hard. Section 1 says singular-pair characterization remains incomplete and states that, for fixed \(k\), only finitely many \(n\) can have multiple solutions. Section 5 lists singular-pair characterization as future work. That is not a theorem-backed, scalable hard parameter regime from which an unlimited generator can honestly be built.
++
++The obvious infinite exceptional line \(n=2k\) is especially unsuitable as a fallback: complementing a \(k\)-subset makes every input invariant under a global reflection of the hidden multiset, and Section 5 specifically says the polynomial-time NS-family attacks perform well when \(n=2k\). The general HSSP NP-completeness cited in Section 1 concerns a different problem in which only an arbitrary collection of subset sums is supplied; it does not establish hardness for the complete all-\(k\)-sums restriction.
++
++## Failed gate
++
++| Gate | Result | Evidence |
++|---|---|---|
++| G | Would pass | Plant \(X\), then enumerate all exact \(k\)-subset sums. |
++| H | **Fail** | Theorem 2/Algorithm 2 reconstruct the nonsingular regime in time polynomial in the explicit input size; exceptional regimes have no hardness theorem or scalable classification in the paper. |
++| V | Would pass | Recompute and compare the complete multiset of sums exactly. |
++
++Running the LLM hardening loop cannot repair a theoretical H failure, and a model failing to execute the reconstruction inside one response would not turn this polynomial-time family into a hard one.
+
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "find . -maxdepth 3 -type f -print | sort && git diff -- ../../claims/2412.04967.json | sed -n '1,160p'" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+./.meta.json
+./.task.md
+./codex_run.log
+./REJECTED.md
+./tmp/pdfs/2412.04967.pdf
+./tmp/pdfs/2412.04967.txt
+./tmp/pdfs/paper-04.png
+./tmp/pdfs/paper-18.png
+./tmp/pdfs/paper-19.png
+./tmp/pdfs/paper-23.png
+diff --git a/claims/2412.04967.json b/claims/2412.04967.json
+index 6140194..691186c 100644
+--- a/claims/2412.04967.json
++++ b/claims/2412.04967.json
+@@ -1 +1 @@
+-{"paper":"2412.04967","who":"Wongi-Jang","status":"in_progress","claimed_at":"2026-09-01T05:38:01Z"}
++{"paper": "2412.04967", "who": "Wongi-Jang", "status": "in_progress", "claimed_at": "2026-09-01T05:38:01Z", "started_at": "2026-09-01T05:38:16Z"}
+\ No newline at end of file
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2412.04967/REJECTED.md b/results/2412.04967/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..03b63827994fefa6399b134c39ee6084f5163045
+--- /dev/null
++++ b/results/2412.04967/REJECTED.md
+@@ -0,0 +1,53 @@
++# Rejected: arXiv 2412.04967
++
++Paper: Lixia Luo, Changheng Li, and Qiongxiu Li, [*Deterministic Algorithms to Solve the \((n,k)\)-Complete Hidden Subset Sum Problem*](https://arxiv.org/abs/2412.04967), arXiv:2412.04967v2.
++
++## Decision
++
++The proposed inverse family passes **G** and **V**, but it does not pass **H**. I therefore did not create `gen_2412_04967.py`, did not claim any mandatory gate passed, and did not run `scripts/harden.py`.
++
++## Exact problem read from the paper
++
++Section 1 defines an \((n,k)\)-complete HSSP instance as the multiset of **all** \(\binom{n}{k}\) sums of exactly \(k\) distinct positions of an unknown cardinality-\(n\) multiset \(X\), over an Abelian group and then over \(\mathbb R\) for the paper's algorithms. The paper assumes \(2\le k\le n/2\): the total of \(X\) is determined by the input, and complementing each \(k\)-sum gives the \((n-k)\)-sums.
++
++Inverse generation would be immediate: sample an integer multiset \(X\) first and publish all exact \(k\)-subset sums. Verification would also be exact and cheap relative to the input: recompute those \(\binom{n}{k}\) sums from a candidate and compare multisets. Thus G and V are not the issue.
++
++## Why H fails
++
++Theorem 2 and Algorithm 2 (Sections 1 and 4.4) give a deterministic reconstruction procedure whenever the Moser-polynomial determinants are nonzero for every degree \(1,\ldots,n\). The procedure computes power sums from the published multiset, solves the partition-indexed linear systems, applies Newton identities, constructs the monic polynomial whose roots are the hidden elements, and recovers \(X\) from those roots. Table 1 in Section 5 describes this as the algorithm for the unique-solution regime.
++
++This is polynomial in the size of the explicitly published instance, not merely an algorithm that looks large as a function of the hidden cardinality. Let
++
++\[
++M=\binom{n}{k},\qquad 2\le k\le n/2.
++\]
++
++For every \(u\le n\), conjugating partitions and then forgetting their weighted sum gives
++
++\[
++p(u,\le k)\le \binom{u+k}{k}\le \binom{n+k}{k}\le M^2.
++\]
++
++The last inequality follows by comparing at \(n=2k\) (the ratio decreases with \(n\)); it is also a deliberately loose bound. Hence the paper's stated arithmetic-operation bound
++
++\[
++O\!\left(\sum_{u=1}^{n}p(u,\le k)^3+Mn\right)
++\]
++
++is at most \(O(nM^6+Mn)\), therefore polynomial in the explicit input length. For integer-planted instances, the intermediate quantities have polynomial bit length and exact integer-polynomial factorization/root recovery is also polynomial-time. For fixed \(k\), the conclusion is even more immediate: \(p(u,\le k)=O(u^{k-1})\), and Theorem 1's ordered brute-force algorithm is polynomial as well.
++
++## Why the singular cases do not rescue the family
++
++Algorithm 2 can fail when a Moser determinant vanishes, but the paper does **not** prove that this exceptional search problem is hard. Section 1 says singular-pair characterization remains incomplete and states that, for fixed \(k\), only finitely many \(n\) can have multiple solutions. Section 5 lists singular-pair characterization as future work. That is not a theorem-backed, scalable hard parameter regime from which an unlimited generator can honestly be built.
++
++The obvious infinite exceptional line \(n=2k\) is especially unsuitable as a fallback: complementing a \(k\)-subset makes every input invariant under a global reflection of the hidden multiset, and Section 5 specifically says the polynomial-time NS-family attacks perform well when \(n=2k\). The general HSSP NP-completeness cited in Section 1 concerns a different problem in which only an arbitrary collection of subset sums is supplied; it does not establish hardness for the complete all-\(k\)-sums restriction.
++
++## Failed gate
++
++| Gate | Result | Evidence |
++|---|---|---|
++| G | Would pass | Plant \(X\), then enumerate all exact \(k\)-subset sums. |
++| H | **Fail** | Theorem 2/Algorithm 2 reconstruct the nonsingular regime in time polynomial in the explicit input size; exceptional regimes have no hardness theorem or scalable classification in the paper. |
++| V | Would pass | Recompute and compare the complete multiset of sums exactly. |
++
++Running the LLM hardening loop cannot repair a theoretical H failure, and a model failing to execute the reconstruction inside one response would not turn this polynomial-time family into a hard one.
+
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'unlink tmp/pdfs/2412.04967.pdf
+unlink tmp/pdfs/2412.04967.txt
+unlink tmp/pdfs/paper-04.png
+unlink tmp/pdfs/paper-18.png
+unlink tmp/pdfs/paper-19.png
+unlink tmp/pdfs/paper-23.png
+rmdir tmp/pdfs
+rmdir tmp
+find . -maxdepth 2 -type f -print | sort' in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967
+ succeeded in 0ms:
+./.meta.json
+./.task.md
+./codex_run.log
+./REJECTED.md
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2412.04967/REJECTED.md b/results/2412.04967/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..03b63827994fefa6399b134c39ee6084f5163045
+--- /dev/null
++++ b/results/2412.04967/REJECTED.md
+@@ -0,0 +1,53 @@
++# Rejected: arXiv 2412.04967
++
++Paper: Lixia Luo, Changheng Li, and Qiongxiu Li, [*Deterministic Algorithms to Solve the \((n,k)\)-Complete Hidden Subset Sum Problem*](https://arxiv.org/abs/2412.04967), arXiv:2412.04967v2.
++
++## Decision
++
++The proposed inverse family passes **G** and **V**, but it does not pass **H**. I therefore did not create `gen_2412_04967.py`, did not claim any mandatory gate passed, and did not run `scripts/harden.py`.
++
++## Exact problem read from the paper
++
++Section 1 defines an \((n,k)\)-complete HSSP instance as the multiset of **all** \(\binom{n}{k}\) sums of exactly \(k\) distinct positions of an unknown cardinality-\(n\) multiset \(X\), over an Abelian group and then over \(\mathbb R\) for the paper's algorithms. The paper assumes \(2\le k\le n/2\): the total of \(X\) is determined by the input, and complementing each \(k\)-sum gives the \((n-k)\)-sums.
++
++Inverse generation would be immediate: sample an integer multiset \(X\) first and publish all exact \(k\)-subset sums. Verification would also be exact and cheap relative to the input: recompute those \(\binom{n}{k}\) sums from a candidate and compare multisets. Thus G and V are not the issue.
++
++## Why H fails
++
++Theorem 2 and Algorithm 2 (Sections 1 and 4.4) give a deterministic reconstruction procedure whenever the Moser-polynomial determinants are nonzero for every degree \(1,\ldots,n\). The procedure computes power sums from the published multiset, solves the partition-indexed linear systems, applies Newton identities, constructs the monic polynomial whose roots are the hidden elements, and recovers \(X\) from those roots. Table 1 in Section 5 describes this as the algorithm for the unique-solution regime.
++
++This is polynomial in the size of the explicitly published instance, not merely an algorithm that looks large as a function of the hidden cardinality. Let
++
++\[
++M=\binom{n}{k},\qquad 2\le k\le n/2.
++\]
++
++For every \(u\le n\), conjugating partitions and then forgetting their weighted sum gives
++
++\[
++p(u,\le k)\le \binom{u+k}{k}\le \binom{n+k}{k}\le M^2.
++\]
++
++The last inequality follows by comparing at \(n=2k\) (the ratio decreases with \(n\)); it is also a deliberately loose bound. Hence the paper's stated arithmetic-operation bound
++
++\[
++O\!\left(\sum_{u=1}^{n}p(u,\le k)^3+Mn\right)
++\]
++
++is at most \(O(nM^6+Mn)\), therefore polynomial in the explicit input length. For integer-planted instances, the intermediate quantities have polynomial bit length and exact integer-polynomial factorization/root recovery is also polynomial-time. For fixed \(k\), the conclusion is even more immediate: \(p(u,\le k)=O(u^{k-1})\), and Theorem 1's ordered brute-force algorithm is polynomial as well.
++
++## Why the singular cases do not rescue the family
++
++Algorithm 2 can fail when a Moser determinant vanishes, but the paper does **not** prove that this exceptional search problem is hard. Section 1 says singular-pair characterization remains incomplete and states that, for fixed \(k\), only finitely many \(n\) can have multiple solutions. Section 5 lists singular-pair characterization as future work. That is not a theorem-backed, scalable hard parameter regime from which an unlimited generator can honestly be built.
++
++The obvious infinite exceptional line \(n=2k\) is especially unsuitable as a fallback: complementing a \(k\)-subset makes every input invariant under a global reflection of the hidden multiset, and Section 5 specifically says the polynomial-time NS-family attacks perform well when \(n=2k\). The general HSSP NP-completeness cited in Section 1 concerns a different problem in which only an arbitrary collection of subset sums is supplied; it does not establish hardness for the complete all-\(k\)-sums restriction.
++
++## Failed gate
++
++| Gate | Result | Evidence |
++|---|---|---|
++| G | Would pass | Plant \(X\), then enumerate all exact \(k\)-subset sums. |
++| H | **Fail** | Theorem 2/Algorithm 2 reconstruct the nonsingular regime in time polynomial in the explicit input size; exceptional regimes have no hardness theorem or scalable classification in the paper. |
++| V | Would pass | Recompute and compare the complete multiset of sums exactly. |
++
++Running the LLM hardening loop cannot repair a theoretical H failure, and a model failing to execute the reconstruction inside one response would not turn this polynomial-time family into a hard one.
+
+codex
+Rejected on gate H after reading the full paper.
+
+Theorem 2 and Algorithm 2 provide deterministic exact reconstruction in the nonsingular regime, with complexity polynomial in the explicitly published input size \(M=\binom nk\). Singular cases lack a proven scalable hard regime, and their classification remains future work. Thus an LLM failure would not establish genuine hardness.
+
+I documented the analysis in [REJECTED.md](/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967/REJECTED.md). Per the stop rule, I did not create a generator, fabricate gate results, or run the hardening loop. See the [full arXiv paper](https://arxiv.org/abs/2412.04967).
+diff --git a/results/2412.04967/REJECTED.md b/results/2412.04967/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..03b63827994fefa6399b134c39ee6084f5163045
+--- /dev/null
++++ b/results/2412.04967/REJECTED.md
+@@ -0,0 +1,53 @@
++# Rejected: arXiv 2412.04967
++
++Paper: Lixia Luo, Changheng Li, and Qiongxiu Li, [*Deterministic Algorithms to Solve the \((n,k)\)-Complete Hidden Subset Sum Problem*](https://arxiv.org/abs/2412.04967), arXiv:2412.04967v2.
++
++## Decision
++
++The proposed inverse family passes **G** and **V**, but it does not pass **H**. I therefore did not create `gen_2412_04967.py`, did not claim any mandatory gate passed, and did not run `scripts/harden.py`.
++
++## Exact problem read from the paper
++
++Section 1 defines an \((n,k)\)-complete HSSP instance as the multiset of **all** \(\binom{n}{k}\) sums of exactly \(k\) distinct positions of an unknown cardinality-\(n\) multiset \(X\), over an Abelian group and then over \(\mathbb R\) for the paper's algorithms. The paper assumes \(2\le k\le n/2\): the total of \(X\) is determined by the input, and complementing each \(k\)-sum gives the \((n-k)\)-sums.
++
++Inverse generation would be immediate: sample an integer multiset \(X\) first and publish all exact \(k\)-subset sums. Verification would also be exact and cheap relative to the input: recompute those \(\binom{n}{k}\) sums from a candidate and compare multisets. Thus G and V are not the issue.
++
++## Why H fails
++
++Theorem 2 and Algorithm 2 (Sections 1 and 4.4) give a deterministic reconstruction procedure whenever the Moser-polynomial determinants are nonzero for every degree \(1,\ldots,n\). The procedure computes power sums from the published multiset, solves the partition-indexed linear systems, applies Newton identities, constructs the monic polynomial whose roots are the hidden elements, and recovers \(X\) from those roots. Table 1 in Section 5 describes this as the algorithm for the unique-solution regime.
++
++This is polynomial in the size of the explicitly published instance, not merely an algorithm that looks large as a function of the hidden cardinality. Let
++
++\[
++M=\binom{n}{k},\qquad 2\le k\le n/2.
++\]
++
++For every \(u\le n\), conjugating partitions and then forgetting their weighted sum gives
++
++\[
++p(u,\le k)\le \binom{u+k}{k}\le \binom{n+k}{k}\le M^2.
++\]
++
++The last inequality follows by comparing at \(n=2k\) (the ratio decreases with \(n\)); it is also a deliberately loose bound. Hence the paper's stated arithmetic-operation bound
++
++\[
++O\!\left(\sum_{u=1}^{n}p(u,\le k)^3+Mn\right)
++\]
++
++is at most \(O(nM^6+Mn)\), therefore polynomial in the explicit input length. For integer-planted instances, the intermediate quantities have polynomial bit length and exact integer-polynomial factorization/root recovery is also polynomial-time. For fixed \(k\), the conclusion is even more immediate: \(p(u,\le k)=O(u^{k-1})\), and Theorem 1's ordered brute-force algorithm is polynomial as well.
++
++## Why the singular cases do not rescue the family
++
++Algorithm 2 can fail when a Moser determinant vanishes, but the paper does **not** prove that this exceptional search problem is hard. Section 1 says singular-pair characterization remains incomplete and states that, for fixed \(k\), only finitely many \(n\) can have multiple solutions. Section 5 lists singular-pair characterization as future work. That is not a theorem-backed, scalable hard parameter regime from which an unlimited generator can honestly be built.
++
++The obvious infinite exceptional line \(n=2k\) is especially unsuitable as a fallback: complementing a \(k\)-subset makes every input invariant under a global reflection of the hidden multiset, and Section 5 specifically says the polynomial-time NS-family attacks perform well when \(n=2k\). The general HSSP NP-completeness cited in Section 1 concerns a different problem in which only an arbitrary collection of subset sums is supplied; it does not establish hardness for the complete all-\(k\)-sums restriction.
++
++## Failed gate
++
++| Gate | Result | Evidence |
++|---|---|---|
++| G | Would pass | Plant \(X\), then enumerate all exact \(k\)-subset sums. |
++| H | **Fail** | Theorem 2/Algorithm 2 reconstruct the nonsingular regime in time polynomial in the explicit input size; exceptional regimes have no hardness theorem or scalable classification in the paper. |
++| V | Would pass | Recompute and compare the complete multiset of sums exactly. |
++
++Running the LLM hardening loop cannot repair a theoretical H failure, and a model failing to execute the reconstruction inside one response would not turn this polynomial-time family into a hard one.
+
+hook: Stop
+hook: Stop Completed
+tokens used
+107,095
+Rejected on gate H after reading the full paper.
+
+Theorem 2 and Algorithm 2 provide deterministic exact reconstruction in the nonsingular regime, with complexity polynomial in the explicitly published input size \(M=\binom nk\). Singular cases lack a proven scalable hard regime, and their classification remains future work. Thus an LLM failure would not establish genuine hardness.
+
+I documented the analysis in [REJECTED.md](/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2412.04967/REJECTED.md). Per the stop rule, I did not create a generator, fabricate gate results, or run the hardening loop. See the [full arXiv paper](https://arxiv.org/abs/2412.04967).
