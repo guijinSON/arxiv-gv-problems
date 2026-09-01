@@ -37,6 +37,35 @@ if [ "$(wc -l < "$D/README.md")" -lt 25 ]; then
   echo "ERROR: $D/README.md is too short to explain the task — see STEP 5."; exit 7
 fi
 
+# Gate results are the builder's to produce, but "the file exists" is not evidence
+# it ran them.  G8 gets named explicitly: it is the one gate nothing downstream can
+# reconstruct, because a canonical_key built on the seed or on hash(render(inst))
+# passes the diversity count below while making it meaningless.
+python3 - "$D/selftest_report.json" <<'PYGATE' || exit 7
+import json, sys
+try:
+    rep = json.load(open(sys.argv[1]))
+except Exception as e:
+    print(f"ERROR: selftest_report.json is not readable JSON: {e}"); sys.exit(1)
+if not isinstance(rep, dict):
+    print("ERROR: selftest_report.json must be a JSON object"); sys.exit(1)
+gates = {k: v for k, v in rep.items() if k.startswith("G") and k[1:2].isdigit()}
+if not gates:
+    print("ERROR: selftest_report.json records no G* gates — see STEP 3."); sys.exit(1)
+failed = [k for k, v in sorted(gates.items())
+          if not (isinstance(v, dict) and v.get("pass"))]
+if failed:
+    print("ERROR: gates not passing in selftest_report.json: " + ", ".join(failed)); sys.exit(1)
+if rep.get("all_passed") is False:
+    print("ERROR: selftest_report.json says all_passed=false"); sys.exit(1)
+if not any(k.startswith("G8") for k in gates):
+    print("ERROR: no G8 gate in selftest_report.json — canonical_key invariance was\n"
+          "       never tested.  submit.sh counts distinct keys but cannot tell a real\n"
+          "       invariant from a hash of the seed.  See prompts/codex_task.md, G8.")
+    sys.exit(1)
+print(f"== gates ==\n  {len(gates)} gates pass, G8 canonical_key present")
+PYGATE
+
 echo "== hardening transcript =="
 python3 - "$D" <<'PY'
 import json, os, sys
