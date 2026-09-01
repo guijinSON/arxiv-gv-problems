@@ -144,22 +144,30 @@ if miss: print("MISSING:", miss); sys.exit(1)
 i=m.make_instance(**(getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})), seed=0)
 ok,why=m.verify(i, i["answer"])
 if not ok: print("G1 FAIL: planted answer does not verify:", why); sys.exit(1)
-# Round-trip the answer through parse_answer.  Modules choose their own wire
-# format, so try the plausible renderings and pass if ANY recovers the answer.
-# A comma-join alone reports a false failure for every nested or non-scalar
-# answer (it emits Python repr where the contract asks for JSON), which either
-# sinks a correct module or teaches people to ignore this line.
-def _roundtrips(mod, ans):
-    cands = [json.dumps(ans)]
-    if isinstance(ans, list) and all(isinstance(x, (int, float, str)) for x in ans):
-        cands.append(", ".join(map(str, ans)))
-    for body in cands:
+# Can parse_answer consume real solver output?  The wire format is the module's
+# own choice and often differs from the internal answer representation (binary
+# strings vs ints, nested JSON vs a flat list), so guessing a rendering of
+# inst["answer"] produces false failures.  Test the contract the renderer itself
+# advertises: pull the example out of render() and require parse_answer to accept
+# it.  That is format-agnostic and still independent of the builder's own gate.
+def _parse_contract(mod, inst, ans):
+    import re
+    ex = re.findall(r"<answer>(.*?)</answer>", mod.render(inst), re.S)
+    for body in reversed(ex):
         try:
-            if mod.parse_answer(f"<answer>{body}</answer>") == ans: return True
+            if mod.parse_answer(f"<answer>{body}</answer>") is not None:
+                return True, "renderer example parses"
         except Exception:
             pass
-    return False
-rt = _roundtrips(m, i["answer"])
+    for body in [json.dumps(ans)] + ([", ".join(map(str, ans))]
+                 if isinstance(ans, list) and all(isinstance(x,(int,float,str)) for x in ans) else []):
+        try:
+            if mod.parse_answer(f"<answer>{body}</answer>") == ans:
+                return True, "planted answer round-trips"
+        except Exception:
+            pass
+    return False, "parse_answer accepted neither the renderer example nor the planted answer"
+rt, rt_why = _parse_contract(m, i, i["answer"])
 # canonical_key must be a function of the instance, not of the call.  A key that
 # is not deterministic cannot detect a duplicate; we cannot check the harder
 # property (invariance under relabelling) without family-specific machinery, so
@@ -171,7 +179,7 @@ if not isinstance(k1,str) or k1 != k2:
     print("canonical_key FAIL: not deterministic or not a str:", repr(k1), repr(k2)); sys.exit(1)
 if m.canonical_key(m.make_instance(**params, seed=4243)) == k1:
     print("canonical_key FAIL: two different seeds collide — the key ignores the instance"); sys.exit(1)
-print("  interface OK | planted verifies | parse round-trip:", rt, "| canonical_key deterministic")
+print(f"  interface OK | planted verifies | parse_answer: {rt} ({rt_why}) | canonical_key deterministic")
 PY
 [ $? -eq 0 ] || { echo "SUBMIT BLOCKED — fix the module first."; exit 3; }
 
