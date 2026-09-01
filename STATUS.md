@@ -35,4 +35,4 @@
 | words and permutations | 0 | 237 |
 | finite field constructions | 2 | 235 |
 
-_regenerated 2026-09-01 19:12Z by `scripts/status.sh --write`_
+_regenerated 2026-09-01 19:14Z by `scripts/status.sh --write`_
