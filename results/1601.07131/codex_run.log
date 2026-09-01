@@ -1,0 +1,1558 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/1601.07131
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a05e3f-f211-7c01-8176-a9f1b78f674c
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know its answer*, because you
+  sampled the answer first and constructed the problem around it.
+- **H — hard.** No known polynomial-time or closed-form method, and the answer space
+  is far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+The answer must be a **witness** — a structured object handed to a checker. Never an
+absence ("no solution exists"), never an optimum whose optimality is the claim,
+never a real number or an asymptotic rate.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the three things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, standard library only, deterministic given `(n, seed)`. No file IO, no
+network, no printing at import. Use `random.Random(seed)`, never global `random`.
+
+```python
+DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
+                            # each maps to kwargs for make_instance
+
+def make_instance(n, seed=0, **params) -> dict
+    """Inverse generation: sample the answer FIRST, then build the problem around
+    it. Returns a dict containing key "answer" (the planted witness) plus all data
+    the solver needs. `n` is the size parameter; larger n must mean harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT."""
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of the naive candidate space, or None if not countable."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship.**
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G6 adversary panel** | Write ≥3 cheap attacks and confirm each FAILS across ≥8 seeds. See below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+5. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard.** The specific theorem and parameter regime you are inside, and
+  — just as important — the easy regimes you had to avoid and the results that
+  identify them. Cite sections by number. This is the part only you know.
+- **A worked example.** A rendered instance small enough to read in full (use your
+  smallest preset), its answer, `verify` returning True on it, and `verify`
+  returning False with its reason on a corrupted variant.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 1601.07131
+url: https://arxiv.org/abs/1601.07131
+title: On the Yang-Baxter equation and left nilpotent left braces
+categories: math.GR
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: algebraic identity solutions
+  method: substitution check
+  candidate generator: construct finite brace or Yang-Baxter solution from algebraic operations
+  candidate verifier: check brace axioms and Yang-Baxter identity by substitution
+codex
+I’ll first read the full paper and pin down its exact hardness/easy regimes before choosing a family. If the paper does not support a genuinely hard, inverse-generatable witness problem, I’ll stop with a documented rejection rather than manufacture one.
+  → Fetch and read the full paper, including exact definitions and hardness/easy results
+  • Select or reject a G/H/V family based on the paper
+  • Implement the generator module and mandatory self-tests
+  • Run self-tests, hardening harness, and address its verdict
+  • Write README and final machine-readable reports
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!**/.git/**'"' .. /home/gson/gvrepo 2>/dev/null | head -80 && rg --files . | sed -n '1,120p'" in /home/gson/gvrepo/results/1601.07131
+ succeeded in 0ms:
+/home/gson/gvrepo/results/1601.07131
+./codex_run.log
+
+web search: 
+web search: https://arxiv.org/abs/1601.07131
+exec
+/bin/bash -lc "curl -L --fail --retry 2 -o /tmp/paper-1601.07131.tar https://arxiv.org/e-print/1601.07131 && file /tmp/paper-1601.07131.tar && tar -tf /tmp/paper-1601.07131.tar | sed -n '1,120p'" in /home/gson/gvrepo/results/1601.07131
+ succeeded in 715ms:
+100   217  100   217    0     0    616      0 --:--:-- --:--:-- --:--:--   616
+ 47 11703   47  5503    0     0   6408      0  0:00:01 --:--:--  0:00:01  6408100 11703  100 11703    0     0  13623      0 --:--:-- --:--:-- --:--:-- 6054k
+/tmp/paper-1601.07131.tar: gzip compressed data, was "nilLbrace13.tex", last modified: Tue Jan 26 18:42:15 2016, max speed, from Unix, original size modulo 2^32 35859
+tar: This does not look like a tar archive
+tar: Skipping to next header
+tar: Exiting with failure status due to previous errors
+
+exec
+/bin/bash -lc "gzip -dc /tmp/paper-1601.07131.tar > /tmp/paper-1601.07131.tex && sed -n '1,260p' /tmp/paper-1601.07131.tex" in /home/gson/gvrepo/results/1601.07131
+ succeeded in 0ms:
+
+\documentclass[12]{amsart}
+
+\usepackage{amssymb}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setlength{\textwidth}{12.5cm}
+\setlength{\textheight}{20cm}
+\setlength{\evensidemargin}{\oddsidemargin}
+\setlength{\topmargin}{0pt}
+\setlength{\headsep}{18pt}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{defn}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{ques}[theorem]{Questions}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{question}{Question}
+\newtheorem{proposition}[theorem]{Proposition}
+
+
+%\newtheorem{fact}{Fact}
+\newtheorem{prop}[theorem]{Proposition}
+%\newtheorem{exa}[theorem]{Example}
+%\newtheorem{exas}[theorem]{Examples}
+%\theoremstyle{definition}
+
+
+%\theoremstyle{remark}
+\newtheorem{rem}[theorem]{Remark}
+%\newtheorem{rems}[theorem]{Remarks}
+%\newtheorem{ack}{Acknowledgement}
+
+%\numberwithin{equation}{section}
+
+\newcommand{\thmref}[1]{Theorem~\ref{#1}}
+\newcommand{\lemref}[1]{Lemma~\ref{#1}}
+\newcommand{\corref}[1]{Corollary~\ref{#1}}
+\newcommand{\propref}[1]{Proposition~\ref{#1}}
+\newcommand{\secref}[1]{\S~\ref{#1}}
+\newcommand{\id}{\mbox{id}}
+\newcommand{\soc}{\operatorname{Soc}}
+\newcommand{\Aut}{\operatorname{Aut}}
+\newcommand{\sym}{\operatorname{Sym}}
+\newcommand{\mpl}{\operatorname{mpl}}
+\newcommand{\Ret}{\operatorname{Ret}}
+\newcommand{\Ker}{\operatorname{Ker}}
+\newcommand{\Fcal}{{\mathcal{F}}}
+\newcommand{\Gcal}{{\mathcal{G}}}
+\newcommand{\Kcal}{{\mathcal{K}}}
+\newcommand{\Lcal}{{\mathcal{L}}}
+
+\renewcommand{\setminus}{\smallsetminus}
+\def\baselinestretch{1.3}
+
+\def\e{\varepsilon}
+\begin{document}
+\title[Nilpotent braces and the Yang--Baxter equation]{ On the Yang-Baxter equation and left  nilpotent left braces}
+\author[Ced\'{o}, Gateva-Ivanova, Smoktunowicz]{Ferran Ced\'{o}, Tatiana
+Gateva-Ivanova and Agata Smoktunowicz}
+
+\subjclass[2010]{Primary 16N80, 16P90, 16N40 } \keywords{brace,
+Yang-Baxter equation, nilpotent braces}
+
+\date{\today}
+\begin{abstract}
+We study non-degenerate involutive set-theoretic solutions $(X,r)$
+of the Yang-Baxter equation, we call them simply \emph{solutions}.
+We show that the structure group $G(X,r)$ of a finite non-trivial solution $(X,r)$ cannot be an Engel group.
+It is known that the structure group $G(X,r)$ of a finite
+multipermutation solution $(X,r)$ is a poly-$\mathbb{Z}$ group, thus
+our result gives a rich source of examples of braided groups and
+left braces $G(X,r)$ which are poly-$\mathbb{Z}$ groups but not Engel groups.
+
+We also show that a finite  solution of the Yang-Baxter equation
+can be embedded in a convenient way into a finite brace and into a finite braided group.
+
+
+For a left brace $A$, we explore the close relation between the
+multipermutation level of the  solution associated with it and the radical chain $A^{(n+1)}=A^{(n)}* A$ introduced by Rump.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+Braces were introduced by Rump \cite{rump} to study non-degenerate
+involutive set-theoretic solutions of the Yang-Baxter equation.
+
+Recall that a left brace is a set $B$ with two operations, $+$ and
+$\cdot$, such that $(B,+)$ is an abelian group, $(B,\cdot)$ is a
+group and for every $a,b,c\in B$,
+\begin{equation}\label{leftbrace}
+a\cdot (b+c)+a=a\cdot b+a\cdot c.
+\end{equation}
+Right braces are defined similarly, changing the property
+(\ref{leftbrace}) by $(a+b)\cdot c+c=a\cdot c+b\cdot c$. A two-sided
+brace is a left brace which is also  a right brace. In any left
+brace $(B,+,\cdot)$ one defines another operation $*$ by the rule
+$$a*b=a\cdot b-a-b,
+$$
+for $a,b\in B$. It is known that $(B,+,\cdot)$ is a two-sided brace
+if and only if $(B,+,*)$ is a Jacobson radical ring. Conversely, if
+$R$ is a Jacobson radical ring, then one defines a new operation
+$\circ$ on $R$ by $a\circ b=ab+a+b$ and $(R,\circ)$ is called the
+adjoint group of the radical ring $R$. Then $(R,+,\circ)$ is a
+two-sided brace. Hence the study of two-sided braces is equivalent
+to the study of Jacobson radical rings.
+
+%\textbf{By convention,  when we study a Jacobson radical ring $R$,
+%we shall denote the operation multiplication, by "$*$", and will
+%write $R = (R, +, *)$, so the associated two-sided brace is simply
+%$(R, +, .)$, where, as usual, $ab = a*b+a +b.$}
+
+
+In general the operation $*$ in a left brace $B$ is not associative,
+but it is left distributive with respect to the sum, that is
+$$a*(b+c)=a*b+a*c,$$
+for $a,b,c\in B$.
+
+Let $B$ be a left brace. For $a\in B$,  let  $\mathcal{L}_a\colon
+B\longrightarrow B$ be the map defined by $\mathcal{L}_a(b)=ab-a$
+for all $b\in B$. It is known that $\mathcal{L}_a$ is an
+automorphism of the additive group of the left brace $B$ and the
+ map $\mathcal{L}\colon (B,\cdot)\longrightarrow \Aut(B,+)$, defined by
+$a\mapsto \mathcal{L}_a$, is a morphism of groups.  The kernel of
+this morphism is called the socle of $B$,
+$$\soc(B):=\{ a\in B\mid \mathcal{L}_a=\id \}=\{ a\in B\mid ab=a+b,\; \mbox{ for all }b\in B \}.$$
+In fact the socle of a left brace $B$ is an ideal of $B$, that is, a
+normal subgroup of its multiplicative group invariant by the maps
+$\mathcal{L}_a$ for all $a\in B$. In particular, $\soc(B)$ is also a
+subgroup of the additive group of $B$. Note that if $a,b\in
+\soc(B)$, then $a-b=\mathcal{L}_b(b^{-1}a)\in \soc(B)$. Therefore
+the quotient of the multiplicative group $B/\soc(B)$ is also the
+quotient of the additive group and $(B/\soc(B),+,\cdot)$ is a left
+brace, the left brace quotient of $B$ modulo its ideal $\soc(B)$.
+
+Let $X$ be a non-empty set. Recall that a map $r\colon X\times
+X\longrightarrow X\times X$ is a set-theoretic solution of the
+Yang-Baxter equation if
+$$r_{12}r_{23}r_{12}=r_{23}r_{12}r_{23},$$
+where $r_{12},r_{23}\colon X\times X\times X\longrightarrow X\times
+X\times X$ are the maps $r_{12}=r\times \id_X$ and
+$r_{23}=\id_X\times r$. We will write $r(x,y)=({}^{x}y, x^{y})$. The
+map $r$ is \emph{non-degenerate} if for every $x\in X$ the maps
+$y\mapsto {}^{x}y$ and $y\mapsto y^{x}$ are bijective, $r$ is
+\emph{involutive} if $r^2=\id_{X^2}$.
+\smallskip
+
+\noindent {\bf Convention.} By \emph{a solution of the YBE} (or
+shortly, \emph{a solution}) we mean a non-degenerate involutive
+set-theoretic solution $(X,r)$ of the Yang-Baxter equation.
+\smallskip
+
+Let $(X,r)$ be a solution of the YBE. The structure group of
+$(X,r)$ is the group $G(X,r)$ with presentation
+$$G(X,r)=\langle X\mid xy=({}^{x}y)(x^{y}),\; x,y\in X\rangle.$$
+(Some authors call $G(X,r)$ the YB group of $(X,r)$).
+
+It follows from the results in \cite{ess} that $X$ is naturally
+embedded in $G(X,r)$. One can define a sum on $G(X,r)$ such that
+$(G(X,r),+)$ is a free abelian group with basis $X$. Moreover,
+$(G(X,r),+,\cdot)$ is a left brace such that
+${}^{x}y=\mathcal{L}_x(y)\in X$ for all $x,y\in X$, see \cite{cjo2,
+Tatyana}.
+
+We say that this is \emph{the canonical left brace structure on}
+$G(X,r)$. It is known that the group $G$ acts on the set $X$ from
+the left (and from the right). Moreover, the assignments $x \mapsto
+\Lcal_x$ extend to a group homomorphism $\Lcal: G \longrightarrow
+\sym_X$. The image $ \Lcal (G)$ of this homomorphism is a subgroup
+of $\sym_X$ called \emph{the permutation group  of} $(X,r)$  and
+denoted by $\mathcal{G}(X,r).$ It is known that
+$\mathcal{G}(X,r):=\langle \mathcal{L}_x \mid x\in X \rangle$, where
+$\Lcal_x(y)={}^{x}y$, for all $x,y\in X$. The group epimorphism
+$\Lcal: G(X,r)\longrightarrow \mathcal{G}(X,r), x\mapsto \Lcal_x$
+has kernel $\Ker \Lcal = \soc(G(X,r))$ (as sets).
+ Thus $\mathcal{G}(X,r)$ inherits a
+structure of a left brace via this natural isomorphism of groups, we
+say that this is \emph{the canonical structure of a left brace on}
+$\mathcal{G}(X,r)$. Moreover, $G(X,r)/\soc(G(X,r))\cong
+\mathcal{G}(X,r)$ as symmetric groups (i.e. involutive braided
+groups) and as left braces, \cite{ Tatyana, cjo2}.
+
+%\emph{ ****Another group associated with a solution $(X,r)$ of the
+%YBE is its permutation group  It is known that the map
+%$X\longrightarrow \mathcal{G}(X,r)$ defined by $x\mapsto \Lcal_x$
+%can be extended to a homomorphism of groups $G(X,r)\longrightarrow
+%\mathcal{G}(X,r)$ with kernel equal to $\soc(G(X,r))$. Therefore
+%$G(X,r)/\soc(G(X,r))\cong \mathcal{G}(X,r)$ as multiplicative
+%groups. Thus $\mathcal{G}(X,r)$ inherits a structure of left brace
+%via this natural isomorphism of groups, we say that this is the
+%natural structure of left brace of $\mathcal{G}(X,r)$.****}
+
+In this paper, we prove some general results about braces and apply
+these to study the close relations between the properties of
+solutions $(X,r)$ and their associated left braces $G(X,r)$. This is
+in the spirit of \cite{Tatyana}  and \cite{cjo2}.
+
+
+
+%***\emph{In this paper, we study the relation between some
+%properties of the left brace $G(X,r)$ and some properties of the
+%solution $(X,r)$ of the YBE.}***
+
+\section{Some results on  $G(X,r)$}
+The results of this section were motivated by a result from
+\cite{Tatyana}, which assures that the structure group $G(X,r)$ of a
+non-trivial solution $(X,r)$ of the Yang Baxter cannot be a
+two-sided brace.
+
+Let $(B,+,\cdot)$ be a left brace. As usual, for any $a,b\in B$ and
+positive integer $m$, $ab$ will denote $a\cdot b$ and $a^m$ will
+ denote $a\cdot a\cdots a$ (where $a$ appears $m$ times).
+
+
+\begin{lemma}\label{nil} Let $B$ be a left brace whose additive group
+ $(B,+)$ is torsion-free.
+ Assume that
+ $a, b\in B$ and that there is an integer
+ %natural number
+ $n(a,b)$ such that $a*
+(a*(\ldots a*(a* b)\ldots ))=0$ (where $a$ occurs $n(a,b)$ times
+and $b$ once in this equation).
+ Assume moreover that $\mathcal{L}_{a^n}=\id$ for some integer
+ $n$.
+  Then $a*b=0$ or equivalently,  $a\cdot b=a+b$.
+\end{lemma}
+
+%\begin{lemma}\label{nil} {\bf Let $B$ be a left brace whose additive group
+% $(B,+)$ is torsion-free.
+% Assume that
+% $a, b\in B$ and that there is a natural number $n(a,b)$ such that $a*
+%(a*(\ldots a*(a* b)\ldots ))=0$ (where $a$ occurs $n(a,b)$ times
+%and $b$ once in this equation).
+% Assume moreover that at least one of the following assertions holds:
+%\begin{itemize}
+%\item [1.] $[B: \soc(B)]=n<\infty$.
+%\item [2.] $\mathcal{L}_{a^n}=\id$ for some $n$.
+%\end{itemize}
+ % Then $a*b=0$ or equivalently,  $a\cdot b=a+b$.}
+%\end{lemma}
+\begin{proof}
+%Since $[B: \soc(B)]=n<\infty$, we have that $\mathcal{L}_{a^n}=\id$.
+Note that $\mathcal{L}_a(b)=a*b+b$, for $a,b\in B$. Let $m$ be a
+positive integer. Let $e_1(a,b)=a*b$ and $e_{m+1}(a,b)=a*e_m(a,b)$,
+for $a,b\in B$. It can be proved by induction on $m$ that
+$$\mathcal{L}_{a^m}(b)=b+\sum_{i=1}^m {m\choose i} e_{i}(a,b).$$
+ Since $\mathcal{L}_{a^n}=\id$, we have
+$$b=\mathcal{L}_{a^n}(b)=b+\sum_{i=1}^n {n\choose i} e_{i}(a,b),$$
+and thus
+$$ne_1(a,b)=-\sum_{i=2}^n {n\choose i} e_{i}(a,b).$$
+Hence
+\begin{eqnarray}\label{eq1}
+&&ne_{k}(a,b)=-\sum_{i=2}^n {n\choose i}
+e_{i+k-1}(a,b),\end{eqnarray}
+for all positive integer $k$.
+
+Suppose that  $e_1(a,b)=a*b\neq 0$.
+
+exec
+/bin/bash -lc "sed -n '261,760p' /tmp/paper-1601.07131.tex" in /home/gson/gvrepo/results/1601.07131
+ succeeded in 0ms:
+Let $n(a,b)$ be the smallest positive integer such that
+$e_{n(a,b)}(a,b)=0$. Then, by (\ref{eq1}),
+$$ne_{n(a,b)-1}(a,b)=-\sum_{i=2}^n {n\choose i} e_{i+n(a,b)-2}(a,b)=0.$$
+Since $(B,+)$ is torsion-free, we have that $e_{n(a,b)-1}(a,b)=0$,
+in contradiction with the definition of $n(a,b)$.
+\end{proof}
+%\textbf{Clearly, every $a\in G$ satisfies $\mathcal{L}_{a^n}=\id$,
+%whenever $[B: \soc(B)]=n<\infty$.}
+
+Let $G$ be a group.   Following the notation of \cite{robinson}, for
+$g,h\in G$, we denote by $[g,h]$ the element $[g,h]=g^{-1}h^{-1}gh$.
+Recall that the group $G$ is an Engel group if and only if for each
+$g,h\in G$ there exists a positive integer $n(g,h)$ such that
+$[[\dots [[g,h],h]\dots],h]=1$, where $h$ occurs $n(g,h)$ times.
+
+\begin{theorem}\label{engel} Let $B$ be a left brace such that its additive group
+$(B,+)$ is torsion-free and $[B: \soc(B)]=n<\infty$. If the
+multiplicative group $(B,\cdot)$ of the left brace $B$ is an Engel
+group, then $B$ is a trivial brace, that is $a\cdot b=a+b$, for
+all $a,b\in B$.
+\end{theorem}
+
+\begin{proof}
+Let $a\in B$ and $c\in \soc(B)$. Note that
+$$\mathcal{L}_a(c)=ac-a=aca^{-1}a-a=aca^{-1}+a-a=aca^{-1}.$$
+Hence
+\begin{eqnarray*}[a,c]&=&a^{-1}c^{-1}ac=a^{-1}c^{-1}a+c\\
+&=&\mathcal{L}_{a^{-1}}(c^{-1})+c= \mathcal{L}_{a^{-1}}(-c)+c\\
+&=&-\mathcal{L}_{a^{-1}}(c)+c= -a^{-1}*c-c+c\\
+&=&-a^{-1}*c=(a^{-1}*c)^{-1}.
+\end{eqnarray*}
+Hence $[c,a]=a^{-1}*c$. Therefore $[[\dots
+[[c,a],a]\dots],a]=a^{-1}*(\dots a^{-1}*(a^{-1}*c)\dots )$. Let
+$b\in B$. Since $[B: \soc(B)]=n<\infty$ and $\soc(B)$ is an ideal of
+$B$, $nb\in\soc(B)$. Since $(B,\cdot)$ is an Engel group, there
+exists a positive integer $m$ such that $$[[\dots
+[[(nb),a],a]\dots],a]=1,
+$$ (where $a$ occurs $m$ times).
+Hence $$0=1=a^{-1}*(\dots a^{-1}*(a^{-1}*(nb))\dots
+)=n(a^{-1}*(\dots a^{-1}*(a^{-1}*b)\dots )),$$ (where $a^{-1}$
+appears $m$ times). But $(B,+)$ is torsion free, hence
+$$a^{-1}*(\dots a^{-1}*(a^{-1}*b)\dots )=0,$$ where $a^{-1}$ occurs $m$ times.
+
+By Lemma~\ref{nil}, $a^{-1}*b= 0$. Therefore $a*b = 0$, for all $a,b
+\in B,$  or equivalently, $B$ is a trivial left brace.
+\end{proof}
+
+
+We call a left brace $B$  left nilpotent if $B^{n}=0$ for some $n$,
+where $B^{n+1}=B* B^{n}$ is the chain introduced by Rump in
+\cite{rump}. As a consequence of Lemma~\ref{nil} and
+Theorem~\ref{engel}, we have the following two results.
+
+%\begin{theorem}
+%%%%\label{one}
+% Let $(X,r)$ be a finite solution of the YBE. Assume that for each  $a, b\in X$
+% there is
+% a natural number
+% an integer $n=n(a,b)$ such that, in $G(X,r)$,
+% we have  $a* (a*(\ldots a*(a* b)))=0$ (where $a$ occurs $n$ times and $b$ occurs once in
+% this equality
+% %equation),
+% then $(X,r)$ is the trivial solution.
+%In particular, if  $G(X,r)$ is a left nilpotent left brace then
+%$(X,r)$ is the trivial solution.
+%\end{theorem}
+
+\begin{theorem} \label{one}
+Let $(X,r)$ be a finite solution of the YBE. Assume that for each
+$a, b\in X$ there is a positive integer $n=n(a,b)$ such that
+the equality $a* (a*(\ldots a*(a* b)))=0$ holds in $G(X,r)$,($a$
+occurs $n$ times and $b$ occurs once in this equality). Then $(X,r)$
+is the trivial solution. In particular, if  $G(X,r)$ is a left
+nilpotent left brace, then $(X,r)$ is the trivial solution.
+\end{theorem}
+\begin{proof}
+ Since $G(X,r)/\soc(G(X,r))\cong \mathcal{G}(X,r)$ is a
+subgroup of the symmetric group $\sym_X$ of the finite set $X$, we
+have that $[G(X,r): \soc(G(X,r))]<\infty$. Hence,  by
+Lemma~\ref{nil}, ${}^{a}b=\mathcal{L}_a(b)=ab-a=a+b-a=b$, for all
+$a,b\in X$. In particular, $(X,r)$ is the trivial solution.
+\end{proof}
+
+%
+%\emph{***At the beginning of \cite[Section 4]{jo} one can read
+%that it is known that any ordered abelian-by-finite group is
+%abelian. Also it is known that any torsion-free nilpotent group is
+%ordered (see \cite[Lemma 13.1.6]{passman}). It is known that if
+%$(X,r)$ is a solution of the YBE, then $G(X,r)$ is a torsion-free,
+%solvable and abelian-by-finite group. Therefore, if $G(X,r)$ is
+%nilpotent, then it is abelian (in this case the left brace
+%structure of $G(X,r)$ is trivial and $(X,r)$ is the trivial
+%solution). We have the following related result.***I suggest we
+%replace the para marked with *** with the following para written
+%in bold****}
+
+It is known that any ordered abelian-by-finite group is abelian, see
+for example \cite[Section 4]{jo}. It is also known that any
+torsion-free nilpotent group is ordered (see \cite[Lemma
+13.1.6]{passman}). Recall  that if $(X,r)$ is a finite
+solution of the YBE,  then $G(X,r)$ is a torsion-free, solvable
+and abelian-by-finite group (see \cite{ess} and \cite{GIVdB}).
+Therefore, if $G(X,r)$ is nilpotent, then it is abelian. In this
+case the canonical left brace structure on $G(X,r)$ is trivial and
+$(X,r)$ is the trivial solution. We have the following related
+result.
+
+
+\begin{theorem}
+\label{two}
+ Let $(X,r)$ be a finite solution of the YBE.
+  If the structure group
+$G(X,r)$ is an Engel group, then $(X,r)$ is the trivial solution.
+\end{theorem}
+\begin{proof}
+This is a consequence of Theorem~\ref{engel}.
+\end{proof}
+
+%
+%
+%Let $(Y,r)$ be a solution of YBE. A subset $X\subseteq Y$ is
+%called \emph{an $r$ invariant subset of} $Y$ if $r(X\times X)
+%\subseteq X\times X$, or equivalently  $x,y \in X,$ imply ${}^xy
+%\in X, x^y \in X$.
+%\begin{theorem}\label{jacobsonradicalring} Let $(B, +, *)$ be a Jacobson radical ring. Let  $(B, +, .)$ be the associated two-sided brace,
+%and $(B, r)$ the corresponding solution of YBE (a symmetric group
+%in the sense of Takeuchi).
+%%Suppose $B$ is generated (as a ring) by
+%%a set $X$, which is an $r$- invariant subset of $B$.
+%If the group $(B, +)$ is torsion free, then $B$ has trivial
+%multiplication, that is $B*B = 0$. Moreover $B = Span
+%_{\mathbb{Z}} X$ is the free abelian group generated by $X$.
+%\end{theorem}
+%\begin{proof}
+%Let $x, y \in B$. We claim that $x*y = 0$. Without loss of
+%generality we may assume that $x\neq 0, y \neq 0.$ We claim that
+%in this case ${}^xy \neq 0$. Indeed, the zero element $0$ of $(B,
+%+, *)$ coincides with the unit element $e$ of the corresponding
+%two-sided brace $(B +, .)$ equivalently, with the unit $e$ of the
+%corresponding symmetric group $(B,r)$. Moreover, in $(B, r)$ one
+%has ${}^ue = e,$ and ${}^eu = u$ for all $u \in B$, see Section 3,
+%\cite{Tatyana}. Thus ${}^xy = e = {}^xe$, which by the
+%nondegeneracy of the left action in the symmetric group $(G, r)$
+%implies  $y = e = 0$, a contradiction.
+% The element ${}^xy\in
+%X$ can be presented as
+%\begin{equation}
+%\label{eqJac1} x*y + y = {}^xy.
+%\end{equation}
+%By assumption  the group $(B, +)$ is torsion free, so this must be
+%a trivial relation. Indeed, in a general torsion free group $(G,
+%+)$ an equality $a + b =c$, with $a,b,c \in G$ implies that one of
+%the following cases is in force: (i) $c = 0, a = -b\neq 0$, (ii)
+%$b = 0, a = c\neq 0$, (iii) $a= 0, b=c\neq 0$; (iv) $a=b=c=0$. We
+%have chosen $y \neq 0$, and we have shown ${}^xy \neq 0,$
+%therefore (\ref{eqJac1}) implies $x*y= 0.$  It follows that $x*y =
+%0$, for all $x, y \in X$. This proves $B*B= 0$, clearly, then
+% $B = Span _{\mathbb{Z}} X$, is the free abelian group
+%generated by $X$.
+%\end{proof}
+% We also get the following short proof of \cite[Theorem 6.3]{Tatyana}.
+%\begin{theorem} \cite[Theorem 6.3]{Tatyana}
+%Let $(X,r)$ be an involutive, non-degenerate set-theoretic solution
+%of the Yang-Baxter equation (not necessarily finite). The the
+%structure group $G(X,r)$ is a two-sided brace if and only if $(X,r)$
+%is the trivial solution.
+%\end{theorem}
+%\begin{proof}
+%Suppose that $G(X,r)$ is a two-sided brace. Let $x,y\in X$. We have
+%that
+%$$\mathcal{L}_{2x}(y)=(2x)y-2x=2xy-y-2x=2\mathcal{L}_x(y)-y.$$
+%Since $\mathcal{L}_{2x}(y),\mathcal{L}_x(y),y\in X$ and the additive
+%group of $G(X,r)$ is free abelian with basis $X$, we have that
+%$\mathcal{L}_x(y)=y$. It is also known that if $r(x,y)=({}^xy,x^y)$,
+%then $\mathcal{L}_x(y)={}^xy$. Hence $(X,r)$ is the trivial
+%solution. The converse is obvious.
+%\end{proof}
+
+%Notice, that in the case when $(X,r)$ is a non trivial  multipermutation solution we have a quicker proof that
+% $G(X,r)$ is not a nilpotent group:
+% Recall that the structure group $G(X,r)$ of a finite multipermutation solution $(X,r)$  is always a poly-$\mathbb{Z}$ group \cite{cjo}.
+%We have the following related result.
+%\begin{theorem}\label{three}
+% Let $(X,r)$ be a finite involutive, non-degenerate set-theoretic solution of the Yang-Baxter equation.
+% Suppose that $(X,r)$ is a multipermutation solution which is not a trivial solution. Then the YB  group
+%$G= G(X,r)$ is not a nilpotent group.
+%\end{theorem}
+%\begin{proof}
+%By hypothesis $(X,r)$ is a nontrivial multipermutation solution.
+%Then, by Theorem $5.15$ from \cite{Tatyana} the associated symmetric
+%group $G= (G, r_G)$ is also a multipermutation solution of level $s
+%= \mpl(G,r_G) \geq  \mpl(X,r) \geq s-1\geq 1$.
+% We claim that $G$ is not a nilpotent group. Suppose, on the contrary, that $G$ is a nilpotent group.
+%Then the two conditions: $\mpl(G, r_G) <\infty$ and ``$G$ is a
+%nilpotent group'' imply $G^{(n)} = 0$, and $G^m =0$ for some natural
+%numbers m, n, (see \cite{smok}, Theorem 3. (4) $\Longleftrightarrow$
+%(1)). Hence the brace $(G, +, .)$ is
+% left nilpotent. It follows then from Theorem 1 that $(X,r)$ is a
+%trivial solution, a contradiction. Therefore $G$ is not nilpotent.
+%\end{proof}
+%
+% We recall the following related result of Cameron and Gateva-Ivanova, \cite{GIC12}
+%\begin{theorem}[Theorem $6.10$,  \cite{GIC12}]  Let  $(X,r)$ be a square-free
+%solution of arbitrary cardinality, $G = G(X,r), \mathcal {G} =
+%\mathcal {G}(X,r)$ in the usual notation. Suppose $(X,r)$ is a
+%multipermutation solution with mpl $(X,r) = m.$  Then $G$ and
+%$\mathcal {G}$ are solvable with sl$(\mathcal {G}) \leq sl (G) \leq m$.
+%Furthermore mpl $X = 2$ implies sl $(G) = 2$ and sl $(\mathcal {G}) = 1$
+%\end{theorem}
+
+\section{Right nilpotent left braces}
+
+Etingof, Schedler and Soloviev in \cite{ess} introduced the retract
+solution of a given solution of the YBE. Let $(X,r)$ be a solution
+of the YBE.  The retract relation $\sim $ on the set $X$ with
+respect to $r$ is defined by $x\sim y$ if $\sigma_{x}=\sigma_{y}$,
+where $\sigma_x(z)={}^{x}z$. Then the retraction of $(X,r)$ is
+$\Ret(X,r)=([X], r_{[X]})$, where $[X]=X/\sim$ and
+$$r_{[X]}([x],[y])=([{}^{x}y],[x^{y}]),$$
+where $[x]$ denotes the $\sim$-class of $x\in X$. We define
+$\Ret^1(X,r)=\Ret(X,r)$ and $\Ret^{k}(X,r)=\Ret(\Ret^{k-1}(X,r))$
+for $k>1$. A solution $(X,r)$ of the YBE is called a
+multipermutation solution of level $m$ if $m$ is the smallest
+nonnegative integer such that the solution $\Ret^{m}(X,r)$ has
+cardinality $1$; in this case we write $\mpl(X,r)=m$.
+
+Let $B$ be a left brace. By $B^{(m)}$ we mean the chain of ideals
+introduced by Rump in \cite{rump}, so $B^{(1)}=B$ and
+$B^{(n+1)}=B^{(n)}*B$. We say that $B$ is right nilpotent if there
+exists a positive integer $n$ such that $B^{(n)}=0$.
+
+Recall that if $B$ is a left brace, then the map $r\colon B\times
+B\longrightarrow B\times B$ defined by
+$$r(a,b)=(\mathcal{L}_a(b),\mathcal{L}^{-1}_{\mathcal{L}_a(b)}(a)),$$
+is a solution of the YBE. This is the solution of the YBE associated
+with the left brace $B$ (see \cite{cjo}).
+
+\begin{proposition}\label{five}
+Let $B$ be a nonzero left brace and let $(B,r)$ be its
+associated solution of the YBE. Then the multipermutation level of
+$(B,r)=m<\infty $ if and only if $B^{(m+1)}=0$ and $B^{(m)}\neq 0.$
+\end{proposition}
+\begin{proof} Note that
+$\soc(B)=\{b\in B\mid  b* a=0$ for every $a\in B\}$.
+
+First we shall prove the implication ($\mpl (B,r) = m) \Rightarrow
+(B^{(m+1)}=0$ and $B^{(m)}\neq 0$). We use induction on $m = \mpl
+(B,r)$. Suppose $\mpl (B,r) = 1$. Therefore,
+$\mathcal{L}_{a}(b)=a*b+b=b$ which is equivalent to   $a*b=0$ for
+all $a,b\in B$. It follows that $B*B=0$, so $B^{(2)}=0$.
+ But $B$ is a nonzero left brace, hence $B^{(1)}=B\neq 0$. This gives the base for induction.
+
+Suppose now that for all $k$, $1\leq k\leq m-1$, the condition
+$\mpl (B,r) = k \leq  m-1$ implies $B^{(k+1)} = 0$ and
+$B^{(k)}\neq 0$. Assume that  $\mpl(B,r) = m$, then the retraction
+$\Ret(B,r) = ([B],r_{[B]})$ has multipermutation level $m-1$.
+%\emph{***Moreover,  $[B]$ is a left brace isomorphic to the left
+%brace $B/\soc(B)$ and $\Ret(B,r)$ is isomorphic to the solution of
+%the YBE associated with $B/\soc(B)$ (\cite{rump}, \cite{cjo},
+%\cite{Tatyana}).***}
+
+Moreover, there is an isomorphism of left braces (or equivalently an
+isomorphism of braided groups) $B/\soc(B) \cong [B]$ and $\Ret(B,r)$
+is isomorphic to the solution of the YBE associated with $B/\soc(B)$
+(\cite{rump}, \cite{cjo}, \cite{Tatyana}). Hence by the inductive
+assumption $(B/\soc(B))^{(m)}= 0$ and $(B/\soc(B))^{(m-1)}\neq 0$.
+This implies
+ $B^{(m)}\subseteq \soc(B)$ and that $B^{(m-1)}$ is not a subset of $\soc(B)$. Therefore $B^{(m+1)}=0$ and $B^{(m)}\neq 0$.
+
+
+ Now we prove the inverse implication:
+($B^{(m+1)}=0$ and $B^{(m)}\neq 0$) $\Rightarrow$ ($\mpl (B,r) =
+m$).
+
+The base for the induction is clear. Assume that for all $k\leq m$
+the implication is true. Suppose that $B$ is a left brace such that
+$B^{(m+2)}=0$ and $B^{(m+1)}\neq
+ 0$.
+Recall  that $B^{(m+2)}=B^{(m+1)}*B$, therefore
+$(B/\soc(B))^{(m+1)}=0.$ On the other hand  $B^{(m+1)}\neq 0$ and
+$B^{(m+1)}=B^{(m)}*B$ imply $(B/\soc(B))^{(m)}\neq 0$. By the
+inductive assumption
+ $\mpl (\Ret(B,r))=m$, and therefore, $\mpl(B,r) = m+1$. This proves the
+proposition.
+\end{proof}
+
+
+
+\section{Embedding solutions and groups into finite braces and finite rings}
+
+
+%\emph{***In this section we will show that a finite solution of the
+%Yang-Baxter equation can  be embedded into a finite left brace.
+%Recall that it was shown in \cite{Tatyana} that there is a
+%one-to-one correspondence between left braces and braided groups
+%with involutive braiding operators (so called symmetric groups in
+%the sense of Takeuchi). Therefore Proposition \ref{three}
+% also shows that a finite solution of the Yang-Baxter equation can be
+%embedded (in a convenient way) into a braided group with an
+%involutive braiding operator.***}
+%
+
+In this section we will show that a finite solution of  the YBE
+can  be embedded (in an explicit way) into a finite left brace.
+Recall that it was shown in \cite{Tatyana} that there is a canonical
+one-to-one correspondence between left braces and symmetric groups
+(in the sense of Takeuchi \cite{Ta}). Therefore Proposition
+\ref{three}
+ also shows explicitly how to embed a finite solution of the YBE into a finite symmetric group.
+
+%\begin{proposition}\label{three}
+%Let $(X,r)$ be a finite solution of the YBE. Then there is a
+%finite left brace $(G, +, \cdot)$ such that $X\subseteq G$
+%generates the additive group of $G$ and $(X,r)$ is a subsolution
+%of the solution of the YBE associated with the left brace $G$,
+%that is, for every $a,b\in X$,  ${ }^ab=\mathcal{L}_a(b)=ab-a$ and
+%$a^{b}=\mathcal{L}^{-1}_{\mathcal{L}_b(a)}(b)$.
+%\end{proposition}
+
+
+\begin{proposition}\label{three}
+Let $(X,r)$ be a finite solution of the YBE. Then there is a finite
+left brace $(B, +, \cdot)$ such that $X\subseteq B$ generates the
+additive group of \textbf{$B$}. Moreover, $(X,r)$ is a subsolution
+of the solution $(B, \sigma)$ associated canonically with the left
+brace $B$, that is, $X$ is $\sigma$-invariant and $r =
+\sigma_{|X\times X}$ is the restriction of $\sigma$ on $X \times
+X$.\end{proposition}
+\begin{proof}
+Let $G=G(X,r)$ be the structure group of the finite solution
+$(X,r)$. We know that the additive group of the left brace $(G, +,
+.)$ associated with $G$ is free abelian with basis $X$ and ${
+}^ab=\mathcal{L}_a(b)=ab-a$ and
+$a^{b}=\mathcal{L}^{-1}_{\mathcal{L}_a(b)}(a)$, for all $a,b\in X$.
+Since $X$ is finite, $[G: \soc(G)]<\infty$, say $[G: \soc(G)]=n$.
+Consider the set $I=\{ ng\mid g\in G(X,r)\}$. We claim that $I$ is
+an ideal of the brace $G$, that is, $I$ is a normal subgroup of the
+multiplicative group $(G, .)$ which is invariant with respect to the
+left actions  by elements of $G$, \cite{cjo2}. It is clear that $I$
+is an additive subgroup of $(G, +)$ and $I\subseteq \soc(G(X,r))$.
+Then for $u,v \in I$ one has $uv = u+ {}^uv = u+v \in I,$
+$u^{-1}=-u\in I$, so $I$ is a subgroup of $G$. Let $g,h\in G$. Then
+\[h(ng)h^{-1}= ({}^h(ng))(h^{ng})(h^{-1})=  ({}^h(ng))(hh^{-1})= {}^h(ng)= n({}hg)\in I.\]
+Thus, $I$ is a normal subgroup of $(G, .)$ which is also invariant
+under the left action by elements of $G$. Therefore $I$ is an ideal
+of the left brace $(G, +, .)$.  It is not difficult to show that
+brace quotient $B= G/I$ is a finite left brace of order $n^{m}$,
+ where $m$ is the cardinality of $X$.
+ Observe
+also that for any two elements $x, y \in X, x\neq y$, one has
+$x-y\notin I$, since the additive group of $(G, +)$ is free abelian
+with a basis $X$. Now the restriction of the natural map
+$G\rightarrow G/I= B$ on the set $X$ is injective. The proposition
+has been proved. \end{proof}
+
+
+ At a conference in Porto Cesareo, B. Amberg mentioned
+that he and his collaborators  first  became interested in
+Jacobson radical rings because they gave them a way to construct
+examples of triply-factorizable groups. Later, they found more
+ways of constructing such examples. Triply factorized groups can
+be also used to define braces; see \cite[Theorem~18]{sysak2}.
+Interesting results on triply factorized  groups can be found in
+\cite{104, 101, 4, 6, sysak2, 102}. Triply factorized groups are
+for example useful for investigating the structure of normal
+subgroups of a group $G=AB$ which is a product of two subgroups.
+Several authors investigated connections between triply factorized
+groups and nearrings \cite{sysak2}, \cite{102}. It might be
+interesting to investigate the connections  between nearrings and
+braces. We would like to pose a related open question:
+
+\begin{question}
+ Investigate whether there is any relation between nearrings and
+solutions of the YBE?
+\end{question}
+
+The multiplicative group of a brace $A$ is also called an adjoint
+group of brace $A$. Observe that \cite[Corollary~3.6]{cjr}
+asserts that every finite solvable group is a subgroup of an
+adjoint group of some left brace. We also make the following simple
+remark which follows from  \cite[Lemma~8.1]{cjo2} and
+\cite[Corollary~3.8]{cjr}.
+\smallskip
+
+\noindent {\bf Remark.} (Related to \cite[Corollary~3.8]{cjr} and
+\cite[Lemma~8.1]{cjo}) Every finite nilpotent group is a subgroup of
+the adjoint group of a finite nilpotent ring.
+\smallskip
+
+  Let $p$ be a prime. By \cite[Lemma~8.1]{cjo}, every finite
+$p$-group is isomorphic to a subgroup of the adjoint group of a
+finite nilpotent ring $R$ such that $R$ has cardinality a power of
+$p$. Let $G$ be a finite nilpotent group. Let $p_1,\dots p_m$ be the
+the distinct prime divisors of the order of $G$. Let $P_i$ be the
+Sylow $p_i$-subgroup of $G$. Then $P_i$ is isomorphic to a subgroup
+of the adjoint group of a finite nilpotent ring $R_i$. Since $G\cong
+P_1\times \cdots \times P_m$, it is clear that $G$ is isomorphic to
+a subgroup of the adjoint group of the finite nilpotent ring
+$R_1\times \cdots\times R_m$.
+If $R$ is a ring, then the adjoint semigroup of $R$ is defined by
+$a\circ b=a+b+a\cdot b$.
+
+  By following the technique of the
+proof of \cite[Lemma~8.1]{cjo} we get the following result.
+
+\begin{proposition}
+Let $G$ be a group and let $R$ be a ring (with unit). Then $G$ is
+isomorphic to a subgroup of the adjoint semigroup of the group ring
+$R[G]$.
+\end{proposition}
+
+\begin{proof}
+Let $f\colon G\longrightarrow R[G]$ be the map defined by
+$f(g)=g-1$, for $g\in G$. Clearly $f$ is injective. Let $g,h\in G$.
+We have that
+$$f(gh)=gh-1=(g-1)(h-1)+g-1+h-1=(g-1)\circ (h-1)=f(g)\circ f(h).$$
+Therefore $f$ is an injective homomorphism of semigroups from $G$
+into the adjoint semigroup of $R[G]$.
+\end{proof}
+
+
+%We ask the following question.
+%\begin{question}
+% Is every finite group a subgroup of the adjoint semigroup of some finite (associative) ring?
+%\end{question}
+
+\section*{Acknowledgments}
+The research of the first author was partially supported by grants
+DGI MICIIN  MTM2011-28992-C02-01 and MINECO MTM2014-53644-P. The
+research of the second author was partially supported by Grant I
+02/18 "Computational and Combinatorial Methods in Algebra and
+Applications"
+ of the Bulgarian National Science Fund,  by The Abdus Salam
+International Centre for Theoretical Physics (ICTP), Trieste,  and
+by Max-Planck Institute for Mathematics, Bonn.
+ The research of the third author was supported with ERC grant 320974.
+
+
+\begin{thebibliography}{99}
+
+\bibitem{104} B. Amberg, {\em Triply factorized groups} in the Groups St Andrews 1989, Vol 1,  London Mathematical Society Lecture Note Series, Cambridge University Press 1991, 1--13.
+\bibitem{101} B.Amberg, S. Franciosi, F. de Giovanni, {\em Triply factorized groups}, Communications in Algebra
+Volume 18, Issue 3, 1990, 789--809.
+
+\bibitem{4} B. Amberg, L. Kazarin, {\em Nilpotent p-algebras and factorized p-groups}, Proceedings of "Groups St. Andrews 2005" ,
+ London Math. Society Lecture Note Series 339, Vol 1, Cambridge Univ. Press (2007), 130--147.
+
+
+\bibitem{6} B. Amberg, Ya.P. Sysak, {\em Radical rings and products of groups}, Groups St Andrews 1997 in Bath:
+ Edited by  C. M. Campbell, 1--19.
+
+
+\bibitem{cjo2} Ferran Ced{\' o}, Eric Jespers, Jan Okni{\' n}ski, {\em Braces and the Yang-Baxter Equation},
+ArXiv:1205.3587v1 [math.RA].
+
+
+\bibitem{cjo} Ferran Ced{\' o}, Eric Jespers, Jan Okni{\' n}ski, {\em Braces and the Yang-Baxter Equation}, Communications in Mathematical Physics
+April 2014, Volume 327, Issue 1, pp 101--116.
+
+\bibitem{cjr}  Ferran Ced{\' o}, Eric Jespers, {\' A}ngel de R{\' i}o, {\em Involutive Yang-Baxter groups},  Trans. Amer. Math. Soc. 362 (2010), 2541--2558.
+
+\bibitem{ess} P. Etingof, T. Schedler and A. Soloviev,
+  Set-theoretical solutions to the quantum
+  Yang-Baxter equation, Duke Math. J. 100 (1999), 169--209.
+
+
+\bibitem{Tatyana} Tatiana Gateva-Ivanova, {\em Set-theoretic solutions of the Yang-Baxter equation, Braces, and Symmetric groups},  ArXiv:1507.02602 [math.QA].
+
+%\bibitem{GIC12} T. Gateva-Ivanova and P. J.  Cameron, {\em Multipermutation solutions of the Yang-Baxter
+%equation}, Comm. Math. Phys. 309 (2012), 583--621.
+
+\bibitem{GIVdB} T. Gateva-Ivanova and M. Van den Bergh,
+  Semigroups of $I$-type, J. Algebra 206 (1998), 97--112.
+
+\bibitem{102} Peter Hubert, {\em  Nearrings and a Construction
+of Triply Factorized Groups}, doctoral dissertation, Johannes
+Gutenberg-Universitat in Mainz, 2005.
+
+
+\bibitem{jo} Eric Jespers and
+Jan Okninski {\em Binomial semigroups}, J. Algebra 202 (1998),
+250--275.
+
+\bibitem{passman} D.S. Passman, {\em The Algebraic
+Structure of Group Rings},   Wiley, New York, 1977.
+
+
+\bibitem{robinson} D. J. S. Robinson, {\em A Course in the Theory of
+Groups}, Springer-Verlag GTM Vol. 80 (1982).
+
+\bibitem{rump} Wolfgang Rump, {\em Braces, radical rings, and the quantum Yang-Baxter equation},  Journal of Algebra
+Volume 307, Issue 1, 1 January 2007, Pages 153--170.
+
+%\bibitem{mob} W. Rump, {\em Modules over braces}, Algebra Discrete Math., 2006, Issue $2$, 127-137.
+
+%\bibitem{smok} Agata Smoktunowicz, {\em  On Engel groups, nilpotent groups, rings, braces and the Yang-Baxter
+%  equation}, arXiv:1509.00420 [math.RA].
+
+\bibitem{sysak2} Ya. P. Sysak, {\em Products of groups and local nearrings}, Note. Mat. 28 (2008), suppl. n. 2. 177-214.
+
+
+codex
+The full LaTeX source confirms the paper is structural, not computational: it proves brace/Yang–Baxter equivalences and embeddings, but gives no search-hardness theorem or hard parameter regime. I’m checking whether any of its constructions nevertheless yields a defensible witness family; the key danger is that “construct a solution” has immediate closed-form witnesses (for example the trivial flip solution), which would fail H.
+web search: 
+web search: site:arxiv.org/abs/1601.07131 "On the Yang-Baxter equation and left nilpotent left braces" ...
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1601.07131/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..6242de388dfa250eda7eadfc65d94370a29568dd
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,54 @@
++# Rejected: arXiv:1601.07131
++
++Paper: Ferran Cedó, Tatiana Gateva-Ivanova, and Agata Smoktunowicz,
++[*On the Yang-Baxter equation and left nilpotent left braces*](https://arxiv.org/abs/1601.07131).
++
++## Verdict
++
++This paper does not support a problem family satisfying the required hardness
++gate **H**, so no generator module is shipped. The full LaTeX source, not only
++the abstract, was reviewed.
++
++## What the paper actually establishes
++
++- Section 1 defines a left brace, its operation `a*b = a·b-a-b`, the socle,
++  and a non-degenerate involutive set-theoretic Yang--Baxter solution.
++- Section 2 proves structural restrictions. In particular, Theorem 2 says that
++  a finite solution whose structure group is Engel is the trivial solution.
++  This is not a computational-hardness result or a hard parameter regime.
++- Section 3, Proposition 5, identifies the multipermutation level of the
++  solution associated with a nonzero brace with termination of the radical
++  chain `B^(n+1) = B^(n)*B`. For an explicitly tabulated finite brace, both the
++  associated solution and this chain are obtained by direct finite-table
++  computation.
++- Section 4, Proposition 6, proves that every finite solution embeds in a finite
++  left brace. Its proof is an explicit quotient construction from the structure
++  group; it is an existence/embedding theorem, not an intractability theorem.
++
++The paper contains no reduction, complexity classification, FPT boundary, or
++parameter regime in which finding any of these algebraic objects is shown (or
++argued) to be computationally hard.
++
++## Why the apparent generator ideas fail
++
++| Candidate task | Gate failure |
++|---|---|
++| Given a set, output a Yang--Baxter solution | **H:** the flip `r(x,y)=(y,x)` is a closed-form non-degenerate involutive solution for every size. |
++| Given a finite brace, output its associated solution | **H:** Section 3 gives the formula `r(a,b)=(L_a(b), L^(-1)_(L_a(b))(a))`; this is direct table lookup/inversion. |
++| Given operation tables, certify that they form a brace or that `r` satisfies YBE | Not a witness-search problem: substitution already decides the supplied object. Asking for the full table would again admit trivial closed-form braces/solutions unless extra constraints external to the paper were imposed. |
++| Compute multipermutation level/right nilpotence | **H:** on finite tables, retraction/partition refinement or repeated set closure computes it directly; Proposition 5 is a characterization, not a hard search problem. |
++| Embed a finite solution into a finite brace | **H/G/V not established together:** Proposition 6 supplies a general construction, while its brace can have order `n^m` (notation of its proof). The paper supplies neither a polynomially bounded witness regime nor hardness of finding an embedding. |
++| Complete a partially hidden operation or Yang--Baxter table | **H unsupported:** this would be a new constraint-satisfaction problem and planted distribution not studied in the paper. Planting a completion would give G and substitution would give V, but the required claim that no polynomial-time/closed-form attack exists would be speculation. |
++| Recover an isomorphism after relabelling a brace | **H unsupported and not the paper's problem:** no isomorphism-complexity result appears in the paper; using this would also make the required canonicalization depend on the unproved hard problem. |
++
++## Gate status
++
++| Gate | Status |
++|---|---|
++| G (inverse-generatable) | Possible for several artificial completion/isomorphism variants, but not sufficient. |
++| H (hard) | **Failed.** Natural tasks are explicitly constructible or direct finite-table computations; modified tasks have no hardness support in the paper. |
++| V (cheap exact verification) | Possible by substitution for tables, but not sufficient. |
++
++Per the task instruction to stop when any of G/H/V fails, `gen_1601_07131.py`,
++`selftest_report.json`, and oracle-loop artifacts were not fabricated, and the
++hardening harness was not run.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..6242de388dfa250eda7eadfc65d94370a29568dd
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,54 @@
++# Rejected: arXiv:1601.07131
++
++Paper: Ferran Cedó, Tatiana Gateva-Ivanova, and Agata Smoktunowicz,
++[*On the Yang-Baxter equation and left nilpotent left braces*](https://arxiv.org/abs/1601.07131).
++
++## Verdict
++
++This paper does not support a problem family satisfying the required hardness
++gate **H**, so no generator module is shipped. The full LaTeX source, not only
++the abstract, was reviewed.
++
++## What the paper actually establishes
++
++- Section 1 defines a left brace, its operation `a*b = a·b-a-b`, the socle,
++  and a non-degenerate involutive set-theoretic Yang--Baxter solution.
++- Section 2 proves structural restrictions. In particular, Theorem 2 says that
++  a finite solution whose structure group is Engel is the trivial solution.
++  This is not a computational-hardness result or a hard parameter regime.
++- Section 3, Proposition 5, identifies the multipermutation level of the
++  solution associated with a nonzero brace with termination of the radical
++  chain `B^(n+1) = B^(n)*B`. For an explicitly tabulated finite brace, both the
++  associated solution and this chain are obtained by direct finite-table
++  computation.
++- Section 4, Proposition 6, proves that every finite solution embeds in a finite
++  left brace. Its proof is an explicit quotient construction from the structure
++  group; it is an existence/embedding theorem, not an intractability theorem.
++
++The paper contains no reduction, complexity classification, FPT boundary, or
++parameter regime in which finding any of these algebraic objects is shown (or
++argued) to be computationally hard.
++
++## Why the apparent generator ideas fail
++
++| Candidate task | Gate failure |
++|---|---|
++| Given a set, output a Yang--Baxter solution | **H:** the flip `r(x,y)=(y,x)` is a closed-form non-degenerate involutive solution for every size. |
++| Given a finite brace, output its associated solution | **H:** Section 3 gives the formula `r(a,b)=(L_a(b), L^(-1)_(L_a(b))(a))`; this is direct table lookup/inversion. |
++| Given operation tables, certify that they form a brace or that `r` satisfies YBE | Not a witness-search problem: substitution already decides the supplied object. Asking for the full table would again admit trivial closed-form braces/solutions unless extra constraints external to the paper were imposed. |
++| Compute multipermutation level/right nilpotence | **H:** on finite tables, retraction/partition refinement or repeated set closure computes it directly; Proposition 5 is a characterization, not a hard search problem. |
++| Embed a finite solution into a finite brace | **H/G/V not established together:** Proposition 6 supplies a general construction, while its brace can have order `n^m` (notation of its proof). The paper supplies neither a polynomially bounded witness regime nor hardness of finding an embedding. |
++| Complete a partially hidden operation or Yang--Baxter table | **H unsupported:** this would be a new constraint-satisfaction problem and planted distribution not studied in the paper. Planting a completion would give G and substitution would give V, but the required claim that no polynomial-time/closed-form attack exists would be speculation. |
++| Recover an isomorphism after relabelling a brace | **H unsupported and not the paper's problem:** no isomorphism-complexity result appears in the paper; using this would also make the required canonicalization depend on the unproved hard problem. |
++
++## Gate status
++
++| Gate | Status |
++|---|---|
++| G (inverse-generatable) | Possible for several artificial completion/isomorphism variants, but not sufficient. |
++| H (hard) | **Failed.** Natural tasks are explicitly constructible or direct finite-table computations; modified tasks have no hardness support in the paper. |
++| V (cheap exact verification) | Possible by substitution for tables, but not sufficient. |
++
++Per the task instruction to stop when any of G/H/V fails, `gen_1601_07131.py`,
++`selftest_report.json`, and oracle-loop artifacts were not fabricated, and the
++hardening harness was not run.
+
+exec
+/bin/bash -lc "ls -la && sed -n '1,260p' REJECTED.md" in /home/gson/gvrepo/results/1601.07131
+ succeeded in 0ms:
+total 104
+drwxrwxr-x  2 gson gson  4096 Sep  1 18:36 .
+drwxrwxr-x 24 gson gson  4096 Sep  1 18:34 ..
+-rw-rw-r--  1 gson gson   161 Sep  1 18:34 .meta.json
+-rw-rw-r--  1 gson gson   529 Sep  1 18:34 .runner.sh
+-rw-rw-r--  1 gson gson 18800 Sep  1 18:34 .task.md
+-rw-rw-r--  1 gson gson  3999 Sep  1 18:36 REJECTED.md
+-rw-rw-r--  1 gson gson 65354 Sep  1 18:36 codex_run.log
+# Rejected: arXiv:1601.07131
+
+Paper: Ferran Cedó, Tatiana Gateva-Ivanova, and Agata Smoktunowicz,
+[*On the Yang-Baxter equation and left nilpotent left braces*](https://arxiv.org/abs/1601.07131).
+
+## Verdict
+
+This paper does not support a problem family satisfying the required hardness
+gate **H**, so no generator module is shipped. The full LaTeX source, not only
+the abstract, was reviewed.
+
+## What the paper actually establishes
+
+- Section 1 defines a left brace, its operation `a*b = a·b-a-b`, the socle,
+  and a non-degenerate involutive set-theoretic Yang--Baxter solution.
+- Section 2 proves structural restrictions. In particular, Theorem 2 says that
+  a finite solution whose structure group is Engel is the trivial solution.
+  This is not a computational-hardness result or a hard parameter regime.
+- Section 3, Proposition 5, identifies the multipermutation level of the
+  solution associated with a nonzero brace with termination of the radical
+  chain `B^(n+1) = B^(n)*B`. For an explicitly tabulated finite brace, both the
+  associated solution and this chain are obtained by direct finite-table
+  computation.
+- Section 4, Proposition 6, proves that every finite solution embeds in a finite
+  left brace. Its proof is an explicit quotient construction from the structure
+  group; it is an existence/embedding theorem, not an intractability theorem.
+
+The paper contains no reduction, complexity classification, FPT boundary, or
+parameter regime in which finding any of these algebraic objects is shown (or
+argued) to be computationally hard.
+
+## Why the apparent generator ideas fail
+
+| Candidate task | Gate failure |
+|---|---|
+| Given a set, output a Yang--Baxter solution | **H:** the flip `r(x,y)=(y,x)` is a closed-form non-degenerate involutive solution for every size. |
+| Given a finite brace, output its associated solution | **H:** Section 3 gives the formula `r(a,b)=(L_a(b), L^(-1)_(L_a(b))(a))`; this is direct table lookup/inversion. |
+| Given operation tables, certify that they form a brace or that `r` satisfies YBE | Not a witness-search problem: substitution already decides the supplied object. Asking for the full table would again admit trivial closed-form braces/solutions unless extra constraints external to the paper were imposed. |
+| Compute multipermutation level/right nilpotence | **H:** on finite tables, retraction/partition refinement or repeated set closure computes it directly; Proposition 5 is a characterization, not a hard search problem. |
+| Embed a finite solution into a finite brace | **H/G/V not established together:** Proposition 6 supplies a general construction, while its brace can have order `n^m` (notation of its proof). The paper supplies neither a polynomially bounded witness regime nor hardness of finding an embedding. |
+| Complete a partially hidden operation or Yang--Baxter table | **H unsupported:** this would be a new constraint-satisfaction problem and planted distribution not studied in the paper. Planting a completion would give G and substitution would give V, but the required claim that no polynomial-time/closed-form attack exists would be speculation. |
+| Recover an isomorphism after relabelling a brace | **H unsupported and not the paper's problem:** no isomorphism-complexity result appears in the paper; using this would also make the required canonicalization depend on the unproved hard problem. |
+
+## Gate status
+
+| Gate | Status |
+|---|---|
+| G (inverse-generatable) | Possible for several artificial completion/isomorphism variants, but not sufficient. |
+| H (hard) | **Failed.** Natural tasks are explicitly constructible or direct finite-table computations; modified tasks have no hardness support in the paper. |
+| V (cheap exact verification) | Possible by substitution for tables, but not sufficient. |
+
+Per the task instruction to stop when any of G/H/V fails, `gen_1601_07131.py`,
+`selftest_report.json`, and oracle-loop artifacts were not fabricated, and the
+hardening harness was not run.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..6242de388dfa250eda7eadfc65d94370a29568dd
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,54 @@
++# Rejected: arXiv:1601.07131
++
++Paper: Ferran Cedó, Tatiana Gateva-Ivanova, and Agata Smoktunowicz,
++[*On the Yang-Baxter equation and left nilpotent left braces*](https://arxiv.org/abs/1601.07131).
++
++## Verdict
++
++This paper does not support a problem family satisfying the required hardness
++gate **H**, so no generator module is shipped. The full LaTeX source, not only
++the abstract, was reviewed.
++
++## What the paper actually establishes
++
++- Section 1 defines a left brace, its operation `a*b = a·b-a-b`, the socle,
++  and a non-degenerate involutive set-theoretic Yang--Baxter solution.
++- Section 2 proves structural restrictions. In particular, Theorem 2 says that
++  a finite solution whose structure group is Engel is the trivial solution.
++  This is not a computational-hardness result or a hard parameter regime.
++- Section 3, Proposition 5, identifies the multipermutation level of the
++  solution associated with a nonzero brace with termination of the radical
++  chain `B^(n+1) = B^(n)*B`. For an explicitly tabulated finite brace, both the
++  associated solution and this chain are obtained by direct finite-table
++  computation.
++- Section 4, Proposition 6, proves that every finite solution embeds in a finite
++  left brace. Its proof is an explicit quotient construction from the structure
++  group; it is an existence/embedding theorem, not an intractability theorem.
++
++The paper contains no reduction, complexity classification, FPT boundary, or
++parameter regime in which finding any of these algebraic objects is shown (or
++argued) to be computationally hard.
++
++## Why the apparent generator ideas fail
++
++| Candidate task | Gate failure |
++|---|---|
++| Given a set, output a Yang--Baxter solution | **H:** the flip `r(x,y)=(y,x)` is a closed-form non-degenerate involutive solution for every size. |
++| Given a finite brace, output its associated solution | **H:** Section 3 gives the formula `r(a,b)=(L_a(b), L^(-1)_(L_a(b))(a))`; this is direct table lookup/inversion. |
++| Given operation tables, certify that they form a brace or that `r` satisfies YBE | Not a witness-search problem: substitution already decides the supplied object. Asking for the full table would again admit trivial closed-form braces/solutions unless extra constraints external to the paper were imposed. |
++| Compute multipermutation level/right nilpotence | **H:** on finite tables, retraction/partition refinement or repeated set closure computes it directly; Proposition 5 is a characterization, not a hard search problem. |
++| Embed a finite solution into a finite brace | **H/G/V not established together:** Proposition 6 supplies a general construction, while its brace can have order `n^m` (notation of its proof). The paper supplies neither a polynomially bounded witness regime nor hardness of finding an embedding. |
++| Complete a partially hidden operation or Yang--Baxter table | **H unsupported:** this would be a new constraint-satisfaction problem and planted distribution not studied in the paper. Planting a completion would give G and substitution would give V, but the required claim that no polynomial-time/closed-form attack exists would be speculation. |
++| Recover an isomorphism after relabelling a brace | **H unsupported and not the paper's problem:** no isomorphism-complexity result appears in the paper; using this would also make the required canonicalization depend on the unproved hard problem. |
++
++## Gate status
++
++| Gate | Status |
++|---|---|
++| G (inverse-generatable) | Possible for several artificial completion/isomorphism variants, but not sufficient. |
++| H (hard) | **Failed.** Natural tasks are explicitly constructible or direct finite-table computations; modified tasks have no hardness support in the paper. |
++| V (cheap exact verification) | Possible by substitution for tables, but not sufficient. |
++
++Per the task instruction to stop when any of G/H/V fails, `gen_1601_07131.py`,
++`selftest_report.json`, and oracle-loop artifacts were not fabricated, and the
++hardening harness was not run.
+
+The full paper has no computational-hardness result or defensible hard search regime. Natural witness tasks are closed-form or direct table computations, so gate H fails and the task requires stopping before implementation/hardening.
+  ✓ Fetch and read the full paper, including exact definitions and hardness/easy results
+  ✓ Select or reject a G/H/V family based on the paper
+  ✓ Implement the generator module and mandatory self-tests
+  ✓ Run self-tests, hardening harness, and address its verdict
+  ✓ Write README and final machine-readable reports
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..6242de388dfa250eda7eadfc65d94370a29568dd
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,54 @@
++# Rejected: arXiv:1601.07131
++
++Paper: Ferran Cedó, Tatiana Gateva-Ivanova, and Agata Smoktunowicz,
++[*On the Yang-Baxter equation and left nilpotent left braces*](https://arxiv.org/abs/1601.07131).
++
++## Verdict
++
++This paper does not support a problem family satisfying the required hardness
++gate **H**, so no generator module is shipped. The full LaTeX source, not only
++the abstract, was reviewed.
++
++## What the paper actually establishes
++
++- Section 1 defines a left brace, its operation `a*b = a·b-a-b`, the socle,
++  and a non-degenerate involutive set-theoretic Yang--Baxter solution.
++- Section 2 proves structural restrictions. In particular, Theorem 2 says that
++  a finite solution whose structure group is Engel is the trivial solution.
++  This is not a computational-hardness result or a hard parameter regime.
++- Section 3, Proposition 5, identifies the multipermutation level of the
++  solution associated with a nonzero brace with termination of the radical
++  chain `B^(n+1) = B^(n)*B`. For an explicitly tabulated finite brace, both the
++  associated solution and this chain are obtained by direct finite-table
++  computation.
++- Section 4, Proposition 6, proves that every finite solution embeds in a finite
++  left brace. Its proof is an explicit quotient construction from the structure
++  group; it is an existence/embedding theorem, not an intractability theorem.
++
++The paper contains no reduction, complexity classification, FPT boundary, or
++parameter regime in which finding any of these algebraic objects is shown (or
++argued) to be computationally hard.
++
++## Why the apparent generator ideas fail
++
++| Candidate task | Gate failure |
++|---|---|
++| Given a set, output a Yang--Baxter solution | **H:** the flip `r(x,y)=(y,x)` is a closed-form non-degenerate involutive solution for every size. |
++| Given a finite brace, output its associated solution | **H:** Section 3 gives the formula `r(a,b)=(L_a(b), L^(-1)_(L_a(b))(a))`; this is direct table lookup/inversion. |
++| Given operation tables, certify that they form a brace or that `r` satisfies YBE | Not a witness-search problem: substitution already decides the supplied object. Asking for the full table would again admit trivial closed-form braces/solutions unless extra constraints external to the paper were imposed. |
++| Compute multipermutation level/right nilpotence | **H:** on finite tables, retraction/partition refinement or repeated set closure computes it directly; Proposition 5 is a characterization, not a hard search problem. |
++| Embed a finite solution into a finite brace | **H/G/V not established together:** Proposition 6 supplies a general construction, while its brace can have order `n^m` (notation of its proof). The paper supplies neither a polynomially bounded witness regime nor hardness of finding an embedding. |
++| Complete a partially hidden operation or Yang--Baxter table | **H unsupported:** this would be a new constraint-satisfaction problem and planted distribution not studied in the paper. Planting a completion would give G and substitution would give V, but the required claim that no polynomial-time/closed-form attack exists would be speculation. |
++| Recover an isomorphism after relabelling a brace | **H unsupported and not the paper's problem:** no isomorphism-complexity result appears in the paper; using this would also make the required canonicalization depend on the unproved hard problem. |
++
++## Gate status
++
++| Gate | Status |
++|---|---|
++| G (inverse-generatable) | Possible for several artificial completion/isomorphism variants, but not sufficient. |
++| H (hard) | **Failed.** Natural tasks are explicitly constructible or direct finite-table computations; modified tasks have no hardness support in the paper. |
++| V (cheap exact verification) | Possible by substitution for tables, but not sufficient. |
++
++Per the task instruction to stop when any of G/H/V fails, `gen_1601_07131.py`,
++`selftest_report.json`, and oracle-loop artifacts were not fabricated, and the
++hardening harness was not run.
+
+codex
+Rejected after reading the full [paper](https://arxiv.org/abs/1601.07131): it provides no computational-hardness result or defensible hard parameter regime. Natural witness tasks are either closed-form or direct finite-table computations, so gate **H** fails.
+
+The detailed assessment is in [REJECTED.md](/home/gson/gvrepo/results/1601.07131/REJECTED.md). Per the instructions, I stopped without fabricating a generator, test report, or hardening transcript.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..6242de388dfa250eda7eadfc65d94370a29568dd
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,54 @@
++# Rejected: arXiv:1601.07131
++
++Paper: Ferran Cedó, Tatiana Gateva-Ivanova, and Agata Smoktunowicz,
++[*On the Yang-Baxter equation and left nilpotent left braces*](https://arxiv.org/abs/1601.07131).
++
++## Verdict
++
++This paper does not support a problem family satisfying the required hardness
++gate **H**, so no generator module is shipped. The full LaTeX source, not only
++the abstract, was reviewed.
++
++## What the paper actually establishes
++
++- Section 1 defines a left brace, its operation `a*b = a·b-a-b`, the socle,
++  and a non-degenerate involutive set-theoretic Yang--Baxter solution.
++- Section 2 proves structural restrictions. In particular, Theorem 2 says that
++  a finite solution whose structure group is Engel is the trivial solution.
++  This is not a computational-hardness result or a hard parameter regime.
++- Section 3, Proposition 5, identifies the multipermutation level of the
++  solution associated with a nonzero brace with termination of the radical
++  chain `B^(n+1) = B^(n)*B`. For an explicitly tabulated finite brace, both the
++  associated solution and this chain are obtained by direct finite-table
++  computation.
++- Section 4, Proposition 6, proves that every finite solution embeds in a finite
++  left brace. Its proof is an explicit quotient construction from the structure
++  group; it is an existence/embedding theorem, not an intractability theorem.
++
++The paper contains no reduction, complexity classification, FPT boundary, or
++parameter regime in which finding any of these algebraic objects is shown (or
++argued) to be computationally hard.
++
++## Why the apparent generator ideas fail
++
++| Candidate task | Gate failure |
++|---|---|
++| Given a set, output a Yang--Baxter solution | **H:** the flip `r(x,y)=(y,x)` is a closed-form non-degenerate involutive solution for every size. |
++| Given a finite brace, output its associated solution | **H:** Section 3 gives the formula `r(a,b)=(L_a(b), L^(-1)_(L_a(b))(a))`; this is direct table lookup/inversion. |
++| Given operation tables, certify that they form a brace or that `r` satisfies YBE | Not a witness-search problem: substitution already decides the supplied object. Asking for the full table would again admit trivial closed-form braces/solutions unless extra constraints external to the paper were imposed. |
++| Compute multipermutation level/right nilpotence | **H:** on finite tables, retraction/partition refinement or repeated set closure computes it directly; Proposition 5 is a characterization, not a hard search problem. |
++| Embed a finite solution into a finite brace | **H/G/V not established together:** Proposition 6 supplies a general construction, while its brace can have order `n^m` (notation of its proof). The paper supplies neither a polynomially bounded witness regime nor hardness of finding an embedding. |
++| Complete a partially hidden operation or Yang--Baxter table | **H unsupported:** this would be a new constraint-satisfaction problem and planted distribution not studied in the paper. Planting a completion would give G and substitution would give V, but the required claim that no polynomial-time/closed-form attack exists would be speculation. |
++| Recover an isomorphism after relabelling a brace | **H unsupported and not the paper's problem:** no isomorphism-complexity result appears in the paper; using this would also make the required canonicalization depend on the unproved hard problem. |
++
++## Gate status
++
++| Gate | Status |
++|---|---|
++| G (inverse-generatable) | Possible for several artificial completion/isomorphism variants, but not sufficient. |
++| H (hard) | **Failed.** Natural tasks are explicitly constructible or direct finite-table computations; modified tasks have no hardness support in the paper. |
++| V (cheap exact verification) | Possible by substitution for tables, but not sufficient. |
++
++Per the task instruction to stop when any of G/H/V fails, `gen_1601_07131.py`,
++`selftest_report.json`, and oracle-loop artifacts were not fabricated, and the
++hardening harness was not run.
+
+tokens used
+34,502
+Rejected after reading the full [paper](https://arxiv.org/abs/1601.07131): it provides no computational-hardness result or defensible hard parameter regime. Natural witness tasks are either closed-form or direct finite-table computations, so gate **H** fails.
+
+The detailed assessment is in [REJECTED.md](/home/gson/gvrepo/results/1601.07131/REJECTED.md). Per the instructions, I stopped without fabricating a generator, test report, or hardening transcript.
