@@ -1,0 +1,1469 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR] (network access enabled)
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a05ae2-7a45-77a2-aac1-6c6bee341bd7
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know its answer*, because you
+  sampled the answer first and constructed the problem around it.
+- **H — hard.** No known polynomial-time or closed-form method, and the answer space
+  is far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+The answer must be a **witness** — a structured object handed to a checker. Never an
+absence ("no solution exists"), never an optimum whose optimality is the claim,
+never a real number or an asymptotic rate.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the three things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, standard library only, deterministic given `(n, seed)`. No file IO, no
+network, no printing at import. Use `random.Random(seed)`, never global `random`.
+
+```python
+DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
+                            # each maps to kwargs for make_instance
+
+def make_instance(n, seed=0, **params) -> dict
+    """Inverse generation: sample the answer FIRST, then build the problem around
+    it. Returns a dict containing key "answer" (the planted witness) plus all data
+    the solver needs. `n` is the size parameter; larger n must mean harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT."""
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of the naive candidate space, or None if not countable."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship.**
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G6 adversary panel** | Write ≥3 cheap attacks and confirm each FAILS across ≥8 seeds. See below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+5. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard.** The specific theorem and parameter regime you are inside, and
+  — just as important — the easy regimes you had to avoid and the results that
+  identify them. Cite sections by number. This is the part only you know.
+- **A worked example.** A rendered instance small enough to read in full (use your
+  smallest preset), its answer, `verify` returning True on it, and `verify`
+  returning False with its reason on a corrupted variant.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2604.26989
+url: https://arxiv.org/abs/2604.26989
+title: Subgroups of Finite Fields As Cap Sets
+categories: math.CO
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: additive combinatorial structures
+  method: structural scan
+  candidate generator: construct finite field subgroup known to avoid three-term progressions
+  candidate verifier: scan candidate subset for forbidden three-term additive configurations
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+codex
+I’m using the PDF skill because the paper’s exact definitions, theorem regime, and easy cases determine whether this family is admissible. I’ll read the full paper first, then either reject it with a precise reason or implement and verify the generator before running the prescribed hardening harness.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/jang-wongi/.codex/plugins/cache/openai-primary-runtime/pdf/26.826.12353/skills/pdf/SKILL.md" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989
+ succeeded in 0ms:
+---
+name: "pdf"
+description: "Read, create, inspect, render, and verify PDF files where visual layout matters, including fillable AcroForms. Use Poppler rendering plus Python tools such as reportlab, pdfplumber, and pypdf for generation and extraction."
+---
+
+# PDF Skill
+
+## When To Use
+
+- Read or review PDF content where layout and visuals matter.
+- Create PDFs programmatically with reliable formatting.
+- Fill and validate interactive PDF forms.
+- Validate final rendering before delivery.
+
+## Tools + Contract Requirements
+
+Immediately before the first create/edit authoring command, run `mark_artifact_operation_started.mjs` successfully exactly once using the command below. Do not run it for read-only work. For edits, replace `create` with `edit`; adjust the expected count and output format to match the requested outputs.
+
+```bash
+node container_tools/mark_artifact_operation_started.mjs --operation-kind create --expected-output-count 1 --output-format pdf
+```
+
+## Workflow
+
+1. Prefer visual review: render PDF pages to PNGs and inspect them.
+   - Use `pdftoppm` from the bundled runtime or system Poppler when available.
+   - If unavailable, install Poppler or ask the user to review the output locally.
+2. Use `reportlab` to generate PDFs when creating new documents.
+3. Use `pdfplumber` or `pypdf` for text extraction and quick checks; do not rely on text extraction for layout fidelity.
+4. After each meaningful update, re-render pages and verify alignment, spacing, and legibility.
+
+## Fill And Validate AcroForms
+
+Visual review alone is not a correctness check for a fillable PDF. A page `/Widget` annotation can render a value from its appearance stream while the canonical `/AcroForm/Fields` tree is missing or contains a stale value.
+
+1. Keep the result interactive by default; set `flatten=True` only when the user explicitly requests a completed, static form. Preserve the source PDF, and do not flatten a signed PDF without an explicit workflow decision.
+2. Inspect both representations before filling: enumerate fields from `reader.get_fields()` and `/Widget` annotations from every page's `/Annots`, following `/Parent` and `/Kids`. If a widget and a canonical field have the same name but are distinct objects with no `/Parent` relationship, do not call `reattach_fields()` blindly: it can create a second top-level field with the same name. Report the ambiguity or produce a static result.
+3. Recover genuinely orphaned widgets, fill all pages, and write the result with `pypdf`:
+
+```python
+from pypdf import PdfReader, PdfWriter
+from pypdf.generic import NameObject
+
+reader = PdfReader(input_pdf)
+writer = PdfWriter()
+writer.clone_document_from_reader(reader)
+
+# Restores widgets that are missing from /AcroForm/Fields.
+writer.reattach_fields()
+fields = writer.get_fields() or {}
+missing = set(expected_values) - set(fields)
+if missing:
+    raise ValueError(f"Form fields not found after repair: {sorted(missing)}")
+
+values_to_write = dict(expected_values)
+if flatten:
+    # Paint every existing value before removing every widget.
+    values_to_write = {
+        name: field.get("/V", "/Off" if field.get("/FT") == "/Btn" else "")
+        for name, field in fields.items()
+    }
+    values_to_write.update(expected_values)
+
+writer.update_page_form_field_values(
+    None, values_to_write, auto_regenerate=False, flatten=flatten
+)
+
+if flatten:
+    # pypdf's flatten=True paints appearances but does not remove widgets.
+    writer.remove_annotations(subtypes="/Widget")
+    writer.root_object.pop(NameObject("/AcroForm"), None)
+
+with open(output_pdf, "wb") as stream:
+    writer.write(stream)
+```
+
+4. Reopen the written PDF before delivery. For an interactive result, require every expected field to be present in `get_fields()` with the expected `/V`, enumerate page widgets again, and confirm their effective `/V` (the widget value or inherited `/Parent` value) agrees. Confirm each updated widget has a non-empty `/AP` `/N` appearance and render the final pages to catch stale or clipped appearances. Do not rely on `/NeedAppearances` or a successful PNG render as proof that logical field data was updated.
+5. For a flattened result, require zero `/Widget` annotations and no remaining `/AcroForm` field tree after reopening, then render the final pages. Keep an editable copy when the user may need to revise the form.
+
+## Temp And Output Conventions
+
+- Use `tmp/pdfs/` for intermediate files; delete them when done.
+- Write final artifacts under `output/pdf/` when working in this repo.
+- Keep filenames stable and descriptive.
+
+## Dependencies
+
+Prefer the Codex bundled workspace/runtime dependencies when available. The primary runtime is expected to include:
+
+- Python packages: `reportlab`, `pdfplumber`, `pypdf`
+- Rendering tools: `pdftoppm` and `pdfinfo` from Poppler
+
+If a dependency is missing, install only what is needed.
+
+Python packages:
+
+```bash
+uv pip install reportlab pdfplumber pypdf
+```
+
+If `uv` is unavailable:
+
+```bash
+python3 -m pip install reportlab pdfplumber pypdf
+```
+
+System tools for rendering:
+
+```bash
+# macOS (Homebrew)
+brew install poppler
+
+# Ubuntu/Debian
+sudo apt-get install -y poppler-utils
+```
+
+If installation is not possible in this environment, tell the user which dependency is missing and how to install it locally.
+
+## Environment
+
+No required environment variables.
+
+## Rendering Command
+
+```bash
+pdftoppm -png "$INPUT_PDF" "$OUTPUT_PREFIX"
+```
+
+## Quality Expectations
+
+- Maintain polished visual design: consistent typography, spacing, margins, and section hierarchy.
+- Avoid rendering issues: clipped text, overlapping elements, broken tables, black squares, or unreadable glyphs.
+- Charts, tables, and images must be sharp, aligned, and clearly labeled.
+- Use ASCII hyphens only. Avoid U+2011 and other Unicode dashes.
+- Citations and references must be human-readable; never leave tool tokens or placeholder strings.
+
+## Final Checks
+
+- Do not deliver until the latest PNG inspection shows zero visual or formatting defects.
+- Confirm headers, footers, page numbering, and section transitions look polished.
+- Keep intermediate files organized or remove them after final approval.
+
+## Final response citations
+
+Place `:codex-file-citation{...}` inline in prose, not in a trailing list. Use `purpose="source"` for Q&amp;A/no-op and `purpose="output"` for create/edit.
+
+- [HARD REQUIREMENT] Create/edit: cite each final PDF exactly once with a plain output citation. Summarize representative changes; do not cite every page or add a separate filename, path, or Markdown link. Example: `Created :codex-file-citation{path="/abs/path/report.pdf" purpose="output"}, with the completed analysis and appendix.`
+- Q&amp;A/no-op: do not edit or re-export. Inspect the complete relevant pages, preserve material headings, table/figure labels, footnotes, sources, and sample sizes, and cite each source PDF once with a plain source citation.
+
+PDF citations currently support only plain file citations. Do not add `artifact_kind`, `page_number`, or other locators. Never cite rendered PNGs, scratch files, builders, or QA intermediates unless asked.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+web search: 
+web search: https://arxiv.org/abs/2604.26989
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "curl -L --fail --max-time 30 -o /tmp/arxiv-2604.26989.pdf https://arxiv.org/pdf/2604.26989 && pdfinfo /tmp/arxiv-2604.26989.pdf | sed -n '1,20p' && pdftotext -layout /tmp/arxiv-2604.26989.pdf /tmp/arxiv-2604.26989.txt && wc -l /tmp/arxiv-2604.26989.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989
+ succeeded in 630ms:
+100  353k  100  353k    0     0   833k      0 --:--:-- --:--:-- --:--:--  834k
+Title:           Subgroups of Finite Fields As Cap Sets
+Author:          Anthony Kable; Melissa Mills; David J. Wright
+Creator:         arXiv GenPDF (tex2pdf:a6404ea)
+Producer:        pikepdf 8.15.1
+Custom Metadata: yes
+Metadata Stream: yes
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           10
+Encrypted:       no
+Page size:       612 x 792 pts (letter)
+Page rot:        0
+File size:       362485 bytes
+Optimized:       no
+PDF version:     1.7
+     450 /tmp/arxiv-2604.26989.txt
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,240p' /tmp/arxiv-2604.26989.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989
+ succeeded in 0ms:
+                                               SUBGROUPS OF FINITE FIELDS AS CAP SETS
+
+                                                 ANTHONY KABLE, MELISSA MILLS, AND DAVID J. WRIGHT
+
+
+
+
+arXiv:2604.26989v1 [math.CO] 28 Apr 2026
+                                                  Abstract. We show the subgroup of 20 nonzero fourth powers in
+                                                  the finite field of order 81 is a cap set. Similarly, the subgroup of 9
+                                                  nonzero seventh powers in the field of order 64 is a cap set. These
+                                                  are the cases related to the card games of SET and EvenQuads,
+                                                  and both are known to be maximal cap sets. A corollary is that the
+                                                  cosets of these subgroups form a partition by maximal caps of the
+                                                  multiplicative groups of their respective fields. We identify certain
+                                                  multiplicative subgroups of fields of orders 243 and 729 as cap sets,
+                                                  and show in general that the subgroup of (2n − 1)-th powers is a
+                                                  cap set in the field of order 22n .
+
+
+
+                                                                         1. Introduction
+                                             This note shows that certain subgroups of the multiplicative group
+                                           F×
+                                            q of the finite field Fq of order q are cap sets in the corresponding affine
+                                                                                 n
+                                           geometries AG(n, p) where q = p and p is prime. The two instances
+                                           AG(4, 3) ≈ F81 and AG(6, 2) ≈ F64 are related to the pattern-matching
+                                           card games SET and EvenQuads. The traditional meaning of cap in
+                                           affine geometry is a set of points for which no three points are collinear
+                                           (see [Hil78] for basic definitions). Over F3 , that is equivalent to the set
+                                           containing no affine lines. For AG(6, 2), this definition was adapted in
+                                           [CFG+ 23] to mean a set of points for which any subset of 4 points is in
+                                           general position, or equivalently that the set contains no affine plane
+                                           over F2 . This is called 4-general in [Ben19] and a 2-cap in [HTW19].
+                                           In both cases, a cap set may also be redefined in terms of solutions of
+                                           a linear equation.
+                                           Definition 1.      (1) For q = 3n , a subset S ⊆ Fq is a cap set if there
+                                                  are no solutions to a + b + c = 0 for distinct elements a, b, c ∈ S.
+                                             (2) For q = 2n , a subset S ⊆ Fq is a cap set if there are no solutions
+                                                  to a + b + c + d = 0 for distinct elements a, b, c, d ∈ S.
+
+                                             Date: May 1, 2026.
+                                             Key words and phrases.     Finite geometry, maximal cap, Sidon set, SET game,
+                                           EvenQuads.
+                                                                                    1
+2        ANTHONY KABLE, MELISSA MILLS, AND DAVID J. WRIGHT
+
+   A fundamental theorem about finite fields first asserted in [Gal30]
+states that Gq = F×  q is a cyclic group of order q − 1. For a modern
+treatment, see for example, [Gal20] ch. 21. For any divisor d | q − 1,
+there is a unique subgroup Gq,d of Gq of order d consisting of all so-
+lutions to xd = 1 in Fq . This subgroup may also be described as the
+subgroup of q−1
+              d
+                 -th powers in Gq . Our main goal is the following the-
+orem. Part (1) was proved by the second author in their 2006 masters
+thesis ([Mil06]). To our knowledge, no other source describes caps in
+AG(n, p) as subgroups of Fpn .
+Theorem 1.        (1) For a, b, c ∈ G81,20 , a + b + c = 0 if and only if
+      a = b = c.
+  (2) For a, b, c ∈ G243,22 , a + b + c = 0 if and only if a = b = c.
+  (3) For a, b, c ∈ G729,28 , a + b + c = 0 if and only if a = b = c.
+  (4) For a, b, c, d ∈ G22n ,2n +1 , a + b + c + d = 0 if and only if, after
+      renaming if necessary, a = b and c = d.
+  (5) For even n, G22n ,2n +1 ∪ {0}is a cap set of size 2n + 2 in F22n .
+   Thus, Theorem 1 part (1) implies the subgroup G81,20 is a cap set of
+size 20 in F81 , which is shown to be the maximal cap size in AG(4, 3) in
+[Pel70] as well as in [DM03]. Similarly, Theorem 1 part (4) implies the
+subgroup G64,9 is a cap set of size 9 in F64 . The paper [CFG+ 23] proves
+this is the maximum size of a cap in AG(6, 2). In both F81 and F64 ,
+it has been proved there is only one maximal cap up to affine linear
+isomorphism.
+   Part (2) of Theorem 1 asserts that G243,22 is a cap in F243 . It is proved
+in [EFLS02] that a maximal cap in AG(5, 3) has 45 elements. We shall
+also prove that G243,22 is a complete cap, meaning it is not contained
+in any larger cap set, and that G243,22 is the smallest complete cap.
+   Part (3) implies G729,28 is a cap of size 28 in F729 . Potechin proved a
+maximal cap in AG(6, 3) has 112 = 4 · 28 elements (see [Pot08]). With
+the aid of computer algebra, we can show the union of certain pairs
+of cosets, for instance, G729,28 ∪ x G729,28 , is a cap set of size 56. The
+Potechin cap is not a union of 4 cosets.
+   A Sidon set S in an abelian group is defined by the property that, if
+a + b = c + d for a, b, c, d ∈ S with a ̸= b and c ̸= d, then {a, b} = {c, d}.
+For the group Zn2 ≈ F2n , Sidon sets are the same as cap sets. Theorem
+1 part (4) implies G22n ,2n +1 is a Sidon set in F22n , and for even n part
+(5) implies G22n ,2n +1 ∪ {0} is also a Sidon set in F22n of size 2n + 2.
+Sidon sets of these sizes in AG(2n, 2) are constructed in [Nag25] by
+means of conics in AG(2, 2n ). It is proved in [CGR25] that a maximal
+cap in AG(7, 2) has size 12, and computer calculations in [CP24] show
+that a maximal cap in AG(8, 2) has size 18 = 24 + 2.
+              SUBGROUPS OF FINITE FIELDS AS CAP SETS                     3
+
+   The game SET is a popular pattern-matching card game invented
+by geneticist Marsha Jean Falco in 1974 and first marketed in 1990.
+The connection between this game and the affine geometry AG(4, 3)
+has been discussed in quite a few sources; see [MGGG17] for example.
+The game EvenQuads was developed at Bard College out of the 2013
+undergraduate senior project of Jeffrey Pereira ([Per13]) supervised by
+Lauren Rose. See [Ros23] for more information about EvenQuads and
+its connection to AG(6, 2).
+   While discussing the work [DM03] on the mathematics of the game
+of SET in 2005, the first author suggested that the subgroup of order
+20 in F× 81 might be a cap set, and this idea was proved by the second
+author in their masters thesis [Mil06]. When we learned about the
+new game of EvenQuads, we discovered the same phenomenon held for
+F64 . In the meantime, several papers [FKM+ 14] and [AFLM22] have
+appeared discussing the partition of AG(4, 3) as the union of 4 disjoint
+maximal cap sets with one point left over. The earlier paper [Tuc07]
+gave a partition of AG(4, 3) as a disjoint union of 9 cap sets of size
+9; this paper modeled AG(4, 3) as the two-dimensional affine geometry
+AG(2, 9) over F9 and identified the 9 point caps as conics. We should
+like to point out that, if a subgroup G ⊆ F×
+                                           q is a cap set, then each coset
+xG is clearly also a cap set by the linearity of the defining equation.
+This establishes the following:
+
+Corollary 2.      (1) The cosets of G81,20 form a partition of F× 81 into
+      4 maximal cap sets.
+  (2) The cosets of G243,22 form a partition of F×  243 into 11 complete
+      cap sets of size 22.
+  (3) The cosets of G729,28 form a partition of F×729 into 26 cap sets of
+      size 28. These cosets may be paired to obtain a partition into
+      13 cap sets of size 56.
+  (4) The cosets of G22n ,2n +1 form a partition of F×          n
+                                                      22n into 2 − 1 cap
+      sets of size 2n + 1.
+
+   The fact that subgroups of F×    q are related to cap sets is perhaps
+another example of the theme expressed in [Kal25] that “multiplica-
+tively structured sets cannot exhibit significant additive structure.”
+Hill also observes in [Hil76] that known maximal caps have automor-
+phism groups that act transitively on the cap. The results in this paper
+are a beginning exploration of the questions of which subgroups of F×   q
+are cap sets, and whether or not the equation xd1 + · · · + xdk = 0 over
+Fq , for d | q − 1, implies that two powers xdj must be equal. In general,
+though, the number of affine k-flats in a proper subgroup of F×   q seems
+4       ANTHONY KABLE, MELISSA MILLS, AND DAVID J. WRIGHT
+
+to be quite small relative to the number of affine k-flats in Fq . This
+may be a good topic for further investigation.
+  There have been quite a few contributions to the question of maxi-
+mum sizes of cap sets in AG(n, q). For more information on the known
+values and on bounds of various kinds, see, for example, [Ben19, Ede04,
+EFLS02, EG17, Gro19, Hil73, Hil76, Hil83, TW21, Tha21, Tha20], and
+the many references within these articles.
+
+                 2. Proof of Theorem 1, Part 1
+Proof. Assume there are distinct x, y, z ∈ F× 81 satisfying x + y + z = 0
+and x20 = y 20 = z 20 = 1. Sincez is nonzero,   we may divide by z to
+         x      y                x 20    y 20
+                                          
+obtain z + z + 1 = 0 and z            = z      = 1. Then we may as well
+assume z = 1 in our proof and suppose x + y + 1 = 0 and x20 = y 20 = 1.
+  In characteristic 3, we have (x + y)3 = x3 + y 3 , and by repetition that
+implies (x + y)27 = x27 + y 27 . Applying this identity to the equation
+x + 1 = −y with x20 = y 20 = 1, we obtain
+      (x + 1)27 = x27 + 1 = x7 + 1 = (−y)27 = (−y)7 = (x + 1)7 .
+The binomial expansion of (x + 1)7 − x7 − 1 = 0 modulo 3 reduces
+to x6 − x4 − x3 + x = 0. This factors as 0 = x(x2 − 1)(x3 − 1) =
+x(x + 1)(x − 1)4 . Since x ̸= 0, this implies x = ±1. If x = −1,
+x + y + 1 = 0 implies y = 0 contradicting y 20 = 1. If x = 1, then
+x + y + 1 = 0 implies y = 1 = x. This completes the proof that G81,20
+is a cap set, as well as the stronger statement that, if x + y + z = 0 for
+x, y, z ∈ G81,20 , then x = y = z.                                      □
+
+                 3. Proof of Theorem 1, Part 2
+Proof. As in the previous proof, we may assume there are x, y ∈ F× 243
+such that if x + y + 1 = 0 and x22 = y 22 = 1. Taking the 27-th power,
+we have
+      (x + 1)27 = x27 + 1 = x5 + 1 = (−y)27 = (−y)5 = (x + 1)5 .
+The binomial expansion mod 3 of (x + 1)5 − x5 − 1 = 0 then yields
+−x4 + x3 + x2 − x = 0, which factors as −x(x + 1)(x − 1)2 = 0. Since
+x ̸= 0 is assumed, and since x = −1 and x+y +1 = 0 implies y = 0, the
+only valid possibility is x = 1. Then x+y+1 = 0 implies y = 1 = x. □
+  This produces a cap set G22 = G243,22 of 22 elements of F×      243 . We
+show next this is a complete cap. To prove a cap set C is complete, we
+must show that for any x ∈   / C, there exist distinct y, z ∈ C such that
+x+y +z = 0. In that case, we say x is represented by C. The analogous
+idea is valid in characteristic 2 as well if we define w to be represented
+                SUBGROUPS OF FINITE FIELDS AS CAP SETS                         5
+
+by G if there are distinct x, y, z ∈ G such that w + x + y + z = 0. The
+next theorem reduces the calculations necessary to prove a subgroup is
+a complete cap.
+Theorem 3. For a prime power q and divisor d | q − 1, suppose the
+subgroup G of d-th powers in F×   q is a cap in the sense that there are no
+solutions to x1 + · · · + xm = 0 with distinct x1 , . . . , xm ∈ G. An element
+y∈ / G is represented by G if there are distinct x1 , . . . , xm−1 ∈ G with
+y + x1 + · · · + xm−1 = 0. We say G is complete if every y ∈            / G is
+represented by G. Let g be a primitive root of Fq . Then G is complete
+if 0 and all powers g k for 1 ≤ k ≤ d − 1 are represented by G.
+Proof. We must prove every x ∈  / G is represented by G. By hypothesis,
+we may assume x = g k for some integer d ≤ k ≤ q − 2 and d ∤ k. By
+division, k = ad + r for integers a and r with 1 ≤ r ≤ d − 1. Since we
+assumed g r is represented by G, we have:
+                        g r + g b1 d + · · · + g bm−1 d = 0,
+for integers b1 , . . . , bm−1 . Multiplying by g ad shows g k = g ad+r is repre-
+sented by G:
+                  g ad+r + g (b1 +a)d + · · · + g (bm−1 +a)d = 0.
+Thus, G is complete.                                                          □
+Theorem 4. G243,22 is a complete cap in F243 of the smallest possible
+size.
+Proof. Since G = G243,22 is the subgroup of 11-th powers, by our previ-
+ous theorem we must show that 0 and g k , 1 ≤ k ≤ 10, are represented
+by G. A primitive root g of F×  243 has order 242 = 2 · 121, and so g
+                                                                        121
+
+has order 2 and is then equal to −1. Then 0 + 1 + g 121 = 0, which
+proves 0 is represented by G.
+   To represent g k for 1 ≤ k ≤ 10, we note that g 5 − g + 1 is irreducible
+mod 3. By computing the remainders of g k (mod g 5 −g +1) mod 3 (for
+this we used the computer algebra system Maple ([Map25]), although
+it is not hard to do by hand), we can confirm that g has order 242.
+Working modulo g 5 − g + 1, we may find the following equations:
+            g + g 55 + g 154 = 0,               g 2 + g 154 + g 220 = 0,
+           g 3 + g 165 + g 220 = 0,             g 4 + g 22 + g 55 = 0,
+           g 5 + g 11 + g 22 = 0,               g 6 + g 176 + g 220 = 0,
+           g 7 + g 33 + g 165 = 0,              g 8 + 1 + g 220 = 0,
+           g 9 + g 11 + g 176 = 0,             g 10 + 1 + g 88 = 0.
+6       ANTHONY KABLE, MELISSA MILLS, AND DAVID J. WRIGHT
+
+These prove each g k is represented by G for 1 ≤ k ≤ 10, and completes
+the proof that G is complete. Since a cap of size 21 or smaller can
+                                 21
+represent by addition at most 2 + 21 = 231 < 243 elements, there
+are no smaller complete caps.                                       □
+
+                    4. Proof of Theorem 1, Part 3
+Proof. Once again, we may assume there are x, y ∈ F×
+                                                   729 such that if
+                   28    28
+x + y + 1 = 0 and x = y = 1. Taking the 81-st power and noting
+81 ≡ 25 (mod 28), we have
+     (x + 1)81 = x81 + 1 = x25 + 1 = (−y)81 = (−y)25 = (x + 1)25 .
+Multiply by x3 + 1 = (x + 1)3 to obtain (x25 + 1)(x3 + 1) = (x + 1)28 =
+(−y)28 = 1. Expanding then yields x28 + x25 + x3 + 1 = 1. Assuming
+x28 = 1, this reduces to x25 + x3 + 1 = 0. Multiply by x3 to obtain
+1 + x6 + x3 = 0. Multiply by x3 − 1 to obtain x9 − 1 = 0. That shows
+x9 = 1, which together with x28 = 1 implies x = 1. Then x = 1 in
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '241,520p' /tmp/arxiv-2604.26989.txt" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989
+ succeeded in 0ms:
+x + y + 1 = 0 proves y = 1 = x.                                       □
+  All the theorems in this paper may be verified by relatively simple
+and fast computer algebra calculations. If g is a primitive root of F×
+                                                                     q
+and if its minimal polynomial is poly = p(x) = 0, the computer math-
+ematics system Maple ([Map25]), for instance, has a fast polynomial
+remainder procedure rem which allows us to test
+         rem(x^(i) + x^(j) + x^(k), poly,x) mod p = 0
+and thus determine if {g i , g j , g k } is an affine line. The authors are
+happy to share a basic Maple worksheet that confirms our theorems.
+We have also confirmed these theorems with the finite fields package in
+SAGE (see [The26]). In addition, we used computer algebra to verify
+that the disjoint union of cosets of G26 ∪ x G26 is a cap set of size 56.
+However, the 112-cap of Potechin is not a union of 4 cosets. The pairs
+of cosets Pk = xk G26 ∪ xk+1 G26 for 0 ≤ k ≤ 12 form a partition of F×  729
+by 13 cap sets of size 56.
+
+                    5. Proof of Theorem 1, Part 4
+Proof. Just as in the previous proofs, we assume there are distinct
+w, x, y ∈ F22n , none equal to 1, such that w + x + y + 1 = 0, and
+  n        n        n
+w2 +1 = x2 +1 = y 2 +1 = 1. In characteristic 2, we may rearrange the
+equation as w + 1 = x + y. By repeated squaring, we have
+        n       n         n      n            n+1      n+1              n+1      n+1
+(w + 1)2 = w2 + 1 = x2 + y 2 , (w + 1)2             = w2     + 1 = x2         + y2     .
+                    SUBGROUPS OF FINITE FIELDS AS CAP SETS                                              7
+
+Multiply the former equation by w + 1 = x + y to obtain
+                n                n           n
+(w + 1)(w2 + 1) = w2 +1 + w2 + w + 1
+                                         n           n           n             n          n       n
+                        = (x + y)(x2 + y 2 ) = x2 +1 + yx2 + xy 2 + y 2 +1 .
+                                 n           n               n
+We may then cancel w2 +1 = x2 +1 = y 2 +1 = 1 and factor to obtain:
+   n                n        n                               n                        n           n
+w2 + w = yx2 + xy 2                      ⇒           w(w2 −1 + 1) = xy(x2 −1 + y 2 −1 ).
+                        n            n           n                       n+1              n+1         n+1
+Also, applying w2 +1 = x2 +1 = y 2 +1 = 1 to w2 + 1 = x2 + y 2
+                                      n           n        n
+with 2n+1 − (2n + 1) = 2n − 1 gives w2 −1 + 1 = x2 −1 + y 2 −1 .
+       n                            n
+  If w2 −1 + 1 = 0, then since w2 +1 = 1 we have w2 = 1, which
+                                          n
+implies w = 1 in characteristic 2. If w2 −1 + 1 ̸= 0, then we can
+cancel and obtain w = xy. Then 1 + xy = x + y, which implies
+0 = 1 + x + y + xy = (1 + x)(1 + y), and thus x = 1 or y = 1. This
+proves G22n ,2n +1 is a cap.                                     □
+
+                        6. Proof of Theorem 1, Part 5
+Proof. The previous theorem rules out the possibility that there are
+distinct w, x, y, z ∈ G22n ,2n +1 with w + x + y + z = 0. Then we may
+assume z = 0 and w = 1. That leads to 1 + x + y = 0 for distinct
+                       n         n
+x, y ̸= 1 satisfying x2 +1 = y 2 +1 = 1.
+                                                                n
+   By rearranging as 1+x = y, repeated squaring and applying x2 +1 =
+   n
+y 2 +1 = 1, we obtain
+                n        n                   n+1                 n             n+1        n
+       1 + x2 = y 2 ,                1 + x2          = 1 + x2 −1 = y 2               = y 2 −1 .
+Multiply the former equation by (1 + x) = y to yield
+                                 n                       n           n         n
+           (1 + x)(1 + x2 ) = 1 + x + x2 + x2 +1 = y 2 +1 = 1.
+            n                                n                            n               n
+Cancel x2 +1 = 1 to get x + x2 = 1 = x(1 + x2 −1 ) = xy 2 −1 . Then
+         n          n
+x = xy 2 +1 = xy 2 −1 · y 2 = y 2 . Then 1 + x = y becomes 1 + y + y 2 = 0.
+That imply y 3 = 1. Since 3 | 2n + 1 if and only if n is odd, we see that,
+                               n
+if n is even, y 3 = 1 and y 2 +1 = 1 imply y = 1. This contradiction
+proves G22n ,2n +1 ∪ {0} is a cap.                                       □
+
+                    7. Translating powers into cards
+   For those readers interested in the games of SET and EvenQuads,
+we explain how to translate these results into specific codes for cards.
+First, we need a primitive root g of F×         q and its minimal polynomial
+over Fp . For SET, it is easy to verify that g 4 − g − 1 is irreducible
+over F3 . By applying the Division Algorithm to find the remainder
+after division by g 4 − g − 1, each power g k may be uniquely written as
+g k = c1 g 3 + c2 g 2 + c3 g + c4 for cj ∈ F3 . These coefficients (c1 , c2 , c3 , c4 )
+8        ANTHONY KABLE, MELISSA MILLS, AND DAVID J. WRIGHT
+
+give the coordinates of the corresponding card. It turns out that a root
+g of g 4 − g − 1 has order 80 and thus the powers g k give all 80 nonzero
+elements. Below is a table of codes for the cap sets of cosets modulo
+G81,20 . In each 4 × 5 block, the exponent k increases across each row
+and then down to the next row from 0 to 19.
+
+
+                   g 4k                                g 4k+1
+    0001 0011 0121 1001 1022 0010 0110 1210 0021 0201
+    1220 0101 1111 2202 1211 2211 1010 1121 2012 2121
+    0002 0022 0212 2002 2011 0020 0220 2120 0012 0102
+    2110 0202 2222 1101 2122 1122 2020 2212 1021 1212
+                  g 4k+2                               g 4k+3
+    0100 1100 2111 0210 2010 1000 1011 1102 2100 0122
+    2102 0111 1221 0112 1202 1012 1110 2221 1120 2001
+    0200 2200 1222 0120 1020 2000 2022 2201 1200 0211
+    1201 0222 2112 0221 2101 2021 2220 1112 2210 1002
+
+Translating these codes into number, color, shape and shading gives 4
+disjoint 20-card no-SET’s. The remaining card has code 0000.
+   Similarly, for the EvenQuads deck, a root g of g 6 + g + 1, which is
+irreducible modulo 2, has order 63. The binary code c1 c2 c3 c4 c5 c6 of a
+power g k comes from the remainder c1 g 5 + c2 g 4 + c3 g 3 + c4 g 2 + c5 g + c6
+after division by g 6 + g + 1 mod 2. In the table of 7-th powers below,
+we translate consecutive binary coefficients 00, 01, 10, 11 to 0, 1, 2, 3,
+resp. Each row below is a maximal cap.
+
+
+    j    gj    g 7+j g 14+j g 21+j g 28+j g 35+j g 42+j g 49+j g 56+j
+    0 001 012             110   323   130     023     322       122   133
+    1 002 030             220   311   320     112     313       310   332
+    2 010 120             103   221   303     230     231       223   333
+    3 020 300             212   101   211     123     121       111   331
+    4 100 203             033   202   021     312     302       222   321
+    5 200 011             132   013   102     233     213       113   301
+    6 003 022             330   032   210     131     031       232   201
+                SUBGROUPS OF FINITE FIELDS AS CAP SETS                         9
+
+Using these codes for number, color, shape produces seven disjoint cap
+sets of 9 cards in the EvenQuads deck, with the remaining card having
+code 000.
+
+
+                                References
+[AFLM22] Jordan Awan, Claire Frechette, Yumi Li, and Elizabeth McMahon,
+          Demicaps in AG(4, 3) and maximal cap partitions, Graphs Combin. 38
+          (2022), no. 6, Paper No. 193, 20.
+[Ben19]   Michael Bennett, Bounds on sizes of generalized caps in AG(n, q) via
+          the Croot-Lev-Pach polynomial method, J. Combin. Theory Ser. A 168
+          (2019), 255–271.
+[CFG+ 23] Julia Crager, Felicia Flores, Timothy E. Goldberg, Lauren L. Rose,
+          Daniel Rose-Levine, Darrion Thornburgh, and Raphael Walker, How
+          many cards should you lay out in a game of EvenQuads: a detailed
+          study of caps in AG(n, 2), Matematica 2 (2023), no. 2, 382–419.
+[CGR25]   Kariane Calta, Timothy E. Goldberg, and Lauren L. Rose, How many
+          cards should you lay out in Quad-128: A classification of caps in
+          AG(7, 2), 2025, submitted.
+[CP24]    Ingo Czerwinski and Alexander Pott, Sidon sets, sum-free sets and
+          linear codes, Adv. Math. Commun. 18 (2024), no. 2, 549–566.
+[DM03]    Benjamin Lent Davis and Diane Maclagan, The card game SET, Math.
+          Intelligencer 25 (2003), no. 3, 33–40.
+[Ede04]   Yves Edel, Extensions of generalized product caps, Des. Codes Cryp-
+          togr. 31 (2004), no. 1, 5–14.
+[EFLS02] Y. Edel, S. Ferret, I. Landjev, and L. Storme, The classification of the
+          largest caps in AG(5, 3), J. Combin. Theory Ser. A 99 (2002), no. 1,
+          95–110.
+[EG17]    Jordan S. Ellenberg and Dion Gijswijt, On large subsets of Fnq with no
+          three-term arithmetic progression, Ann. of Math. (2) 185 (2017), no. 1,
+          339–343.
+[FKM+ 14] Michael Follett, Kyle Kalail, Elizabeth McMahon, Catherine Pelland,
+          and Robert Won, Partitions of AG(4, 3) into maximal caps, Discrete
+          Math. 337 (2014), 1–8.
+[Gal30]   E. Galois, Sur la théorie des nombres, Bulletin des Sciences
+          Mathématiques, Physiques et Chimiques (Férrusac) XIII (1830), 428–
+          435.
+[Gal20]   Joseph Gallian, Contemporary abstract algebra, Chapman and
+          Hall/CRC, 2020.
+[Gro19]   Joshua A. Grochow, New applications of the polynomial method: the
+          cap set conjecture and beyond, Bull. Amer. Math. Soc. (N.S.) 56 (2019),
+          no. 1, 29–64.
+[Hil73]   Raymond Hill, On the largest size of cap in S5, 3 , Atti Accad. Naz.
+          Lincei Rend. Cl. Sci. Fis. Mat. Nat. (8) 54 (1973), 378–384 (1974).
+[Hil76]   R. Hill, Caps and groups, Colloquio Internazionale sulle Teorie Com-
+          binatorie (Roma, 1973), Tomo II, Accad. Naz. Lincei, Rome, 1976,
+          pp. 389–394.
+10        ANTHONY KABLE, MELISSA MILLS, AND DAVID J. WRIGHT
+
+[Hil78]  Raymond Hill, Caps and codes, Discrete Math. 22 (1978), no. 2, 111–
+         137.
+[Hil83]           , On Pellegrino’s 20-caps in S4,3 , Combinatorics ’81 (Rome,
+         1981), North-Holland Math. Stud., vol. 78, North-Holland, Amster-
+         dam, 1983, pp. 433–447.
+[HTW19] Yixuan Huang, Michael Tait, and Robert Won, Sidon sets and 2-caps
+         in Fn3 , Involve 12 (2019), no. 6, 995–1003.
+[Kal25]  Alexander Kalmynin, On additive irreducibility of multiplicative sub-
+         groups, 2025.
+[Map25]  Maplesoft, a division of Waterloo Maple Inc., Maple is a trademark of
+         Waterloo Maple Inc., 2025.
+[MGGG17] Liz McMahon, Gary Gordon, Hannah Gordon, and Rebecca Gordon,
+         The Joy of SET, Princeton University Press, Princeton, NJ; National
+         Museum of Mathematics, New York, 2017.
+[Mil06]  Melissa Mills, The game of SET and finite fields, Master’s thesis, Ok-
+         lahoma State University, 2006.
+[Nag25]  Gábor P. Nagy, Sidon sets, thin sets, and the nonlinearity of vectorial
+         Boolean functions, J. Combin. Theory Ser. A 212 (2025), Paper No.
+         106001, 21.
+[Pel70]  Giuseppe Pellegrino, Sul massimo ordine delle calotte in S4,3 , Matem-
+         atiche (Catania) 25 (1970), 149–157.
+[Per13]  Jeffrey Pereira, SuperSET: a mathematical investigation of a vari-
+         ation of SET., 2013, Senior Project: Available through https://
+         digitalcommons.bard.edu/undergrad/.
+[Pot08]  Aaron Potechin, Maximal caps in AG(6, 3), Des. Codes Cryptogr. 46
+         (2008), no. 3, 243–259.
+[Ros23]  Lauren Rose, Quads: A set-like game with a twist, accepted, 2023.
+[Tha20]  Joseph A. Thas, Arcs, caps, generalisations: results and problems, 50
+         years of combinatorics, graph theory, and computing, Discrete Math.
+         Appl., CRC Press, Boca Raton, FL, 2020, pp. 387–407.
+[Tha21]  Henry Robert Thackeray, The cap set problem and standard diagrams,
+         Discrete Math. 344 (2021), no. 11, Paper No. 112558, 28.
+[The26]  The Sage Developers, SageMath, the Sage Mathematics Software Sys-
+         tem (Version x.y.z), 2026, https://www.sagemath.org.
+[Tuc07]  Cherith Tucker, Geometric models of the card game SET, Rose-Hulman
+         Undergraduate Mathematics Journal 8 (2007), no. 1, Article 10.
+[TW21]   Michael Tait and Robert Won, Improved bounds on sizes of generalized
+         caps in AG(n, q), SIAM J. Discrete Math. 35 (2021), no. 1, 521–531.
+
+ Dept. of Math., Oklahoma State University, 401 MSCS, Stillwater,
+OK 74078
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The full paper rules out the proposed family on the hardness gate. Its cap sets are explicit multiplicative subgroups: Theorem 1 identifies them, the introduction defines the unique subgroup as the roots of \(x^d=1\) (equivalently a power-image), and Section 4 explicitly says all results admit simple, fast computer-algebra verification. A solver can construct the requested set directly; there is no hidden hard search problem or hardness theorem to rely on. I’m recording this as a rejection rather than manufacturing misleading gate results.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "pwd && rg --files -g '"'!*llm_loop_transcript.jsonl'"' -g '"'!.meta.json'"' | sed -n '1,120p' && git status --short 2>/dev/null || true" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989
+ succeeded in 0ms:
+/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989
+codex_run.log
+ M ../../claims/2604.26989.json
+?? ./
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+apply patch
+patch: completed
+/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989/REJECTED.md
+diff --git a/results/2604.26989/REJECTED.md b/results/2604.26989/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f6acb87efe26a66fbe3157f0a14ae7b0211dcc8b
+--- /dev/null
++++ b/results/2604.26989/REJECTED.md
+@@ -0,0 +1,71 @@
++# Rejected: arXiv 2604.26989
++
++Paper: Anthony Kable, Melissa Mills, and David J. Wright, [*Subgroups of
++Finite Fields As Cap Sets*](https://arxiv.org/abs/2604.26989), arXiv:2604.26989.
++
++## Decision
++
++The proposed family passes inverse generation (G) and exact verification (V),
++but fails the required hardness condition (H). No generator module is shipped,
++and the LLM hardening loop was not run, because Step 0 requires stopping as soon
++as one of G/H/V fails.
++
++## Definition and regimes checked
++
++Definition 1 in Section 1 says that a cap in `F_(3^m)` contains no three
++**distinct** elements whose sum is zero, while a cap in `F_(2^m)` contains no
++four **distinct** elements whose sum is zero.
++
++Theorem 1 proves that the following explicitly defined multiplicative subgroups
++are caps:
++
++- `G_(81,20)`, `G_(243,22)`, and `G_(729,28)` in characteristic 3;
++- `G_(2^(2m), 2^m+1)` in characteristic 2 for every `m`;
++- `G_(2^(2m), 2^m+1) union {0}` when `m` is even.
++
++The paper defines `G_(q,d)` as the unique order-`d` subgroup of `F_q^*`, both as
++the roots of `x^d = 1` and as the image of an explicit power map. Corollary 2
++observes that its multiplicative cosets are caps as well.
++
++## Why H fails
++
++There is no hard witness search here. Given a primitive element `g`, the subgroup
++is simply
++
++```text
++{g^((q-1)j/d) : 0 <= j < d}.
++```
++
++Thus the candidate answer suggested by the triage is a closed-form construction,
++not a witness hidden in a large search space. A coset is just a scalar multiple
++of the same list. Section 7 even supplies primitive polynomials and explicit
++coordinate tables for the `F_81` and `F_64` examples. Section 4 states that all
++the paper's theorems can be checked by relatively simple and fast computer
++algebra calculations.
++
++The paper proves structural cap properties, maximality/completeness facts in a
++few fixed small fields, and an infinite explicit construction. It does **not**
++prove NP-hardness or any other computational lower bound for finding these sets,
++nor does it identify a parameter regime in which this construction becomes a
++hard search problem. Increasing `m` only enlarges an explicitly enumerable
++subgroup; it does not remove the formula.
++
++Trying to hide a subgroup among decoys would define a new planted-recovery
++problem for which the paper supplies no hardness result. Asking for a forbidden
++additive tuple instead is also unsuitable: such a tuple can be found by standard
++sum-table searches in polynomial time in the listed set size. Asking for a
++maximum or complete cap would violate the required witness/optimality contract
++and, in the fixed cases treated here, would not provide an unlimited scalable
++family.
++
++## Gate assessment
++
++| Condition | Result | Reason |
++|---|---:|---|
++| G | pass | Sample a field representation and subgroup/coset, then enumerate the known cap. |
++| H | **fail** | The witness has an explicit power-enumeration formula and no hard search theorem applies. |
++| V | pass | Check size/distinctness, field membership, and all forbidden 3- or 4-term sums exactly. |
++
++Because H fails before implementation, reporting G1-G8 measurements or an oracle
++transcript would give false assurance rather than evidence for an acceptable
++problem family.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2604.26989/REJECTED.md b/results/2604.26989/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f6acb87efe26a66fbe3157f0a14ae7b0211dcc8b
+--- /dev/null
++++ b/results/2604.26989/REJECTED.md
+@@ -0,0 +1,71 @@
++# Rejected: arXiv 2604.26989
++
++Paper: Anthony Kable, Melissa Mills, and David J. Wright, [*Subgroups of
++Finite Fields As Cap Sets*](https://arxiv.org/abs/2604.26989), arXiv:2604.26989.
++
++## Decision
++
++The proposed family passes inverse generation (G) and exact verification (V),
++but fails the required hardness condition (H). No generator module is shipped,
++and the LLM hardening loop was not run, because Step 0 requires stopping as soon
++as one of G/H/V fails.
++
++## Definition and regimes checked
++
++Definition 1 in Section 1 says that a cap in `F_(3^m)` contains no three
++**distinct** elements whose sum is zero, while a cap in `F_(2^m)` contains no
++four **distinct** elements whose sum is zero.
++
++Theorem 1 proves that the following explicitly defined multiplicative subgroups
++are caps:
++
++- `G_(81,20)`, `G_(243,22)`, and `G_(729,28)` in characteristic 3;
++- `G_(2^(2m), 2^m+1)` in characteristic 2 for every `m`;
++- `G_(2^(2m), 2^m+1) union {0}` when `m` is even.
++
++The paper defines `G_(q,d)` as the unique order-`d` subgroup of `F_q^*`, both as
++the roots of `x^d = 1` and as the image of an explicit power map. Corollary 2
++observes that its multiplicative cosets are caps as well.
++
++## Why H fails
++
++There is no hard witness search here. Given a primitive element `g`, the subgroup
++is simply
++
++```text
++{g^((q-1)j/d) : 0 <= j < d}.
++```
++
++Thus the candidate answer suggested by the triage is a closed-form construction,
++not a witness hidden in a large search space. A coset is just a scalar multiple
++of the same list. Section 7 even supplies primitive polynomials and explicit
++coordinate tables for the `F_81` and `F_64` examples. Section 4 states that all
++the paper's theorems can be checked by relatively simple and fast computer
++algebra calculations.
++
++The paper proves structural cap properties, maximality/completeness facts in a
++few fixed small fields, and an infinite explicit construction. It does **not**
++prove NP-hardness or any other computational lower bound for finding these sets,
++nor does it identify a parameter regime in which this construction becomes a
++hard search problem. Increasing `m` only enlarges an explicitly enumerable
++subgroup; it does not remove the formula.
++
++Trying to hide a subgroup among decoys would define a new planted-recovery
++problem for which the paper supplies no hardness result. Asking for a forbidden
++additive tuple instead is also unsuitable: such a tuple can be found by standard
++sum-table searches in polynomial time in the listed set size. Asking for a
++maximum or complete cap would violate the required witness/optimality contract
++and, in the fixed cases treated here, would not provide an unlimited scalable
++family.
++
++## Gate assessment
++
++| Condition | Result | Reason |
++|---|---:|---|
++| G | pass | Sample a field representation and subgroup/coset, then enumerate the known cap. |
++| H | **fail** | The witness has an explicit power-enumeration formula and no hard search theorem applies. |
++| V | pass | Check size/distinctness, field membership, and all forbidden 3- or 4-term sums exactly. |
++
++Because H fails before implementation, reporting G1-G8 measurements or an oracle
++transcript would give false assurance rather than evidence for an acceptable
++problem family.
+
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,240p' REJECTED.md && git status --short -- REJECTED.md gen_2604_26989.py selftest_report.json llm_loop_transcript.jsonl .meta.json" in /Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989
+ succeeded in 0ms:
+# Rejected: arXiv 2604.26989
+
+Paper: Anthony Kable, Melissa Mills, and David J. Wright, [*Subgroups of
+Finite Fields As Cap Sets*](https://arxiv.org/abs/2604.26989), arXiv:2604.26989.
+
+## Decision
+
+The proposed family passes inverse generation (G) and exact verification (V),
+but fails the required hardness condition (H). No generator module is shipped,
+and the LLM hardening loop was not run, because Step 0 requires stopping as soon
+as one of G/H/V fails.
+
+## Definition and regimes checked
+
+Definition 1 in Section 1 says that a cap in `F_(3^m)` contains no three
+**distinct** elements whose sum is zero, while a cap in `F_(2^m)` contains no
+four **distinct** elements whose sum is zero.
+
+Theorem 1 proves that the following explicitly defined multiplicative subgroups
+are caps:
+
+- `G_(81,20)`, `G_(243,22)`, and `G_(729,28)` in characteristic 3;
+- `G_(2^(2m), 2^m+1)` in characteristic 2 for every `m`;
+- `G_(2^(2m), 2^m+1) union {0}` when `m` is even.
+
+The paper defines `G_(q,d)` as the unique order-`d` subgroup of `F_q^*`, both as
+the roots of `x^d = 1` and as the image of an explicit power map. Corollary 2
+observes that its multiplicative cosets are caps as well.
+
+## Why H fails
+
+There is no hard witness search here. Given a primitive element `g`, the subgroup
+is simply
+
+```text
+{g^((q-1)j/d) : 0 <= j < d}.
+```
+
+Thus the candidate answer suggested by the triage is a closed-form construction,
+not a witness hidden in a large search space. A coset is just a scalar multiple
+of the same list. Section 7 even supplies primitive polynomials and explicit
+coordinate tables for the `F_81` and `F_64` examples. Section 4 states that all
+the paper's theorems can be checked by relatively simple and fast computer
+algebra calculations.
+
+The paper proves structural cap properties, maximality/completeness facts in a
+few fixed small fields, and an infinite explicit construction. It does **not**
+prove NP-hardness or any other computational lower bound for finding these sets,
+nor does it identify a parameter regime in which this construction becomes a
+hard search problem. Increasing `m` only enlarges an explicitly enumerable
+subgroup; it does not remove the formula.
+
+Trying to hide a subgroup among decoys would define a new planted-recovery
+problem for which the paper supplies no hardness result. Asking for a forbidden
+additive tuple instead is also unsuitable: such a tuple can be found by standard
+sum-table searches in polynomial time in the listed set size. Asking for a
+maximum or complete cap would violate the required witness/optimality contract
+and, in the fixed cases treated here, would not provide an unlimited scalable
+family.
+
+## Gate assessment
+
+| Condition | Result | Reason |
+|---|---:|---|
+| G | pass | Sample a field representation and subgroup/coset, then enumerate the known cap. |
+| H | **fail** | The witness has an explicit power-enumeration formula and no hard search theorem applies. |
+| V | pass | Check size/distinctness, field membership, and all forbidden 3- or 4-term sums exactly. |
+
+Because H fails before implementation, reporting G1-G8 measurements or an oracle
+transcript would give false assurance rather than evidence for an acceptable
+problem family.
+?? .meta.json
+?? REJECTED.md
+
+hook: PostToolUse
+hook: PostToolUse Completed
+diff --git a/results/2604.26989/REJECTED.md b/results/2604.26989/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f6acb87efe26a66fbe3157f0a14ae7b0211dcc8b
+--- /dev/null
++++ b/results/2604.26989/REJECTED.md
+@@ -0,0 +1,71 @@
++# Rejected: arXiv 2604.26989
++
++Paper: Anthony Kable, Melissa Mills, and David J. Wright, [*Subgroups of
++Finite Fields As Cap Sets*](https://arxiv.org/abs/2604.26989), arXiv:2604.26989.
++
++## Decision
++
++The proposed family passes inverse generation (G) and exact verification (V),
++but fails the required hardness condition (H). No generator module is shipped,
++and the LLM hardening loop was not run, because Step 0 requires stopping as soon
++as one of G/H/V fails.
++
++## Definition and regimes checked
++
++Definition 1 in Section 1 says that a cap in `F_(3^m)` contains no three
++**distinct** elements whose sum is zero, while a cap in `F_(2^m)` contains no
++four **distinct** elements whose sum is zero.
++
++Theorem 1 proves that the following explicitly defined multiplicative subgroups
++are caps:
++
++- `G_(81,20)`, `G_(243,22)`, and `G_(729,28)` in characteristic 3;
++- `G_(2^(2m), 2^m+1)` in characteristic 2 for every `m`;
++- `G_(2^(2m), 2^m+1) union {0}` when `m` is even.
++
++The paper defines `G_(q,d)` as the unique order-`d` subgroup of `F_q^*`, both as
++the roots of `x^d = 1` and as the image of an explicit power map. Corollary 2
++observes that its multiplicative cosets are caps as well.
++
++## Why H fails
++
++There is no hard witness search here. Given a primitive element `g`, the subgroup
++is simply
++
++```text
++{g^((q-1)j/d) : 0 <= j < d}.
++```
++
++Thus the candidate answer suggested by the triage is a closed-form construction,
++not a witness hidden in a large search space. A coset is just a scalar multiple
++of the same list. Section 7 even supplies primitive polynomials and explicit
++coordinate tables for the `F_81` and `F_64` examples. Section 4 states that all
++the paper's theorems can be checked by relatively simple and fast computer
++algebra calculations.
++
++The paper proves structural cap properties, maximality/completeness facts in a
++few fixed small fields, and an infinite explicit construction. It does **not**
++prove NP-hardness or any other computational lower bound for finding these sets,
++nor does it identify a parameter regime in which this construction becomes a
++hard search problem. Increasing `m` only enlarges an explicitly enumerable
++subgroup; it does not remove the formula.
++
++Trying to hide a subgroup among decoys would define a new planted-recovery
++problem for which the paper supplies no hardness result. Asking for a forbidden
++additive tuple instead is also unsuitable: such a tuple can be found by standard
++sum-table searches in polynomial time in the listed set size. Asking for a
++maximum or complete cap would violate the required witness/optimality contract
++and, in the fixed cases treated here, would not provide an unlimited scalable
++family.
++
++## Gate assessment
++
++| Condition | Result | Reason |
++|---|---:|---|
++| G | pass | Sample a field representation and subgroup/coset, then enumerate the known cap. |
++| H | **fail** | The witness has an explicit power-enumeration formula and no hard search theorem applies. |
++| V | pass | Check size/distinctness, field membership, and all forbidden 3- or 4-term sums exactly. |
++
++Because H fails before implementation, reporting G1-G8 measurements or an oracle
++transcript would give false assurance rather than evidence for an acceptable
++problem family.
+
+codex
+Rejected the family because it fails **H — hard**.
+
+The paper’s cap sets are explicit multiplicative subgroups with a direct power-enumeration formula. Theorem 1 proves their cap property, while Sections 4 and 7 emphasize efficient computation and provide concrete constructions. No computational-hardness regime is established. :codex-file-citation{path="/tmp/arxiv-2604.26989.pdf" purpose="source"}
+
+I documented the exact definitions, relevant theorems, and rejection rationale in [REJECTED.md](/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989/REJECTED.md).
+
+Per Step 0, I stopped without creating a generator, gate report, or fabricated hardening transcript.
+diff --git a/results/2604.26989/REJECTED.md b/results/2604.26989/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f6acb87efe26a66fbe3157f0a14ae7b0211dcc8b
+--- /dev/null
++++ b/results/2604.26989/REJECTED.md
+@@ -0,0 +1,71 @@
++# Rejected: arXiv 2604.26989
++
++Paper: Anthony Kable, Melissa Mills, and David J. Wright, [*Subgroups of
++Finite Fields As Cap Sets*](https://arxiv.org/abs/2604.26989), arXiv:2604.26989.
++
++## Decision
++
++The proposed family passes inverse generation (G) and exact verification (V),
++but fails the required hardness condition (H). No generator module is shipped,
++and the LLM hardening loop was not run, because Step 0 requires stopping as soon
++as one of G/H/V fails.
++
++## Definition and regimes checked
++
++Definition 1 in Section 1 says that a cap in `F_(3^m)` contains no three
++**distinct** elements whose sum is zero, while a cap in `F_(2^m)` contains no
++four **distinct** elements whose sum is zero.
++
++Theorem 1 proves that the following explicitly defined multiplicative subgroups
++are caps:
++
++- `G_(81,20)`, `G_(243,22)`, and `G_(729,28)` in characteristic 3;
++- `G_(2^(2m), 2^m+1)` in characteristic 2 for every `m`;
++- `G_(2^(2m), 2^m+1) union {0}` when `m` is even.
++
++The paper defines `G_(q,d)` as the unique order-`d` subgroup of `F_q^*`, both as
++the roots of `x^d = 1` and as the image of an explicit power map. Corollary 2
++observes that its multiplicative cosets are caps as well.
++
++## Why H fails
++
++There is no hard witness search here. Given a primitive element `g`, the subgroup
++is simply
++
++```text
++{g^((q-1)j/d) : 0 <= j < d}.
++```
++
++Thus the candidate answer suggested by the triage is a closed-form construction,
++not a witness hidden in a large search space. A coset is just a scalar multiple
++of the same list. Section 7 even supplies primitive polynomials and explicit
++coordinate tables for the `F_81` and `F_64` examples. Section 4 states that all
++the paper's theorems can be checked by relatively simple and fast computer
++algebra calculations.
++
++The paper proves structural cap properties, maximality/completeness facts in a
++few fixed small fields, and an infinite explicit construction. It does **not**
++prove NP-hardness or any other computational lower bound for finding these sets,
++nor does it identify a parameter regime in which this construction becomes a
++hard search problem. Increasing `m` only enlarges an explicitly enumerable
++subgroup; it does not remove the formula.
++
++Trying to hide a subgroup among decoys would define a new planted-recovery
++problem for which the paper supplies no hardness result. Asking for a forbidden
++additive tuple instead is also unsuitable: such a tuple can be found by standard
++sum-table searches in polynomial time in the listed set size. Asking for a
++maximum or complete cap would violate the required witness/optimality contract
++and, in the fixed cases treated here, would not provide an unlimited scalable
++family.
++
++## Gate assessment
++
++| Condition | Result | Reason |
++|---|---:|---|
++| G | pass | Sample a field representation and subgroup/coset, then enumerate the known cap. |
++| H | **fail** | The witness has an explicit power-enumeration formula and no hard search theorem applies. |
++| V | pass | Check size/distinctness, field membership, and all forbidden 3- or 4-term sums exactly. |
++
++Because H fails before implementation, reporting G1-G8 measurements or an oracle
++transcript would give false assurance rather than evidence for an acceptable
++problem family.
+
+hook: Stop
+hook: Stop Completed
+tokens used
+45,860
+Rejected the family because it fails **H — hard**.
+
+The paper’s cap sets are explicit multiplicative subgroups with a direct power-enumeration formula. Theorem 1 proves their cap property, while Sections 4 and 7 emphasize efficient computation and provide concrete constructions. No computational-hardness regime is established. :codex-file-citation{path="/tmp/arxiv-2604.26989.pdf" purpose="source"}
+
+I documented the exact definitions, relevant theorems, and rejection rationale in [REJECTED.md](/Users/jang-wongi/Desktop/WG/PI_LAB/arxiv-gv-problems/results/2604.26989/REJECTED.md).
+
+Per Step 0, I stopped without creating a generator, gate report, or fabricated hardening transcript.
