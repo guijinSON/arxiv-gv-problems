@@ -134,7 +134,7 @@ PY
 
 echo "== interface check =="
 python3 - "$MOD" <<'PY'
-import importlib.util, sys
+import importlib.util, json, sys
 p=sys.argv[1]
 s=importlib.util.spec_from_file_location("m",p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
 need=["make_instance","render","parse_answer","verify","random_candidate","search_space",
@@ -144,8 +144,22 @@ if miss: print("MISSING:", miss); sys.exit(1)
 i=m.make_instance(**(getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})), seed=0)
 ok,why=m.verify(i, i["answer"])
 if not ok: print("G1 FAIL: planted answer does not verify:", why); sys.exit(1)
-rt = m.parse_answer(f"<answer>{', '.join(map(str,i['answer']))}</answer>") == i["answer"] \
-     if isinstance(i["answer"], list) else True
+# Round-trip the answer through parse_answer.  Modules choose their own wire
+# format, so try the plausible renderings and pass if ANY recovers the answer.
+# A comma-join alone reports a false failure for every nested or non-scalar
+# answer (it emits Python repr where the contract asks for JSON), which either
+# sinks a correct module or teaches people to ignore this line.
+def _roundtrips(mod, ans):
+    cands = [json.dumps(ans)]
+    if isinstance(ans, list) and all(isinstance(x, (int, float, str)) for x in ans):
+        cands.append(", ".join(map(str, ans)))
+    for body in cands:
+        try:
+            if mod.parse_answer(f"<answer>{body}</answer>") == ans: return True
+        except Exception:
+            pass
+    return False
+rt = _roundtrips(m, i["answer"])
 # canonical_key must be a function of the instance, not of the call.  A key that
 # is not deterministic cannot detect a duplicate; we cannot check the harder
 # property (invariance under relabelling) without family-specific machinery, so
