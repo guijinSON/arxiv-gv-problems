@@ -1,13 +1,13 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **39 / 12,167** resolved (0.32%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **40 / 12,167** resolved (0.33%)
 
 | state | count |
 |---|---:|
 | ✅ done | 17 |
-| 🚫 rejected (documented) | 22 |
-| 🔄 in progress | 3 |
-| ⚪ free | 12,125 |
+| 🚫 rejected (documented) | 23 |
+| 🔄 in progress | 6 |
+| ⚪ free | 12,121 |
 | **total** | **12,167** |
 
 ## In progress
@@ -17,6 +17,9 @@
 | `2508.11570` | GUIJIN SON | 2026-09-01T19:14 |
 | `2411.04916` | GUIJIN SON | 2026-09-01T19:14 |
 | `2007.09736` | GUIJIN SON | 2026-09-01T19:14 |
+| `2002.10145` | GUIJIN SON | 2026-09-01T19:53 |
+| `2411.07981` | GUIJIN SON | 2026-09-01T19:53 |
+| `2008.09415` | GUIJIN SON | 2026-09-01T19:53 |
 
 ## By family
 
@@ -26,7 +29,7 @@
 | designs and codes | 6 | 1,022 |
 | algebraic decomposition | 2 | 804 |
 | integer equations | 1 | 607 |
-| reconfiguration | 0 | 551 |
+| reconfiguration | 1 | 551 |
 | geometric configurations | 2 | 533 |
 | constraint satisfaction | 5 | 508 |
 | algebraic identity solutions | 2 | 398 |
@@ -35,4 +38,4 @@
 | words and permutations | 0 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-01 19:53Z by `scripts/status.sh --write`_
+_regenerated 2026-09-01 20:03Z by `scripts/status.sh --write`_
