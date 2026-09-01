@@ -16,6 +16,7 @@ import json
 import os
 import random
 import sys
+import threading
 import time
 import ssl
 import urllib.error
@@ -47,6 +48,12 @@ MAX_TOKENS = int(os.environ.get("ORACLE_MAX_TOKENS", "32000"))
 # sized for the answer alone comes back HTTP 200 with an empty body — observed
 # live at 16000 against claude-sonnet-5 on a 2030-character statement.
 REQUEST_TIMEOUT = 900
+# urlopen(timeout=) is a per-socket-operation timeout, NOT a total deadline: a
+# provider that trickles bytes (or holds a streaming connection open) resets it on
+# every read, so a single call can hang indefinitely.  Observed live -- one call
+# sat open 44 minutes against a 900s "timeout" and blocked the paper for 74.  The
+# request therefore runs on a worker thread under a hard wall-clock deadline.
+TOTAL_DEADLINE = int(os.environ.get("ORACLE_TOTAL_DEADLINE", str(REQUEST_TIMEOUT)))
 
 ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -121,7 +128,7 @@ def update_meta(**fields):
 
 
 # --- the oracle call --------------------------------------------------------
-def ask(model, prompt, key):
+def _ask_blocking(model, prompt, key):
     """Return (reply_text, http_status, finish_reason, error, empty).
 
     Exactly one of reply/error is set.  An empty body is NOT an API error: it is
@@ -169,6 +176,33 @@ def ask(model, prompt, key):
             f"the model returned no content, most likely because reasoning consumed "
             f"max_tokens={MAX_TOKENS}; raise ORACLE_MAX_TOKENS"), True
     return text, status, finish, None, False
+
+
+def ask(model, prompt, key):
+    """_ask_blocking under a hard wall-clock deadline.
+
+    A deadline overrun is reported as an ERROR, not a failure to solve: the model
+    never got to answer, so scoring it as unsolved would manufacture hardness out
+    of a hung socket.  attempt() redraws against a different vendor.
+    """
+    box = {}
+
+    def run():
+        try:
+            box["v"] = _ask_blocking(model, prompt, key)
+        except Exception as e:                                # noqa: BLE001
+            box["v"] = (None, None, None, f"{type(e).__name__}: {e}", False)
+
+    # daemon=True matters: a wedged socket must not keep the interpreter alive at
+    # exit, which is exactly what a ThreadPoolExecutor worker would do.
+    t = threading.Thread(target=run, daemon=True, name=f"oracle-{model}")
+    t.start()
+    t.join(TOTAL_DEADLINE)
+    if t.is_alive():
+        return (None, None, None,
+                f"total deadline exceeded: no complete response in {TOTAL_DEADLINE}s",
+                False)
+    return box.get("v", (None, None, None, "worker produced no result", False))
 
 
 def attempt(mod, model, params, seed, key):
