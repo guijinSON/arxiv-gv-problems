@@ -6,8 +6,8 @@
 |---|---:|
 | ✅ done | 11 |
 | 🚫 rejected (documented) | 17 |
-| 🔄 in progress | 3 |
-| ⚪ free | 12,136 |
+| 🔄 in progress | 6 |
+| ⚪ free | 12,133 |
 | **total** | **12,167** |
 
 ## In progress
@@ -17,6 +17,9 @@
 | `2309.11256` | GUIJIN SON | 2026-09-01T16:58 |
 | `2306.12713` | GUIJIN SON | 2026-09-01T17:39 |
 | `2311.15057` | GUIJIN SON | 2026-09-01T17:39 |
+| `2511.01003` | GUIJIN SON | 2026-09-01T18:02 |
+| `2501.06427` | GUIJIN SON | 2026-09-01T18:02 |
+| `2001.09362` | GUIJIN SON | 2026-09-01T18:02 |
 
 ## By family
 
@@ -35,4 +38,4 @@
 | words and permutations | 0 | 237 |
 | finite field constructions | 1 | 235 |
 
-_regenerated 2026-09-01 18:00Z by `scripts/status.sh --write`_
+_regenerated 2026-09-01 18:02Z by `scripts/status.sh --write`_
