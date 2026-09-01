@@ -1,0 +1,99 @@
+{
+  "G1_planted_verifies": {
+    "cases": [
+      {"ok": true, "preset": "demo", "reason": "ok", "seed": 0},
+      {"ok": true, "preset": "demo", "reason": "ok", "seed": 1},
+      {"ok": true, "preset": "demo", "reason": "ok", "seed": 17},
+      {"ok": true, "preset": "demo", "reason": "ok", "seed": 991},
+      {"ok": true, "preset": "standard", "reason": "ok", "seed": 0},
+      {"ok": true, "preset": "standard", "reason": "ok", "seed": 1},
+      {"ok": true, "preset": "standard", "reason": "ok", "seed": 17},
+      {"ok": true, "preset": "standard", "reason": "ok", "seed": 991},
+      {"ok": true, "preset": "hard", "reason": "ok", "seed": 0},
+      {"ok": true, "preset": "hard", "reason": "ok", "seed": 1},
+      {"ok": true, "preset": "hard", "reason": "ok", "seed": 17},
+      {"ok": true, "preset": "hard", "reason": "ok", "seed": 991},
+      {"ok": true, "preset": "extreme", "reason": "ok", "seed": 0},
+      {"ok": true, "preset": "extreme", "reason": "ok", "seed": 1},
+      {"ok": true, "preset": "extreme", "reason": "ok", "seed": 17},
+      {"ok": true, "preset": "extreme", "reason": "ok", "seed": 991}
+    ],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "tests": {
+      "drop_one": {"reason": "wrong number of indices: expected 16, got 15", "rejected": true},
+      "duplicate": {"reason": "indices must be distinct; a duplicate was supplied", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "index out of range; valid indices are 1 through 160", "rejected": true},
+      "replace_one": {"reason": "selected vectors XOR to the wrong target", "rejected": true}
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "measured_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over exactly h distinct 1-based indices",
+    "structure_aware_space": 4059949873964357469950,
+    "total": 250000
+  },
+  "G5_sparse": {
+    "n": 40,
+    "pass": true,
+    "search_space": 91390,
+    "solution_fraction": 2.18842324105482e-05,
+    "solutions": 2,
+    "weight": 4
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "closest_to_target": {"fails_all": true, "successes": 0, "trials": 8},
+      "greedy_residual": {"fails_all": true, "successes": 0, "trials": 8},
+      "highest_affine_degree": {"fails_all": true, "successes": 0, "trials": 8},
+      "lowest_column_weight": {"fails_all": true, "successes": 0, "trials": 8},
+      "position_first": {"fails_all": true, "successes": 0, "trials": 8},
+      "random_restart_swap": {"fails_all": true, "successes": 0, "trials": 8}
+    },
+    "pass": true,
+    "seeds": [800, 801, 802, 803, 804, 805, 806, 807]
+  },
+  "G7_scales": {
+    "base": {"log2_search_space_floor": 71, "n": 160, "rows": 92, "weight": 16},
+    "doubled": {
+      "log2_search_space_floor": 146,
+      "n": 320,
+      "planted_ok": true,
+      "reason": "ok",
+      "rows": 184,
+      "weight": 32
+    },
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "complete_isomorphism_test": false,
+    "distinct_keys": 20,
+    "failures": [],
+    "invariance_checks": 100,
+    "key_basis": "colour-refined zero-XOR 4-hypergraph plus target counts",
+    "pass": true,
+    "transformations": [
+      "column permutation",
+      "coordinate permutation",
+      "general GL(r,2) change of basis",
+      "global translation with parity-correct target",
+      "GL + translation + column permutation"
+    ],
+    "unrelated_instances": 20,
+    "witness_preservation_checks": 100
+  },
+  "all_passed": true,
+  "family": "exact_weight_binary_syndrome",
+  "shipping_difficulty": "standard"
+}
