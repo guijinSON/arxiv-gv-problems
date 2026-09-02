@@ -1,0 +1,88 @@
+{
+  "G1_planted_verifies": {
+    "by_preset": {
+      "extreme": [
+        {"ok": true, "reason": "ok", "seed": 0},
+        {"ok": true, "reason": "ok", "seed": 1},
+        {"ok": true, "reason": "ok", "seed": 2}
+      ],
+      "hard": [
+        {"ok": true, "reason": "ok", "seed": 0},
+        {"ok": true, "reason": "ok", "seed": 1},
+        {"ok": true, "reason": "ok", "seed": 2}
+      ],
+      "standard": [
+        {"ok": true, "reason": "ok", "seed": 0},
+        {"ok": true, "reason": "ok", "seed": 1},
+        {"ok": true, "reason": "ok", "seed": 2}
+      ]
+    },
+    "pass": true,
+    "total": 9,
+    "verified": 9
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"accepted": false, "reason": "wrong length: expected 128 colors, got 127"},
+      "duplicate": {"accepted": false, "reason": "duplicate color: 92 appears more than once"},
+      "empty": {"accepted": false, "reason": "empty answer: expected 128 ordinary colors"},
+      "out_of_range": {"accepted": false, "reason": "out of range: color 128 is not in 0..127"},
+      "swap_two": {"accepted": false, "reason": "missing transition: cyclic pair 92-91 is not a cubic edge"}
+    },
+    "distinct_reasons": 5,
+    "pass": true,
+    "rejected": 5
+  },
+  "G3_round_trip": {
+    "parsed_length": 128,
+    "pass": true,
+    "prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "naive_space": 385620482362580421735677065923463640617493109590223590278828403276373402575165543560686168588507361534030051833058916347592172932262498857766114955245039357760034644709279247692495585280000000000000000000000000000000,
+    "p_hat": 0.0,
+    "pass": true,
+    "prior": "uniform over all permutations of the ordinary colors",
+    "total": 200000
+  },
+  "G5_sparse": {
+    "instances": [
+      {"n": 12, "ratio": 2.505210838544172e-07, "search_space": 479001600, "seed": 3, "valid_answers": 120},
+      {"n": 12, "ratio": 3.5072951739618406e-07, "search_space": 479001600, "seed": 7, "valid_answers": 168},
+      {"n": 12, "ratio": 4.5093795093795094e-07, "search_space": 479001600, "seed": 11, "valid_answers": 216}
+    ],
+    "pass": true,
+    "threshold": 1e-06
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_low_onward_degree": {"solved": 0, "solved_seeds": [], "total": 8},
+      "outlier_label_span": {"solved": 0, "solved_seeds": [], "total": 8},
+      "outlier_short_cycle_count": {"solved": 0, "solved_seeds": [], "total": 8},
+      "random_restart_512": {"solved": 0, "solved_seeds": [], "total": 8}
+    },
+    "pass": true,
+    "shipping_params": {"n": 128}
+  },
+  "G7_scales": {
+    "base_n": 128,
+    "doubled_n": 256,
+    "pass": true,
+    "star_vertices": 393985,
+    "verify_ok": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_answer_checks_passed": 60,
+    "carried_answer_checks_total": 60,
+    "distinct_unrelated_keys": 20,
+    "invariance_checks_passed": 60,
+    "invariance_checks_total": 60,
+    "key_kind": "rooted BFS layer/edge-profile multiset (strong invariant, not exact GI canonization)",
+    "pass": true,
+    "transformations": ["edge reorder/orientation", "vertex/color relabel", "composition"],
+    "unrelated_instances": 20
+  },
+  "all_passed": true
+}
