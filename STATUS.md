@@ -1,14 +1,23 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **59 / 12,167** resolved (0.48%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **60 / 12,167** resolved (0.49%)
 
 | state | count |
 |---|---:|
 | ✅ done | 31 |
-| 🚫 rejected (documented) | 28 |
-| 🔄 in progress | 0 |
-| ⚪ free | 12,108 |
+| 🚫 rejected (documented) | 29 |
+| 🔄 in progress | 4 |
+| ⚪ free | 12,103 |
 | **total** | **12,167** |
+
+## In progress
+
+| paper | who | claimed |
+|---|---|---|
+| `2104.04330` | GUIJIN SON | 2026-09-02T14:22 |
+| `2112.06333` | GUIJIN SON | 2026-09-02T14:22 |
+| `2506.24001` | GUIJIN SON | 2026-09-02T14:22 |
+| `2509.03064` | GUIJIN SON | 2026-09-02T14:22 |
 
 ## By family
 
@@ -18,7 +27,7 @@
 | designs and codes | 10 | 1,022 |
 | algebraic decomposition | 2 | 804 |
 | integer equations | 2 | 607 |
-| reconfiguration | 3 | 551 |
+| reconfiguration | 4 | 551 |
 | geometric configurations | 4 | 533 |
 | constraint satisfaction | 7 | 508 |
 | algebraic identity solutions | 2 | 398 |
@@ -27,4 +36,4 @@
 | words and permutations | 1 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-02 14:22Z by `scripts/status.sh --write`_
+_regenerated 2026-09-02 15:02Z by `scripts/status.sh --write`_
