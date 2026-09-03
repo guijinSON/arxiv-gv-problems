@@ -1,13 +1,13 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **84 / 12,167** resolved (0.69%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **85 / 12,167** resolved (0.70%)
 
 | state | count |
 |---|---:|
-| ✅ done | 40 |
+| ✅ done | 41 |
 | 🚫 rejected (documented) | 44 |
-| 🔄 in progress | 12 |
-| ⚪ free | 12,071 |
+| 🔄 in progress | 19 |
+| ⚪ free | 12,063 |
 | **total** | **12,167** |
 
 ## In progress
@@ -19,13 +19,20 @@
 | `2512.24037` | GUIJIN SON | 2026-09-03T03:58 |
 | `2411.16149` | GUIJIN SON | 2026-09-03T04:36 |
 | `2601.08530` | GUIJIN SON | 2026-09-03T04:37 |
-| `2604.25734` | GUIJIN SON | 2026-09-03T04:37 |
 | `1604.00052` | GUIJIN SON | 2026-09-03T06:44 |
 | `1103.0203` | GUIJIN SON | 2026-09-03T06:44 |
 | `2601.07658` | GUIJIN SON | 2026-09-03T06:44 |
 | `2204.09356` | GUIJIN SON | 2026-09-03T06:44 |
 | `2508.18162` | GUIJIN SON | 2026-09-03T06:45 |
 | `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
+| `2506.23846` | GUIJIN SON | 2026-09-03T07:14 |
+| `2507.09257` | GUIJIN SON | 2026-09-03T07:14 |
+| `1902.03852` | GUIJIN SON | 2026-09-03T07:14 |
+| `2004.01492` | GUIJIN SON | 2026-09-03T07:14 |
+| `1904.04072` | GUIJIN SON | 2026-09-03T07:14 |
+| `1902.03164` | GUIJIN SON | 2026-09-03T07:15 |
+| `0812.4158` | GUIJIN SON | 2026-09-03T07:15 |
+| `1503.03192` | GUIJIN SON | 2026-09-03T07:15 |
 
 ## By family
 
@@ -41,7 +48,7 @@
 | algebraic identity solutions | 2 | 398 |
 | algebraic geometric structures | 0 | 299 |
 | schedules and allocations | 4 | 259 |
-| words and permutations | 5 | 237 |
+| words and permutations | 6 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-03 07:13Z by `scripts/status.sh --write`_
+_regenerated 2026-09-03 07:57Z by `scripts/status.sh --write`_
