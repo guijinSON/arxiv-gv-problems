@@ -124,6 +124,25 @@ def verify(inst, answer) -> tuple[bool, str]
     """(True,"ok") or (False, reason). Accept ANY valid witness, not only
     inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
 
+CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
+    # {"description": a human-readable grammar/bounds statement, e.g.
+    #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed
+    #                  monomial basis, rational coefficients with |num|,|den| < 2^32"
+    #  "bounds":      the numeric bounds that make it finite, e.g.
+    #                 {"n_squares": 6, "max_degree": 4, "basis": 45, "coeff_bits": 32}}
+    #
+    # This field exists because requiring an integer `search_space` silently forces
+    # every family to be a tuple of small integers.  Measured over the first 40
+    # shipped generators: search_space returned an int 40/40 and None 0/40, and not
+    # one answer was a rational, a polynomial or a symbolic expression -- because a
+    # symbolic answer has no uniformly-sampleable candidate set, so G4 could not be
+    # reported and the family was never built.
+    #
+    # Declaring bounds fixes that.  An antiderivative is infinite; an antiderivative
+    # over a fixed operator set with depth <= 4 and coefficients under 2^16 is a
+    # finite, countable, samplable space.  Bound the language and the continuous
+    # families become expressible without weakening exact verification at all.
+
 def random_candidate(inst, rng) -> object
     """A random candidate that ALREADY SATISFIES every constraint a solver would
     trivially enforce from reading the statement (shape, size, and any structural
@@ -131,6 +150,10 @@ def random_candidate(inst, rng) -> object
     bias toward the planted answer. See G4 — do NOT sample from the naive space."""
 
 def search_space(inst) -> int | None
+    """Size of CERTIFICATE_LANGUAGE at these parameters -- the space
+    `random_candidate` samples from, not a looser superset. Return None ONLY if
+    the declared language is genuinely uncountable; then G5 must carry a sampled
+    density estimate instead."""
     """Size of the naive candidate space, or None if not countable."""
 
 def enumerate_all(inst) -> int | None
@@ -202,8 +225,8 @@ pass at the difficulty you ship.**
 | **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
 | **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
 | **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
-| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
-| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples drawn from `CERTIFICATE_LANGUAGE`, measured **structure-aware** (see below). Report hits/total. |
+| **G5 density + baseline cost** | A real number, never "not feasible": an exact solution count where enumeration works at any preset, otherwise a sampled density estimate — **plus** the measured cost of your strongest attack. See below. |
 | **G6 adversary panel** | ≥3 cheap attacks **plus the standard algorithm for the problem class**, each FAILING across ≥8 seeds. The domain attack is mandatory — see below. |
 | **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
 | **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
@@ -231,6 +254,31 @@ So: before sampling, ask what a solver gets for free from the statement — the
 arity, the partition shape, the degree, the range, the sum constraint — and build
 those into `random_candidate`. If you also report the naive number, label it
 clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G5: measure difficulty, do not infer it from cardinality
+
+Across the first 40 shipped generators, `enumerate_all` returned `None` at the
+**shipping** preset **40/40**. G5 was therefore measured on a reduced instance
+(n = 4–40, against shipping n up to 512) or carried no number at all (7/40). It
+never described the instance that actually ships — and a density at n=4 says
+nothing about n=32.
+
+Worse, a reduced-preset number can be passed while being alarming: `2104.04330`
+reported a solution fraction of **5.7e-4** at n=18 — roughly one candidate in 1768
+is valid — and passed G5 anyway.
+
+A large space is not difficulty. `2503.01929` reported a 1536-bit candidate space
+and fell to Algorithm X in under five seconds. Report both of these, as numbers,
+**at the shipping preset**:
+
+1. **Density at the shipping preset.** Exact count if `enumerate_all` terminates
+   there; otherwise sample `random_candidate` and report the observed fraction of
+   valid answers with the sample size. A count from a smaller preset may be given
+   in addition, labelled with its `n` — never instead. `None` is not an answer.
+2. **Baseline cost.** Run your strongest G6 attack at the *shipping* preset and
+   record what it actually cost: wall-clock seconds, and nodes/restarts/iterations.
+   A family whose best attack fails in 0.2 s is not obviously hard — it may simply
+   be unsatisfiable-looking to that attack. Cost is the honest difficulty signal.
 
 ### G6: the adversary panel — this is where generators actually die
 

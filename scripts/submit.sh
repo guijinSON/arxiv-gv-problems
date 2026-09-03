@@ -58,6 +58,18 @@ if failed:
     print("ERROR: gates not passing in selftest_report.json: " + ", ".join(failed)); sys.exit(1)
 if rep.get("all_passed") is False:
     print("ERROR: selftest_report.json says all_passed=false"); sys.exit(1)
+g5 = next((v for k, v in gates.items() if k.startswith("G5")), None)
+if isinstance(g5, dict):
+    nums = [v for k, v in g5.items()
+            if k != "pass" and isinstance(v, (int, float)) and not isinstance(v, bool)]
+    if not nums:
+        print("ERROR: G5 reports no measured number.  enumerate_all returned None in\n"
+              "       40/40 of the first shipped generators, so the sparsity gate never\n"
+              "       fired -- 2503.01929 passed it with a 1536-bit space and fell to\n"
+              "       Algorithm X in 5s.  Report an exact count, or a sampled density\n"
+              "       estimate, AND the measured cost of your strongest attack.\n"
+              "       See prompts/codex_task.md, G5.")
+        sys.exit(1)
 if not any(k.startswith("G8") for k in gates):
     print("ERROR: no G8 gate in selftest_report.json — canonical_key invariance was\n"
           "       never tested.  submit.sh counts distinct keys but cannot tell a real\n"
@@ -197,6 +209,16 @@ rt, rt_why = _parse_contract(m, i, i["answer"])
 # anything.  Observed live: an equiangular-lines paper (Gram matrices, Seidel
 # matrices, interlacing) shipped as a 720-vertex graph whose verify() is
 # documented "check any size-k clique" -- no vectors in the instance at all.
+CL = getattr(m, "CERTIFICATE_LANGUAGE", None)
+if not isinstance(CL, dict) or not CL.get("description") or "bounds" not in CL:
+    print("ERROR: module has no CERTIFICATE_LANGUAGE {description, bounds}.\n"
+          "       Requiring an integer search_space without a declared language\n"
+          "       silently forces every answer to be a tuple of small ints: across\n"
+          "       the first 40 shipped generators search_space was an int 40/40 and\n"
+          "       None 0/40, with zero rational, polynomial or symbolic answers.\n"
+          "       Bound the language instead -- see prompts/codex_task.md, STEP 1.")
+    sys.exit(1)
+
 NAT = getattr(m, "NATIVE", None)
 if not isinstance(NAT, dict):
     print("ERROR: module has no NATIVE dict.  Declare what this family really is\n"
