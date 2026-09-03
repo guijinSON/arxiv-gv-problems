@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **76 / 12,167** resolved (0.62%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **77 / 12,167** resolved (0.63%)
 
 | state | count |
 |---|---:|
-| ✅ done | 43 |
+| ✅ done | 44 |
 | 🚫 rejected (documented) | 33 |
-| 🔄 in progress | 2 |
+| 🔄 in progress | 1 |
 | ⚪ free | 12,089 |
 | **total** | **12,167** |
 
@@ -14,7 +14,6 @@
 
 | paper | who | claimed |
 |---|---|---|
-| `2509.14357` | GUIJIN SON | 2026-09-02T21:42 |
 | `2502.08624` | Wongi-Jang | 2026-09-03T03:22 |
 
 ## By family
@@ -30,7 +29,7 @@
 | constraint satisfaction | 7 | 508 |
 | algebraic identity solutions | 2 | 398 |
 | algebraic geometric structures | 0 | 299 |
-| schedules and allocations | 3 | 259 |
+| schedules and allocations | 4 | 259 |
 | words and permutations | 4 | 237 |
 | finite field constructions | 3 | 235 |
 
