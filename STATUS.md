@@ -1,13 +1,13 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **79 / 12,167** resolved (0.65%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **80 / 12,167** resolved (0.66%)
 
 | state | count |
 |---|---:|
 | ✅ done | 40 |
-| 🚫 rejected (documented) | 39 |
+| 🚫 rejected (documented) | 40 |
 | 🔄 in progress | 16 |
-| ⚪ free | 12,072 |
+| ⚪ free | 12,071 |
 | **total** | **12,167** |
 
 ## In progress
@@ -22,7 +22,6 @@
 | `2604.25734` | GUIJIN SON | 2026-09-03T04:37 |
 | `1604.00052` | GUIJIN SON | 2026-09-03T06:44 |
 | `1103.0203` | GUIJIN SON | 2026-09-03T06:44 |
-| `2605.28674` | GUIJIN SON | 2026-09-03T06:44 |
 | `2601.07658` | GUIJIN SON | 2026-09-03T06:44 |
 | `2204.09356` | GUIJIN SON | 2026-09-03T06:44 |
 | `2411.10209` | GUIJIN SON | 2026-09-03T06:44 |
@@ -30,6 +29,7 @@
 | `2601.05272` | GUIJIN SON | 2026-09-03T06:45 |
 | `2304.13478` | GUIJIN SON | 2026-09-03T06:45 |
 | `2508.18162` | GUIJIN SON | 2026-09-03T06:45 |
+| `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
 
 ## By family
 
@@ -37,7 +37,7 @@
 |---|---:|---:|
 | graph structures | 14 | 5,559 |
 | designs and codes | 10 | 1,022 |
-| algebraic decomposition | 2 | 804 |
+| algebraic decomposition | 3 | 804 |
 | integer equations | 4 | 607 |
 | reconfiguration | 7 | 551 |
 | geometric configurations | 5 | 533 |
@@ -48,4 +48,4 @@
 | words and permutations | 5 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-03 06:56Z by `scripts/status.sh --write`_
+_regenerated 2026-09-03 07:13Z by `scripts/status.sh --write`_
