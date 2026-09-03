@@ -1,0 +1,1594 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/2604.13514
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a06604-21ac-7191-974b-735268068e67
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know its answer*, because you
+  sampled the answer first and constructed the problem around it.
+- **H — hard.** No known polynomial-time or closed-form method, and the answer space
+  is far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+The answer must be a **witness** — a structured object handed to a checker. Never an
+absence ("no solution exists"), never an optimum whose optimality is the claim,
+never a real number or an asymptotic rate.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the three things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, standard library only, deterministic given `(n, seed)`. No file IO, no
+network, no printing at import. Use `random.Random(seed)`, never global `random`.
+
+```python
+DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
+                            # each maps to kwargs for make_instance
+
+def make_instance(n, seed=0, **params) -> dict
+    """Inverse generation: sample the answer FIRST, then build the problem around
+    it. Returns a dict containing key "answer" (the planted witness) plus all data
+    the solver needs. `n` is the size parameter; larger n must mean harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT."""
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of the naive candidate space, or None if not countable."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship.**
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G6 adversary panel** | ≥3 cheap attacks **plus the standard algorithm for the problem class**, each FAILING across ≥8 seeds. The domain attack is mandatory — see below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+- **The standard algorithm for the problem class — REQUIRED, not optional.** The
+  three above are generic and they are *not sufficient*; they probe how you built
+  the instance, not what is known about the problem. Ask what a specialist would
+  reach for first and run *that*:
+
+  | the problem is about | run at least |
+  |---|---|
+  | satisfiability / CSP | a SAT or SMT solver, or DPLL with unit propagation |
+  | covering, packing, assignment, scheduling | an ILP/LP relaxation, or matching |
+  | a planted subgraph, colouring, partition, or community | **a spectral method** — top eigenvectors of the adjacency/Laplacian, and an SDP or nuclear-norm relaxation if the paper mentions one |
+  | subset sum, knapsack, lattice, or small-coefficient integer relations | LLL / lattice reduction |
+  | exact cover, tiling, set partition | Algorithm X / DLX, or a CP solver |
+  | paths, cycles, flows, connectivity | the classical polynomial algorithm for the relaxed version, then repair |
+  | permutations, words, group elements | normal forms and the natural rewriting/canonicalisation |
+
+  If no library is available, implement the cheap version — power iteration is a
+  dozen lines and breaks most planted-subgraph constructions. If you genuinely
+  cannot run the standard attack, say so explicitly in the README caveats and name
+  the attack you could not run. Never silently omit it.
+
+**Report G6 in this shape**, so the panel can be checked mechanically rather than
+read prose-by-prose:
+
+```python
+report["G6_adversary_panel"] = {
+    "pass": all_failed,
+    "attacks": {                      # one entry per attack, name -> result
+        "outlier_degree":     {"successes": 0, "attempts": 8},
+        "greedy_largest_first":{"successes": 0, "attempts": 8},
+        "random_restart_256": {"successes": 0, "attempts": 8},
+        "spectral_top_eigenvector": {"successes": 0, "attempts": 8},   # the domain attack
+    },
+}
+```
+
+Extra keys alongside `attacks` are fine. `submit.sh` requires `attacks` to be
+present with **at least 4 entries** — three generic probes plus the domain attack.
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+- **A bounded Token Jumping family (arXiv:2408.04743) passed every gate, and the
+  four-vendor oracle pool returned `hardened`.** A construction-aware spectral
+  attack then recovered a verified witness on **20/20 shipping instances in
+  polynomial time** — the planted colour classes formed an exact −3 eigenvector.
+  The generic outlier/greedy/restart panel saw nothing. This is why the domain
+  attack is mandatory: gates passing and the oracle failing to solve are jointly
+  *not* evidence of hardness, and this family would have shipped on that evidence.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+5. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard.** The specific theorem and parameter regime you are inside, and
+  — just as important — the easy regimes you had to avoid and the results that
+  identify them. Cite sections by number. This is the part only you know.
+- **A worked example.** A rendered instance small enough to read in full (use your
+  smallest preset), its answer, `verify` returning True on it, and `verify`
+  returning False with its reason on a corrupted variant.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2604.13514
+url: https://arxiv.org/abs/2604.13514
+title: Automated Tactics for Polynomial Reasoning in Lean 4
+categories: cs.LO math.AC
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: algebraic decomposition
+  method: ideal containment
+  candidate generator: choose polynomials and derive membership certificate from constructed ideal relations
+  candidate verifier: check polynomial reductions and ideal containment certificate inside Lean
+2026-09-03T06:45:46.735394Z ERROR codex_skills_extension::host_service: failed to install system skills: io error while remove existing system skills dir: Directory not empty (os error 39)
+2026-09-03T06:45:51.466628Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://developers.openai.com/mcp?source=codex)")))
+codex
+I’ll first inspect the full paper and its exact tactic/problem definitions, hardness claims, and easy regimes. I’ll reject the proposed family immediately if the paper does not support a genuine hard witness-search problem; otherwise I’ll implement and exercise every gate before running the mandated oracle harness.
+web search: 
+web search: https://arxiv.org/abs/2604.13514
+web search: 
+web search: 
+codex
+The full paper exposes a serious issue with the triage hypothesis: it gives certificate formats and complete SageMath/SymPy procedures, but no hardness theorem, lower bound, or hard parameter regime. I’m checking the source and repository conventions now to determine whether this must be recorded as a formal rejection rather than manufacturing unsupported “hardness.”
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!**/.git/**'"' -g '*' | sed -n '1,120p'" in /home/gson/gvrepo/results/2604.13514
+ succeeded in 0ms:
+/home/gson/gvrepo/results/2604.13514
+codex_run.log
+.meta.json
+.task.md
+.runner.sh
+
+exec
+/bin/bash -lc 'for p in /home/gson/gvrepo/results/2604.13514/AGENTS.md /home/gson/gvrepo/results/AGENTS.md /home/gson/gvrepo/AGENTS.md /home/gson/AGENTS.md /home/AGENTS.md; do if test -f "$p"; then echo "$p"; sed -n '"'1,240p' \""'$p"; fi; done
+sed -n '"'1,240p' .meta.json" in /home/gson/gvrepo/results/2604.13514
+ succeeded in 0ms:
+{
+ "paper": "2604.13514",
+ "schema_version": 2,
+ "model": "gpt-5.6-sol",
+ "effort": "xhigh",
+ "codex_version": "0.150.1",
+ "started_at": "2026-09-03T06:45:40Z"
+}
+exec
+/bin/bash -lc 'paper_tmp=$(mktemp -d)
+curl -L --fail --silent --show-error https://arxiv.org/e-print/2604.13514 -o "$paper_tmp/source.tar"
+tar -xf "$paper_tmp/source.tar" -C "$paper_tmp"
+rg -n -i "hard|complex|polynomial.time|lower bound|NP|FPT|fixed.parameter|benchmark|performance|runtime|certificate|ideal membership|SageMath|SymPy" "$paper_tmp" -g '"'*.tex'
+find \""'$paper_tmp" -maxdepth 2 -type f -printf '"'%f\\n' | sort" in /home/gson/gvrepo/results/2604.13514
+ succeeded in 422ms:
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:25:\usepackage[utf8]{inputenc}
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:116:% \usepackage{unicode-math-input}
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:212:To address this issue, we propose a certificate-based approach
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:213: that combines external computer algebra systems, such as SageMath or SymPy, with formal verification in Lean~4. Our approach uses a computable representation of multivariate polynomials in Lean to import and verify externally generated Gröbner basis computations. The external solver carries out the main algebraic computations, while the returned results are verified inside Lean.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:215:\keywords{Lean  \and Gröbner basis \and Tactic \and  SageMath \and SymPy}
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:221:% This paper presents a certificate-based framework that combines the computational strength of external computer algebra systems, such as SageMath and SymPy, with the proof-theoretic rigor of Lean~4. Our approach is based on a computable representation of multivariate polynomials inside Lean, which serves as the interface for importing and verifying externally generated Gröbner basis computations. Heavy symbolic computations are delegated to the external CAS, while the returned results are imported back into Lean as certificates and formally checked.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:223:% To support efficient communication between Lean and external solvers, we introduce a compact sparse JSON encoding of  polynomials, which significantly reduces overhead for high-dimensional inputs. On the Lean side, polynomial extraction, serialization, and reconstruction are implemented at the metaprogramming level, ensuring that exchanged expressions are well typed by construction and make the overall pipeline robust and extensible.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:225:% Building on this infrastructure, we implement three automated tactics for transferring polynomial data between Lean and CAS and for certifying the returned computations. These tactics can automatically solve goals involving remainder certification, Gröbner basis verification, ideal equality, and ideal or radical membership. Our work demonstrates a practical approach to integrating external symbolic computation into Lean~4, making Gröbner basis methods effectively usable in formal verification while preserving full foundational trust through certificate checking.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:227:% Applying Gröbner basis theory to concrete computational tasks in Lean 4 remains a significant challenge, as the existing formalization relies on the non-computable structure. This paper presents a framework that bridges this gap by delegating heavy algebraic computations to external computer algebra systems while preserving formal rigor within Lean 4. Communication between the two systems is handled via a compact, sparse JSON representation of rational polynomials, reducing overhead for high-dimensional inputs. On the Lean side, the extraction and reconstruction of polynomial expressions are implemented at the metaprogramming level, ensuring that all terms exchanged with the external CAS are well-typed by construction, which guaranties the robustness of the entire pipeline. Results returned by external solvers are treated as certificates and formally verified using a computable polynomial representation. Building on this infrastructure, we introduce a suite of automated tactics that can automatically discharge goals such as ideal equivalence, remainder certification, Gröbner basis verification, and ideal or radical membership. This work demonstrates a practical and extensible approach to combining the computational power of a external solver with the proof-theoretic rigor of an interactive theorem prover.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:234:% Symbolic computation is a powerful mathematical framework, within which Gröbner bases represent a crucial concept, widely used for solving algebraic challenges such as the ideal membership problem. Lean\cite{moura2021lean} is an interactive theorem prover that strictly guarantees the correctness of the theorems proved within its framework. Previous work by Guo et al.\cite{guo2026formalizinggrobnerbasistheory} formalized Gröbner bases in Lean. This formalization highly depends on the mathematical structure \lean{MvPolynomial} defined Mathlib\cite{mathlib}, which is a unified and extensive mathematical library. However, \lean{MvPolynomial} is designed to be non-computable. To enable automated algebraic reasoning based on Gröbner bases within Lean, we adopt an approach that integrates an external computational engine. We delegate the heavy polynomial computations to an external Computer Algebra System, such as SageMath\cite{sage2020sagemath}. Based on the calculation results, we can simplify the problem into a PIT problem in Lean, and efficiently verify this problem in Lean using the structure developed by Guo et al. Through this approach, we not only construct strict proof certificates for the external computations but also accomplish rigorous, automated algebraic reasoning purely reliant on the theoretical foundation of Gröbner bases. Finally, we encapsulate this entire workflow into some automated tactics.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:236:Gröbner basis, first introduced by Buchberger~\cite{BUCHBERGER2006475}, is a cornerstone of computational commutative algebra and algebraic geometry. It provides a unified algorithmic framework for classical problems, such as deciding  ideal membership  and solving systems of polynomial equations. 
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:242:% We employ SageMath~\cite{sage2020sagemath} or SymPy~\cite{meurer2017sympy} as the external solver, chosen for their open-source framework and extensive computational capabilities. 
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:245:We use SageMath~\cite{sage2020sagemath} or SymPy~\cite{meurer2017sympy} as the external solver, taking advantage of their open-source infrastructures and powerful symbolic computation capabilities. However, computing a result externally is only the first step. The result must still be rigorously verified within Lean~4. Direct verification via \leandef{MvPolynomial} is computationally impractical since its highly generic design supports abstract mathematical development rather than efficient large-scale symbolic computation. To address this bottleneck, we use a computable representation of a polynomial developed by Guo et.al.~\cite{wuprover_mop_2026}. Finally, we encapsulate this entire workflow into tactics, allowing users to solve algebraic goals automatically without managing the underlying complexity. The source code is publicly available at \url{https://github.com/WuProver/GroebnerTactic}.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:252:%     \item We provide an interface between Lean and SageMath, allowing users to leverage both the rigorous verification of Lean and the efficient symbolic computation of SageMath.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:290:Using these structures and conversion functions, we translate the JSON output produced by an external solver into an \lean{Expr} object in Lean, and then apply \leandef{Lean.PrettyPrinter.delab} to convert it into a \leandef[\lean{Syntax}]{Lean.Syntax} object that can serve as a certificate for other tactics.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:331:For some kinds of verifications requiring a Gröbner basis, it is essential to verify in Lean that the externally computed  Gröbner basis $G$ of $\langle B \rangle$ is a Gröbner basis, but it does not by itself imply that $G$ generates the same ideal as the original generator $B$. Formal algebraic reasoning requires us to prove the extensional identity $\langle G \rangle = \langle B \rangle$. To automate this task, we implement the tactic \lean{idealeq}, which proves the equality of two finitely generated ideals by reducing it to ideal membership certificates.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:346:In our implementation, these coefficient polynomials are computed by an external solver and returned to Lean as certificates. On the Lean side, we implement a tactic \lean{submodule_span} that takes such coefficients as input and reduces the membership goal to an equality check,  which is a concrete polynomial identity testing (PIT) problem and can be solved by the computable representation. The tactic \lean{idealeq} establishes $I = J$ by proving both inclusions that every $f_i \in J$ and every $g_j \in I$.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:429:\subsubsection{Ideal Membership Problem}
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:433:A fundamental property of Gröbner bases is that they provide an effective method for solving the ideal membership problem. For a goal of the form \lean{f ∈ Ideal.span B}, \lean{gb_solve} invokes an external computation tool to obtain an ideal-membership certificate, namely polynomials $c_i$ such that $
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:482:% For a goal \lean{f ∈ (Ideal.span S).radical}, \lean{gb_solve} applies \lean{Ideal.mem_radical_iff} to reduce the goal to $f^n \in \langle B \rangle$ for some $n$. It queries external solver for the witness exponent $n$ and membership certificates, and then closes the resulting ideal membership goal as mentioned before. 
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:484:For a goal of the form \lean{f ∈ (Ideal.span S).radical}, the tactic \lean{gb_solve} first applies \lean{Ideal.mem_radical_iff} to reduce the problem to proving that $f^n \in \langle S \rangle$ for some exponent $n$. It then queries an external solver for such a witness exponent together with the corresponding ideal membership certificate. Once these data are returned, the tactic reduces the goal to an ordinary ideal membership problem. 
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:520:% queries SageMath to compute $G$, verifies that \lean{lex.IsGroebnerBasis G (Ideal.span B)} using the procedure described above, and introduces this fact as a named hypothesis, which can then be used in subsequent proof steps. In \Cref{gb_example}, if we do not know the Gröbner basis of $I$, we can use \lean{add_gb_hyp} to compute one.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:543:% To invoke external computer algebra systems from within Lean 4 tactics, we implement a unified runner framework supporting three backends: local SageMath, SageMath via API, and local SymPy. The active backend is configured through Lean 4's option mechanism via \lean{gb_tactic.backend}, defaulting to external solvers. All backends share a common task descriptor type \lean{GbTask}, whose constructors cover the full range of operations required for Gröbner basis computation, including polynomial reduction, generator enumeration, Gröbner basis computation, Gröbner normal form reduction, radical ideal membership, and ideal membership testing. Each backend maps a \lean{GbTask} value to a corresponding script filename and command-line argument list, delegates execution to the appropriate runtime via \leandef{IO.Process.spawn}, and returns the result as a string for further processing by the tactic framework.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:547:To support calls from Lean~4 tactics to external computer algebra systems, we implement a unified runner framework with three backends: local SageMath, SageMath accessed through an API, and local SymPy. The backend to be used is controlled by the Lean~4 option \lean{gb_tactic.backend}. By default, the system uses local SageMath.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:549:The interface between the tactic layer and the computation backends is given by a common task descriptor type \lean{GbTask}. Its constructors represent the various algebraic operations required in our workflow, including polynomial reduction, Gröbner basis computation, reduction to  normal form, ideal membership testing, and radical membership testing.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:553:% The code used to solve \Cref{ideal_eq_example} relies on the default backend, which performs the required computations using a local SageMath installation. By changing the option \lean{gb_tactic.backend}, users can switch to a different computation backend without modifying the proof script itself.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:554:Taking \Cref{ideal_eq_example} as an example, explicitly setting \lean{gb_tactic.backend} to \texttt{1} directs the computation through the SageMath API, which is particularly convenient in environments where SageMath is not installed locally.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:561:Setting it to \texttt{2} delegates to a SymPy installed locally instead. 
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:575:In this paper, we presented a framework for automated algebraic reasoning in Lean~4 through integration with external computer algebra systems. At the metaprogramming level, we developed an interface between Lean and external solvers, enabling the extraction, serialization, and certification of algebraic data and computational results. Building on this infrastructure, we introduced three automated tactics: \lean{idealeq}, \lean{gb_solve}, and \lean{add_gb_hyp} that support a range of algebraic reasoning tasks, including ideal equality, remainder certification, Gröbner basis verification, ideal membership problems, and radical ideal membership problems.
+/tmp/tmp.tFLo1BBkjg/samplepaper.tex:642:% A key property of a Gröbner basis is its ability to solve the ideal membership problem.
+/tmp/tmp.tFLo1BBkjg/lstlean.tex:292:captionpos=b,
+00README.json
+llncs.cls
+lstlean.tex
+references.bib
+samplepaper.bbl
+samplepaper.tex
+source.tar
+splncs04.bst
+
+exec
+/bin/bash -lc "rg --files .. -g 'REJECTED.md' | head -20" in /home/gson/gvrepo/results/2604.13514
+ succeeded in 0ms:
+../1601.07131/REJECTED.md
+../2306.12848/REJECTED.md
+../2410.07666/REJECTED.md
+../2211.12582/REJECTED.md
+../2501.06427/REJECTED.md
+../2604.24502/REJECTED.md
+../2212.01053/REJECTED.md
+../2408.04743/REJECTED.md
+../2504.18110/REJECTED.md
+../2502.14674/REJECTED.md
+../2310.01945/REJECTED.md
+../2302.04718/REJECTED.md
+../2304.07157/REJECTED.md
+../2602.19989/REJECTED.md
+../1409.6092/REJECTED.md
+../2403.03885/REJECTED.md
+../1904.00563/REJECTED.md
+../2101.05057/REJECTED.md
+../2306.00850/REJECTED.md
+../2306.09948/REJECTED.md
+
+exec
+/bin/bash -lc 'for f in ../1601.07131/REJECTED.md ../2604.24502/REJECTED.md ../2408.04743/REJECTED.md; do echo "$f"; sed -n '"'1,220p' \""'$f"; done' in /home/gson/gvrepo/results/2604.13514
+ succeeded in 0ms:
+../1601.07131/REJECTED.md
+# Rejected: arXiv:1601.07131
+
+Paper: Ferran Cedó, Tatiana Gateva-Ivanova, and Agata Smoktunowicz,
+[*On the Yang-Baxter equation and left nilpotent left braces*](https://arxiv.org/abs/1601.07131).
+
+## Verdict
+
+This paper does not support a problem family satisfying the required hardness
+gate **H**, so no generator module is shipped. The full LaTeX source, not only
+the abstract, was reviewed.
+
+## What the paper actually establishes
+
+- Section 1 defines a left brace, its operation `a*b = a·b-a-b`, the socle,
+  and a non-degenerate involutive set-theoretic Yang--Baxter solution.
+- Section 2 proves structural restrictions. In particular, Theorem 2 says that
+  a finite solution whose structure group is Engel is the trivial solution.
+  This is not a computational-hardness result or a hard parameter regime.
+- Section 3, Proposition 5, identifies the multipermutation level of the
+  solution associated with a nonzero brace with termination of the radical
+  chain `B^(n+1) = B^(n)*B`. For an explicitly tabulated finite brace, both the
+  associated solution and this chain are obtained by direct finite-table
+  computation.
+- Section 4, Proposition 6, proves that every finite solution embeds in a finite
+  left brace. Its proof is an explicit quotient construction from the structure
+  group; it is an existence/embedding theorem, not an intractability theorem.
+
+The paper contains no reduction, complexity classification, FPT boundary, or
+parameter regime in which finding any of these algebraic objects is shown (or
+argued) to be computationally hard.
+
+## Why the apparent generator ideas fail
+
+| Candidate task | Gate failure |
+|---|---|
+| Given a set, output a Yang--Baxter solution | **H:** the flip `r(x,y)=(y,x)` is a closed-form non-degenerate involutive solution for every size. |
+| Given a finite brace, output its associated solution | **H:** Section 3 gives the formula `r(a,b)=(L_a(b), L^(-1)_(L_a(b))(a))`; this is direct table lookup/inversion. |
+| Given operation tables, certify that they form a brace or that `r` satisfies YBE | Not a witness-search problem: substitution already decides the supplied object. Asking for the full table would again admit trivial closed-form braces/solutions unless extra constraints external to the paper were imposed. |
+| Compute multipermutation level/right nilpotence | **H:** on finite tables, retraction/partition refinement or repeated set closure computes it directly; Proposition 5 is a characterization, not a hard search problem. |
+| Embed a finite solution into a finite brace | **H/G/V not established together:** Proposition 6 supplies a general construction, while its brace can have order `n^m` (notation of its proof). The paper supplies neither a polynomially bounded witness regime nor hardness of finding an embedding. |
+| Complete a partially hidden operation or Yang--Baxter table | **H unsupported:** this would be a new constraint-satisfaction problem and planted distribution not studied in the paper. Planting a completion would give G and substitution would give V, but the required claim that no polynomial-time/closed-form attack exists would be speculation. |
+| Recover an isomorphism after relabelling a brace | **H unsupported and not the paper's problem:** no isomorphism-complexity result appears in the paper; using this would also make the required canonicalization depend on the unproved hard problem. |
+
+## Gate status
+
+| Gate | Status |
+|---|---|
+| G (inverse-generatable) | Possible for several artificial completion/isomorphism variants, but not sufficient. |
+| H (hard) | **Failed.** Natural tasks are explicitly constructible or direct finite-table computations; modified tasks have no hardness support in the paper. |
+| V (cheap exact verification) | Possible by substitution for tables, but not sufficient. |
+
+Per the task instruction to stop when any of G/H/V fails, `gen_1601_07131.py`,
+`selftest_report.json`, and oracle-loop artifacts were not fabricated, and the
+hardening harness was not run.
+../2604.24502/REJECTED.md
+# Rejected: exposed equalizer witnesses in the explicit Stallings-graph family
+
+Paper: Jialin Lei and Teng Zhang, [*Colored Stallings graphs and
+counterexamples to the Stallings equalizer conjecture*](https://arxiv.org/abs/2604.24502),
+arXiv:2604.24502v2 (9 May 2026).
+
+## Decision
+
+No problem generator is shipped. The natural witness task suggested by the
+paper—given two free-group homomorphisms, return a nontrivial word on which
+they agree—meets **G (inverse generation)** and **V (exact verification)** but
+fails **H (hardness)** on the paper's actual counterexample family. The
+construction exposes valid witnesses in closed form, including length-one
+witnesses. Increasing the rank or the word lengths does not remove that
+solver.
+
+Per Step 0 of the task, I stopped before writing a module, self-test report, or
+LLM-hardening transcript. Random-guess and oracle failures cannot override a
+deterministic construction that succeeds on every generated instance.
+
+## Exact definition and theorem regime
+
+Section 1 defines, for homomorphisms
+
+```text
+g,h : F(Sigma) -> F(Delta),
+```
+
+the equalizer
+
+```text
+Eq(g,h) = { w in F(Sigma) : g(w) = h(w) }.
+```
+
+Equality is equality in the free group, so a candidate word is checked by
+substituting the listed images of the domain generators into the word, freely
+reducing both results, and comparing them. This is an exact, inexpensive
+verifier and would satisfy V.
+
+Theorem 1.2 is structural, not a computational-hardness theorem. For every
+`n >= 2`, it constructs monomorphisms `g,h : F_n -> F_2` whose equalizer has
+rank at least `2n-2`. Proposition 3.3 and Construction 4.1 fix the domain basis
+
+```text
+F_n = <t, x_1, ..., x_(n-1)>
+```
+
+and define, with `c_i = a^(-i)b^i`,
+
+```text
+g(t) = a,              h(t) = b,
+g(x_i) = c_i^2,        h(x_i) = c_i^2.
+```
+
+Lemma 4.3 proves that the subgroup represented by the colored Stallings graph
+`Gamma_n` is a rank-`2n-2` free factor of `Eq(g,h)`.
+
+## Fatal closed-form solvers
+
+### One equalizer word
+
+For every `i` from `1` through `n-1`, the displayed definition gives
+
+```text
+g(x_i) = h(x_i).
+```
+
+Thus `x_1` is a valid nontrivial witness on every instance and can be found by
+one comparison of two input rows. Its reduced length is one. Permuting the
+input rows, renaming generators, or inverting generators does not help: compare
+each generator image under `g` and `h` and return any equal pair (or its
+inverse). This attack is linear in the displayed input size.
+
+Length constraints do not repair the family. For any positive target length
+`L`, the freely reduced word `x_1^L` is in the equalizer. Products and powers of
+the other `x_i` give unlimited further explicit witnesses.
+
+### A full rank-`2n-2` independent family
+
+The paper's own graph also exposes the larger witness family. Use the chain of
+`t`-edges as a maximal tree in `Gamma_n`. The two `x_i`-loops—one at the base
+vertex and one at the vertex reached by `t^i`—give the graph-basis words
+
+```text
+x_i                    for 1 <= i < n,
+t^i x_i t^(-i)         for 1 <= i < n.
+```
+
+There are exactly `2n-2` such words. Lemma 4.2 verifies their membership and
+Lemma 4.3 verifies the rank/free-factor claim. Consequently, even a stronger
+task asking for the whole independent family has the closed-form solution
+printed by Construction 4.1. A solver does not need to search the nominal word
+space or reconstruct a hidden planted answer.
+
+### Stabilized variants
+
+Propositions 5.1 and 5.2 only add dummy generators to the same maps. They
+explicitly retain the subgroup `A_m` and its colored graph, so they retain all
+of the witnesses above. Remark 5.3 is easier still: membership is exactly the
+linear exponent-sum condition `e_x(w) = e_y(w)`. These non-injective variants
+therefore do not supply a hard positive-witness family.
+
+## Why nearby modifications do not qualify
+
+- **Hide the construction with a random Nielsen automorphism.** Precomposing
+  both maps by a long hidden change of free basis would conceal the displayed
+  words, but recovering a planted basis is a new average-case problem. This
+  paper gives no complexity reduction, hard planted distribution, or theorem
+  transferring hardness to that distribution. Claiming H from the apparent
+  obscurity of the transformed strings would be unsupported. It would also
+  make canonicalization under changes of basis a substantive unresolved part
+  of G8 rather than a harmless relabelling check.
+- **Ask for the exact rank or a maximum-rank basis.** Section 6 only conjectures
+  the upper bound `rank Eq(g,h) <= 2n-2`. An exact-rank or maximum claim makes
+  optimality part of the answer, which the task forbids, and the paper does not
+  prove that its lower bound is the complete equalizer rank.
+- **Ask whether the equalizer is trivial or whether another word exists.** A
+  yes/no answer or an absence is not an admissible witness. On the explicit
+  family nontriviality is already witnessed by every `x_i`.
+- **Use a general or bounded Post Correspondence Problem instance.** Section 1
+  mentions algorithmic work connecting equalizers and PCP, but this paper does
+  not prove a computational-hardness regime or provide an answer-first hard
+  distribution for general PCP instances. Substituting that external problem
+  would no longer be generating the explicit family established here.
+- **Return a colored Stallings graph.** The paper constructs `Gamma_n`
+  explicitly in Section 4. Returning it is a transcription task, while asking
+  for a proof that it captures an entire equalizer would require more than the
+  requested substitution-style witness verification.
+
+The paper also identifies genuinely easy special settings in its introduction:
+Ciobanu and Logan give algorithms for immersion pairs, and fixed-subgroup cases
+have constructive theory for endomorphisms. More importantly for this task,
+the paper never asserts computational hardness for its counterexamples; the
+word "harder" in Section 1 concerns the mathematical rank problem, not the
+complexity of finding one of the explicitly exhibited words.
+
+## Gate outcome
+
+| Requirement | Result | Evidence |
+|---|---:|---|
+| G — sample the witness first | Pass in principle | Construct any listed `x_i` or graph-basis word before emitting the maps. |
+| H — no polynomial/closed-form solver | **Fail** | `x_1` solves every instance; the `2n-2` graph-basis words above solve the stronger batch task. |
+| V — cheap exact verification | Pass | Substitute generator images, freely reduce both words, and compare. |
+| G4/G6 | Not run | A deterministic 100% attack makes random-guess estimates irrelevant. |
+| G7 | Does not rescue H | Larger `n` creates more immediately visible witnesses. |
+| Oracle loop | Not run | Step 0 requires stopping once H fails. |
+
+The prior triage was correct about substitution verification but not about
+hardness: the colored Stallings graph plants witnesses by displaying the very
+loops that produce them.
+../2408.04743/REJECTED.md
+# Rejected: spectrally exposed Token Jumping barrier
+
+Paper: Daniel W. Cranston, Moritz Mühlenthaler, and Benjamin Peyrille,
+[*A simple quadratic kernel for Token Jumping on surfaces*](https://arxiv.org/abs/2408.04743),
+arXiv:2408.04743.
+
+## Decision
+
+No generator is shipped. The proposed bounded-length Token Jumping family met
+inverse generation and exact replay, and it even received a `hardened` verdict
+from the prescribed LLM loop. A subsequent construction-aware spectral attack,
+motivated by the planted-colouring literature, recovered a verified witness on
+**20/20 shipping instances in polynomial time**. The family therefore fails
+**H (hardness)** and **G6 (adversary panel)**. The misleading generator,
+self-test report, README, and oracle transcript were removed rather than leave
+an apparently validated but easy family in the corpus.
+
+## What the paper actually defines
+
+Section 2 defines Token Jumping on a finite, undirected, simple graph. A state
+is an independent vertex set. Consecutive states have the same cardinality and
+differ by exactly one removed and one added vertex. Given independent sets `I`
+and `J`, each of size `k`, the decision problem asks whether such a sequence
+connects them.
+
+Section 1 states the relevant hard and easy regimes. Unrestricted Token
+Jumping is PSPACE-complete even on subcubic planar graphs of bounded bandwidth,
+and the version parameterised by both token count `k` and number of jumps
+`ell` is W[1]-hard. On the positive side, the problem is FPT on planar and,
+more generally, `K_{3,t}`-free graphs when parameterised by `k`; it also has
+kernels on bounded-degree, bounded-degeneracy, and fixed-surface graph classes.
+Theorem 1 proves an `O(g^2 + gk + k^2)` kernel when both genus `g` and token
+count `k` are parameters. These facts require `k` and `ell` to grow and rule
+out treating a small planted path as hard merely because unrestricted
+reachability is PSPACE-complete.
+
+## The attempted bounded-witness reduction
+
+The attempted family used an auxiliary graph `H` on `n` vertices. The Token
+Jumping graph had:
+
+- `n+1` independent start vertices `S` and `n+1` independent goal vertices
+  `T`, with every `S`--`T` edge present;
+- three choice vertices `X(v,0)`, `X(v,1)`, `X(v,2)` forming a triangle for
+  every `v` in `H`; and
+- an edge `X(u,c)`--`X(v,c)` for every edge `uv` of `H` and colour `c`.
+
+A sequence of exactly `2n+1` jumps from all of `S` to all of `T` is forced to
+move `n` tokens onto choice vertices before its unique `S -> T` jump. The
+choice triangles force one choice per vertex of `H`, and same-colour conflict
+edges make those choices a proper 3-colouring. Conversely, every proper
+3-colouring gives a valid sequence. This supplied a polynomially bounded
+witness and a cheap exact verifier, and it contains the ordinary worst-case
+3-COLOURING relation.
+
+For inverse generation, the code sampled three equal planted colour classes
+first and then drew three edge-disjoint perfect matchings between every pair
+of classes. Thus every vertex of `H` had exactly three neighbours in each of
+the other two classes and none in its own class. This equalised all visible
+degrees and defeated the original outlier, greedy, and short random-restart
+attacks. It also created the fatal algebraic signature.
+
+## Polynomial spectral attack
+
+Let `A` be the adjacency matrix of `H`, and let `1_C` be the indicator vector
+of a planted colour class. For
+
+`x = 1_C0 - 1_C1`,
+
+every vertex in `C0` has three neighbours in `C1`, every vertex in `C1` has
+three neighbours in `C0`, and every vertex in `C2` has three neighbours in
+both. Hence
+
+`A x = -3 x`.
+
+A second independent difference of class indicators has the same eigenvalue.
+The supposedly hidden colouring is therefore an exact two-dimensional
+eigenspace of eigenvalue `-3`. Computing that eigenspace and grouping vertices
+by their two coordinates recovers the three classes whenever no accidental
+extra `-3` eigenvectors occur. This takes polynomial time using standard exact
+or numerical linear algebra.
+
+The attack was tested on 20 unrelated `n=180` shipping seeds. In every case:
+
+1. eigenvalue `-3` had multiplicity exactly two;
+2. the eigenspace row embeddings formed three groups of exactly 60 vertices;
+3. those groups were a proper 3-colouring; and
+4. converting the colouring to the prescribed 361-jump witness made the public
+   verifier return `(True, "ok")`.
+
+Result: **20/20 verified solves**. This is not a marginal statistical leak; it
+is a direct polynomial construction of the witness.
+
+The failure is consistent with known work on planted colouring. David and
+Feige's [*On the effect of randomness on planted 3-coloring models*](https://arxiv.org/abs/1603.05183)
+reviews polynomial spectral recovery for random planted balanced colourings,
+and Kumar, Louis, and Tulsiani's [*Finding Pseudorandom Colorings of
+Pseudorandom Graphs*](https://doi.org/10.4230/LIPIcs.FSTTCS.2017.37) gives
+polynomial recovery results for expanding graphs with pseudorandom balanced
+colourings. The attempted construction was even more exposed because its
+between-class neighbour counts were exact rather than merely concentrated.
+
+## Why the LLM and initial gates were insufficient
+
+Before the spectral check, the `n=180` version had these measurements:
+
+| check | observed result |
+|---|---:|
+| planted replay | 12/12 preset/seed checks passed |
+| corruptions | 5/5 rejected with distinct reasons |
+| structure-aware random guessing | 0/200,000 |
+| degree outlier | 0/8 |
+| deterministic greedy colouring | 0/8 |
+| 32-restart randomised DSATUR | 0/8 |
+| relabelling/key checks | 120/120 invariant; 20/20 unrelated keys distinct |
+| four-vendor hardening | `hardened` at `n=180` after the easy rung was solved |
+| **spectral colouring** | **20/20 verified solves — failure** |
+
+The LLM result was especially weak evidence: one decisive model exhausted its
+32,000-token budget without emitting content, one explicitly declined to
+answer, and one emitted an invalid sequence. None tried the two-line
+eigenvector observation above. Random guessing and local heuristics measured
+the wrong attack surface; their failures say nothing against a deterministic
+global invariant.
+
+An earlier `n=90` rung had already shown why the adversary panel matters: three
+LLM vendors failed it, but the randomized-DSATUR attack solved 6/8 seeds. It was
+retired before the final run. The spectral attack then invalidated the larger
+rung too.
+
+## Why this was not retuned again
+
+Varying the between-class degrees could remove the exact eigenvalue, but that
+would start a new planted-colouring family whose average-case hardness is not
+established by the Token Jumping paper. Published planted-colouring algorithms
+also make a quick density retune unsafe. The prompt explicitly forbids using
+manual post-oracle tuning to chase a passing run. A defensible replacement
+would require a new hard planted distribution (or a faithful worst-case
+reduction with answer-first sampling), a spectral/SDP attack panel, and a fresh
+hardening process. That is materially different work, not a repair to this
+generator.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G — inverse generation | Passed: the colouring and bounded jump sequence were sampled before edges. |
+| H — no known polynomial/closed-form method | **Failed:** eigenspace recovery solved 20/20 and is polynomial. |
+| V — cheap exact verification | Passed: replay checks occupancy, independence, length, and final state. |
+| G6 — adversary panel | **Failed after adding the required spectral attack: 20/20 successes.** |
+| Overall | **Rejected.** |
+
+The rejection is based on a stronger attack than the required LLM loop. An
+oracle transcript cannot override a known polynomial solution method.
+
+codex
+This is a Step-0 rejection, not a merely weak preset. A bounded polynomial-decomposition witness turns coefficient recovery into Gaussian elimination over \(\mathbb{Q}\); leaving degree/support unbounded avoids that only by violating the bounded, cheaply handled witness requirement. The paper supplies no alternative hard distribution or reduction, while its own standard attack is Gröbner-basis computation through SageMath/SymPy. I’m recording that evidence in `REJECTED.md` and will not fabricate gate or oracle artifacts.
+apply patch
+patch: completed
+/home/gson/gvrepo/results/2604.13514/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..8e26144d9cf9bd99b2e9736d8365f941b1c5e454
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,132 @@
++# Rejected: no supported hard certificate-search regime
++
++Paper: Hao Shen, Junyu Guo, Junqi Liu, and Lihong Zhi,
++[*Automated Tactics for Polynomial Reasoning in Lean 4*](https://arxiv.org/abs/2604.13514),
++arXiv:2604.13514v1 (15 April 2026).
++
++## Decision
++
++No problem generator is shipped. The suggested ideal-containment/decomposition
++task has **G (inverse generation)** and **V (exact verification)**, but this paper
++does not establish **H (hardness)** for any parameter regime or generated
++distribution. Moreover, the natural way to make the requested certificate a
++bounded structured object makes recovery an ordinary linear-algebra problem over
++the rationals.
++
++This is a Step-0 rejection. Per the task instruction to stop when any of G, H, or
++V fails, `gen_2604_13514.py`, `selftest_report.json`, and oracle-loop artifacts
++were not created, and `scripts/harden.py` was not run. Random-guess and LLM
++failures could not repair the missing mathematical hardness claim.
++
++## What the full paper actually defines
++
++The full LaTeX source and all nine pages of the paper were reviewed, not only the
++abstract.
++
++- Section 2.2 fixes the certificate representation: sparse multivariate
++  polynomials with rational coefficients, serialized as coefficient/exponent
++  lists and reified in Lean.
++- Section 3 restricts the implementation to lexicographic order over
++  `Q[x_0, ..., x_n]`.
++- Section 3.1 gives the exact ideal-inclusion witness. For
++  `I = <f_1, ..., f_n>` and `J = <g_1, ..., g_m>`, inclusion `I <= J` is
++  certified by coefficient polynomials `c_ij` satisfying
++
++  ```text
++  f_i = sum_j c_ij * g_j
++  ```
++
++  for every `i`. Lean expands each identity and compares the resulting
++  polynomials. Ideal equality consists of certificates for both inclusions.
++- Section 3.2 similarly certifies a remainder using quotient polynomials,
++  verifies a Groebner basis using Buchberger's criterion plus ideal equality,
++  certifies ideal membership by an identity `f = sum_i c_i*s_i`, and certifies
++  radical membership using an exponent together with an ordinary membership
++  certificate for `f^n`.
++- Sections 3.3 and 3.4 describe the search procedure actually supplied by the
++  paper: `add_gb_hyp` computes a Groebner basis, and `gb_solve` obtains the
++  relevant certificates through local SageMath, a SageMath API, or local SymPy.
++
++The paper contains no complexity theorem, reduction, lower bound, benchmark,
++FPT boundary, or claimed average-case hard distribution. Its statement that
++`MvPolynomial` is non-computable and impractical for large symbolic computations
++is about the Lean representation and motivates moving computation to a CAS; it
++is not a hardness result for witness search. Indeed, Section 1 calls Groebner
++bases an effective algorithmic framework for deciding ideal membership, and
++Sections 3.2--3.4 implement that framework as the standard solver.
++
++## Why the triaged decomposition generator fails
++
++Suppose inverse generation first samples polynomials `c_1, ..., c_m` and
++generators `g_1, ..., g_m`, then emits
++
++```text
++f = sum_i c_i * g_i.
++```
++
++This certainly knows a valid answer, and exact sparse expansion verifies it.
++It does not yield a defensible hard family.
++
++### Bounded certificates are linear algebra
++
++A self-contained instance must pin down the witness shape. If it gives a degree
++bound or an allowed monomial support for each `c_i`, put one unknown rational
++coefficient on each allowed monomial, expand `sum_i c_i*g_i`, and equate its
++coefficients with those of `f`. This is a linear system over `Q`. Gaussian
++elimination returns some valid certificate in time polynomial in that explicit
++coefficient system. The solver need not recover the planted certificate, and
++crowding it with more rational solutions does not defeat this attack.
++
++The same observation applies when only a total-degree bound is stated: enumerate
++the permitted monomials and solve the resulting Macaulay-style linear system.
++Choosing enough variables or a large enough degree can make that expanded system
++large, but then apparent difficulty comes from an exponentially expanded search
++basis rather than from a hard regime proved or studied by this paper. Relative to
++the explicit matrix being solved, the standard attack remains polynomial.
++
++Adding requirements such as minimum support, coefficients in a small finite set,
++or a shortest decomposition could turn recovery into a combinatorial task, but
++none of those constraints occurs in the paper. A shortest/minimum certificate
++would also make optimality the claim, which the task expressly forbids.
++
++### Unbounded certificates do not rescue the contract
++
++If no degree/support bound is supplied, a certificate is an unbounded-length
++object. The paper gives no polynomial witness-size guarantee for the generated
++instances and no hard answer-first distribution. A solver can use precisely the
++Groebner-basis/normal-form machinery implemented by the paper, or search degree
++bounds successively using the linear system above. Planting cancellations at a
++secret high degree is not evidence that either method is hard, and it can make
++the output and exact expansion arbitrarily large.
++
++### Nearby paper tasks also lack the required combination
++
++| Candidate witness | Why it cannot be shipped from this paper |
++|---|---|
++| Quotients proving a stated remainder | Multivariate division is the natural direct algorithm; Section 3.2 delegates it to the external solver and checks the returned identity and degree condition. |
++| A Groebner basis plus certificates | Buchberger's algorithm is the mandatory domain attack and is exactly what Sections 3.2--3.4 invoke. The paper supplies no generated regime on which it fails or even performance measurements. |
++| Ideal-equality certificates | These are just two collections of the same membership decompositions, so bounded versions reduce to rational linear systems. |
++| Radical-membership exponent and coefficients | Section 3.2 asks the external solver for both. The exponent/certificate size is not bounded, and no hard positive-instance distribution is given. |
++| A non-membership result | This is an absence rather than an admissible positive witness; the paper uses a nonzero normal-form remainder to decide it. |
++| A sparse or small-coefficient decomposition | This is a new constrained-representation problem not defined or analyzed in the paper. Any hardness claim would be imported speculation. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- inverse generation | Pass in principle | Sample `c_i` first and form `f = sum_i c_i*g_i`. |
++| H -- no polynomial/closed-form method in a justified regime | **Fail** | The paper has no hardness theorem or hard parameters; bounded certificate recovery is linear algebra, and the paper implements the Groebner/CAS domain solver for the general task. |
++| V -- cheap exact verification | Pass for explicit certificates | Multiply sparse polynomials, sum, normalize rational coefficients, and compare exactly as in Sections 2.2 and 3.1. |
++| G1--G8 | Not run | Step 0 requires stopping after H fails. |
++| LLM hardening loop | Not run | Oracle failures cannot establish a missing complexity regime and would be especially misleading against a deterministic linear-algebra attack. |
++
++## What would be needed for a viable family
++
++A defensible successor would need a source that defines a bounded positive
++certificate problem and proves hardness for the exact parameter regime used by
++the generator, together with an answer-first distribution that preserves that
++hardness. It would also need to test at least rational linear solving, bounded
++Macaulay matrices, Buchberger/F4-style Groebner computation, and
++construction-specific cancellation/support attacks. Those ingredients are not
++present in arXiv:2604.13514, so adding them here would no longer be turning this
++paper's result into a verified generator.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..8e26144d9cf9bd99b2e9736d8365f941b1c5e454
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,132 @@
++# Rejected: no supported hard certificate-search regime
++
++Paper: Hao Shen, Junyu Guo, Junqi Liu, and Lihong Zhi,
++[*Automated Tactics for Polynomial Reasoning in Lean 4*](https://arxiv.org/abs/2604.13514),
++arXiv:2604.13514v1 (15 April 2026).
++
++## Decision
++
++No problem generator is shipped. The suggested ideal-containment/decomposition
++task has **G (inverse generation)** and **V (exact verification)**, but this paper
++does not establish **H (hardness)** for any parameter regime or generated
++distribution. Moreover, the natural way to make the requested certificate a
++bounded structured object makes recovery an ordinary linear-algebra problem over
++the rationals.
++
++This is a Step-0 rejection. Per the task instruction to stop when any of G, H, or
++V fails, `gen_2604_13514.py`, `selftest_report.json`, and oracle-loop artifacts
++were not created, and `scripts/harden.py` was not run. Random-guess and LLM
++failures could not repair the missing mathematical hardness claim.
++
++## What the full paper actually defines
++
++The full LaTeX source and all nine pages of the paper were reviewed, not only the
++abstract.
++
++- Section 2.2 fixes the certificate representation: sparse multivariate
++  polynomials with rational coefficients, serialized as coefficient/exponent
++  lists and reified in Lean.
++- Section 3 restricts the implementation to lexicographic order over
++  `Q[x_0, ..., x_n]`.
++- Section 3.1 gives the exact ideal-inclusion witness. For
++  `I = <f_1, ..., f_n>` and `J = <g_1, ..., g_m>`, inclusion `I <= J` is
++  certified by coefficient polynomials `c_ij` satisfying
++
++  ```text
++  f_i = sum_j c_ij * g_j
++  ```
++
++  for every `i`. Lean expands each identity and compares the resulting
++  polynomials. Ideal equality consists of certificates for both inclusions.
++- Section 3.2 similarly certifies a remainder using quotient polynomials,
++  verifies a Groebner basis using Buchberger's criterion plus ideal equality,
++  certifies ideal membership by an identity `f = sum_i c_i*s_i`, and certifies
++  radical membership using an exponent together with an ordinary membership
++  certificate for `f^n`.
++- Sections 3.3 and 3.4 describe the search procedure actually supplied by the
++  paper: `add_gb_hyp` computes a Groebner basis, and `gb_solve` obtains the
++  relevant certificates through local SageMath, a SageMath API, or local SymPy.
++
++The paper contains no complexity theorem, reduction, lower bound, benchmark,
++FPT boundary, or claimed average-case hard distribution. Its statement that
++`MvPolynomial` is non-computable and impractical for large symbolic computations
++is about the Lean representation and motivates moving computation to a CAS; it
++is not a hardness result for witness search. Indeed, Section 1 calls Groebner
++bases an effective algorithmic framework for deciding ideal membership, and
++Sections 3.2--3.4 implement that framework as the standard solver.
++
++## Why the triaged decomposition generator fails
++
++Suppose inverse generation first samples polynomials `c_1, ..., c_m` and
++generators `g_1, ..., g_m`, then emits
++
++```text
++f = sum_i c_i * g_i.
++```
++
++This certainly knows a valid answer, and exact sparse expansion verifies it.
++It does not yield a defensible hard family.
++
++### Bounded certificates are linear algebra
++
++A self-contained instance must pin down the witness shape. If it gives a degree
++bound or an allowed monomial support for each `c_i`, put one unknown rational
++coefficient on each allowed monomial, expand `sum_i c_i*g_i`, and equate its
++coefficients with those of `f`. This is a linear system over `Q`. Gaussian
++elimination returns some valid certificate in time polynomial in that explicit
++coefficient system. The solver need not recover the planted certificate, and
++crowding it with more rational solutions does not defeat this attack.
++
++The same observation applies when only a total-degree bound is stated: enumerate
++the permitted monomials and solve the resulting Macaulay-style linear system.
++Choosing enough variables or a large enough degree can make that expanded system
++large, but then apparent difficulty comes from an exponentially expanded search
++basis rather than from a hard regime proved or studied by this paper. Relative to
++the explicit matrix being solved, the standard attack remains polynomial.
++
++Adding requirements such as minimum support, coefficients in a small finite set,
++or a shortest decomposition could turn recovery into a combinatorial task, but
++none of those constraints occurs in the paper. A shortest/minimum certificate
++would also make optimality the claim, which the task expressly forbids.
++
++### Unbounded certificates do not rescue the contract
++
++If no degree/support bound is supplied, a certificate is an unbounded-length
++object. The paper gives no polynomial witness-size guarantee for the generated
++instances and no hard answer-first distribution. A solver can use precisely the
++Groebner-basis/normal-form machinery implemented by the paper, or search degree
++bounds successively using the linear system above. Planting cancellations at a
++secret high degree is not evidence that either method is hard, and it can make
++the output and exact expansion arbitrarily large.
++
++### Nearby paper tasks also lack the required combination
++
++| Candidate witness | Why it cannot be shipped from this paper |
++|---|---|
++| Quotients proving a stated remainder | Multivariate division is the natural direct algorithm; Section 3.2 delegates it to the external solver and checks the returned identity and degree condition. |
++| A Groebner basis plus certificates | Buchberger's algorithm is the mandatory domain attack and is exactly what Sections 3.2--3.4 invoke. The paper supplies no generated regime on which it fails or even performance measurements. |
++| Ideal-equality certificates | These are just two collections of the same membership decompositions, so bounded versions reduce to rational linear systems. |
++| Radical-membership exponent and coefficients | Section 3.2 asks the external solver for both. The exponent/certificate size is not bounded, and no hard positive-instance distribution is given. |
++| A non-membership result | This is an absence rather than an admissible positive witness; the paper uses a nonzero normal-form remainder to decide it. |
++| A sparse or small-coefficient decomposition | This is a new constrained-representation problem not defined or analyzed in the paper. Any hardness claim would be imported speculation. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- inverse generation | Pass in principle | Sample `c_i` first and form `f = sum_i c_i*g_i`. |
++| H -- no polynomial/closed-form method in a justified regime | **Fail** | The paper has no hardness theorem or hard parameters; bounded certificate recovery is linear algebra, and the paper implements the Groebner/CAS domain solver for the general task. |
++| V -- cheap exact verification | Pass for explicit certificates | Multiply sparse polynomials, sum, normalize rational coefficients, and compare exactly as in Sections 2.2 and 3.1. |
++| G1--G8 | Not run | Step 0 requires stopping after H fails. |
++| LLM hardening loop | Not run | Oracle failures cannot establish a missing complexity regime and would be especially misleading against a deterministic linear-algebra attack. |
++
++## What would be needed for a viable family
++
++A defensible successor would need a source that defines a bounded positive
++certificate problem and proves hardness for the exact parameter regime used by
++the generator, together with an answer-first distribution that preserves that
++hardness. It would also need to test at least rational linear solving, bounded
++Macaulay matrices, Buchberger/F4-style Groebner computation, and
++construction-specific cancellation/support attacks. Those ingredients are not
++present in arXiv:2604.13514, so adding them here would no longer be turning this
++paper's result into a verified generator.
+
+exec
+/bin/bash -lc "sed -n '1,260p' REJECTED.md
+git status --short 2>/dev/null || true" in /home/gson/gvrepo/results/2604.13514
+ succeeded in 0ms:
+# Rejected: no supported hard certificate-search regime
+
+Paper: Hao Shen, Junyu Guo, Junqi Liu, and Lihong Zhi,
+[*Automated Tactics for Polynomial Reasoning in Lean 4*](https://arxiv.org/abs/2604.13514),
+arXiv:2604.13514v1 (15 April 2026).
+
+## Decision
+
+No problem generator is shipped. The suggested ideal-containment/decomposition
+task has **G (inverse generation)** and **V (exact verification)**, but this paper
+does not establish **H (hardness)** for any parameter regime or generated
+distribution. Moreover, the natural way to make the requested certificate a
+bounded structured object makes recovery an ordinary linear-algebra problem over
+the rationals.
+
+This is a Step-0 rejection. Per the task instruction to stop when any of G, H, or
+V fails, `gen_2604_13514.py`, `selftest_report.json`, and oracle-loop artifacts
+were not created, and `scripts/harden.py` was not run. Random-guess and LLM
+failures could not repair the missing mathematical hardness claim.
+
+## What the full paper actually defines
+
+The full LaTeX source and all nine pages of the paper were reviewed, not only the
+abstract.
+
+- Section 2.2 fixes the certificate representation: sparse multivariate
+  polynomials with rational coefficients, serialized as coefficient/exponent
+  lists and reified in Lean.
+- Section 3 restricts the implementation to lexicographic order over
+  `Q[x_0, ..., x_n]`.
+- Section 3.1 gives the exact ideal-inclusion witness. For
+  `I = <f_1, ..., f_n>` and `J = <g_1, ..., g_m>`, inclusion `I <= J` is
+  certified by coefficient polynomials `c_ij` satisfying
+
+  ```text
+  f_i = sum_j c_ij * g_j
+  ```
+
+  for every `i`. Lean expands each identity and compares the resulting
+  polynomials. Ideal equality consists of certificates for both inclusions.
+- Section 3.2 similarly certifies a remainder using quotient polynomials,
+  verifies a Groebner basis using Buchberger's criterion plus ideal equality,
+  certifies ideal membership by an identity `f = sum_i c_i*s_i`, and certifies
+  radical membership using an exponent together with an ordinary membership
+  certificate for `f^n`.
+- Sections 3.3 and 3.4 describe the search procedure actually supplied by the
+  paper: `add_gb_hyp` computes a Groebner basis, and `gb_solve` obtains the
+  relevant certificates through local SageMath, a SageMath API, or local SymPy.
+
+The paper contains no complexity theorem, reduction, lower bound, benchmark,
+FPT boundary, or claimed average-case hard distribution. Its statement that
+`MvPolynomial` is non-computable and impractical for large symbolic computations
+is about the Lean representation and motivates moving computation to a CAS; it
+is not a hardness result for witness search. Indeed, Section 1 calls Groebner
+bases an effective algorithmic framework for deciding ideal membership, and
+Sections 3.2--3.4 implement that framework as the standard solver.
+
+## Why the triaged decomposition generator fails
+
+Suppose inverse generation first samples polynomials `c_1, ..., c_m` and
+generators `g_1, ..., g_m`, then emits
+
+```text
+f = sum_i c_i * g_i.
+```
+
+This certainly knows a valid answer, and exact sparse expansion verifies it.
+It does not yield a defensible hard family.
+
+### Bounded certificates are linear algebra
+
+A self-contained instance must pin down the witness shape. If it gives a degree
+bound or an allowed monomial support for each `c_i`, put one unknown rational
+coefficient on each allowed monomial, expand `sum_i c_i*g_i`, and equate its
+coefficients with those of `f`. This is a linear system over `Q`. Gaussian
+elimination returns some valid certificate in time polynomial in that explicit
+coefficient system. The solver need not recover the planted certificate, and
+crowding it with more rational solutions does not defeat this attack.
+
+The same observation applies when only a total-degree bound is stated: enumerate
+the permitted monomials and solve the resulting Macaulay-style linear system.
+Choosing enough variables or a large enough degree can make that expanded system
+large, but then apparent difficulty comes from an exponentially expanded search
+basis rather than from a hard regime proved or studied by this paper. Relative to
+the explicit matrix being solved, the standard attack remains polynomial.
+
+Adding requirements such as minimum support, coefficients in a small finite set,
+or a shortest decomposition could turn recovery into a combinatorial task, but
+none of those constraints occurs in the paper. A shortest/minimum certificate
+would also make optimality the claim, which the task expressly forbids.
+
+### Unbounded certificates do not rescue the contract
+
+If no degree/support bound is supplied, a certificate is an unbounded-length
+object. The paper gives no polynomial witness-size guarantee for the generated
+instances and no hard answer-first distribution. A solver can use precisely the
+Groebner-basis/normal-form machinery implemented by the paper, or search degree
+bounds successively using the linear system above. Planting cancellations at a
+secret high degree is not evidence that either method is hard, and it can make
+the output and exact expansion arbitrarily large.
+
+### Nearby paper tasks also lack the required combination
+
+| Candidate witness | Why it cannot be shipped from this paper |
+|---|---|
+| Quotients proving a stated remainder | Multivariate division is the natural direct algorithm; Section 3.2 delegates it to the external solver and checks the returned identity and degree condition. |
+| A Groebner basis plus certificates | Buchberger's algorithm is the mandatory domain attack and is exactly what Sections 3.2--3.4 invoke. The paper supplies no generated regime on which it fails or even performance measurements. |
+| Ideal-equality certificates | These are just two collections of the same membership decompositions, so bounded versions reduce to rational linear systems. |
+| Radical-membership exponent and coefficients | Section 3.2 asks the external solver for both. The exponent/certificate size is not bounded, and no hard positive-instance distribution is given. |
+| A non-membership result | This is an absence rather than an admissible positive witness; the paper uses a nonzero normal-form remainder to decide it. |
+| A sparse or small-coefficient decomposition | This is a new constrained-representation problem not defined or analyzed in the paper. Any hardness claim would be imported speculation. |
+
+## Gate outcome
+
+| Requirement | Result | Evidence |
+|---|---:|---|
+| G -- inverse generation | Pass in principle | Sample `c_i` first and form `f = sum_i c_i*g_i`. |
+| H -- no polynomial/closed-form method in a justified regime | **Fail** | The paper has no hardness theorem or hard parameters; bounded certificate recovery is linear algebra, and the paper implements the Groebner/CAS domain solver for the general task. |
+| V -- cheap exact verification | Pass for explicit certificates | Multiply sparse polynomials, sum, normalize rational coefficients, and compare exactly as in Sections 2.2 and 3.1. |
+| G1--G8 | Not run | Step 0 requires stopping after H fails. |
+| LLM hardening loop | Not run | Oracle failures cannot establish a missing complexity regime and would be especially misleading against a deterministic linear-algebra attack. |
+
+## What would be needed for a viable family
+
+A defensible successor would need a source that defines a bounded positive
+certificate problem and proves hardness for the exact parameter regime used by
+the generator, together with an answer-first distribution that preserves that
+hardness. It would also need to test at least rational linear solving, bounded
+Macaulay matrices, Buchberger/F4-style Groebner computation, and
+construction-specific cancellation/support attacks. Those ingredients are not
+present in arXiv:2604.13514, so adding them here would no longer be turning this
+paper's result into a verified generator.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..8e26144d9cf9bd99b2e9736d8365f941b1c5e454
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,132 @@
++# Rejected: no supported hard certificate-search regime
++
++Paper: Hao Shen, Junyu Guo, Junqi Liu, and Lihong Zhi,
++[*Automated Tactics for Polynomial Reasoning in Lean 4*](https://arxiv.org/abs/2604.13514),
++arXiv:2604.13514v1 (15 April 2026).
++
++## Decision
++
++No problem generator is shipped. The suggested ideal-containment/decomposition
++task has **G (inverse generation)** and **V (exact verification)**, but this paper
++does not establish **H (hardness)** for any parameter regime or generated
++distribution. Moreover, the natural way to make the requested certificate a
++bounded structured object makes recovery an ordinary linear-algebra problem over
++the rationals.
++
++This is a Step-0 rejection. Per the task instruction to stop when any of G, H, or
++V fails, `gen_2604_13514.py`, `selftest_report.json`, and oracle-loop artifacts
++were not created, and `scripts/harden.py` was not run. Random-guess and LLM
++failures could not repair the missing mathematical hardness claim.
++
++## What the full paper actually defines
++
++The full LaTeX source and all nine pages of the paper were reviewed, not only the
++abstract.
++
++- Section 2.2 fixes the certificate representation: sparse multivariate
++  polynomials with rational coefficients, serialized as coefficient/exponent
++  lists and reified in Lean.
++- Section 3 restricts the implementation to lexicographic order over
++  `Q[x_0, ..., x_n]`.
++- Section 3.1 gives the exact ideal-inclusion witness. For
++  `I = <f_1, ..., f_n>` and `J = <g_1, ..., g_m>`, inclusion `I <= J` is
++  certified by coefficient polynomials `c_ij` satisfying
++
++  ```text
++  f_i = sum_j c_ij * g_j
++  ```
++
++  for every `i`. Lean expands each identity and compares the resulting
++  polynomials. Ideal equality consists of certificates for both inclusions.
++- Section 3.2 similarly certifies a remainder using quotient polynomials,
++  verifies a Groebner basis using Buchberger's criterion plus ideal equality,
++  certifies ideal membership by an identity `f = sum_i c_i*s_i`, and certifies
++  radical membership using an exponent together with an ordinary membership
++  certificate for `f^n`.
++- Sections 3.3 and 3.4 describe the search procedure actually supplied by the
++  paper: `add_gb_hyp` computes a Groebner basis, and `gb_solve` obtains the
++  relevant certificates through local SageMath, a SageMath API, or local SymPy.
++
++The paper contains no complexity theorem, reduction, lower bound, benchmark,
++FPT boundary, or claimed average-case hard distribution. Its statement that
++`MvPolynomial` is non-computable and impractical for large symbolic computations
++is about the Lean representation and motivates moving computation to a CAS; it
++is not a hardness result for witness search. Indeed, Section 1 calls Groebner
++bases an effective algorithmic framework for deciding ideal membership, and
++Sections 3.2--3.4 implement that framework as the standard solver.
++
++## Why the triaged decomposition generator fails
++
++Suppose inverse generation first samples polynomials `c_1, ..., c_m` and
++generators `g_1, ..., g_m`, then emits
++
++```text
++f = sum_i c_i * g_i.
++```
++
++This certainly knows a valid answer, and exact sparse expansion verifies it.
++It does not yield a defensible hard family.
++
++### Bounded certificates are linear algebra
++
++A self-contained instance must pin down the witness shape. If it gives a degree
++bound or an allowed monomial support for each `c_i`, put one unknown rational
++coefficient on each allowed monomial, expand `sum_i c_i*g_i`, and equate its
++coefficients with those of `f`. This is a linear system over `Q`. Gaussian
++elimination returns some valid certificate in time polynomial in that explicit
++coefficient system. The solver need not recover the planted certificate, and
++crowding it with more rational solutions does not defeat this attack.
++
++The same observation applies when only a total-degree bound is stated: enumerate
++the permitted monomials and solve the resulting Macaulay-style linear system.
++Choosing enough variables or a large enough degree can make that expanded system
++large, but then apparent difficulty comes from an exponentially expanded search
++basis rather than from a hard regime proved or studied by this paper. Relative to
++the explicit matrix being solved, the standard attack remains polynomial.
++
++Adding requirements such as minimum support, coefficients in a small finite set,
++or a shortest decomposition could turn recovery into a combinatorial task, but
++none of those constraints occurs in the paper. A shortest/minimum certificate
++would also make optimality the claim, which the task expressly forbids.
++
++### Unbounded certificates do not rescue the contract
++
++If no degree/support bound is supplied, a certificate is an unbounded-length
++object. The paper gives no polynomial witness-size guarantee for the generated
++instances and no hard answer-first distribution. A solver can use precisely the
++Groebner-basis/normal-form machinery implemented by the paper, or search degree
++bounds successively using the linear system above. Planting cancellations at a
++secret high degree is not evidence that either method is hard, and it can make
++the output and exact expansion arbitrarily large.
++
++### Nearby paper tasks also lack the required combination
++
++| Candidate witness | Why it cannot be shipped from this paper |
++|---|---|
++| Quotients proving a stated remainder | Multivariate division is the natural direct algorithm; Section 3.2 delegates it to the external solver and checks the returned identity and degree condition. |
++| A Groebner basis plus certificates | Buchberger's algorithm is the mandatory domain attack and is exactly what Sections 3.2--3.4 invoke. The paper supplies no generated regime on which it fails or even performance measurements. |
++| Ideal-equality certificates | These are just two collections of the same membership decompositions, so bounded versions reduce to rational linear systems. |
++| Radical-membership exponent and coefficients | Section 3.2 asks the external solver for both. The exponent/certificate size is not bounded, and no hard positive-instance distribution is given. |
++| A non-membership result | This is an absence rather than an admissible positive witness; the paper uses a nonzero normal-form remainder to decide it. |
++| A sparse or small-coefficient decomposition | This is a new constrained-representation problem not defined or analyzed in the paper. Any hardness claim would be imported speculation. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- inverse generation | Pass in principle | Sample `c_i` first and form `f = sum_i c_i*g_i`. |
++| H -- no polynomial/closed-form method in a justified regime | **Fail** | The paper has no hardness theorem or hard parameters; bounded certificate recovery is linear algebra, and the paper implements the Groebner/CAS domain solver for the general task. |
++| V -- cheap exact verification | Pass for explicit certificates | Multiply sparse polynomials, sum, normalize rational coefficients, and compare exactly as in Sections 2.2 and 3.1. |
++| G1--G8 | Not run | Step 0 requires stopping after H fails. |
++| LLM hardening loop | Not run | Oracle failures cannot establish a missing complexity regime and would be especially misleading against a deterministic linear-algebra attack. |
++
++## What would be needed for a viable family
++
++A defensible successor would need a source that defines a bounded positive
++certificate problem and proves hardness for the exact parameter regime used by
++the generator, together with an answer-first distribution that preserves that
++hardness. It would also need to test at least rational linear solving, bounded
++Macaulay matrices, Buchberger/F4-style Groebner computation, and
++construction-specific cancellation/support attacks. Those ingredients are not
++present in arXiv:2604.13514, so adding them here would no longer be turning this
++paper's result into a verified generator.
+
+codex
+Rejected at Step 0 because the family fails **H (hardness)**.
+
+The paper defines cheaply verifiable ideal-membership certificates in Section 3.1, but provides no hardness theorem or hard parameter regime. Bounded certificate recovery reduces to rational linear algebra, while the unrestricted problem is explicitly solved using SageMath/SymPy Gröbner-basis machinery in Sections 3.2–3.4. [Full paper](https://arxiv.org/html/2604.13514)
+
+I documented the analysis in [REJECTED.md](/home/gson/gvrepo/results/2604.13514/REJECTED.md). Per the task’s stop rule, I did not fabricate a generator, gate report, or oracle transcript.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..8e26144d9cf9bd99b2e9736d8365f941b1c5e454
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,132 @@
++# Rejected: no supported hard certificate-search regime
++
++Paper: Hao Shen, Junyu Guo, Junqi Liu, and Lihong Zhi,
++[*Automated Tactics for Polynomial Reasoning in Lean 4*](https://arxiv.org/abs/2604.13514),
++arXiv:2604.13514v1 (15 April 2026).
++
++## Decision
++
++No problem generator is shipped. The suggested ideal-containment/decomposition
++task has **G (inverse generation)** and **V (exact verification)**, but this paper
++does not establish **H (hardness)** for any parameter regime or generated
++distribution. Moreover, the natural way to make the requested certificate a
++bounded structured object makes recovery an ordinary linear-algebra problem over
++the rationals.
++
++This is a Step-0 rejection. Per the task instruction to stop when any of G, H, or
++V fails, `gen_2604_13514.py`, `selftest_report.json`, and oracle-loop artifacts
++were not created, and `scripts/harden.py` was not run. Random-guess and LLM
++failures could not repair the missing mathematical hardness claim.
++
++## What the full paper actually defines
++
++The full LaTeX source and all nine pages of the paper were reviewed, not only the
++abstract.
++
++- Section 2.2 fixes the certificate representation: sparse multivariate
++  polynomials with rational coefficients, serialized as coefficient/exponent
++  lists and reified in Lean.
++- Section 3 restricts the implementation to lexicographic order over
++  `Q[x_0, ..., x_n]`.
++- Section 3.1 gives the exact ideal-inclusion witness. For
++  `I = <f_1, ..., f_n>` and `J = <g_1, ..., g_m>`, inclusion `I <= J` is
++  certified by coefficient polynomials `c_ij` satisfying
++
++  ```text
++  f_i = sum_j c_ij * g_j
++  ```
++
++  for every `i`. Lean expands each identity and compares the resulting
++  polynomials. Ideal equality consists of certificates for both inclusions.
++- Section 3.2 similarly certifies a remainder using quotient polynomials,
++  verifies a Groebner basis using Buchberger's criterion plus ideal equality,
++  certifies ideal membership by an identity `f = sum_i c_i*s_i`, and certifies
++  radical membership using an exponent together with an ordinary membership
++  certificate for `f^n`.
++- Sections 3.3 and 3.4 describe the search procedure actually supplied by the
++  paper: `add_gb_hyp` computes a Groebner basis, and `gb_solve` obtains the
++  relevant certificates through local SageMath, a SageMath API, or local SymPy.
++
++The paper contains no complexity theorem, reduction, lower bound, benchmark,
++FPT boundary, or claimed average-case hard distribution. Its statement that
++`MvPolynomial` is non-computable and impractical for large symbolic computations
++is about the Lean representation and motivates moving computation to a CAS; it
++is not a hardness result for witness search. Indeed, Section 1 calls Groebner
++bases an effective algorithmic framework for deciding ideal membership, and
++Sections 3.2--3.4 implement that framework as the standard solver.
++
++## Why the triaged decomposition generator fails
++
++Suppose inverse generation first samples polynomials `c_1, ..., c_m` and
++generators `g_1, ..., g_m`, then emits
++
++```text
++f = sum_i c_i * g_i.
++```
++
++This certainly knows a valid answer, and exact sparse expansion verifies it.
++It does not yield a defensible hard family.
++
++### Bounded certificates are linear algebra
++
++A self-contained instance must pin down the witness shape. If it gives a degree
++bound or an allowed monomial support for each `c_i`, put one unknown rational
++coefficient on each allowed monomial, expand `sum_i c_i*g_i`, and equate its
++coefficients with those of `f`. This is a linear system over `Q`. Gaussian
++elimination returns some valid certificate in time polynomial in that explicit
++coefficient system. The solver need not recover the planted certificate, and
++crowding it with more rational solutions does not defeat this attack.
++
++The same observation applies when only a total-degree bound is stated: enumerate
++the permitted monomials and solve the resulting Macaulay-style linear system.
++Choosing enough variables or a large enough degree can make that expanded system
++large, but then apparent difficulty comes from an exponentially expanded search
++basis rather than from a hard regime proved or studied by this paper. Relative to
++the explicit matrix being solved, the standard attack remains polynomial.
++
++Adding requirements such as minimum support, coefficients in a small finite set,
++or a shortest decomposition could turn recovery into a combinatorial task, but
++none of those constraints occurs in the paper. A shortest/minimum certificate
++would also make optimality the claim, which the task expressly forbids.
++
++### Unbounded certificates do not rescue the contract
++
++If no degree/support bound is supplied, a certificate is an unbounded-length
++object. The paper gives no polynomial witness-size guarantee for the generated
++instances and no hard answer-first distribution. A solver can use precisely the
++Groebner-basis/normal-form machinery implemented by the paper, or search degree
++bounds successively using the linear system above. Planting cancellations at a
++secret high degree is not evidence that either method is hard, and it can make
++the output and exact expansion arbitrarily large.
++
++### Nearby paper tasks also lack the required combination
++
++| Candidate witness | Why it cannot be shipped from this paper |
++|---|---|
++| Quotients proving a stated remainder | Multivariate division is the natural direct algorithm; Section 3.2 delegates it to the external solver and checks the returned identity and degree condition. |
++| A Groebner basis plus certificates | Buchberger's algorithm is the mandatory domain attack and is exactly what Sections 3.2--3.4 invoke. The paper supplies no generated regime on which it fails or even performance measurements. |
++| Ideal-equality certificates | These are just two collections of the same membership decompositions, so bounded versions reduce to rational linear systems. |
++| Radical-membership exponent and coefficients | Section 3.2 asks the external solver for both. The exponent/certificate size is not bounded, and no hard positive-instance distribution is given. |
++| A non-membership result | This is an absence rather than an admissible positive witness; the paper uses a nonzero normal-form remainder to decide it. |
++| A sparse or small-coefficient decomposition | This is a new constrained-representation problem not defined or analyzed in the paper. Any hardness claim would be imported speculation. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- inverse generation | Pass in principle | Sample `c_i` first and form `f = sum_i c_i*g_i`. |
++| H -- no polynomial/closed-form method in a justified regime | **Fail** | The paper has no hardness theorem or hard parameters; bounded certificate recovery is linear algebra, and the paper implements the Groebner/CAS domain solver for the general task. |
++| V -- cheap exact verification | Pass for explicit certificates | Multiply sparse polynomials, sum, normalize rational coefficients, and compare exactly as in Sections 2.2 and 3.1. |
++| G1--G8 | Not run | Step 0 requires stopping after H fails. |
++| LLM hardening loop | Not run | Oracle failures cannot establish a missing complexity regime and would be especially misleading against a deterministic linear-algebra attack. |
++
++## What would be needed for a viable family
++
++A defensible successor would need a source that defines a bounded positive
++certificate problem and proves hardness for the exact parameter regime used by
++the generator, together with an answer-first distribution that preserves that
++hardness. It would also need to test at least rational linear solving, bounded
++Macaulay matrices, Buchberger/F4-style Groebner computation, and
++construction-specific cancellation/support attacks. Those ingredients are not
++present in arXiv:2604.13514, so adding them here would no longer be turning this
++paper's result into a verified generator.
+
+tokens used
+84,995
+Rejected at Step 0 because the family fails **H (hardness)**.
+
+The paper defines cheaply verifiable ideal-membership certificates in Section 3.1, but provides no hardness theorem or hard parameter regime. Bounded certificate recovery reduces to rational linear algebra, while the unrestricted problem is explicitly solved using SageMath/SymPy Gröbner-basis machinery in Sections 3.2–3.4. [Full paper](https://arxiv.org/html/2604.13514)
+
+I documented the analysis in [REJECTED.md](/home/gson/gvrepo/results/2604.13514/REJECTED.md). Per the task’s stop rule, I did not fabricate a generator, gate report, or oracle transcript.
