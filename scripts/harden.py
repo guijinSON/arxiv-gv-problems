@@ -335,7 +335,11 @@ def main():
                 oracle_pool=ORACLE_POOL, oracle_effort=ORACLE_EFFORT,
                 max_escalations=MAX_ESCALATIONS)
 
-    ladder = [dict(p, _preset=name) for name, p in mod.DIFFICULTY.items()]
+    # `demo` is a hand-scale illustration rung, built to be solvable.  Starting
+    # the ladder there would spend one of MAX_ESCALATIONS proving that, so the
+    # hardening ladder begins at `easy`.
+    ladder = [dict(p, _preset=name) for name, p in mod.DIFFICULTY.items()
+              if name != "demo"]
     params = ladder[0]
     rung = 0
     verdict = None

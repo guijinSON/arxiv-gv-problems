@@ -196,7 +196,18 @@ need=["make_instance","render","parse_answer","verify","random_candidate","searc
       "enumerate_all","canonical_key","escalate"]
 miss=[f for f in need if not callable(getattr(m,f,None))]
 if miss: print("MISSING:", miss); sys.exit(1)
-i=m.make_instance(**(getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})), seed=0)
+# The ladder is the same four rungs in every family.  harden.py walks DIFFICULTY
+# in insertion order, so the order is the ladder; and the emitted "difficulty"
+# field only means something across papers if the names mean the same thing.
+# `demo` is the hand-scale rung: harden.py skips it and it must never ship.
+D=getattr(m,"DIFFICULTY",None)
+if not isinstance(D,dict) or list(D)!=["demo","easy","medium","hard"]:
+    print("DIFFICULTY FAIL: expected exactly demo, easy, medium, hard in that order; got",
+          list(D) if isinstance(D,dict) else repr(D)); sys.exit(1)
+if getattr(m,"SHIPPING_DIFFICULTY",None) not in ("easy","medium","hard"):
+    print("SHIPPING_DIFFICULTY FAIL: must be easy, medium or hard (never demo):",
+          repr(getattr(m,"SHIPPING_DIFFICULTY",None))); sys.exit(1)
+i=m.make_instance(**D[m.SHIPPING_DIFFICULTY], seed=0)
 ok,why=m.verify(i, i["answer"])
 if not ok: print("G1 FAIL: planted answer does not verify:", why); sys.exit(1)
 # Can parse_answer consume real solver output?  The wire format is the module's
@@ -280,7 +291,7 @@ print(f"== native check ==\n  domain={NAT['domain']} core={NAT['core']} "
 # is not deterministic cannot detect a duplicate; we cannot check the harder
 # property (invariance under relabelling) without family-specific machinery, so
 # the README caveats have to carry that one.
-params = getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})
+params = m.DIFFICULTY[m.SHIPPING_DIFFICULTY]
 k1 = m.canonical_key(m.make_instance(**params, seed=4242))
 k2 = m.canonical_key(m.make_instance(**params, seed=4242))
 if not isinstance(k1,str) or k1 != k2:

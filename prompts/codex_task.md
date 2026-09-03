@@ -105,8 +105,15 @@ NATIVE: dict                # what this family really is -- see below.  Required
     # and core="graph".  Labelling it "geometry" is the failure this field exists
     # to prevent.
 
-DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
-                            # each maps to kwargs for make_instance
+DIFFICULTY: dict            # exactly four presets, named "demo", "easy", "medium"
+                            # and "hard", in that order -- harden.py walks the dict
+                            # in insertion order, so it is the ladder, ascending.
+                            # Each maps to kwargs for make_instance.
+                            # "demo" is the smallest setting the family supports:
+                            # a person must be able to solve it and check the
+                            # answer on paper.  It is an illustration, not a
+                            # difficulty level -- harden.py skips it, and
+                            # SHIPPING_DIFFICULTY must never name it.
 
 def make_instance(n, seed=0, **params) -> dict
     """Inverse generation: sample the answer FIRST, then build the problem around
@@ -403,6 +410,8 @@ What it does, so you know what its output means:
   held only if **all three fail**.
 - A call that errors is redrawn against another model and does not consume an attempt.
   An API failure is never recorded as the model failing to solve.
+- The ladder starts at `easy`. `demo` is skipped: it is built to be solvable, so
+  starting there would spend an escalation proving exactly that.
 - When a level is solved the harness escalates: to the next named preset, and once
   `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
   as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
@@ -413,8 +422,12 @@ What it does, so you know what its output means:
 Read the verdict it prints:
 
 - `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
-  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
-  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+  from `escalate()` rather than a named preset, the four names are already taken, so
+  **slide the ladder up**: drop the rung the oracle solved, keep the survivors in
+  ascending order, and put the escalated level in as the new `hard`, leaving
+  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+  whichever name now carries the level that held, then re-run STEP 3's gates at it.
+  `demo` never moves: it stays the hand-solvable rung.
 - `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
   saying which theorem or regime you were relying on and why you now think it does not
   bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
@@ -466,9 +479,11 @@ one screen of prose plus tables. Cover:
 - **Why it is hard.** The specific theorem and parameter regime you are inside, and
   — just as important — the easy regimes you had to avoid and the results that
   identify them. Cite sections by number. This is the part only you know.
-- **A worked example.** A rendered instance small enough to read in full (use your
-  smallest preset), its answer, `verify` returning True on it, and `verify`
-  returning False with its reason on a corrupted variant.
+- **A worked example.** A rendered instance small enough to read in full — use the
+  `demo` preset, which exists for this — its answer, `verify` returning True on it,
+  and `verify` returning False with its reason on a corrupted variant. Say plainly
+  whether a person can actually solve it by hand, and if not, why the family's
+  smallest supported setting still is not hand-scale.
 - **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
   say which gate rejected it — a preset the oracle failed but an attack solved is
   worth recording.

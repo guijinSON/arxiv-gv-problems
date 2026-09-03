@@ -88,7 +88,8 @@ Or open **Claude Code** in the repo and say **"do a paper"**; it follows `CLAUDE
 `results/<arxiv_id>/gen_<arxiv_id>.py` exposes:
 
 ```python
-DIFFICULTY, SHIPPING_DIFFICULTY
+DIFFICULTY                                   # "demo", "easy", "medium", "hard", ascending
+SHIPPING_DIFFICULTY                          # one of the last three; demo never ships
 make_instance(n, seed, **params) -> dict     # contains "answer"; inverse generation
 render(inst)              -> str             # self-contained statement + <answer> contract
 parse_answer(text)        -> answer | None   # tolerant of prose and fences
@@ -115,7 +116,9 @@ and deliberately excludes the builder model: a family checked only against its o
 author, or only against one vendor, is fitted to that model's blind spots rather than
 shown to be hard. Each difficulty level is asked of three distinct models on three
 drawn seeds and is held only if **all three fail**; when one solves it the harness
-escalates, and after three escalations the family is given up on.
+escalates, and after three escalations the family is given up on. The ladder starts at
+`easy`: `demo` is the hand-solvable rung, built to be solved, so the loop skips it
+rather than spending an escalation on it.
 
 The loop is owned by `scripts/harden.py`, not by the builder — see `CODEX.md`.
 

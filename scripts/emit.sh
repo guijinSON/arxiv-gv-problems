@@ -15,7 +15,9 @@ s = importlib.util.spec_from_file_location("m", mod_path)
 m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
 D = getattr(m, "DIFFICULTY", {})
 name = diff or getattr(m, "SHIPPING_DIFFICULTY", next(iter(D), "medium"))
-params = D.get(name, {})
+if name not in D:
+    sys.exit(f"ERROR: {mod_path} has no difficulty {name!r}; it has {list(D)}")
+params = D[name]
 
 # Seeds are drawn, not counted off from a constant.  A fixed ladder like
 # 10_000+i means every run of a paper emits the same instances forever, so an
