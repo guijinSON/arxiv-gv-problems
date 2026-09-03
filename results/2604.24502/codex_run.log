@@ -1,0 +1,3224 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/2604.24502
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a0656b-bdf7-7662-bde5-7ba27ccce061
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know its answer*, because you
+  sampled the answer first and constructed the problem around it.
+- **H — hard.** No known polynomial-time or closed-form method, and the answer space
+  is far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+The answer must be a **witness** — a structured object handed to a checker. Never an
+absence ("no solution exists"), never an optimum whose optimality is the claim,
+never a real number or an asymptotic rate.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the three things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, standard library only, deterministic given `(n, seed)`. No file IO, no
+network, no printing at import. Use `random.Random(seed)`, never global `random`.
+
+```python
+DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
+                            # each maps to kwargs for make_instance
+
+def make_instance(n, seed=0, **params) -> dict
+    """Inverse generation: sample the answer FIRST, then build the problem around
+    it. Returns a dict containing key "answer" (the planted witness) plus all data
+    the solver needs. `n` is the size parameter; larger n must mean harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT."""
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of the naive candidate space, or None if not countable."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship.**
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples, measured **structure-aware** (see below). Report hits/total. |
+| **G5 sparse** | Where `enumerate_all` is feasible, solutions are a tiny fraction of `search_space`. |
+| **G6 adversary panel** | Write ≥3 cheap attacks and confirm each FAILS across ≥8 seeds. See below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, **add it to `DIFFICULTY` under a name**
+  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+5. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard.** The specific theorem and parameter regime you are inside, and
+  — just as important — the easy regimes you had to avoid and the results that
+  identify them. Cite sections by number. This is the part only you know.
+- **A worked example.** A rendered instance small enough to read in full (use your
+  smallest preset), its answer, `verify` returning True on it, and `verify`
+  returning False with its reason on a corrupted variant.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2604.24502
+url: https://arxiv.org/abs/2604.24502
+title: Colored Stallings graphs and Counterexamples to Stallings equalizer conjecture
+categories: math.GR
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: words and permutations
+  method: substitution check
+  candidate generator: construct monomorphisms from colored Stallings graph with planted equalizer words
+  candidate verifier: substitute each word into both homomorphisms and freely reduce
+codex
+I’ll first read the full paper and inspect the repository’s harness/contracts. I’ll only proceed to implementation if the paper yields a witness family that genuinely meets G, H, and V in a theorem-supported parameter regime.
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!**/.git/**'"' .. ../.. ../../.. 2>/dev/null | sort -u | head -50 && rg --files . ../../scripts | sed -n '1,160p'" in /home/gson/gvrepo/results/2604.24502
+ succeeded in 0ms:
+../../scripts/claim.sh
+../../scripts/emit.sh
+../../scripts/status.sh
+../../scripts/submit.sh
+../../scripts/run_codex.sh
+../../scripts/harden.py
+../../scripts/fetch_paper.sh
+./codex_run.log
+
+exec
+/bin/bash -lc 'for f in /home/gson/gvrepo/results/2604.24502/AGENTS.md /home/gson/gvrepo/results/AGENTS.md /home/gson/gvrepo/AGENTS.md /home/gson/AGENTS.md /home/AGENTS.md /AGENTS.md; do if [ -f "$f" ]; then echo "$f"; sed -n '"'1,240p' \""'$f"; fi; done
+sed -n '"'1,260p' ../../scripts/harden.py
+sed -n '1,260p' ../../scripts/submit.sh" in /home/gson/gvrepo/results/2604.24502
+ succeeded in 0ms:
+#!/usr/bin/env python3
+"""The LLM hardening loop.  Usage: python3 scripts/harden.py <path to gen_*.py>
+
+This file, not the builder, owns the loop.  The builder writes gen_<id>.py and
+runs this; everything about which model is asked, with which seed, and when a
+family is declared too easy is decided here.  That is deliberate: a builder that
+reports its own hardening result has an obvious incentive not to report a
+failure, and a transcript whose schema is chosen per run cannot be validated.
+
+Requires OPENROUTER_API_KEY.  The oracle pool spans four vendors, so a single
+OpenAI key is not enough.  Standard library only.
+"""
+
+import importlib.util
+import json
+import os
+import random
+import sys
+import threading
+import time
+import ssl
+import urllib.error
+import urllib.request
+
+# --- configuration ----------------------------------------------------------
+# The oracle pool.  Four vendors at the same price tier as the model this
+# replaced (openai/gpt-5.6-terra, $2/$12 per M tokens).  A model is drawn afresh
+# for every single call: a family that only defeats one model's blind spots is
+# not hard, it is overfitted to.
+#
+# openai/gpt-5.6-sol is deliberately absent — it is the builder model, and a
+# family checked against its own author proves nothing.
+DEFAULT_POOL = [
+    "openai/gpt-5.6-terra",
+    "anthropic/claude-sonnet-5",
+    "google/gemini-3.1-pro-preview",
+    "x-ai/grok-4.6",
+]
+ORACLE_POOL = [m.strip() for m in os.environ.get(
+    "ORACLE_POOL", ",".join(DEFAULT_POOL)).split(",") if m.strip()]
+
+ORACLE_EFFORT = os.environ.get("ORACLE_EFFORT", "medium")
+ATTEMPTS_PER_PRESET = 3      # distinct models per difficulty level
+MAX_ESCALATIONS = 3          # raises of difficulty before the family is given up on
+MAX_ERROR_RETRIES = 3        # per attempt; API errors do not count as attempts
+MAX_TOKENS = int(os.environ.get("ORACLE_MAX_TOKENS", "32000"))
+# Reasoning tokens are billed against max_tokens on some vendors, so a budget
+# sized for the answer alone comes back HTTP 200 with an empty body — observed
+# live at 16000 against claude-sonnet-5 on a 2030-character statement.
+REQUEST_TIMEOUT = 900
+# urlopen(timeout=) is a per-socket-operation timeout, NOT a total deadline: a
+# provider that trickles bytes (or holds a streaming connection open) resets it on
+# every read, so a single call can hang indefinitely.  Observed live -- one call
+# sat open 44 minutes against a 900s "timeout" and blocked the paper for 74.  The
+# request therefore runs on a worker thread under a hard wall-clock deadline.
+TOTAL_DEADLINE = int(os.environ.get("ORACLE_TOTAL_DEADLINE", str(REQUEST_TIMEOUT)))
+
+ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _ssl_context():
+    """A context with a CA bundle that actually exists.
+
+    A python.org build on macOS whose "Install Certificates.command" was never
+    run has openssl_cafile pointing at a file that is not there, and every call
+    dies with CERTIFICATE_VERIFY_FAILED.  The loop treats that as an API error
+    and refuses to make a hardness claim, which is the right failure, but it is
+    a failure of the machine and not of the family — so find a usable bundle
+    first.  Never fall back to an unverified context: this call carries an API
+    key.
+    """
+    ctx = ssl.create_default_context()
+    if ctx.cert_store_stats().get("x509_ca", 0) > 0:
+        return ctx
+    candidates = [os.environ.get("SSL_CERT_FILE"), "/etc/ssl/cert.pem",
+                  "/etc/pki/tls/certs/ca-bundle.crt",
+                  "/etc/ssl/certs/ca-certificates.crt"]
+    try:
+        import certifi
+        candidates.append(certifi.where())
+    except ImportError:
+        pass
+    for path in candidates:
+        if path and os.path.exists(path):
+            try:
+                return ssl.create_default_context(cafile=path)
+            except Exception:                                 # noqa: BLE001
+                continue
+    sys.exit("ERROR: no usable CA bundle — TLS verification would fail for every "
+             "oracle call. On a python.org build, run the bundled "
+             "'Install Certificates.command', or set SSL_CERT_FILE.")
+
+
+SSL_CONTEXT = None
+SCHEMA_VERSION = 2
+
+TRANSCRIPT = "llm_loop_transcript.jsonl"
+META = ".meta.json"
+
+
+# --- module loading ---------------------------------------------------------
+def load_module(path):
+    spec = importlib.util.spec_from_file_location("gen", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for fn in ("make_instance", "render", "parse_answer", "verify", "escalate"):
+        if not callable(getattr(mod, fn, None)):
+            sys.exit(f"ERROR: {path} has no callable {fn}() — see prompts/codex_task.md STEP 1")
+    if not isinstance(getattr(mod, "DIFFICULTY", None), dict) or not mod.DIFFICULTY:
+        sys.exit(f"ERROR: {path} has no non-empty DIFFICULTY dict")
+    return mod
+
+
+# --- metadata ---------------------------------------------------------------
+def read_meta():
+    try:
+        with open(META) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def update_meta(**fields):
+    meta = read_meta()
+    meta.update(fields)
+    with open(META, "w") as f:
+        json.dump(meta, f, indent=1)
+
+
+# --- the oracle call --------------------------------------------------------
+def _ask_blocking(model, prompt, key):
+    """Return (reply_text, http_status, finish_reason, error, empty).
+
+    Exactly one of reply/error is set.  An empty body is NOT an API error: it is
+    flagged via `empty`, and attempt() scores it as an unsolved attempt.  A model
+    that spends its whole budget on reasoning and emits nothing did not produce a
+    witness under the conditions the pool is measured at, so it consumes its slot
+    rather than being redrawn.  The diagnostic is preserved in verify_reason so a
+    level hardened this way can still be told apart from one hardened on wrong
+    answers -- if ORACLE_MAX_TOKENS is the real constraint, raise it and re-run.
+
+    Every model in the default pool accepts OpenRouter's normalised `reasoning`
+    field, so no per-vendor body mapping is needed.  A model that rejects it is
+    reported as an error rather than silently retried without it — dropping the
+    effort setting would change what the hardness claim means.
+    """
+    body = json.dumps({
+        "model": model,
+        "reasoning": {"effort": ORACLE_EFFORT},
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": MAX_TOKENS,
+    }).encode()
+    req = urllib.request.Request(
+        ENDPOINT, data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT,
+                                    context=SSL_CONTEXT) as resp:
+            status = resp.status
+            payload = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        return None, e.code, None, f"http {e.code}: {e.read()[:400].decode('utf-8', 'replace')}", False
+    except Exception as e:                                    # noqa: BLE001
+        return None, None, None, f"{type(e).__name__}: {e}", False
+    try:
+        choice = payload["choices"][0]
+        text = choice["message"]["content"]
+        finish = choice.get("finish_reason") or choice.get("native_finish_reason")
+    except (KeyError, IndexError, TypeError):
+        return None, status, None, f"unparseable response: {json.dumps(payload)[:400]}", False
+    if not (text or "").strip():
+        usage = payload.get("usage") or {}
+        return None, status, finish, (
+            f"empty reply (finish_reason={finish}, usage={json.dumps(usage)[:160]}) — "
+            f"the model returned no content, most likely because reasoning consumed "
+            f"max_tokens={MAX_TOKENS}; raise ORACLE_MAX_TOKENS"), True
+    return text, status, finish, None, False
+
+
+def ask(model, prompt, key):
+    """_ask_blocking under a hard wall-clock deadline.
+
+    A deadline overrun is reported as an ERROR, not a failure to solve: the model
+    never got to answer, so scoring it as unsolved would manufacture hardness out
+    of a hung socket.  attempt() redraws against a different vendor.
+    """
+    box = {}
+
+    def run():
+        try:
+            box["v"] = _ask_blocking(model, prompt, key)
+        except Exception as e:                                # noqa: BLE001
+            box["v"] = (None, None, None, f"{type(e).__name__}: {e}", False)
+
+    # daemon=True matters: a wedged socket must not keep the interpreter alive at
+    # exit, which is exactly what a ThreadPoolExecutor worker would do.
+    t = threading.Thread(target=run, daemon=True, name=f"oracle-{model}")
+    t.start()
+    t.join(TOTAL_DEADLINE)
+    if t.is_alive():
+        return (None, None, None,
+                f"total deadline exceeded: no complete response in {TOTAL_DEADLINE}s",
+                False)
+    return box.get("v", (None, None, None, "worker produced no result", False))
+
+
+def attempt(mod, model, params, seed, key):
+    """One oracle call.  Returns the transcript record for it."""
+    inst = mod.make_instance(seed=seed, **params)
+    t0 = time.time()
+    reply, status, finish, error, empty = ask(model, mod.render(inst), key)
+    elapsed = round(time.time() - t0, 2)
+
+    rec = {
+        "schema_version": SCHEMA_VERSION,
+        "model": model,
+        "effort": ORACLE_EFFORT,
+        "params": dict(params),
+        "seed": seed,
+        "solved": "error",
+        "parsed": False,
+        "verify_ok": None,
+        "verify_reason": None,
+        "reply": reply,
+        "error": error,
+        "elapsed_sec": elapsed,
+        "http_status": status,
+        "finish_reason": finish,
+    }
+    if empty:
+        # Scored as an unsolved attempt, not an API error: the model returned no
+        # witness within its budget.  error stays None so the invariant
+        # "error is not None => solved == 'error'" holds.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = f"empty length-limited response ({error})"
+        rec["error"] = None
+        return rec
+    if error is not None:
+        return rec
+
+    ans = mod.parse_answer(reply)
+    rec["parsed"] = ans is not None
+    if ans is None:
+        # Not an error, and not evidence of hardness either: a reply that
+        # visibly contains an answer but does not parse is a renderer bug.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = "parse_answer returned None"
+        return rec
+
+    ok, why = mod.verify(inst, ans)
+    rec["verify_ok"] = bool(ok)
+    rec["verify_reason"] = why
+    rec["solved"] = "solved" if ok else "failed"
+    return rec
+
+
+# --- the loop ---------------------------------------------------------------
+def run_level(mod, params, preset, escalation_round, rng, key, out):
+    """Ask the pool to solve this difficulty.  Returns True if any model solved it.
+#!/usr/bin/env bash
+# Submit a finished paper.  Usage: scripts/submit.sh <arxiv_id>
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
+D="results/$ID"
+[ -d "$D" ] || { echo "ERROR: $D missing."; exit 1; }
+
+if [ -n "$REJECT" ]; then
+  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+  python3 -c "
+import json,datetime,os
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='rejected'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d,open(p,'w'))"
+  rm -f "$D/.orkey" "$D/.task.md" "$D/.runner.sh"; rm -rf "$D/__pycache__"
+  bash scripts/status.sh --write >/dev/null
+  git add "$D" "claims/$ID.json" STATUS.md
+  git commit -q -m "reject $ID"
+  git pull -q --rebase origin main && bash scripts/status.sh --write >/dev/null && git add STATUS.md \
+    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+    echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+  exit 0
+fi
+
+MOD="$(ls "$D"/gen_*.py 2>/dev/null | head -1)"
+[ -n "$MOD" ] || { echo "ERROR: no gen_*.py in $D — nothing to submit."; exit 2; }
+
+# The builder writes these; a result nobody can read or re-check is not a result.
+for f in README.md selftest_report.json llm_loop_transcript.jsonl; do
+  [ -s "$D/$f" ] || { echo "ERROR: $D/$f missing or empty — see prompts/codex_task.md STEP 5."; exit 7; }
+done
+if [ "$(wc -l < "$D/README.md")" -lt 25 ]; then
+  echo "ERROR: $D/README.md is too short to explain the task — see STEP 5."; exit 7
+fi
+
+# Gate results are the builder's to produce, but "the file exists" is not evidence
+# it ran them.  G8 gets named explicitly: it is the one gate nothing downstream can
+# reconstruct, because a canonical_key built on the seed or on hash(render(inst))
+# passes the diversity count below while making it meaningless.
+python3 - "$D/selftest_report.json" <<'PYGATE' || exit 7
+import json, sys
+try:
+    rep = json.load(open(sys.argv[1]))
+except Exception as e:
+    print(f"ERROR: selftest_report.json is not readable JSON: {e}"); sys.exit(1)
+if not isinstance(rep, dict):
+    print("ERROR: selftest_report.json must be a JSON object"); sys.exit(1)
+gates = {k: v for k, v in rep.items() if k.startswith("G") and k[1:2].isdigit()}
+if not gates:
+    print("ERROR: selftest_report.json records no G* gates — see STEP 3."); sys.exit(1)
+failed = [k for k, v in sorted(gates.items())
+          if not (isinstance(v, dict) and v.get("pass"))]
+if failed:
+    print("ERROR: gates not passing in selftest_report.json: " + ", ".join(failed)); sys.exit(1)
+if rep.get("all_passed") is False:
+    print("ERROR: selftest_report.json says all_passed=false"); sys.exit(1)
+if not any(k.startswith("G8") for k in gates):
+    print("ERROR: no G8 gate in selftest_report.json — canonical_key invariance was\n"
+          "       never tested.  submit.sh counts distinct keys but cannot tell a real\n"
+          "       invariant from a hash of the seed.  See prompts/codex_task.md, G8.")
+    sys.exit(1)
+print(f"== gates ==\n  {len(gates)} gates pass, G8 canonical_key present")
+PYGATE
+
+echo "== hardening transcript =="
+python3 - "$D" <<'PY'
+import json, os, sys
+D = sys.argv[1]
+try:
+    meta = json.load(open(os.path.join(D, ".meta.json")))
+except (OSError, ValueError):
+    meta = {}
+ver = meta.get("schema_version", 1)
+rows = [json.loads(l) for l in open(os.path.join(D, "llm_loop_transcript.jsonl")) if l.strip()]
+
+if ver < 2:
+    # Built before scripts/harden.py existed: single fixed oracle, builder-authored
+    # transcript.  Grandfathered rather than re-run, and tagged so that nobody has
+    # to guess later which rules it was checked against.
+    print(f"  schema_version={ver} (legacy, pre-harden.py) — {len(rows)} calls, not re-validated")
+    sys.exit(0)
+
+NEED = {"schema_version","model","effort","preset","params","seed","escalation_round",
+        "solved","parsed","verify_ok","verify_reason","reply","error","elapsed_sec",
+        "http_status","finish_reason"}
+fail = []
+for n, r in enumerate(rows, 1):
+    missing = NEED - set(r)
+    if missing:
+        fail.append(f"line {n}: missing keys {sorted(missing)}")
+if not rows:
+    fail.append("transcript is empty")
+
+models = {r.get("model") for r in rows}
+if len(models) < 3:
+    fail.append(f"only {len(models)} distinct oracle model(s) used: {sorted(models)} — "
+                "the pool must be redrawn per call")
+seeds = [r.get("seed") for r in rows]
+if len(set(seeds)) != len(seeds):
+    fail.append("repeated seeds — every attempt must use a distinct instance")
+rounds = [r.get("escalation_round", 0) for r in rows]
+cap = meta.get("max_escalations", 3)
+if rounds and max(rounds) > cap:
+    fail.append(f"escalation_round reached {max(rounds)}, above the cap of {cap}")
+# The hardness claim rests on the level that held, not on the run as a whole:
+# a transcript can show four vendors overall while the shipping level was decided
+# by two of them.
+verdict = meta.get("harden_verdict", {})
+if verdict.get("verdict") == "hardened" and rows:
+    top = max(rounds)
+    deciders = {r.get("model") for r in rows
+                if r.get("escalation_round") == top and r.get("solved") != "error"}
+    want = min(3, len(meta.get("oracle_pool") or []) or 3)
+    if len(deciders) < want:
+        fail.append(f"the shipping level was decided by only {len(deciders)} distinct "
+                    f"vendor(s) {sorted(deciders)}; the all-fail claim needs {want}")
+if verdict.get("verdict") == "too_easy":
+    fail.append("harden.py returned verdict too_easy — this family is given up on; "
+                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+
+if fail:
+    print("TRANSCRIPT INVALID:")
+    for f in fail: print("  -", f)
+    sys.exit(1)
+print(f"  {len(rows)} calls | {len(models)} distinct models | "
+      f"{max(rounds)+1} difficulty level(s) | verdict "
+      f"{meta.get('harden_verdict',{}).get('verdict')}")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — see prompts/codex_task.md STEP 4."; exit 8; }
+
+echo "== interface check =="
+python3 - "$MOD" <<'PY'
+import importlib.util, json, sys
+p=sys.argv[1]
+s=importlib.util.spec_from_file_location("m",p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
+need=["make_instance","render","parse_answer","verify","random_candidate","search_space",
+      "enumerate_all","canonical_key","escalate"]
+miss=[f for f in need if not callable(getattr(m,f,None))]
+if miss: print("MISSING:", miss); sys.exit(1)
+i=m.make_instance(**(getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})), seed=0)
+ok,why=m.verify(i, i["answer"])
+if not ok: print("G1 FAIL: planted answer does not verify:", why); sys.exit(1)
+# Can parse_answer consume real solver output?  The wire format is the module's
+# own choice and often differs from the internal answer representation (binary
+# strings vs ints, nested JSON vs a flat list), so guessing a rendering of
+# inst["answer"] produces false failures.  Test the contract the renderer itself
+# advertises: pull the example out of render() and require parse_answer to accept
+# it.  That is format-agnostic and still independent of the builder's own gate.
+def _parse_contract(mod, inst, ans):
+    import re
+    ex = re.findall(r"<answer>(.*?)</answer>", mod.render(inst), re.S)
+    for body in reversed(ex):
+        try:
+            if mod.parse_answer(f"<answer>{body}</answer>") is not None:
+                return True, "renderer example parses"
+        except Exception:
+            pass
+    for body in [json.dumps(ans)] + ([", ".join(map(str, ans))]
+                 if isinstance(ans, list) and all(isinstance(x,(int,float,str)) for x in ans) else []):
+        try:
+            if mod.parse_answer(f"<answer>{body}</answer>") == ans:
+                return True, "planted answer round-trips"
+        except Exception:
+            pass
+    return False, "parse_answer accepted neither the renderer example nor the planted answer"
+rt, rt_why = _parse_contract(m, i, i["answer"])
+# canonical_key must be a function of the instance, not of the call.  A key that
+# is not deterministic cannot detect a duplicate; we cannot check the harder
+# property (invariance under relabelling) without family-specific machinery, so
+# the README caveats have to carry that one.
+params = getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})
+k1 = m.canonical_key(m.make_instance(**params, seed=4242))
+k2 = m.canonical_key(m.make_instance(**params, seed=4242))
+if not isinstance(k1,str) or k1 != k2:
+    print("canonical_key FAIL: not deterministic or not a str:", repr(k1), repr(k2)); sys.exit(1)
+if m.canonical_key(m.make_instance(**params, seed=4243)) == k1:
+    print("canonical_key FAIL: two different seeds collide — the key ignores the instance"); sys.exit(1)
+print(f"  interface OK | planted verifies | parse_answer: {rt} ({rt_why}) | canonical_key deterministic")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — fix the module first."; exit 3; }
+
+rm -f "$D/.orkey" "$D/.task.md" "$D/.runner.sh"; rm -rf "$D/__pycache__"
+echo "== emitting sample instances =="
+bash scripts/emit.sh "$ID" "${EMIT_N:-20}" || { echo "SUBMIT BLOCKED — emit failed."; exit 5; }
+
+# emit.sh already resamples past duplicates; this re-checks the file it produced,
+# so the thing that generates the instances is not the only thing that vouches
+# for them.
+echo "== diversity =="
+python3 - "$MOD" "artifacts/$ID.jsonl" <<'PY'
+import importlib.util, json, sys
+mod_path, art = sys.argv[1], sys.argv[2]
+s = importlib.util.spec_from_file_location("m", mod_path)
+m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+recs = [json.loads(l) for l in open(art) if l.strip()]
+keys = [m.canonical_key(m.make_instance(**r["params"])) for r in recs]
+dupes = len(keys) - len(set(keys))
+if dupes:
+    print(f"  {dupes} duplicate instance(s) out of {len(keys)} — isomorphic problems in "
+          f"the dataset"); sys.exit(1)
+print(f"  {len(set(keys))}/{len(keys)} distinct canonical keys")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — duplicate instances."; exit 9; }
+
+
+python3 -c "
+import json,os,datetime
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='done'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d, open(p,'w'))"
+bash scripts/status.sh --write >/dev/null
+git add "$D" "artifacts/$ID.jsonl" "claims/$ID.json" STATUS.md
+git commit -q -m "result $ID"
+# STATUS.md is generated: on conflict, regenerate rather than merge
+git pull -q --rebase origin main 2>/dev/null || { git checkout --ours STATUS.md 2>/dev/null; git add STATUS.md 2>/dev/null; git rebase --continue >/dev/null 2>&1 || true; }
+bash scripts/status.sh --write >/dev/null; git add STATUS.md
+git diff --cached --quiet 2>/dev/null || git commit -q --amend --no-edit 2>/dev/null
+git push -q origin main && echo "SUBMITTED $ID" || {
+  echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+
+web search: 
+web search: https://arxiv.org/abs/2604.24502
+web search: 
+web search: 
+web search: 
+web search: 
+codex
+The paper’s core construction is now clear: its Section 4 maps satisfy \(g(x_i)=h(x_i)\) outright, so the most obvious “find a nontrivial equalizer word” problem is immediately solved by returning any \(x_i\). I’m checking whether a theorem-backed hard search variant survives transformations or length constraints; if not, the correct deliverable is a documented rejection rather than a misleading generator.
+exec
+/bin/bash -lc "sed -n '1,240p' ../../scripts/fetch_paper.sh
+curl -L --fail --silent --show-error https://arxiv.org/e-print/2604.24502 -o /tmp/paper_2604.24502.tar
+file /tmp/paper_2604.24502.tar
+mkdir -p /tmp/paper_2604.24502 && tar -xf /tmp/paper_2604.24502.tar -C /tmp/paper_2604.24502
+rg -n -i 'algorithm|complex|hard|decid|search|equalizer|basis|word' /tmp/paper_2604.24502 | sed -n '1,260p'
+rg --files /tmp/paper_2604.24502 | sort" in /home/gson/gvrepo/results/2604.24502
+ succeeded in 310ms:
+/tmp/paper_2604.24502.tar: gzip compressed data, last modified: Tue May 12 00:51:17 2026, from Unix, original size modulo 2^32 61440
+/tmp/paper_2604.24502/main.tex:54:\title[Colored Stallings graphs and counterexamples to the equalizer conjecture]{Colored Stallings graphs and counterexamples to the Stallings equalizer conjecture}
+/tmp/paper_2604.24502/main.tex:64:\keywords{Stallings equalizer conjecture; counterexamples; colored Stallings graphs; free groups.}
+/tmp/paper_2604.24502/main.tex:68:\thanks{All the proofs in this paper are based on (colored) Stallings graphs, reflecting the profound mathematical insight of Professor J.~R. Stallings, which has deeply inspired the authors. The second author is supported by the China Scholarship Council, the Young Elite Scientists Sponsorship Program for PhD Students (China Association for Science and Technology), and the Fundamental Research Funds for the Central Universities at Xi'an Jiaotong University (Grant No.~xzy022024045).}
+/tmp/paper_2604.24502/main.tex:70: The famous Stallings equalizer conjecture has remained open for more than 40
+/tmp/paper_2604.24502/main.tex:72:the equalizer
+/tmp/paper_2604.24502/main.tex:82:$ This disproves the Stallings equalizer conjecture for $n\ge 3$.
+/tmp/paper_2604.24502/main.tex:98:be homomorphisms. Their \emph{equalizer}  is defined by
+/tmp/paper_2604.24502/main.tex:103:P1 \& 5]{Sta87} proposed his famous rank-$n$ equalizer conjecture, which states the following.
+/tmp/paper_2604.24502/main.tex:115:In the special case where \(\Sigma=\Delta\) and $h=\id$, the equalizer is precisely the fixed subgroup.  Indeed, for any
+/tmp/paper_2604.24502/main.tex:122:Thus the fixed subgroup problem is the one-map  special  case of the equalizer problem. By using train-track maps, Bestvina and Handel  \cite{BH92} proved the well-known Scott conjecture
+/tmp/paper_2604.24502/main.tex:129:For general equalizers, the situation is harder.    Ventura \cite{Ven02}
+/tmp/paper_2604.24502/main.tex:130:noted that the injectivity hypothesis in Conjecture~\ref{conj:Stallings} is essential: without it, equalizers
+/tmp/paper_2604.24502/main.tex:132:  Ciobanu and Logan \cite{CL20} proved algorithmic
+/tmp/paper_2604.24502/main.tex:135:hypotheses on the images. Very recently, Carvalho and Silva \cite{CS26} investigated the fixed points and equalizers of injective endomorphisms of the free group at infinity.
+/tmp/paper_2604.24502/main.tex:167: \noindent\textbf{Sketch of our proofs. }We introduce the notion of colored Stallings graphs for a pair $(g,h)$, which are Stallings graphs decorated by a vertex color, recording the twisted difference $g(\ell(p))^{-1}h(\ell(p))$ along path $p$ in the graph. We will see that injectivity of the color map forces the represented subgroup to be a free factor of the equalizer, giving a lower bound for the rank of the equalizer. Our examples are constructed by the following: let us consider homomorphisms with domain
+/tmp/paper_2604.24502/main.tex:189:criterion which detects free factors of equalizers. In Section~\ref{s:3}, we
+/tmp/paper_2604.24502/main.tex:199:\section{Colored Stallings graphs and equalizers}\label{s:2}
+/tmp/paper_2604.24502/main.tex:209:Let \(X\) be a finite set, and let \(F(X)\) be the free group with basis
+/tmp/paper_2604.24502/main.tex:301:Thus every reduced word \(w\in F(X)\) determines a unique reduced path in
+/tmp/paper_2604.24502/main.tex:382:tree in \(Z\). The graph basis associated to the larger tree contains the
+/tmp/paper_2604.24502/main.tex:383:graph basis associated to \(Y\).
+/tmp/paper_2604.24502/main.tex:415:inverses. We now introduce the colored version of Stallings graphs. This device will be used to produce explicit free factors of equalizers.
+/tmp/paper_2604.24502/main.tex:633:% \section{Colored Stallings graphs and equalizers}\label{s:2}
+/tmp/paper_2604.24502/main.tex:643:%     Let \(X\) be a finite set and let \(F(X)\) be the free group with basis \(X\).
+/tmp/paper_2604.24502/main.tex:719:% word
+/tmp/paper_2604.24502/main.tex:810:% Equivalently, a path labeled by a word \(w\in F(X)\) starting at the base
+/tmp/paper_2604.24502/main.tex:830:% We now introduce the colored version used to detect subgroups of equalizers.
+/tmp/paper_2604.24502/main.tex:1039:% of \(\operatorname{Core}_X(\operatorname{Eq}(g,h))\). The graph basis of
+/tmp/paper_2604.24502/main.tex:1044:% outside \(T\). The edges of \(Y\setminus T_Y\) give a free basis for
+/tmp/paper_2604.24502/main.tex:1075:% \section{Colored Stallings graphs and equalizers}\label{s:2}
+/tmp/paper_2604.24502/main.tex:1080:% Let $X$ be a finite basis of the free group $F(X)$. An $X$-labeled graph $\Gamma$ is called \emph{folded} if, at each vertex, there is at most one outgoing oriented edge with any prescribed label $x\in X^{\pm1}$. A connected folded graph with a distinguished base vertex represents a subgroup of $F(X)$, namely the subgroup consisting of the labels of its based loops. Its rank is given by
+/tmp/paper_2604.24502/main.tex:1087:% Then we use a standard colored-graph criterion to certify that a labeled graph represents a subgroup of an equalizer.
+/tmp/paper_2604.24502/main.tex:1095:% In particular, when the underlying graph $\Gamma$ is a Stallings  graph, we call such colored $X$-graph a \emph{colored Stallings graph}. The word ``colored'' only refers to the auxiliary vertex map \(C\); the
+/tmp/paper_2604.24502/main.tex:1279:The graph basis of \(\pi_1(\Delta_n,o)\) associated to \(T\) has one
+/tmp/paper_2604.24502/main.tex:1291:Therefore the labels of the graph basis are precisely
+/tmp/paper_2604.24502/main.tex:1304:is injective. Hence the labels of the above graph basis freely generate the
+/tmp/paper_2604.24502/main.tex:1334:is again a free basis of \(F_n\).
+/tmp/paper_2604.24502/main.tex:1340:Thus the image under $g$ of the free basis
+/tmp/paper_2604.24502/main.tex:1351:\(\{t,x_1,\ldots,x_{n-1}\}\) is a free basis of \(F_n\), the set
+/tmp/paper_2604.24502/main.tex:1355:is a free basis of the subgroup \(g(F_n)\). Hence
+/tmp/paper_2604.24502/main.tex:1359:is also a free basis, obtained by inverting some basis elements.
+/tmp/paper_2604.24502/main.tex:1379:These are precisely the images under \(h\) of the basis
+/tmp/paper_2604.24502/main.tex:1511:These elements are pairwise distinct as reduced words in \(F(a,b)\). Hence
+/tmp/paper_2604.24502/main.tex:1565:% For every $n\ge 3$, the rank-$n$ equalizer conjecture for pairs of monomorphisms
+/tmp/paper_2604.24502/main.tex:1577:The   same construction of Sections~\ref{s:3} and~\ref{s:4}  also yields consequences when one allows non-injective maps.  The reason is that one may add dummy generators without changing the large subgroup already lying in the equalizer.
+/tmp/paper_2604.24502/main.tex:1632:\(A_m\) is the same graph \((\Gamma_m,v_0)\). Indeed, by the normal form theorem for free products, a reduced word in the
+/tmp/paper_2604.24502/main.tex:1633:enlarged basis \(X_r\) which contains \(z^{\pm1}\) represents an element outside the free factor \(F_m\).
+/tmp/paper_2604.24502/main.tex:1708:graph of \(A_m\) is still \((\Gamma_m,v_0)\), because, by the normal form theorem for free products, no reduced word
+/tmp/paper_2604.24502/main.tex:1727:Once both maps are allowed to be non-injective, the equalizer may even fail to be finitely generated.  Here is a Stallings-graph way to see this.
+/tmp/paper_2604.24502/main.tex:1741:Then both $\alpha$ and $\beta$ are non-injective.  If $e_x(w)$ and $e_y(w)$ denote the exponent sums of $x$ and $y$ in a word $w\in F(x,y)$, then
+/tmp/paper_2604.24502/main.tex:1784:% No data was used for the research described in the article.
+/tmp/paper_2604.24502/main.tex:1801:A.~Carvalho and P.~V. Silva, \emph{On fixed points and equalizers of injective endomorphisms of the free group at infinity}, \href{https://arxiv.org/abs/2604.01107}{arXiv:2604.01107, 2026}.
+/tmp/paper_2604.24502/main.tex:1818:R.~Z. Goldstein and E.~C. Turner, \emph{Monomorphisms of finitely generated free groups have finitely generated equalizers}, Invent. Math. \textbf{82} (1985), no.~2, 283--289. \doi{10.1007/BF01388804}
+/tmp/paper_2604.24502/main.tex:1842:A.~D. Logan, \emph{The Equalizer Conjecture for the free group of rank two}, Q. J. Math. \textbf{73} (2022), no.~2, 777--793. \doi{10.1093/qmath/haab059}
+/tmp/paper_2604.24502/00README.json
+/tmp/paper_2604.24502/main.tex
+
+web search: 
+web search: site:arxiv.org Ciobanu Logan algorithmic equalizer injective homomorphisms free groups Post Correspondence Problem ...
+exec
+/bin/bash -lc 'find .. -maxdepth 2 -name REJECTED.md -type f | head -8 | while read f; do echo "$f"; sed -n '"'1,180p' \""'$f"; done
+find .. -maxdepth 2 -name '"'gen_*.py' -type f | head -3" in /home/gson/gvrepo/results/2604.24502
+ succeeded in 0ms:
+../2306.00850/REJECTED.md
+# Rejected: arXiv 2306.00850
+
+Paper: Marija Bliznac Trebješanin and Pavao Radić, [*On extensions of
+\(D(4)\)-triples by adjoining smaller elements*](https://arxiv.org/abs/2306.00850),
+v2 (2024).
+
+## Decision
+
+The proposed family—construct a \(D(4)\)-quadruple, reveal its three larger
+members, and ask for the smaller member—fails requirement **H (hard)**. The
+only unlimited planted construction supported by the paper produces regular
+quadruples, and the hidden answer then has an exact closed-form recovery.
+
+No generator module, self-test report, or LLM hardening transcript was created.
+The task explicitly requires stopping after Step 0 when G, H, or V fails.
+
+## What the paper actually defines
+
+Section 1 defines a \(D(4)\)-\(m\)-tuple as a set of distinct positive integers
+such that \(xy+4\) is a perfect square for every two distinct members \(x,y\).
+For a \(D(4)\)-triple \(\{x,y,z\}\), it gives
+
+\[
+d_{\pm}(x,y,z)=x+y+z+\frac{xyz\pm
+\sqrt{(xy+4)(xz+4)(yz+4)}}{2}.
+\]
+
+The \(d_+\) value is an explicit larger extension and defines a *regular*
+quadruple. Section 1 also explains that \(d_-\), when positive, gives the
+companion smaller extension.
+
+## The fatal solver
+
+Suppose inverse generation starts from \(a<b<c\) and plants the regular value
+\(d=d_+(a,b,c)\). The rendered problem would reveal \(b,c,d\) and ask for
+\(a<b\). A solver computes, using exact integer arithmetic,
+
+\[
+a=b+c+d+\frac{bcd-
+\sqrt{(bc+4)(bd+4)(cd+4)}}{2}=d_-(b,c,d).
+\]
+
+All three factors under the square root are promised squares, so the root is
+exact and inexpensive to compute with integer square root. This is not merely
+a statistical planting leak: it is the paper's defining formula, applied in
+reverse. It succeeds on every regular planted instance. For example,
+\(\{1,5,12,96\}\) is regular, and \(d_-(5,12,96)=1\).
+
+Thus G and V would be straightforward, but H fails regardless of numeric size.
+Increasing `n` only increases operand bit lengths; it does not remove the
+closed-form attack.
+
+## Why the harder-looking alternatives do not qualify
+
+- Conjecture 1.2 asks whether one triple can have two different smaller
+  extensions. The paper treats such a configuration hypothetically. It gives
+  necessary inequalities in Theorem 1.3 and proves in Corollary 1.6 that only
+  finitely many can exist, but it does not provide even one scalable planted
+  family. Basing a generator on these counterexamples therefore fails **G**.
+- Section 2 reduces irregular extensions to intersections of Pellian recurrence
+  sequences. It explicitly notes that the relevant Pellian solutions can be
+  described for each fixed pair and that the proofs finish bounded cases by
+  search. More importantly, the section states that regular solutions occur at
+  indices at most 2, while a non-regular solution would require the separate
+  high-index regime (Lemma 2.6 in the paper's numbering). The paper supplies no
+  inverse construction of unlimited high-index irregular intersections.
+- Asking for any extension of a visible \(D(4)\)-triple is also easy: \(d_+\) is
+  always explicitly available. Asking for nonexistence, uniqueness, or an
+  optimum would violate the required witness contract.
+
+## Gate evidence
+
+The family is rejected before implementation:
+
+| Requirement | Result | Evidence |
+|---|---:|---|
+| G | pass only for the easy regular regime | sample \(a,b,c\), compute \(d_+\) |
+| H | **fail** | deterministic \(d_-\) attack solves 100% of regular plants |
+| V | pass | check distinct positivity and the six values \(xy+4\) by integer square root |
+
+Because H fails by a universal algebraic attack, random-guess measurements and
+LLM failures could not establish hardness and would be misleading.
+../2101.05057/REJECTED.md
+# Rejected: planted reset words in strongly connected partial DFAs
+
+Paper: Mikhail V. Berlinkov, Robert Ferens, Andrew Ryzhikov, and Marek
+Szykuła, *Synchronization of strongly connected partial DFAs and prefix
+codes*, [arXiv:2101.05057](https://arxiv.org/abs/2101.05057) (v4, 3 June
+2026).
+
+## Decision
+
+The proposed family fails **H (hardness)**. I therefore stopped at Step 0 and
+did not create a generator, self-test report, README, or oracle-loop
+transcript. Those artifacts would misrepresent a polynomial-time constructive
+problem as hard witness search.
+
+## Exact definition
+
+Section 2 defines a partial DFA as a finite state set `Q`, an alphabet `Sigma`,
+and a possibly undefined transition for each state/letter pair. Applying a
+word discards every state whose run encounters an undefined transition. The
+word's rank is the number of distinct surviving destination states. A **reset
+word** is exactly a word of rank 1: at least one run must survive, and all
+surviving runs must finish in one state. It need not be defined on every state.
+
+This distinction matters. Section 1.5 calls a word defined on every state and
+mapping all states to one state *carefully synchronizing*, and explicitly says
+that this is not the paper's reset-word definition.
+
+The proposed inverse generator could sample a word first, arrange transitions
+so that its image has size one, and verify it by replaying the transitions.
+Thus G and V are possible. They do not imply H.
+
+## Why H fails
+
+Section 3.5, Proposition 3.12 gives constructive polynomial-time algorithms
+for the exact regime in the title:
+
+- synchronizability of a strongly connected partial DFA is decided in
+  `O(|Sigma| n^2)` time;
+- a word of **minimum nonzero rank** is found in `O(|Sigma| n^3)` time (apart
+  from storage for the output word).
+
+The construction marks compressible unordered state pairs by reverse BFS and
+then repeatedly applies a shortest pair-compressing word to the current image.
+Lemma 3.6 (the paper's `lem:strcon_minimal_rank`) is the strong-connectivity
+fact that makes this iteration reach the global minimum nonzero rank.
+
+On every instance produced by the proposed planter, a reset word exists, so
+the minimum nonzero rank is 1. Proposition 3.12 therefore returns a valid
+reset-word witness directly. The solver need not guess the planted word or
+recover any hidden construction. Increasing `n`, adding decoys, hiding state
+labels, or making the naive word space exponential merely enlarges a
+polynomial-time pair-compression computation.
+
+The same obstruction covers the paper's finite-prefix-code/literal-automaton
+special case. Theorem 3.18 even constructs a linear-length, logarithmic-rank
+word in polynomial time, and Corollary 3.19 supplies a polynomial reset-length
+upper bound for synchronizing literal automata. None of these results creates
+a hard positive-witness search regime.
+
+## Why nearby variants were not substituted
+
+- **Ask whether a reset word exists.** This is a yes/no answer, not a witness,
+  and Proposition 3.12 decides it in polynomial time anyway.
+- **Ask for a shortest reset word or the reset threshold.** Making optimality
+  the claim violates the witness contract. Adding an externally chosen length
+  bound would define a different constrained problem; this paper gives no
+  hardness theorem or answer-first hard-instance construction for such a
+  planted distribution.
+- **Drop strong connectivity.** Section 1.5 notes PSPACE-completeness for
+  general partial DFAs, but that is explicitly the regime the paper excludes
+  to obtain its algorithms. Replacing the title regime with arbitrary partial
+  automata would abandon the proposed paper family, and the paper supplies no
+  inverse generator whose planted distribution inherits the cited worst-case
+  hardness.
+- **Use careful synchronization.** Section 1.5 cites PSPACE-completeness and
+  exponential shortest witnesses for this different notion, expressly to
+  contrast it with the notion studied in the paper. The paper neither develops
+  that problem nor provides a bounded, answer-first hard construction; merely
+  planting a careful word would not establish hardness of the generated
+  instances.
+- **Use the lower-bound automata in Section 4.** Proposition 4.2 is an explicit
+  construction with a known quadratic reset threshold. It is useful for an
+  extremal bound, not for hiding a witness from a solver.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G -- sample the answer first | Pass in principle: plant a word and its rank-1 action |
+| H -- no known polynomial-time or closed-form method | **Fail: Proposition 3.12 constructs a minimum-rank word in `O(|Sigma| n^3)`** |
+| V -- cheap exact verification | Pass: replay the word from every state and require a singleton nonempty image |
+
+Because H fails analytically in the shipped parameter regime, running 200,000
+random guesses or the LLM hardening harness would not be meaningful evidence
+and would contradict the instruction to stop after a Step-0 rejection.
+../2408.04743/REJECTED.md
+# Rejected: spectrally exposed Token Jumping barrier
+
+Paper: Daniel W. Cranston, Moritz Mühlenthaler, and Benjamin Peyrille,
+[*A simple quadratic kernel for Token Jumping on surfaces*](https://arxiv.org/abs/2408.04743),
+arXiv:2408.04743.
+
+## Decision
+
+No generator is shipped. The proposed bounded-length Token Jumping family met
+inverse generation and exact replay, and it even received a `hardened` verdict
+from the prescribed LLM loop. A subsequent construction-aware spectral attack,
+motivated by the planted-colouring literature, recovered a verified witness on
+**20/20 shipping instances in polynomial time**. The family therefore fails
+**H (hardness)** and **G6 (adversary panel)**. The misleading generator,
+self-test report, README, and oracle transcript were removed rather than leave
+an apparently validated but easy family in the corpus.
+
+## What the paper actually defines
+
+Section 2 defines Token Jumping on a finite, undirected, simple graph. A state
+is an independent vertex set. Consecutive states have the same cardinality and
+differ by exactly one removed and one added vertex. Given independent sets `I`
+and `J`, each of size `k`, the decision problem asks whether such a sequence
+connects them.
+
+Section 1 states the relevant hard and easy regimes. Unrestricted Token
+Jumping is PSPACE-complete even on subcubic planar graphs of bounded bandwidth,
+and the version parameterised by both token count `k` and number of jumps
+`ell` is W[1]-hard. On the positive side, the problem is FPT on planar and,
+more generally, `K_{3,t}`-free graphs when parameterised by `k`; it also has
+kernels on bounded-degree, bounded-degeneracy, and fixed-surface graph classes.
+Theorem 1 proves an `O(g^2 + gk + k^2)` kernel when both genus `g` and token
+count `k` are parameters. These facts require `k` and `ell` to grow and rule
+out treating a small planted path as hard merely because unrestricted
+reachability is PSPACE-complete.
+
+## The attempted bounded-witness reduction
+
+The attempted family used an auxiliary graph `H` on `n` vertices. The Token
+Jumping graph had:
+
+- `n+1` independent start vertices `S` and `n+1` independent goal vertices
+  `T`, with every `S`--`T` edge present;
+- three choice vertices `X(v,0)`, `X(v,1)`, `X(v,2)` forming a triangle for
+  every `v` in `H`; and
+- an edge `X(u,c)`--`X(v,c)` for every edge `uv` of `H` and colour `c`.
+
+A sequence of exactly `2n+1` jumps from all of `S` to all of `T` is forced to
+move `n` tokens onto choice vertices before its unique `S -> T` jump. The
+choice triangles force one choice per vertex of `H`, and same-colour conflict
+edges make those choices a proper 3-colouring. Conversely, every proper
+3-colouring gives a valid sequence. This supplied a polynomially bounded
+witness and a cheap exact verifier, and it contains the ordinary worst-case
+3-COLOURING relation.
+
+For inverse generation, the code sampled three equal planted colour classes
+first and then drew three edge-disjoint perfect matchings between every pair
+of classes. Thus every vertex of `H` had exactly three neighbours in each of
+the other two classes and none in its own class. This equalised all visible
+degrees and defeated the original outlier, greedy, and short random-restart
+attacks. It also created the fatal algebraic signature.
+
+## Polynomial spectral attack
+
+Let `A` be the adjacency matrix of `H`, and let `1_C` be the indicator vector
+of a planted colour class. For
+
+`x = 1_C0 - 1_C1`,
+
+every vertex in `C0` has three neighbours in `C1`, every vertex in `C1` has
+three neighbours in `C0`, and every vertex in `C2` has three neighbours in
+both. Hence
+
+`A x = -3 x`.
+
+A second independent difference of class indicators has the same eigenvalue.
+The supposedly hidden colouring is therefore an exact two-dimensional
+eigenspace of eigenvalue `-3`. Computing that eigenspace and grouping vertices
+by their two coordinates recovers the three classes whenever no accidental
+extra `-3` eigenvectors occur. This takes polynomial time using standard exact
+or numerical linear algebra.
+
+The attack was tested on 20 unrelated `n=180` shipping seeds. In every case:
+
+1. eigenvalue `-3` had multiplicity exactly two;
+2. the eigenspace row embeddings formed three groups of exactly 60 vertices;
+3. those groups were a proper 3-colouring; and
+4. converting the colouring to the prescribed 361-jump witness made the public
+   verifier return `(True, "ok")`.
+
+Result: **20/20 verified solves**. This is not a marginal statistical leak; it
+is a direct polynomial construction of the witness.
+
+The failure is consistent with known work on planted colouring. David and
+Feige's [*On the effect of randomness on planted 3-coloring models*](https://arxiv.org/abs/1603.05183)
+reviews polynomial spectral recovery for random planted balanced colourings,
+and Kumar, Louis, and Tulsiani's [*Finding Pseudorandom Colorings of
+Pseudorandom Graphs*](https://doi.org/10.4230/LIPIcs.FSTTCS.2017.37) gives
+polynomial recovery results for expanding graphs with pseudorandom balanced
+colourings. The attempted construction was even more exposed because its
+between-class neighbour counts were exact rather than merely concentrated.
+
+## Why the LLM and initial gates were insufficient
+
+Before the spectral check, the `n=180` version had these measurements:
+
+| check | observed result |
+|---|---:|
+| planted replay | 12/12 preset/seed checks passed |
+| corruptions | 5/5 rejected with distinct reasons |
+| structure-aware random guessing | 0/200,000 |
+| degree outlier | 0/8 |
+| deterministic greedy colouring | 0/8 |
+| 32-restart randomised DSATUR | 0/8 |
+| relabelling/key checks | 120/120 invariant; 20/20 unrelated keys distinct |
+| four-vendor hardening | `hardened` at `n=180` after the easy rung was solved |
+| **spectral colouring** | **20/20 verified solves — failure** |
+
+The LLM result was especially weak evidence: one decisive model exhausted its
+32,000-token budget without emitting content, one explicitly declined to
+answer, and one emitted an invalid sequence. None tried the two-line
+eigenvector observation above. Random guessing and local heuristics measured
+the wrong attack surface; their failures say nothing against a deterministic
+global invariant.
+
+An earlier `n=90` rung had already shown why the adversary panel matters: three
+LLM vendors failed it, but the randomized-DSATUR attack solved 6/8 seeds. It was
+retired before the final run. The spectral attack then invalidated the larger
+rung too.
+
+## Why this was not retuned again
+
+Varying the between-class degrees could remove the exact eigenvalue, but that
+would start a new planted-colouring family whose average-case hardness is not
+established by the Token Jumping paper. Published planted-colouring algorithms
+also make a quick density retune unsafe. The prompt explicitly forbids using
+manual post-oracle tuning to chase a passing run. A defensible replacement
+would require a new hard planted distribution (or a faithful worst-case
+reduction with answer-first sampling), a spectral/SDP attack panel, and a fresh
+hardening process. That is materially different work, not a repair to this
+generator.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G — inverse generation | Passed: the colouring and bounded jump sequence were sampled before edges. |
+| H — no known polynomial/closed-form method | **Failed:** eigenspace recovery solved 20/20 and is polynomial. |
+| V — cheap exact verification | Passed: replay checks occupancy, independence, length, and final state. |
+| G6 — adversary panel | **Failed after adding the required spectral attack: 20/20 successes.** |
+| Overall | **Rejected.** |
+
+The rejection is based on a stronger attack than the required LLM loop. An
+oracle transcript cannot override a known polynomial solution method.
+../2212.01053/REJECTED.md
+# Rejected: arXiv 2212.01053
+
+Paper: Dragan Mašulović, [*Deducibility in Sudoku*](https://arxiv.org/abs/2212.01053) (v3, 17 April 2026).
+
+## Decision
+
+This paper does not contain a problem family satisfying **G, H, and V** simultaneously. A completed classic Sudoku grid is an easy-to-check witness and can be planted before clues are removed, but the paper defines only the fixed classic `9 x 9` game. It gives no scalable order parameter and no computational-hardness theorem or hard planted distribution. Consequently the proposed family fails **H**, and it cannot pass the mandatory **G7 scaling** gate. I stopped at Step 0 rather than manufacture a generalized problem not studied in the paper, claim unmeasured gates, or run the oracle loop on a family already ruled out analytically.
+
+## What the full paper actually defines
+
+Section 3 fixes Sudoku propositions to `r_i c_j not-approximately d` with all three indices in `{1,...,9}`. Its three domain axioms enforce distinct uniquely determined values in each of the nine rows, nine columns, and nine `3 x 3` boxes.
+
+Section 4 is more precise than the ordinary clue-grid description in the introduction:
+
+- a grid is a `9 x 9` matrix whose entries are nonempty subsets of `{1,...,9}`;
+- a full grid has a singleton set in every cell;
+- a Sudoku grid satisfies the row, column, and box axioms;
+- a grid `B` is compatible with `A` when every cell-set of `B` is a subset of the corresponding cell-set of `A`;
+- a solution is a compatible full grid (subsequent semantic statements and the main theorems quantify over full Sudoku grids).
+
+Thus the paper formalizes candidate elimination for one fixed board. It does not define generalized `b^2 x b^2` Sudoku, Latin-square completion of growing order, or another input family whose dimension can tend to infinity.
+
+Section 5 proves soundness and completeness of the proposed logic. Its central corollary is:
+
+```text
+a Sudoku grid has a unique solution if and only if it has a logically deducible solution.
+```
+
+This is a semantic/logical equivalence, not a complexity result. The paper neither claims NP-hardness nor analyzes a parameter regime in which finding a solution is computationally hard. In fact, the appendix notes that there are exactly `9^3 = 729` Sudoku propositions, another explicit indication that the formal universe is fixed.
+
+Sections 6 and 7 define when two boards are essentially the same. The allowed transformations include the eight geometric symmetries, row and column shuffles that preserve the three bands/stacks, and arbitrary digit relabellings. Section 8 uses those transformations to prove Gurth's Symmetrical Placement Theorem. These results are important for canonicalization but do not create a growing search problem.
+
+## Why the proposed planted generator fails
+
+### Fixed classic Sudoku is not a hard asymptotic family
+
+Sampling a completed grid first and deleting entries would satisfy inverse generation for the search task “return any completion.” Verification is exact and cheap: check all 81 entries, the clues, and every row, column, and box. However, every instance has the same fixed 81 cells and nine symbols. There are finitely many possible instances and finitely many answers; the introduction quotes `6,670,903,752,021,072,936,960` completed grids. Formally, any problem on this fixed domain has a constant-time lookup algorithm. More practically, `n` cannot control board order, so doubling `n` cannot produce a size-doubled instance as G7 requires.
+
+Using `n` as “number of blank cells” does not repair this. It is bounded by 81, and hardness is not monotone: zero blanks exposes the witness, while 81 blanks admits any completed grid and is easier to satisfy than a carefully constrained puzzle. The paper supplies no theorem identifying an intermediate clue count as a hard regime.
+
+### Removing clues does not establish uniqueness or deducibility
+
+Deleting clues preserves the planted completion, but it does not prove that the completion is unique. If the requested witness were merely any completion, uniqueness is irrelevant but the fixed-size H/G7 failure remains. If the requested object were specifically a *deducible* solution, Section 5 equates that claim with uniqueness. Checking the submitted grid alone would not verify uniqueness; a checker would need to rule out every other completion. The paper gives a logical equivalence, not a cheap uniqueness certificate or an inverse construction guaranteed to retain uniqueness after random clue deletion.
+
+### A deduction is not a suitable replacement witness
+
+Section 5 defines a proof as a finite but unbounded sequence of formulas, each an axiom, a premise, or a modus-ponens consequence. The Sudoku-axiom set is itself defined semantically as all formulas true in every full Sudoku grid. A purported proof therefore has unbounded witness length, and recognizing arbitrary axiom lines is not the requested cheap substitute-and-compare verification. The completeness proof establishes existence; it does not provide a bounded proof format or efficient proof-search algorithm.
+
+### Generalized Sudoku would be a different paper regime
+
+One could replace 9 by a growing order and appeal to known hardness results for generalized Sudoku. That would produce a plausible scalable CSP, but neither the generalized definition nor those hardness results occur in this paper. The requested family must come from the given paper, and the README would have no honest paper section or theorem supporting such a regime. Importing an external NP-completeness theorem would therefore not cure this Step-0 failure.
+
+### Random transformations do not create genuine diversity
+
+A common generator starts with one patterned solution and applies digit permutations, band/stack permutations, within-band/within-stack row/column permutations, and rotations/reflections. Section 7 explicitly classifies these as Sudoku transformations and defines transformed grids as not essentially different. Under the required G8 key, all such outputs must collapse to the same problem. A one-template generator would therefore also fail canonical distinctness even though its raw encodings and seeds differ.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G — sample a witness first | Possible for a fixed classic puzzle: plant a full grid, then retain compatible clues/candidate sets |
+| H — no known polynomial-time or closed-form method, with a large scalable answer space | **Fail: the paper's universe is the one fixed 9 x 9 board; it provides no growing hard regime or complexity theorem** |
+| V — cheap exact witness checking | Pass for a completed grid; not established for uniqueness/deducibility or arbitrary formal proofs |
+| G7 — difficulty grows with `n` and size doubling still works | **Fail: board size and alphabet are fixed at 9, and clue count is bounded and non-monotone** |
+| G8 — structural diversity under relabelling | A canonicalizer must quotient Section 7's transformations; template-plus-transform generation collapses to one key |
+
+No `gen_2212_01053.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Those files would falsely imply that a compliant generator reached Steps 1–5. Running `scripts/harden.py` would likewise contradict the instruction to stop immediately once G, H, or V fails.
+../2501.06427/REJECTED.md
+# Rejected: arXiv 2501.06427
+
+Paper: Brice Huang and Mark Sellke, [*Strong Low Degree Hardness for Stable Local Optima in Spin Glasses*](https://arxiv.org/abs/2501.06427) (v2, 31 March 2026).
+
+## Decision
+
+This paper does not provide one distribution that satisfies **G (inverse generation)** and **H (supported hardness)** at the same time. Its main search problems are hard only when the disorder is sampled from an **unconditioned random ensemble**. Sampling a witness first and constructing the disorder around it instead produces a planted/conditioned ensemble, and none of the paper's theorems claims hardness for that ensemble. The paper calls its principal result the first strong low-degree lower bound for a random search problem *without planted structure*, so this distinction is part of the theorem rather than a cosmetic implementation choice.
+
+I therefore stopped at Step 0. No generator, self-test report, README, or oracle transcript was created: any such deliverable would either misapply the paper's hardness theorem or manufacture a different problem family whose hardness is unsupported here.
+
+## What the full paper actually defines
+
+Section 1.1 defines the Sherrington--Kirkpatrick Hamiltonian on spins `sigma in {-1,+1}^N`:
+
+```text
+H_N(sigma) = (1/sqrt(N)) sum_{i,j} g_ij sigma_i sigma_j,
+```
+
+where every `g_ij` is an independent standard Gaussian. For coordinate `i`, the paper defines the local field from half the energy lost by flipping that spin. Definition 1.1 calls `sigma` a `(gamma, delta)`-gapped state when at most `delta*N` coordinates have signed local field below the positive constant `gamma`. Thus the exact witness is a length-`N` sign vector, and checking it only requires recomputing all local fields.
+
+Theorem 1.1 gives the relevant hardness regime: for every fixed `gamma > 0`, there is a fixed `delta > 0` such that, on an **ordinary IID-Gaussian SK Hamiltonian**, rounded deterministic polynomial algorithms of degree `D = o(N)` succeed with probability `o(1)`. The theorem also gives exponential failure for fixed-Lipschitz algorithms and a stretched-exponential bound for `D <= log(N)/11`. Section 2 proves the result using correlated Hamiltonians, separation of gapped states, and a disorder-chaos obstruction. Section 3.1 strengthens the low-degree conclusion.
+
+The paper is careful about what this means. Section 1.2 labels the claim *strong low degree hardness*, Section 1.3 describes the resulting exponential-runtime interpretation as a heuristic, and explicitly warns that low degree is not a universally valid proxy for runtime. This is not an NP-hardness theorem for arbitrary coupling matrices.
+
+The paper also treats these other search problems:
+
+| Full-text location | Witness problem | Hard input distribution/regime |
+|---|---|---|
+| Section 3.2.1 | a spin attaining a near-ground-state energy in an even pure `k`-spin model, `k >= 4` | unconditioned Gaussian tensor; degree `o(N)` |
+| Section 3.2.2 | a sign vector satisfying every Ising-perceptron constraint | unconditioned IID Gaussian rows; specified small symmetric or sufficiently negative asymmetric margins; degree `o(N/log N)` |
+| Section 3.3.1 | an independent set larger than the greedy scale | `G(N,d/N)` with sufficiently large fixed `d`; target at least `(1+iota)N log(d)/d`; degree `o(N)` |
+| Section 3.3.2 | a satisfying assignment | random `k`-SAT with large fixed `k` and density `kappa*2^k log(k)/k`, `kappa > 4.911`; degree `o(N)` |
+| Section 3.4 | an independent set above the greedy scale | unconditioned `G(N,1/2)`; degree `o(log^2 N)` |
+| Section 4 | a spherical well reached by Langevin dynamics | unconditioned mixed spherical spin glass, no external field, fixed dimension-free time |
+
+Every hardness statement above is average-case and uses the stated unconditioned ensemble.
+
+## Why the suggested SK generator fails
+
+The suggested construction is to sample `sigma` first and choose couplings that make it locally stable. It has attractive G and V properties: `sigma` is known before the instance is built, and a checker can substitute the signs and compare `N` local-field margins.
+
+It does **not** inherit H from Theorem 1.1. Under the theorem, the couplings are IID centered Gaussians before any solution is chosen. Requiring the sampled `sigma` to have all or nearly all positive margins conditions `N` correlated linear forms of those couplings. Directly biasing or repairing entries is an even larger distribution change. In the gauge where the planted spin becomes the all-ones vector, the altered row sums expose exactly the signal that spectral, degree, local-field, and iterative attacks can exploit. Randomly permuting vertices or flipping gauges hides labels but does not restore the IID Gaussian law.
+
+Exact conditional sampling would not cure the theorem mismatch. It would generate the SK law conditioned on one specified vector being gapped (equivalently, a size-biased planted law after hiding the vector), not the unconditioned SK law of Theorem 1.1. The paper proves no quiet-planting, contiguity, indistinguishability, or planted-recovery lower bound connecting those distributions. Indeed, Section 1.2 contrasts its result with planted problems and says the testing tools used for planted structure provide a different notion of evidence.
+
+There is no distribution-preserving answer-first shortcut in the paper. Sampling an ordinary SK Hamiltonian and then locating one of its gapped states would preserve H, but it asks the generator to solve the very search problem being posed. Rejection-sampling an IID Hamiltonian until an independently sampled spin is gapped has exponentially small acceptance for a strict constant gap and is just another way to sample the conditioned law. Running ordinary single-spin local improvement only guarantees a marginal local optimum; it does not supply the positive constant gap required by Theorem 1.1, and the paper's introduction explains that ordinary dynamics are expected to remain marginal.
+
+There is also an exactness issue. The theorem uses real Gaussian couplings. Python floats do not provide an exact mathematical Gaussian instance or exact comparison at the margin boundary. Replacing them by bounded integers or rationals would make verification exact, but the paper proves no corresponding hardness theorem for that disorder distribution.
+
+## Why the other paper families do not rescue the task
+
+### Sparse or dense independent set
+
+Choosing a vertex subset first and suppressing its internal edges gives a valid planted independent set and an exact cheap verifier. However, Section 3.3.1 concerns an ordinary `G(N,d/N)` sample, and Section 3.4 concerns ordinary `G(N,1/2)`. Suppressing all planted internal edges conditions the graph and creates a planted-subgraph model. Neither result covers it. At or below the paper's greedy target, a simple greedy algorithm is an explicitly identified easy regime; above it, the only hardness evidence in the paper is for the unplanted graph.
+
+### Random `k`-SAT
+
+Sampling an assignment and retaining only clauses it satisfies is standard planting, but the result in Section 3.3.2 samples each of the `kM` literals independently and uniformly with no conditioning on an assignment. The paper supplies no quiet-planted clause distribution and no transfer theorem. Its asymptotic hard regime also requires `k` sufficiently large while using clause density proportional to `2^k log(k)/k`, making a literal inline instance impractically large before the unspecified asymptotic threshold is safely reached.
+
+### Ising perceptrons
+
+Conditioning Gaussian rows to put a sampled sign vector inside every required interval again changes the unconditioned Gaussian ensemble of Section 3.2.2. In addition, unrestricted Gaussian coefficients and interval comparisons are not exact standard-library arithmetic, while rational discretization is outside the stated theorem.
+
+### Near-ground-state spin optimization
+
+The witness is accepted by comparison with a threshold involving the asymptotic Parisi value `GS(k)-delta`, neither supplied as exact finite data nor suitable for the requested exact standard-library checker. Planting a high-energy spin changes the Gaussian tensor distribution. Asking for the actual optimum would additionally make optimality the claim, which the task explicitly forbids.
+
+### Spherical wells and Langevin dynamics
+
+A spherical well is a real vector satisfying a small-gradient condition and an eigenvalue condition on the Riemannian Hessian. This violates the ban on real-number answers and does not admit the requested cheap exact substitution checker. The theorem is also a negative statement about what one particular dynamics cannot reach in fixed time, not a hard inverse-generatable witness family.
+
+## Easy regimes and limits that matter
+
+- Section 1.3 states only a heuristic correspondence between degree `D` and roughly exponential-in-`D` runtime; it notes counterexamples to a universal correspondence.
+- Sections 1.3 and 3.5 construct degree `O(N)` algorithms that approximate Ising spin-glass ground states, showing the low-degree lower-bound range is sharp for that optimization task.
+- Section 1.4 notes that sufficiently strong external field makes the spherical landscape topologically trivial and allows low-temperature Langevin dynamics to reach the global optimum rapidly; the spherical theorem therefore excludes external field.
+- Section 3.3.1 records a simple greedy independent-set algorithm at approximately `N log(d)/d`; hardness is only claimed above `(1+iota)` times that scale and only for ordinary random graphs.
+- Section 3.3.2 records an algorithmic regime for random `k`-SAT below approximately `2^k log(k)/k`; the strong low-degree result uses the larger factor `kappa > 4.911` and sufficiently large fixed `k`.
+- Section 3.4 records that greedy finds approximately `log_2 N` vertices in `G(N,1/2)`; the hard target is above that scale, while brute force in `exp(O(log^2 N))` time reaches maximum independent sets.
+
+These boundaries prevent weakening the target merely to make answer-first generation easier.
+
+## Gate outcome
+
+| Requirement | Result |
+|---|---|
+| G -- sample the witness first | Possible only after conditioning or modifying the random input; the resulting planted distribution is not the distribution in the hardness theorem |
+| H -- no known polynomial/closed-form method in the generated regime | **Unsupported/fail:** all relevant lower bounds are for unconditioned ensembles, not the answer-first planted ensembles |
+| V -- cheap exact witness verification | Passes algebraically for rational SK couplings, independent sets, and SAT assignments, but rational SK is outside the theorem; Gaussian and spherical formulations have exact-real issues |
+| G4/G6 -- guessing and planting attacks | Not run: the analytical distribution mismatch already invalidates the hardness claim; attack measurements cannot manufacture a missing theorem |
+| G7 -- scaling | The paper's asymptotic families scale, but no supported answer-first distribution does |
+| Oracle loop | Not run, as required after a Step-0 G/H/V failure |
+
+The decisive failure is not that one particular planted implementation looked weak. It is that the paper's contribution deliberately proves hardness **without planted structure**, while the required generator deliberately introduces planted structure, and the paper contains no result bridging the two.
+../2211.12582/REJECTED.md
+# Rejected: arXiv 2211.12582
+
+Paper: Iliyas Noman and Yuan Yao, [*Spectral conditions for spherical two-distance sets*](https://arxiv.org/abs/2211.12582) (v2, 3 February 2026).
+
+## Decision
+
+This paper does not provide a problem family satisfying **G, H, and V** simultaneously. The suggested family—construct or recognize points on a sphere having exactly two pairwise distances—can be generated and checked, but it fails **H (hardness)** in the parameter regime studied by the paper. The paper's main contribution is a necessary-and-sufficient spectral characterization, and its other main result reads the minimum representation dimension directly from an eigenvalue multiplicity. I therefore stopped at Step 0, before creating a generator, claiming gate measurements, or running the LLM hardening loop.
+
+## What the paper actually studies
+
+Definition 2.1 calls a finite set in `R^d` a two-distance set when the distances between distinct points take exactly two values. Definition 2.2 encodes it by a graph: an edge represents the longer of the two distances. Definition 2.4 calls the set spherical when all points lie on a `(d-1)`-sphere in `R^d` (scaling can make this the unit sphere).
+
+The paper focuses on the "small" regime of a graph with exactly `d+2` vertices represented in `R^d`. It supplies progressively simpler exact characterizations:
+
+- Theorem 2.1 (Einhorn--Schoenberg) says that a graph on `d+2` vertices is not representable precisely in the complete-multipartite exception; otherwise it has a unique admissible distance ratio.
+- Lemma 2.2 (Schoenberg) reduces realization of a prescribed distance matrix to positive semidefiniteness and a rank bound, and states that the configuration is unique up to congruence.
+- Sections 3--5 rewrite spherical representability as positive-semidefinite, nullspace, and eigenvalue conditions.
+- Theorem 1.1, proved in Section 6, says that spherical representability is determined by the second eigenvalue of the adjacency matrix and the spectrum of its projection onto the all-ones vector's orthogonal complement.
+- Proposition 1.2, also proved in Section 6, gives the lowest representation dimension directly from the multiplicity of the second adjacency eigenvalue.
+- The final corollary makes an especially broad regime immediate: every regular graph on `d+2` vertices that is not complete multipartite has a spherical representation in `R^d`.
+
+These are finite-dimensional linear-algebra computations, not a hard witness-search regime. The paper contains no NP-hardness result, no planted average-case hardness claim, and no parameter range in which finding a representation is asserted to be hard.
+
+## Why the proposed generator fails
+
+### Recognize a spherical two-distance graph
+
+Given the adjacency matrix, Theorem 1.1 is an explicit decision procedure: compute the spectra of `A` and `P A P`, compare the relevant eigenvalue and multiplicities. Exact versions can use characteristic-polynomial and rational/algebraic linear algebra. This is polynomial-time linear algebra, so **H fails**. Asking for the minimum dimension is even more directly defeated by Proposition 1.2.
+
+### Construct a spherical two-distance realization
+
+Sampling a graph first would satisfy inverse generation, and a submitted exact Gram/distance matrix could be checked by substitution, rank, and positive-semidefiniteness. But Theorem 2.1, Lemma 2.2, and Section 4's formula
+
+```text
+k = sqrt(1/lambda_2 + 1)
+```
+
+give the distance ratio and a standard spectral/Gram-matrix reconstruction route. A solver need not recover a hidden plant. For regular non-complete-multipartite graphs the paper's final corollary even decides existence immediately. Thus **H fails** again.
+
+There is a second contract problem if ordinary coordinates are requested: the natural coordinates and distance ratio can be irrational algebraic numbers. A floating-point answer is not an exact witness, while an exact algebraic-number representation and checker would require machinery beyond the requested standard-library substitution-style interface. Restricting the generator to rational constructions would improve V but would not repair H.
+
+### Recover information from already supplied points
+
+If the points are supplied and the witness is their two distances, the associated graph, or confirmation that the points are spherical, the solver only computes norms and all pairwise distances. That costs polynomial time and is exactly the proposed verifier, so it also supplies the solving algorithm. Returning the two distances would additionally make the answer a real-valued object, which the witness contract forbids.
+
+### Nearby formulations do not rescue the family
+
+- A yes/no existence answer is not a witness, and Theorem 1.1 makes it a spectral lookup anyway.
+- An eigenvector, null vector, Gram factor, or multiplicity certificate is found by standard linear algebra; changing the output from a decision to a certificate does not create hardness.
+- Asking for an optimal or maximum-cardinality two-distance set would make optimality the claim and violate the witness requirement; the paper also does not give an answer-first generator for such optima.
+- Hiding a vertex permutation and asking the solver to recover it would append a graph-isomorphism puzzle not studied or shown hard in this paper. Its difficulty would come from the added encoding, not from the spherical two-distance results, so it would not be an honest use of the paper's regime.
+- Moving to arbitrary numbers of vertices abandons the paper's `d+2` characterization regime. The paper proves no computational-hardness theorem or inverse-generation distribution there.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G -- sample the answer first | Possible for explicit point/Gram constructions |
+| H -- no known polynomial-time or closed-form method | **Fail: Theorem 1.1, Proposition 1.2, and Lemma 2.2 reduce the natural tasks to spectral and PSD/rank computations** |
+| V -- cheap exact witness checking | Possible for exact distance/Gram data; problematic for unrestricted irrational coordinates |
+
+No `gen_2211_12582.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Running `scripts/harden.py` after this analytical H rejection would contradict the instruction to stop as soon as a family fails G, H, or V.
+../1601.07131/REJECTED.md
+# Rejected: arXiv:1601.07131
+
+Paper: Ferran Cedó, Tatiana Gateva-Ivanova, and Agata Smoktunowicz,
+[*On the Yang-Baxter equation and left nilpotent left braces*](https://arxiv.org/abs/1601.07131).
+
+## Verdict
+
+This paper does not support a problem family satisfying the required hardness
+gate **H**, so no generator module is shipped. The full LaTeX source, not only
+the abstract, was reviewed.
+
+## What the paper actually establishes
+
+- Section 1 defines a left brace, its operation `a*b = a·b-a-b`, the socle,
+  and a non-degenerate involutive set-theoretic Yang--Baxter solution.
+- Section 2 proves structural restrictions. In particular, Theorem 2 says that
+  a finite solution whose structure group is Engel is the trivial solution.
+  This is not a computational-hardness result or a hard parameter regime.
+- Section 3, Proposition 5, identifies the multipermutation level of the
+  solution associated with a nonzero brace with termination of the radical
+  chain `B^(n+1) = B^(n)*B`. For an explicitly tabulated finite brace, both the
+  associated solution and this chain are obtained by direct finite-table
+  computation.
+- Section 4, Proposition 6, proves that every finite solution embeds in a finite
+  left brace. Its proof is an explicit quotient construction from the structure
+  group; it is an existence/embedding theorem, not an intractability theorem.
+
+The paper contains no reduction, complexity classification, FPT boundary, or
+parameter regime in which finding any of these algebraic objects is shown (or
+argued) to be computationally hard.
+
+## Why the apparent generator ideas fail
+
+| Candidate task | Gate failure |
+|---|---|
+| Given a set, output a Yang--Baxter solution | **H:** the flip `r(x,y)=(y,x)` is a closed-form non-degenerate involutive solution for every size. |
+| Given a finite brace, output its associated solution | **H:** Section 3 gives the formula `r(a,b)=(L_a(b), L^(-1)_(L_a(b))(a))`; this is direct table lookup/inversion. |
+| Given operation tables, certify that they form a brace or that `r` satisfies YBE | Not a witness-search problem: substitution already decides the supplied object. Asking for the full table would again admit trivial closed-form braces/solutions unless extra constraints external to the paper were imposed. |
+| Compute multipermutation level/right nilpotence | **H:** on finite tables, retraction/partition refinement or repeated set closure computes it directly; Proposition 5 is a characterization, not a hard search problem. |
+| Embed a finite solution into a finite brace | **H/G/V not established together:** Proposition 6 supplies a general construction, while its brace can have order `n^m` (notation of its proof). The paper supplies neither a polynomially bounded witness regime nor hardness of finding an embedding. |
+| Complete a partially hidden operation or Yang--Baxter table | **H unsupported:** this would be a new constraint-satisfaction problem and planted distribution not studied in the paper. Planting a completion would give G and substitution would give V, but the required claim that no polynomial-time/closed-form attack exists would be speculation. |
+| Recover an isomorphism after relabelling a brace | **H unsupported and not the paper's problem:** no isomorphism-complexity result appears in the paper; using this would also make the required canonicalization depend on the unproved hard problem. |
+
+## Gate status
+
+| Gate | Status |
+|---|---|
+| G (inverse-generatable) | Possible for several artificial completion/isomorphism variants, but not sufficient. |
+| H (hard) | **Failed.** Natural tasks are explicitly constructible or direct finite-table computations; modified tasks have no hardness support in the paper. |
+| V (cheap exact verification) | Possible by substitution for tables, but not sufficient. |
+
+Per the task instruction to stop when any of G/H/V fails, `gen_1601_07131.py`,
+`selftest_report.json`, and oracle-loop artifacts were not fabricated, and the
+hardening harness was not run.
+../2402.17528/REJECTED.md
+# Rejected: arXiv 2402.17528
+
+Paper: Gary Greaves and Sho Suda, [*Constructions of t-designs from weighing matrices and association schemes*](https://arxiv.org/abs/2402.17528).
+
+## Decision
+
+No problem family in the paper meets gate **H (hard)**, and the paper's flagship
+families also fail the structure-aware form of **G4 (guess resistance)**.  Per the
+task instruction to stop when G, H, or V fails, no generator, self-test report, or
+LLM-hardening transcript was produced.
+
+## What was checked in the full paper
+
+Section 1.4 defines
+
+\[
+\mathfrak B_A(v,k,a)=\{\alpha\in\tbinom{[v]}k:\det A[\alpha]=a\}.
+\]
+
+Theorem 2.2 proves that this explicitly defined block collection is a
+`t`-design when the `k`-principal minors take two values and certain
+characteristic-polynomial coefficients are constant.  The actual parameter
+regimes used in Section 2 have fixed `k`: conference matrices use `k=4` or `5`,
+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+examples use `k=3` or `4`.  The association-scheme extensions in Theorems 3.1
+and 3.8 and the signed-hypercube and balanced-generalised-weighing-matrix
+constructions in Theorems 3.10 and 3.12 again use `k=4`.  Theorem 4.2 uses blocks
+of sizes `3` and `4`.
+
+Section 5 confirms that larger block size is not a proved hard regime: it asks
+as an open question whether any example with `k >= 6` exists.  The paper
+contains no complexity or hardness theorem, no NP-hard regime, and no search
+problem with a hidden witness.
+
+## Why the natural candidate is easy
+
+Given `A`, `k`, and `a`, every block is obtained by enumerating the
+`binom(v,k)` subsets and computing a constant-size determinant.  In every
+proved infinite family above, `k <= 5`, so this takes polynomial time
+(`O(v^5)` determinant tests, with constant matrix dimension).  Asking for one
+block is no harder: the same enumeration finds one.  Asking for the complete
+design is also direct enumeration of the definition.  This violates H's
+requirement that there be no known polynomial-time or closed-form method.
+
+Some families are easier still.  Lemma 3.9 identifies determinant-4 blocks of
+the signed hypercube exactly with its induced 4-cycles, which can be generated
+directly by choosing a vertex and two coordinate directions.  Theorems 2.2,
+3.1, and 3.8 give closed formulas for the design/PBIBD incidence counts rather
+than concealing a witness.
+
+## Structure-aware guessing also fails on the flagship designs
+
+For a `t-(v,k,lambda)` design, a uniformly random structurally valid candidate
+(`k` distinct vertices) is a block with exact probability
+
+\[
+\frac{|\mathfrak B|}{\binom vk}
+=\frac{\lambda}{\binom{v-t}{k-t}}.
+\]
+
+Applying the parameters stated in Examples 2.3 and 2.4 gives:
+
+| construction and target minor | exact probability | limit |
+|---|---:|---:|
+| symmetric conference, `k=4`, `a=5` | `3n/(4n-1)` | `3/4` |
+| symmetric conference, `k=4`, `a=-3` | `(n-1)/(4n-1)` | `1/4` |
+| skew conference, `k=4`, `a=1` | `3(n-1)/(4n-3)` | `3/4` |
+| skew conference, `k=4`, `a=9` | `n/(4n-3)` | `1/4` |
+| skew conference shifted by `+/- I`, `k=5`, minor of magnitude `16` | `3(n-1)(n-2)/binom(4n-3,2)` | `3/8` |
+| skew conference shifted by `+/- I`, `k=5`, minor of magnitude `32` | `5n(n-1)/binom(4n-3,2)` | `5/8` |
+
+These are orders of magnitude above the required `10^-6` bound.  This is an
+exact count, so a 200,000-sample experiment would add noise rather than useful
+evidence.
+
+## Why no alternative was manufactured
+
+One could invent an inverse matrix-completion, design-reconstruction, or
+arbitrary target-principal-minor puzzle inspired by the notation.  None is the
+problem studied in this paper, and the paper supplies no hardness result or
+hard parameter regime for it.  Claiming H for such a puzzle would therefore be
+unsupported.  Asking the solver to construct the conference, Hadamard, or
+weighing matrix does not help: the infinite orders usable by an unconditional
+generator come from the same explicit Paley/Kronecker constructions available
+to the solver, while the general existence questions are open.  The paper's
+genuine open questions ask for existence, which would make a negative answer
+an impermissible absence witness and positive witness generation dependent on
+unresolved research.
+../2506.24001/gen_2506_24001.py
+../2411.07981/gen_2411_07981.py
+../2507.17878/gen_2507_17878.py
+
+exec
+/bin/bash -lc "git status --short -- .
+sed -n '90,200p' /tmp/paper_2604.24502/main.tex
+sed -n '1180,1580p' /tmp/paper_2604.24502/main.tex
+sed -n '1570,1785p' /tmp/paper_2604.24502/main.tex" in /home/gson/gvrepo/results/2604.24502
+ succeeded in 0ms:
+fatal: not a git repository (or any of the parent directories): .git
+
+
+
+
+
+Let \(F(\Sigma)\) and \(F(\Delta)\) be the free groups  generated by
+the sets \(\Sigma\) and \(\Delta\), respectively. Let
+$ g,h:F(\Sigma)\longrightarrow F(\Delta)$
+be homomorphisms. Their \emph{equalizer}  is defined by
+\[
+        \Eq(g,h):=\{w\in F(\Sigma):g(w)=h(w)\}.
+\]
+ Stallings \cite[Problems
+P1 \& 5]{Sta87} proposed his famous rank-$n$ equalizer conjecture, which states the following.
+ \begin{conj}[Stallings]\label{conj:Stallings}  Let $n\ge2$. Let \(F_n\) be a free group of rank \(n\), and let \(F\) be a free group. Let
+$ g,h:F_n\to F
+$
+be monomorphisms.  Then
+\[
+        \rk\Eq(g,h)\le n.
+\]
+ \end{conj}
+Goldstein and Turner~\cite{GT85} proved that under the hypotheses of Conjecture~\ref{conj:Stallings}, $\Eq(g,h)$ is  finitely generated, that is,  \(\operatorname{Eq}(g,h)\) has finite rank.  Later, they \cite{GT86} proved that under the weaker assumption that at least one of \(g\) and \(h\) is injective,
+\(\operatorname{Eq}(g,h)\) has finite rank. Conjecture \ref{conj:Stallings} is also considered under such weaker assumption, see \cite[Problem F31]{BMS02},  \cite[Problem 6]{DV96} and \cite[Conjecture 8.3]{Ven02}.
+
+In the special case where \(\Sigma=\Delta\) and $h=\id$, the equalizer is precisely the fixed subgroup.  Indeed, for any
+endomorphism \(\phi:F(\Sigma)\to F(\Sigma)\),
+\[
+        \Fix(\phi)
+        =\{w\in F(\Sigma)\mid \phi(w)=w\}
+        =\Eq(\phi,\id).
+\]
+Thus the fixed subgroup problem is the one-map  special  case of the equalizer problem. By using train-track maps, Bestvina and Handel  \cite{BH92} proved the well-known Scott conjecture
+for automorphisms, that is, Conjecture~\ref{conj:Stallings} holds in the special  case where \(F_n=F\),   $g\in\Aut (F_n)$ and $h=\id$. Later, Imrich and
+Turner \cite{IT89} extended Bestvina--Handel's results to all endomorphisms. Dicks
+and Ventura \cite{DV96} proved stronger inertness results for families of injective
+endomorphisms, and Bergman  \cite{Ber99} extended their results to
+families of endomorphisms. For related recent developments, see \cite{Jai26,LZ23}.
+
+For general equalizers, the situation is harder.    Ventura \cite{Ven02}
+noted that the injectivity hypothesis in Conjecture~\ref{conj:Stallings} is essential: without it, equalizers
+may have infinite rank.
+  Ciobanu and Logan \cite{CL20} proved algorithmic
+and rank results for immersions, relating the problem to the Post
+Correspondence Problem.  Logan \cite{Log22} proved the case $n=2$ in Conjecture~\ref{conj:Stallings} and obtained further positive results under inertness or retract
+hypotheses on the images. Very recently, Carvalho and Silva \cite{CS26} investigated the fixed points and equalizers of injective endomorphisms of the free group at infinity.
+
+The purpose of this paper is to give  a family of explicit counterexamples to Conjecture~\ref{conj:Stallings} for $n\ge 3$.
+Our main result is the following.
+
+\begin{thm}\label{thm:main}
+ Let $n\ge 2$ and $F_n$ be a free group of rank $n$. Then 
+ there exist monomorphisms
+$
+        g,h:F_n\longrightarrow F_2
+$
+such that
+\[
+        \rk\Eq(g,h)\ge 2n-2.
+\] Consequently, Conjecture~\ref{conj:Stallings} is false for every $n\ge 3$.
+
+
+
+\end{thm}
+\begin{rem} 
+In fact, we construct a subgroup family \(A_n\) of rank $2n-2$ such that
+\[
+A_n\leq_{\mathrm{ff}}\operatorname{Eq}(g,h),
+\]
+where \(\leq_{\mathrm{ff}}\) denotes a free factor inclusion.
+In particular,
+\[
+\operatorname{rk}\operatorname{Eq}(g,h)\geq 2n-2.
+\]
+Moreover, the same family shows that the analogue of Conjecture~\ref{conj:Stallings} is false if one replaces the assumption that both \(g\) and \(h\) are injective by the assumption that \(g\) is injective and \(h\) is not, for every \(n\geq 5\); see Proposition~\ref{prop:one-noninj}.
+\end{rem}
+\medskip
+ \noindent\textbf{Sketch of our proofs. }We introduce the notion of colored Stallings graphs for a pair $(g,h)$, which are Stallings graphs decorated by a vertex color, recording the twisted difference $g(\ell(p))^{-1}h(\ell(p))$ along path $p$ in the graph. We will see that injectivity of the color map forces the represented subgroup to be a free factor of the equalizer, giving a lower bound for the rank of the equalizer. Our examples are constructed by the following: let us consider homomorphisms with domain
+\[
+        F_n=\langle t,x_1,\ldots,x_{n-1}\rangle,
+\]
+and with codomain the rank-two free group \(F(a,b)\).   The generator $t$ creates a chain of colors
+\[
+        c_0,c_1,\ldots,c_{n-1},
+\]
+and each generator $x_i$ gives one loop at $c_0$ and one loop at $c_i$.  Thus the graph has $n$ vertices and
+\[
+        (n-1)+2(n-1)=3n-3
+\]
+positive oriented edges.  Its rank is therefore
+\[
+        1-n+3n-3=2n-2.
+\] 
+
+
+\medskip
+\noindent\textbf{Organization of the paper.}
+In Section~\ref{s:2}, we recall the Stallings-graph formalism and introduce colored Stallings
+ graphs. We prove the key embedding
+criterion which detects free factors of equalizers. In Section~\ref{s:3}, we
+construct the homomorphisms used in the main example and prove, by an explicit
+Stallings-graph argument, that they are injective. In Section~\ref{s:4}, we
+build the colored Stallings graphs \(\Gamma_n\), compute the rank of the
+subgroups they represent, and prove Theorem~\ref{thm:main}. Section~\ref{s:5}
+records stabilized variants in which one or both homomorphisms are allowed to
+be non-injective. Finally, Section~\ref{s:6} proposes a possible sharp upper
+bound suggested by the examples constructed here.
+
+
+\section{Colored Stallings graphs and equalizers}\label{s:2}
+
+Thus $c_0=1$.  
+
+We shall define
+\[
+        g(t)=a,\qquad h(t)=b,\qquad g(x_i)=h(x_i)=c_i^2.
+\]
+The aim of this section is to prove, by an explicit Stallings-graph argument, that both maps are injective.
+
+For $1\le i\le n-1$, set
+\[
+        d_i=b^ia^{-i}b^i.
+\]
+
+\begin{cons}\label{cons:Delta}
+Let $\Delta_n$ be the following labeled graph over the alphabet $X=\{a,b\}$.
+It has a base vertex $o$.  There is one $a$-loop at $o$.  There is a positive $b$-path of length $n-1$
+\[
+        o=P_0\xrightarrow{b}P_1\xrightarrow{b}\cdots\xrightarrow{b}P_{n-1},
+\]
+and a negative $b$-path of length $n-1$
+\[
+        o=Q_0\xrightarrow{b^{-1}}Q_1\xrightarrow{b^{-1}}\cdots\xrightarrow{b^{-1}}Q_{n-1},
+\]
+where the vertices \(P_i\) and \(Q_j\) are all distinct except for
+\(P_0=Q_0=o\).
+For each \(i=1,\ldots,n-1\), attach a new path
+\[
+        P_i=R_{i,0}\xrightarrow{a^{-1}}R_{i,1}
+        \xrightarrow{a^{-1}}\cdots
+        \xrightarrow{a^{-1}}R_{i,i}=Q_i.
+\] 
+The interior vertices \(R_{i,1},\ldots,R_{i,i-1}\) are new, and the
+interiors of these paths are pairwise disjoint and disjoint from the two
+\(b\)-paths. 
+\end{cons}
+
+\begin{lem}\label{lem:delta-rank}
+The based graph \((\Delta_n,o)\) is a Stallings graph over \(X=\{a,b\}\).
+Moreover,
+\[
+L_X(\Delta_n,o)=\langle a,d_1,\ldots,d_{n-1}\rangle\leq F(a,b),
+\]
+where
+\[
+d_i=b^ia^{-i}b^i.
+\]
+In particular,
+\[
+\operatorname{rk}L_X(\Delta_n,o)=n,
+\]
+and
+\[
+a,d_1,\ldots,d_{n-1}
+\]
+freely generate this subgroup.
+\end{lem}
+
+\begin{proof}
+First we check that \(\Delta_n\) is folded. Along the two \(b\)-paths there
+is at most one outgoing edge with each label \(b\) or \(b^{-1}\) at every
+vertex. Along each attached \(a^{-i}\)-path there is at most one outgoing
+edge with each label \(a\) or \(a^{-1}\). The interiors of the attached
+paths are pairwise disjoint. At the base vertex \(o\), the outgoing labels
+are
+\[
+a,\ a^{-1},\ b,\ b^{-1},
+\]
+which are distinct. Thus \(\Delta_n\) is folded.
+
+Next we check the based core condition. The \(a\)-loop at \(o\) is a reduced
+closed path based at \(o\). For each \(i=1,\ldots,n-1\), the path
+\[
+o=P_0 \xrightarrow{b^i} P_i
+\xrightarrow{a^{-i}} Q_i
+\xrightarrow{b^i} Q_0=o
+\]
+is a reduced closed path based at \(o\), and its label is
+\[
+b^ia^{-i}b^i=d_i.
+\]
+These paths contain all edges of the two \(b\)-paths and all edges of the
+attached \(a^{-i}\)-paths. Hence every topological edge of \(\Delta_n\) lies
+in a reduced closed path based at \(o\). Therefore \((\Delta_n,o)\) is a
+Stallings graph.
+
+It remains to identify the subgroup represented by \(\Delta_n\). Choose a
+maximal tree \(T\) as follows. Put into \(T\) all edges of the two \(b\)-paths.
+For each attached path
+\[
+P_i=R_{i,0}\to R_{i,1}\to\cdots\to R_{i,i}=Q_i,
+\]
+put into \(T\) all its edges except the first edge
+\[
+R_{i,0}=P_i\to R_{i,1}.
+\]
+Finally, do not put the \(a\)-loop at \(o\) into \(T\). Then the topological
+edges outside \(T\) are exactly the \(a\)-loop at \(o\) and the first edge
+of each attached \(a^{-i}\)-path. Hence there are \(n\) non-tree edges.
+
+The graph basis of \(\pi_1(\Delta_n,o)\) associated to \(T\) has one
+generator labelled \(a\), coming from the \(a\)-loop at \(o\). For the
+omitted first edge of the \(i\)-th attached path, the corresponding based
+loop goes from \(o\) to \(P_i\), crosses this omitted edge, and then returns
+to \(o\) through the tree. Its label is
+\[
+b^i a^{-1} a^{-(i-1)} b^i
+=
+b^i a^{-i} b^i
+=
+d_i.
+\]
+Therefore the labels of the graph basis are precisely
+\[
+a,d_1,\ldots,d_{n-1}.
+\]
+
+Since \(\Delta_n\) is folded, the label map
+\[
+\Delta_n\longrightarrow R_{\{a,b\}}
+\]
+is an immersion of graphs. Hence it is injective on fundamental groups, so
+\[
+\pi_1(\Delta_n,o)\longrightarrow F(a,b)
+\]
+is injective. Hence the labels of the above graph basis freely generate the
+represented subgroup. Thus
+\[
+L_X(\Delta_n,o)=\langle a,d_1,\ldots,d_{n-1}\rangle,
+\]
+and this subgroup has rank \(n\).
+\end{proof}
+
+\begin{prop}\label{prop:injective-square}
+Define homomorphisms
+$
+        g,h:F_n\to F(a,b)
+$
+by
+\[
+        g(t)=a,\qquad h(t)=b,\qquad g(x_i)=h(x_i)=c_i^2=(a^{-i}b^i)^2
+\]
+for $1\le i\le n-1$.  Then both $g$ and $h$ are injective.
+\end{prop}
+
+\begin{proof}
+We first prove that $g$ is injective.  For each $i$, put $y_i=t^ix_i$.
+The assignment
+\[
+        t\mapsto t,\qquad x_i\mapsto t^i x_i\quad (1\le i\le n-1)
+\]
+extends to an automorphism of \(F_n\). Hence
+\[
+        \{t,y_1,\ldots,y_{n-1}\}
+\]
+is again a free basis of \(F_n\).
+
+Now
+\[
+        g(y_i)=g(t)^ig(x_i)=a^i(a^{-i}b^i)^2=b^ia^{-i}b^i=d_i.
+\]
+Thus the image under $g$ of the free basis
+\[
+        \{t,y_1,\ldots,y_{n-1}\}
+\]
+is
+\[
+        \{a,d_1,\ldots,d_{n-1}\}.
+\]
+By Lemma~\ref{lem:delta-rank}, this set freely generates a free subgroup of rank $n$.  Hence $g$ is injective.
+
+We now prove that \(h\) is injective. Since \(g\) is injective and
+\(\{t,x_1,\ldots,x_{n-1}\}\) is a free basis of \(F_n\), the set
+\[
+\{a,c_1^2,\ldots,c_{n-1}^2\}
+\]
+is a free basis of the subgroup \(g(F_n)\). Hence
+\[
+\{a,c_1^{-2},\ldots,c_{n-1}^{-2}\}
+\]
+is also a free basis, obtained by inverting some basis elements.
+
+Let
+\[
+\sigma:F(a,b)\to F(a,b),\qquad \sigma(a)=b,\quad \sigma(b)=a.
+\]
+Then
+\[
+\sigma(c_i)=\sigma(a^{-i}b^i)=b^{-i}a^i=c_i^{-1}.
+\]
+Therefore
+\[
+\sigma\bigl(\{b,c_1^2,\ldots,c_{n-1}^2\}\bigr)
+=
+\{a,c_1^{-2},\ldots,c_{n-1}^{-2}\}.
+\]
+Since the set on the right freely generates a free subgroup, so does
+\[
+\{b,c_1^2,\ldots,c_{n-1}^2\}.
+\]
+These are precisely the images under \(h\) of the basis
+\[
+\{t,x_1,\ldots,x_{n-1}\}.
+\]
+Hence \(h\) is injective.
+\end{proof}
+
+\section{The counterexample family}\label{s:4}
+
+We now keep the maps $g$ and $h$ from Proposition~\ref{prop:injective-square} fixed:
+\[
+        g(t)=a,\qquad h(t)=b,\qquad g(x_i)=h(x_i)=c_i^2.
+\]
+
+\begin{cons}\label{cons:Gamma}
+Let $\Gamma_n$ be the labeled graph with vertices
+\[
+        v_0,v_1,\ldots,v_{n-1}.
+\]
+The base vertex is $v_0$.  For each $1\le i\le n-1$, the graph has a directed $t$-edge
+\[
+        v_{i-1}\xrightarrow{t}v_i.
+\]
+For each $i=1,\ldots,n-1$, the graph also has two $x_i$-loops:
+\[
+        v_0\xrightarrow{x_i}v_0,\qquad v_i\xrightarrow{x_i}v_i.
+\]
+Assign the color
+\[
+        C(v_i)=c_i=a^{-i}b^i.
+\] See Figure~\ref{fig:Gamma-n}.
+\end{cons}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=1.0, >=Stealth, vertex/.style={circle,draw,inner sep=2pt,minimum size=23pt}]
+    \node[vertex] (v0) at (0,0) {$v_0$};
+    \node[vertex] (v1) at (2.3,0) {$v_1$};
+    \node[vertex] (v2) at (4.6,0) {$v_2$};
+    \node (dots) at (6.9,0) {$\cdots$};
+    \node[vertex] (vn) at (9.2,0) {$v_{n-1}$};
+
+    \draw[->] (v0) -- node[above] {$t$} (v1);
+    \draw[->] (v1) -- node[above] {$t$} (v2);
+    \draw[->] (v2) -- node[above] {$t$} (dots);
+    \draw[->] (dots) -- node[above] {$t$} (vn);
+
+    % separated loops at v0, arranged counterclockwise
+    \node at (-1.2,-0.50) {$\vdots$};
+    \draw[->] (v0) to[out=118,in=62,looseness=9] node[above] {$x_1$} (v0);
+    \draw[->] (v0) to[out=178,in=122,looseness=10] node[left] {$x_2$} (v0);
+    \draw[->] (v0) to[out=238,in=302,looseness=9] node[below left] {$x_{n-1}$} (v0);
+
+    % loops at other vertices
+    \draw[->] (v1) to[out=120,in=60,looseness=8] node[above] {$x_1$} (v1);
+    \draw[->] (v2) to[out=120,in=60,looseness=8] node[above] {$x_2$} (v2);
+    \draw[->] (vn) to[out=120,in=60,looseness=8] node[above] {$x_{n-1}$} (vn);
+\end{tikzpicture}
+\caption{The graph $\Gamma_n$.}
+\label{fig:Gamma-n}
+\end{figure}
+
+\begin{lem}\label{lem:edge-check}
+The triple \((\Gamma_n,v_0,C)\) is a colored Stallings graph for the pair
+\((g,h)\).
+\end{lem}
+
+\begin{proof}
+By the observation following Definition~\ref{def:colored}, it suffices to
+verify the edge condition
+\[
+        g(y)=C(v)h(y)C(w)^{-1}
+\]
+for the chosen orientations of the topological edges listed in
+Construction~\ref{cons:Gamma}.
+
+First consider the edge $ v_{i-1}\xrightarrow{t}v_i$.
+Since
+\[
+        C(v_{i-1})=a^{-(i-1)}b^{i-1},
+        \qquad
+        C(v_i)=a^{-i}b^i,
+\]
+we have
+\[
+\begin{aligned}
+        C(v_{i-1})h(t)C(v_i)^{-1}
+        &=a^{-(i-1)}b^{i-1}\,b\,(a^{-i}b^i)^{-1} \\
+        &=a^{-(i-1)}b^ib^{-i}a^i \\
+        &=a.
+\end{aligned}
+\]
+This is $g(t)$.
+
+Next, we consider an $x_i$-loop at $v_0$.  Since $C(v_0)=1$, we have
+\[
+        C(v_0)h(x_i)C(v_0)^{-1}=c_i^2=g(x_i).
+\]
+
+Finally, consider the $x_i$-loop at $v_i$.  Since $C(v_i)=c_i$ and $h(x_i)=c_i^2$, we have
+\[
+        C(v_i)h(x_i)C(v_i)^{-1}=c_ic_i^2c_i^{-1}=c_i^2=g(x_i).
+\]
+
+Thus every edge satisfies the required condition.
+
+Moreover, the underlying based graph \((\Gamma_n,v_0)\) is a Stallings graph.
+It is folded: at each vertex there is at most one outgoing edge with any
+prescribed label in \(X_n^{\pm1}\). Also, every edge lies in a reduced closed
+path based at \(v_0\). Indeed, the \(x_i\)-loop at \(v_0\) lies in the based
+loop labelled \(x_i\), whereas the \(x_i\)-loop at \(v_i\) lies in the based
+loop labelled \(t^i x_i t^{-i}\). Finally, the \(t\)-edge from \(v_{j-1}\)
+to \(v_j\) lies in the reduced based loop labelled \(t^j x_j t^{-j}\).
+\end{proof}
+
+\begin{lem}\label{lem:rank}
+Let
+$
+A_n=L_{X_n}(\Gamma_n,v_0)\leq F_n
+$
+be the subgroup represented by \(\Gamma_n\).
+Then
+\[
+        A_n\le_{\mathrm{ff}} \Eq(g,h)\quad \text{and}\quad
+        \rk A_n=2n-2.
+\]
+\end{lem}
+\begin{proof}
+The colors are
+\[
+        C(v_i)=c_i=a^{-i}b^i,\qquad 0\le i\le n-1.
+\]
+These elements are pairwise distinct as reduced words in \(F(a,b)\). Hence
+the color map \(C:V\Gamma_n\to F(a,b)\) is injective.
+
+By Lemma~\ref{lem:edge-check}, the triple \((\Gamma_n,v_0,C)\) is a finite
+colored Stallings graph for \((g,h)\). Therefore Lemma~\ref{lem:free-factor}
+gives
+\[
+        A_n\leq_{\mathrm{ff}}\Eq(g,h).
+\]
+
+Since the underlying based graph \((\Gamma_n,v_0)\) is a finite Stallings
+graph, the label map identifies \(\pi_1(\Gamma_n,v_0)\) with \(A_n\). Hence
+\[
+\operatorname{rk}A_n
+=
+\operatorname{rk}\pi_1(\Gamma_n,v_0)
+=
+1-|V\Gamma_n|+|E^+\Gamma_n|.
+\]
+The graph \(\Gamma_n\) has \(n\) vertices. It has \(n-1\) topological
+\(t\)-edges, and for each \(i=1,\ldots,n-1\) it has two \(x_i\)-loops. Thus
+\[
+|E^+\Gamma_n|=(n-1)+2(n-1)=3n-3.
+\]
+Therefore
+\[
+        \rk A_n
+        =1-n+3n-3
+        =2n-2.
+\]
+\end{proof}
+\begin{proof}[Proof of Theorem~\ref{thm:main}]
+By Proposition~\ref{prop:injective-square}, both \(g\) and \(h\) are
+monomorphisms. By Lemma~\ref{lem:rank}, the subgroup
+$
+        A_n=L_{X_n}(\Gamma_n,v_0)
+$
+satisfies
+\[
+        A_n\leq_{\mathrm{ff}}\Eq(g,h)
+        \qquad\text{and}\qquad
+        \rk A_n=2n-2.
+\]
+Hence
+\[
+        \rk\Eq(g,h)\geq 2n-2.
+\]
+If \(n\ge3\), then \(2n-2>n\), so Conjecture~\ref{conj:Stallings} is false
+for every \(n\ge3\).
+\end{proof}
+
+
+
+% \begin{cor}\label{cor:counterexample}
+% For every $n\ge 3$, the rank-$n$ equalizer conjecture for pairs of monomorphisms
+% \[
+%         g,h:F_n\to F
+% \]
+% is false.  In fact there are monomorphisms with
+% \[
+%         \rk\Eq(g,h)\ge 2n-2>n.
+% \]
+% \end{cor}
+
+\section{Stabilized non-injective applications}\label{s:5}
+
+The   same construction of Sections~\ref{s:3} and~\ref{s:4}  also yields consequences when one allows non-injective maps.  The reason is that one may add dummy generators without changing the large subgroup already lying in the equalizer.
+
+\begin{prop}\label{prop:one-noninj}
+For every integer $r\ge 5$, there exist homomorphisms
+% \[
+%         \rk\Eq(g,h)\ge 2n-2>n.
+% \]
+% \end{cor}
+
+\section{Stabilized non-injective applications}\label{s:5}
+
+The   same construction of Sections~\ref{s:3} and~\ref{s:4}  also yields consequences when one allows non-injective maps.  The reason is that one may add dummy generators without changing the large subgroup already lying in the equalizer.
+
+\begin{prop}\label{prop:one-noninj}
+For every integer $r\ge 5$, there exist homomorphisms
+\[
+        \alpha,\beta:F_r\to F
+\]
+to a free group $F$ such that $\alpha$ is injective, $\beta$ is not injective, and
+\[
+        \rk\Eq(\alpha,\beta)>r.
+\]
+\end{prop}
+
+
+
+
+\begin{proof} Put \(m=r-1\). Since \(r\ge 5\), we have \(m\ge 4\). 
+Let $X_m=\{t,x_1,\ldots,x_{m-1}\}$ and $X_r=X_m\sqcup\{z\}.$
+Apply
+Theorem~\ref{thm:main} to obtain monomorphisms
+\[
+        g,h:F_m\to F_2
+\]
+and the colored Stallings graph \((\Gamma_m,v_0,C)\) whose represented
+subgroup
+\[
+        A_m=L_{X_m}(\Gamma_m,v_0)
+\]
+satisfies
+\[
+        A_m\leq_{\mathrm{ff}}\Eq(g,h),\qquad \rk A_m=2m-2.
+\]
+
+Write
+\[
+        F_r=F_m*\langle z\rangle.
+\]
+Let \(s\) be a new free generator and let the target be
+\[
+        F=F_2*\langle s\rangle.
+\]
+Define
+\[
+        \alpha|_{F_m}=g,\qquad \alpha(z)=s,
+\]
+and
+\[
+        \beta|_{F_m}=h,\qquad \beta(z)=1.
+\]
+Then \(\alpha\) is injective, since it is the free product of the
+monomorphism \(g\) with the embedding of \(\langle z\rangle\) as
+\(\langle s\rangle\). The map \(\beta\) is not injective, because
+\(z\in\ker\beta\).
+
+It remains to justify the rank estimate. Since \(A_m\le F_m\le F_r=F(X_r)\), the \(X_r\)-Stallings graph of
+\(A_m\) is the same graph \((\Gamma_m,v_0)\). Indeed, by the normal form theorem for free products, a reduced word in the
+enlarged basis \(X_r\) which contains \(z^{\pm1}\) represents an element outside the free factor \(F_m\).
+
+Moreover, \((\Gamma_m,v_0,C)\) is a colored \(X_r\)-Stallings graph for
+\((\alpha,\beta)\). All edges of \(\Gamma_m\) are labelled by letters in
+\(X_m\), and on those edges the coloring equations are exactly the
+coloring equations for \((g,h)\). The color map remains injective after
+viewing its values in \(F_2*\langle s\rangle\).
+
+Therefore Lemma~\ref{lem:free-factor} gives
+\[
+        A_m\leq_{\mathrm{ff}}\Eq(\alpha,\beta).
+\]
+Hence
+\[
+        \rk\Eq(\alpha,\beta)\ge \rk A_m=2m-2=2(r-1)-2=2r-4.
+\]
+For \(r\ge 5\), one has \(2r-4>r\).
+\end{proof}
+
+
+
+
+
+
+
+\begin{prop}\label{prop:two-noninj}
+For every integer $r\ge 7$, there exist non-injective homomorphisms
+\[
+        \alpha,\beta:F_r\to F
+\]
+to a free group $F$ such that
+\[
+        \rk\Eq(\alpha,\beta)>r.
+\]
+\end{prop}
+
+\begin{proof}
+Put \(m=r-2\). Since \(r\ge 7\), we have \(m\ge 5\). Let $X_m=\{t,x_1,\ldots,x_{m-1}\}$ and $X_r=X_m\sqcup\{z_1,z_2\}$.
+  Apply
+Theorem~\ref{thm:main} to obtain monomorphisms
+\[
+        g,h:F_m\to F_2
+\]
+and the colored Stallings graph \((\Gamma_m,v_0,C)\) whose represented
+subgroup
+\[
+        A_m=L_{X_m}(\Gamma_m,v_0)
+\]
+has rank
+\[
+        \rk A_m=2m-2.
+\]
+
+Write
+\[
+        F_r=F_m*\langle z_1\rangle*\langle z_2\rangle.
+\]
+Let \(s\) be a new free generator and let the target be
+\[
+        F=F_2*\langle s\rangle.
+\]
+Define
+\[
+        \alpha|_{F_m}=g,\qquad \beta|_{F_m}=h,
+\]
+and set
+\[
+        \alpha(z_1)=1,\qquad \beta(z_1)=s,
+\]
+\[
+        \alpha(z_2)=s,\qquad \beta(z_2)=1.
+\]
+Then \(\alpha\) is not injective, because \(z_1\in\ker\alpha\), and
+\(\beta\) is not injective, because \(z_2\in\ker\beta\).
+As in the proof of Proposition~\ref{prop:one-noninj}, the \(X_r\)-Stallings
+graph of \(A_m\) is still \((\Gamma_m,v_0)\), because, by the normal form theorem for free products, no reduced word
+involving \(z_1^{\pm1}\) or \(z_2^{\pm1}\) can represent an element of
+the free factor \(F_m\).
+
+The same coloring \(C\) makes \((\Gamma_m,v_0,C)\) a colored
+\(X_r\)-Stallings graph for \((\alpha,\beta)\), and the color map is
+still injective. Lemma~\ref{lem:free-factor} therefore gives
+\[
+        A_m\leq_{\mathrm{ff}}\Eq(\alpha,\beta).
+\]
+Consequently
+\[
+        \rk\Eq(\alpha,\beta)\ge \rk A_m=2m-2=2(r-2)-2=2r-6.
+\]
+For \(r\ge 7\), one has \(2r-6>r\).
+\end{proof}
+
+
+\begin{rem}\label{rem:inf-rank}
+Once both maps are allowed to be non-injective, the equalizer may even fail to be finitely generated.  Here is a Stallings-graph way to see this.
+
+Let
+\[
+        F(x,y)=\langle x,y\rangle,
+        \qquad
+        F(a)=\langle a\rangle,
+\]
+and define
+\[
+        \alpha(x)=a,\qquad \alpha(y)=1,
+        \qquad
+        \beta(x)=1,\qquad \beta(y)=a.
+\]
+Then both $\alpha$ and $\beta$ are non-injective.  If $e_x(w)$ and $e_y(w)$ denote the exponent sums of $x$ and $y$ in a word $w\in F(x,y)$, then
+\[
+        \alpha(w)=a^{e_x(w)},\qquad \beta(w)=a^{e_y(w)}.
+\]
+Hence
+\[
+        w\in\Eq(\alpha,\beta)
+        \quad\Longleftrightarrow\quad
+        e_x(w)=e_y(w).
+\]
+Equivalently,
+\[
+        \Eq(\alpha,\beta)=\ker\phi,
+\]
+where
+\[
+        \phi:F(x,y)\to\mathbb Z,\qquad
+        \phi(x)=1,\qquad \phi(y)=-1.
+\]
+
+The Stallings graph of $\ker\phi$ is the covering of the two-petal rose corresponding to this epimorphism onto $\mathbb Z$.  Its vertices are indexed by the integers.  From the vertex $k$ there is an $x$-edge to $k+1$ and a $y$-edge to $k-1$.  Thus, between two consecutive vertices $k$ and $k+1$, there are two distinct unoriented edges: the $x$-edge from $k$ to $k+1$ and the $y$-edge from $k+1$ to $k$.  This infinite folded Stallings graph has one independent cycle between every consecutive pair of vertices.  Therefore its first Betti number is infinite.  Hence $\Eq(\alpha,\beta)$ is a free group of countably infinite rank and is not finitely generated.
+\end{rem}
+
+\section{A possible sharp bound}\label{s:6}
+
+The family above suggests the following candidate for the correct sharp upper bound in the monomorphism case.
+
+\begin{conj}\label{conj:2n-2}
+Let $n\ge3$, and let $g,h:F_n\to F$
+be monomorphisms into a free group.  Then
+\[
+        \rk\Eq(g,h)\le 2n-2.
+\]
+\end{conj}
+
+Theorem~\ref{thm:main} shows that, if this conjecture is true, then it is sharp.
+
+
+
+% \section*{Declaration of competing interest}
+% The author declares no competing interests.
+
+% \section*{Data availability}
+% No data was used for the research described in the article.
+
+
+codex
+The full text confirms there is no surviving hard search regime in this paper. Section 4 does not merely prove existence: it exposes closed-form equalizer witnesses, including length-one generators, for every \(n\). General “obfuscation” by a hidden free-group basis change would create a new planted recovery problem with no hardness result in the paper, so I’m recording a Step-0 H rejection and will not fabricate gate or oracle artifacts.
+apply patch
+patch: completed
+/home/gson/gvrepo/results/2604.24502/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..c6be6f032198cface5e9f85005eeeb347f641c5b
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,150 @@
++# Rejected: exposed equalizer witnesses in the explicit Stallings-graph family
++
++Paper: Jialin Lei and Teng Zhang, [*Colored Stallings graphs and
++counterexamples to the Stallings equalizer conjecture*](https://arxiv.org/abs/2604.24502),
++arXiv:2604.24502v2 (9 May 2026).
++
++## Decision
++
++No problem generator is shipped. The natural witness task suggested by the
++paper—given two free-group homomorphisms, return a nontrivial word on which
++they agree—meets **G (inverse generation)** and **V (exact verification)** but
++fails **H (hardness)** on the paper's actual counterexample family. The
++construction exposes valid witnesses in closed form, including length-one
++witnesses. Increasing the rank or the word lengths does not remove that
++solver.
++
++Per Step 0 of the task, I stopped before writing a module, self-test report, or
++LLM-hardening transcript. Random-guess and oracle failures cannot override a
++deterministic construction that succeeds on every generated instance.
++
++## Exact definition and theorem regime
++
++Section 1 defines, for homomorphisms
++
++```text
++g,h : F(Sigma) -> F(Delta),
++```
++
++the equalizer
++
++```text
++Eq(g,h) = { w in F(Sigma) : g(w) = h(w) }.
++```
++
++Equality is equality in the free group, so a candidate word is checked by
++substituting the listed images of the domain generators into the word, freely
++reducing both results, and comparing them. This is an exact, inexpensive
++verifier and would satisfy V.
++
++Theorem 1.2 is structural, not a computational-hardness theorem. For every
++`n >= 2`, it constructs monomorphisms `g,h : F_n -> F_2` whose equalizer has
++rank at least `2n-2`. Proposition 3.3 and Construction 4.1 fix the domain basis
++
++```text
++F_n = <t, x_1, ..., x_(n-1)>
++```
++
++and define, with `c_i = a^(-i)b^i`,
++
++```text
++g(t) = a,              h(t) = b,
++g(x_i) = c_i^2,        h(x_i) = c_i^2.
++```
++
++Lemma 4.3 proves that the subgroup represented by the colored Stallings graph
++`Gamma_n` is a rank-`2n-2` free factor of `Eq(g,h)`.
++
++## Fatal closed-form solvers
++
++### One equalizer word
++
++For every `i` from `1` through `n-1`, the displayed definition gives
++
++```text
++g(x_i) = h(x_i).
++```
++
++Thus `x_1` is a valid nontrivial witness on every instance and can be found by
++one comparison of two input rows. Its reduced length is one. Permuting the
++input rows, renaming generators, or inverting generators does not help: compare
++each generator image under `g` and `h` and return any equal pair (or its
++inverse). This attack is linear in the displayed input size.
++
++Length constraints do not repair the family. For any positive target length
++`L`, the freely reduced word `x_1^L` is in the equalizer. Products and powers of
++the other `x_i` give unlimited further explicit witnesses.
++
++### A full rank-`2n-2` independent family
++
++The paper's own graph also exposes the larger witness family. Use the chain of
++`t`-edges as a maximal tree in `Gamma_n`. The two `x_i`-loops—one at the base
++vertex and one at the vertex reached by `t^i`—give the graph-basis words
++
++```text
++x_i                    for 1 <= i < n,
++t^i x_i t^(-i)         for 1 <= i < n.
++```
++
++There are exactly `2n-2` such words. Lemma 4.2 verifies their membership and
++Lemma 4.3 verifies the rank/free-factor claim. Consequently, even a stronger
++task asking for the whole independent family has the closed-form solution
++printed by Construction 4.1. A solver does not need to search the nominal word
++space or reconstruct a hidden planted answer.
++
++### Stabilized variants
++
++Propositions 5.1 and 5.2 only add dummy generators to the same maps. They
++explicitly retain the subgroup `A_m` and its colored graph, so they retain all
++of the witnesses above. Remark 5.3 is easier still: membership is exactly the
++linear exponent-sum condition `e_x(w) = e_y(w)`. These non-injective variants
++therefore do not supply a hard positive-witness family.
++
++## Why nearby modifications do not qualify
++
++- **Hide the construction with a random Nielsen automorphism.** Precomposing
++  both maps by a long hidden change of free basis would conceal the displayed
++  words, but recovering a planted basis is a new average-case problem. This
++  paper gives no complexity reduction, hard planted distribution, or theorem
++  transferring hardness to that distribution. Claiming H from the apparent
++  obscurity of the transformed strings would be unsupported. It would also
++  make canonicalization under changes of basis a substantive unresolved part
++  of G8 rather than a harmless relabelling check.
++- **Ask for the exact rank or a maximum-rank basis.** Section 6 only conjectures
++  the upper bound `rank Eq(g,h) <= 2n-2`. An exact-rank or maximum claim makes
++  optimality part of the answer, which the task forbids, and the paper does not
++  prove that its lower bound is the complete equalizer rank.
++- **Ask whether the equalizer is trivial or whether another word exists.** A
++  yes/no answer or an absence is not an admissible witness. On the explicit
++  family nontriviality is already witnessed by every `x_i`.
++- **Use a general or bounded Post Correspondence Problem instance.** Section 1
++  mentions algorithmic work connecting equalizers and PCP, but this paper does
++  not prove a computational-hardness regime or provide an answer-first hard
++  distribution for general PCP instances. Substituting that external problem
++  would no longer be generating the explicit family established here.
++- **Return a colored Stallings graph.** The paper constructs `Gamma_n`
++  explicitly in Section 4. Returning it is a transcription task, while asking
++  for a proof that it captures an entire equalizer would require more than the
++  requested substitution-style witness verification.
++
++The paper also identifies genuinely easy special settings in its introduction:
++Ciobanu and Logan give algorithms for immersion pairs, and fixed-subgroup cases
++have constructive theory for endomorphisms. More importantly for this task,
++the paper never asserts computational hardness for its counterexamples; the
++word "harder" in Section 1 concerns the mathematical rank problem, not the
++complexity of finding one of the explicitly exhibited words.
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G — sample the witness first | Pass in principle | Construct any listed `x_i` or graph-basis word before emitting the maps. |
++| H — no polynomial/closed-form solver | **Fail** | `x_1` solves every instance; the `2n-2` graph-basis words above solve the stronger batch task. |
++| V — cheap exact verification | Pass | Substitute generator images, freely reduce both words, and compare. |
++| G4/G6 | Not run | A deterministic 100% attack makes random-guess estimates irrelevant. |
++| G7 | Does not rescue H | Larger `n` creates more immediately visible witnesses. |
++| Oracle loop | Not run | Step 0 requires stopping once H fails. |
++
++The prior triage was correct about substitution verification but not about
++hardness: the colored Stallings graph plants witnesses by displaying the very
++loops that produce them.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..c6be6f032198cface5e9f85005eeeb347f641c5b
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,150 @@
++# Rejected: exposed equalizer witnesses in the explicit Stallings-graph family
++
++Paper: Jialin Lei and Teng Zhang, [*Colored Stallings graphs and
++counterexamples to the Stallings equalizer conjecture*](https://arxiv.org/abs/2604.24502),
++arXiv:2604.24502v2 (9 May 2026).
++
++## Decision
++
++No problem generator is shipped. The natural witness task suggested by the
++paper—given two free-group homomorphisms, return a nontrivial word on which
++they agree—meets **G (inverse generation)** and **V (exact verification)** but
++fails **H (hardness)** on the paper's actual counterexample family. The
++construction exposes valid witnesses in closed form, including length-one
++witnesses. Increasing the rank or the word lengths does not remove that
++solver.
++
++Per Step 0 of the task, I stopped before writing a module, self-test report, or
++LLM-hardening transcript. Random-guess and oracle failures cannot override a
++deterministic construction that succeeds on every generated instance.
++
++## Exact definition and theorem regime
++
++Section 1 defines, for homomorphisms
++
++```text
++g,h : F(Sigma) -> F(Delta),
++```
++
++the equalizer
++
++```text
++Eq(g,h) = { w in F(Sigma) : g(w) = h(w) }.
++```
++
++Equality is equality in the free group, so a candidate word is checked by
++substituting the listed images of the domain generators into the word, freely
++reducing both results, and comparing them. This is an exact, inexpensive
++verifier and would satisfy V.
++
++Theorem 1.2 is structural, not a computational-hardness theorem. For every
++`n >= 2`, it constructs monomorphisms `g,h : F_n -> F_2` whose equalizer has
++rank at least `2n-2`. Proposition 3.3 and Construction 4.1 fix the domain basis
++
++```text
++F_n = <t, x_1, ..., x_(n-1)>
++```
++
++and define, with `c_i = a^(-i)b^i`,
++
++```text
++g(t) = a,              h(t) = b,
++g(x_i) = c_i^2,        h(x_i) = c_i^2.
++```
++
++Lemma 4.3 proves that the subgroup represented by the colored Stallings graph
++`Gamma_n` is a rank-`2n-2` free factor of `Eq(g,h)`.
++
++## Fatal closed-form solvers
++
++### One equalizer word
++
++For every `i` from `1` through `n-1`, the displayed definition gives
++
++```text
++g(x_i) = h(x_i).
++```
++
++Thus `x_1` is a valid nontrivial witness on every instance and can be found by
++one comparison of two input rows. Its reduced length is one. Permuting the
++input rows, renaming generators, or inverting generators does not help: compare
++each generator image under `g` and `h` and return any equal pair (or its
++inverse). This attack is linear in the displayed input size.
++
++Length constraints do not repair the family. For any positive target length
++`L`, the freely reduced word `x_1^L` is in the equalizer. Products and powers of
++the other `x_i` give unlimited further explicit witnesses.
++
++### A full rank-`2n-2` independent family
++
++The paper's own graph also exposes the larger witness family. Use the chain of
++`t`-edges as a maximal tree in `Gamma_n`. The two `x_i`-loops—one at the base
++vertex and one at the vertex reached by `t^i`—give the graph-basis words
++
++```text
++x_i                    for 1 <= i < n,
++t^i x_i t^(-i)         for 1 <= i < n.
++```
++
++There are exactly `2n-2` such words. Lemma 4.2 verifies their membership and
++Lemma 4.3 verifies the rank/free-factor claim. Consequently, even a stronger
++task asking for the whole independent family has the closed-form solution
++printed by Construction 4.1. A solver does not need to search the nominal word
++space or reconstruct a hidden planted answer.
++
++### Stabilized variants
++
++Propositions 5.1 and 5.2 only add dummy generators to the same maps. They
++explicitly retain the subgroup `A_m` and its colored graph, so they retain all
++of the witnesses above. Remark 5.3 is easier still: membership is exactly the
++linear exponent-sum condition `e_x(w) = e_y(w)`. These non-injective variants
++therefore do not supply a hard positive-witness family.
++
++## Why nearby modifications do not qualify
++
++- **Hide the construction with a random Nielsen automorphism.** Precomposing
++  both maps by a long hidden change of free basis would conceal the displayed
++  words, but recovering a planted basis is a new average-case problem. This
++  paper gives no complexity reduction, hard planted distribution, or theorem
++  transferring hardness to that distribution. Claiming H from the apparent
++  obscurity of the transformed strings would be unsupported. It would also
++  make canonicalization under changes of basis a substantive unresolved part
++  of G8 rather than a harmless relabelling check.
++- **Ask for the exact rank or a maximum-rank basis.** Section 6 only conjectures
++  the upper bound `rank Eq(g,h) <= 2n-2`. An exact-rank or maximum claim makes
++  optimality part of the answer, which the task forbids, and the paper does not
++  prove that its lower bound is the complete equalizer rank.
++- **Ask whether the equalizer is trivial or whether another word exists.** A
++  yes/no answer or an absence is not an admissible witness. On the explicit
++  family nontriviality is already witnessed by every `x_i`.
++- **Use a general or bounded Post Correspondence Problem instance.** Section 1
++  mentions algorithmic work connecting equalizers and PCP, but this paper does
++  not prove a computational-hardness regime or provide an answer-first hard
++  distribution for general PCP instances. Substituting that external problem
++  would no longer be generating the explicit family established here.
++- **Return a colored Stallings graph.** The paper constructs `Gamma_n`
++  explicitly in Section 4. Returning it is a transcription task, while asking
++  for a proof that it captures an entire equalizer would require more than the
++  requested substitution-style witness verification.
++
++The paper also identifies genuinely easy special settings in its introduction:
++Ciobanu and Logan give algorithms for immersion pairs, and fixed-subgroup cases
++have constructive theory for endomorphisms. More importantly for this task,
++the paper never asserts computational hardness for its counterexamples; the
++word "harder" in Section 1 concerns the mathematical rank problem, not the
++complexity of finding one of the explicitly exhibited words.
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G — sample the witness first | Pass in principle | Construct any listed `x_i` or graph-basis word before emitting the maps. |
++| H — no polynomial/closed-form solver | **Fail** | `x_1` solves every instance; the `2n-2` graph-basis words above solve the stronger batch task. |
++| V — cheap exact verification | Pass | Substitute generator images, freely reduce both words, and compare. |
++| G4/G6 | Not run | A deterministic 100% attack makes random-guess estimates irrelevant. |
++| G7 | Does not rescue H | Larger `n` creates more immediately visible witnesses. |
++| Oracle loop | Not run | Step 0 requires stopping once H fails. |
++
++The prior triage was correct about substitution verification but not about
++hardness: the colored Stallings graph plants witnesses by displaying the very
++loops that produce them.
+
+exec
+/bin/bash -lc "ls -la
+wc -l -w REJECTED.md
+sed -n '1,260p' REJECTED.md" in /home/gson/gvrepo/results/2604.24502
+ succeeded in 0ms:
+total 184
+drwxrwxr-x  2 gson gson   4096 Sep  3 04:02 .
+drwxrwxr-x 67 gson gson   4096 Sep  3 03:59 ..
+-rw-rw-r--  1 gson gson    161 Sep  3 03:59 .meta.json
+-rw-rw-r--  1 gson gson    529 Sep  3 03:59 .runner.sh
+-rw-rw-r--  1 gson gson  18826 Sep  3 03:59 .task.md
+-rw-rw-r--  1 gson gson   6937 Sep  3 04:02 REJECTED.md
+-rw-rw-r--  1 gson gson 140717 Sep  3 04:02 codex_run.log
+ 150 1067 REJECTED.md
+# Rejected: exposed equalizer witnesses in the explicit Stallings-graph family
+
+Paper: Jialin Lei and Teng Zhang, [*Colored Stallings graphs and
+counterexamples to the Stallings equalizer conjecture*](https://arxiv.org/abs/2604.24502),
+arXiv:2604.24502v2 (9 May 2026).
+
+## Decision
+
+No problem generator is shipped. The natural witness task suggested by the
+paper—given two free-group homomorphisms, return a nontrivial word on which
+they agree—meets **G (inverse generation)** and **V (exact verification)** but
+fails **H (hardness)** on the paper's actual counterexample family. The
+construction exposes valid witnesses in closed form, including length-one
+witnesses. Increasing the rank or the word lengths does not remove that
+solver.
+
+Per Step 0 of the task, I stopped before writing a module, self-test report, or
+LLM-hardening transcript. Random-guess and oracle failures cannot override a
+deterministic construction that succeeds on every generated instance.
+
+## Exact definition and theorem regime
+
+Section 1 defines, for homomorphisms
+
+```text
+g,h : F(Sigma) -> F(Delta),
+```
+
+the equalizer
+
+```text
+Eq(g,h) = { w in F(Sigma) : g(w) = h(w) }.
+```
+
+Equality is equality in the free group, so a candidate word is checked by
+substituting the listed images of the domain generators into the word, freely
+reducing both results, and comparing them. This is an exact, inexpensive
+verifier and would satisfy V.
+
+Theorem 1.2 is structural, not a computational-hardness theorem. For every
+`n >= 2`, it constructs monomorphisms `g,h : F_n -> F_2` whose equalizer has
+rank at least `2n-2`. Proposition 3.3 and Construction 4.1 fix the domain basis
+
+```text
+F_n = <t, x_1, ..., x_(n-1)>
+```
+
+and define, with `c_i = a^(-i)b^i`,
+
+```text
+g(t) = a,              h(t) = b,
+g(x_i) = c_i^2,        h(x_i) = c_i^2.
+```
+
+Lemma 4.3 proves that the subgroup represented by the colored Stallings graph
+`Gamma_n` is a rank-`2n-2` free factor of `Eq(g,h)`.
+
+## Fatal closed-form solvers
+
+### One equalizer word
+
+For every `i` from `1` through `n-1`, the displayed definition gives
+
+```text
+g(x_i) = h(x_i).
+```
+
+Thus `x_1` is a valid nontrivial witness on every instance and can be found by
+one comparison of two input rows. Its reduced length is one. Permuting the
+input rows, renaming generators, or inverting generators does not help: compare
+each generator image under `g` and `h` and return any equal pair (or its
+inverse). This attack is linear in the displayed input size.
+
+Length constraints do not repair the family. For any positive target length
+`L`, the freely reduced word `x_1^L` is in the equalizer. Products and powers of
+the other `x_i` give unlimited further explicit witnesses.
+
+### A full rank-`2n-2` independent family
+
+The paper's own graph also exposes the larger witness family. Use the chain of
+`t`-edges as a maximal tree in `Gamma_n`. The two `x_i`-loops—one at the base
+vertex and one at the vertex reached by `t^i`—give the graph-basis words
+
+```text
+x_i                    for 1 <= i < n,
+t^i x_i t^(-i)         for 1 <= i < n.
+```
+
+There are exactly `2n-2` such words. Lemma 4.2 verifies their membership and
+Lemma 4.3 verifies the rank/free-factor claim. Consequently, even a stronger
+task asking for the whole independent family has the closed-form solution
+printed by Construction 4.1. A solver does not need to search the nominal word
+space or reconstruct a hidden planted answer.
+
+### Stabilized variants
+
+Propositions 5.1 and 5.2 only add dummy generators to the same maps. They
+explicitly retain the subgroup `A_m` and its colored graph, so they retain all
+of the witnesses above. Remark 5.3 is easier still: membership is exactly the
+linear exponent-sum condition `e_x(w) = e_y(w)`. These non-injective variants
+therefore do not supply a hard positive-witness family.
+
+## Why nearby modifications do not qualify
+
+- **Hide the construction with a random Nielsen automorphism.** Precomposing
+  both maps by a long hidden change of free basis would conceal the displayed
+  words, but recovering a planted basis is a new average-case problem. This
+  paper gives no complexity reduction, hard planted distribution, or theorem
+  transferring hardness to that distribution. Claiming H from the apparent
+  obscurity of the transformed strings would be unsupported. It would also
+  make canonicalization under changes of basis a substantive unresolved part
+  of G8 rather than a harmless relabelling check.
+- **Ask for the exact rank or a maximum-rank basis.** Section 6 only conjectures
+  the upper bound `rank Eq(g,h) <= 2n-2`. An exact-rank or maximum claim makes
+  optimality part of the answer, which the task forbids, and the paper does not
+  prove that its lower bound is the complete equalizer rank.
+- **Ask whether the equalizer is trivial or whether another word exists.** A
+  yes/no answer or an absence is not an admissible witness. On the explicit
+  family nontriviality is already witnessed by every `x_i`.
+- **Use a general or bounded Post Correspondence Problem instance.** Section 1
+  mentions algorithmic work connecting equalizers and PCP, but this paper does
+  not prove a computational-hardness regime or provide an answer-first hard
+  distribution for general PCP instances. Substituting that external problem
+  would no longer be generating the explicit family established here.
+- **Return a colored Stallings graph.** The paper constructs `Gamma_n`
+  explicitly in Section 4. Returning it is a transcription task, while asking
+  for a proof that it captures an entire equalizer would require more than the
+  requested substitution-style witness verification.
+
+The paper also identifies genuinely easy special settings in its introduction:
+Ciobanu and Logan give algorithms for immersion pairs, and fixed-subgroup cases
+have constructive theory for endomorphisms. More importantly for this task,
+the paper never asserts computational hardness for its counterexamples; the
+word "harder" in Section 1 concerns the mathematical rank problem, not the
+complexity of finding one of the explicitly exhibited words.
+
+## Gate outcome
+
+| Requirement | Result | Evidence |
+|---|---:|---|
+| G — sample the witness first | Pass in principle | Construct any listed `x_i` or graph-basis word before emitting the maps. |
+| H — no polynomial/closed-form solver | **Fail** | `x_1` solves every instance; the `2n-2` graph-basis words above solve the stronger batch task. |
+| V — cheap exact verification | Pass | Substitute generator images, freely reduce both words, and compare. |
+| G4/G6 | Not run | A deterministic 100% attack makes random-guess estimates irrelevant. |
+| G7 | Does not rescue H | Larger `n` creates more immediately visible witnesses. |
+| Oracle loop | Not run | Step 0 requires stopping once H fails. |
+
+The prior triage was correct about substitution verification but not about
+hardness: the colored Stallings graph plants witnesses by displaying the very
+loops that produce them.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..c6be6f032198cface5e9f85005eeeb347f641c5b
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,150 @@
++# Rejected: exposed equalizer witnesses in the explicit Stallings-graph family
++
++Paper: Jialin Lei and Teng Zhang, [*Colored Stallings graphs and
++counterexamples to the Stallings equalizer conjecture*](https://arxiv.org/abs/2604.24502),
++arXiv:2604.24502v2 (9 May 2026).
++
++## Decision
++
++No problem generator is shipped. The natural witness task suggested by the
++paper—given two free-group homomorphisms, return a nontrivial word on which
++they agree—meets **G (inverse generation)** and **V (exact verification)** but
++fails **H (hardness)** on the paper's actual counterexample family. The
++construction exposes valid witnesses in closed form, including length-one
++witnesses. Increasing the rank or the word lengths does not remove that
++solver.
++
++Per Step 0 of the task, I stopped before writing a module, self-test report, or
++LLM-hardening transcript. Random-guess and oracle failures cannot override a
++deterministic construction that succeeds on every generated instance.
++
++## Exact definition and theorem regime
++
++Section 1 defines, for homomorphisms
++
++```text
++g,h : F(Sigma) -> F(Delta),
++```
++
++the equalizer
++
++```text
++Eq(g,h) = { w in F(Sigma) : g(w) = h(w) }.
++```
++
++Equality is equality in the free group, so a candidate word is checked by
++substituting the listed images of the domain generators into the word, freely
++reducing both results, and comparing them. This is an exact, inexpensive
++verifier and would satisfy V.
++
++Theorem 1.2 is structural, not a computational-hardness theorem. For every
++`n >= 2`, it constructs monomorphisms `g,h : F_n -> F_2` whose equalizer has
++rank at least `2n-2`. Proposition 3.3 and Construction 4.1 fix the domain basis
++
++```text
++F_n = <t, x_1, ..., x_(n-1)>
++```
++
++and define, with `c_i = a^(-i)b^i`,
++
++```text
++g(t) = a,              h(t) = b,
++g(x_i) = c_i^2,        h(x_i) = c_i^2.
++```
++
++Lemma 4.3 proves that the subgroup represented by the colored Stallings graph
++`Gamma_n` is a rank-`2n-2` free factor of `Eq(g,h)`.
++
++## Fatal closed-form solvers
++
++### One equalizer word
++
++For every `i` from `1` through `n-1`, the displayed definition gives
++
++```text
++g(x_i) = h(x_i).
++```
++
++Thus `x_1` is a valid nontrivial witness on every instance and can be found by
++one comparison of two input rows. Its reduced length is one. Permuting the
++input rows, renaming generators, or inverting generators does not help: compare
++each generator image under `g` and `h` and return any equal pair (or its
++inverse). This attack is linear in the displayed input size.
++
++Length constraints do not repair the family. For any positive target length
++`L`, the freely reduced word `x_1^L` is in the equalizer. Products and powers of
++the other `x_i` give unlimited further explicit witnesses.
++
++### A full rank-`2n-2` independent family
++
++The paper's own graph also exposes the larger witness family. Use the chain of
++`t`-edges as a maximal tree in `Gamma_n`. The two `x_i`-loops—one at the base
++vertex and one at the vertex reached by `t^i`—give the graph-basis words
++
++```text
++x_i                    for 1 <= i < n,
++t^i x_i t^(-i)         for 1 <= i < n.
++```
++
++There are exactly `2n-2` such words. Lemma 4.2 verifies their membership and
++Lemma 4.3 verifies the rank/free-factor claim. Consequently, even a stronger
++task asking for the whole independent family has the closed-form solution
++printed by Construction 4.1. A solver does not need to search the nominal word
++space or reconstruct a hidden planted answer.
++
++### Stabilized variants
++
++Propositions 5.1 and 5.2 only add dummy generators to the same maps. They
++explicitly retain the subgroup `A_m` and its colored graph, so they retain all
++of the witnesses above. Remark 5.3 is easier still: membership is exactly the
++linear exponent-sum condition `e_x(w) = e_y(w)`. These non-injective variants
++therefore do not supply a hard positive-witness family.
++
++## Why nearby modifications do not qualify
++
++- **Hide the construction with a random Nielsen automorphism.** Precomposing
++  both maps by a long hidden change of free basis would conceal the displayed
++  words, but recovering a planted basis is a new average-case problem. This
++  paper gives no complexity reduction, hard planted distribution, or theorem
++  transferring hardness to that distribution. Claiming H from the apparent
++  obscurity of the transformed strings would be unsupported. It would also
++  make canonicalization under changes of basis a substantive unresolved part
++  of G8 rather than a harmless relabelling check.
++- **Ask for the exact rank or a maximum-rank basis.** Section 6 only conjectures
++  the upper bound `rank Eq(g,h) <= 2n-2`. An exact-rank or maximum claim makes
++  optimality part of the answer, which the task forbids, and the paper does not
++  prove that its lower bound is the complete equalizer rank.
++- **Ask whether the equalizer is trivial or whether another word exists.** A
++  yes/no answer or an absence is not an admissible witness. On the explicit
++  family nontriviality is already witnessed by every `x_i`.
++- **Use a general or bounded Post Correspondence Problem instance.** Section 1
++  mentions algorithmic work connecting equalizers and PCP, but this paper does
++  not prove a computational-hardness regime or provide an answer-first hard
++  distribution for general PCP instances. Substituting that external problem
++  would no longer be generating the explicit family established here.
++- **Return a colored Stallings graph.** The paper constructs `Gamma_n`
++  explicitly in Section 4. Returning it is a transcription task, while asking
++  for a proof that it captures an entire equalizer would require more than the
++  requested substitution-style witness verification.
++
++The paper also identifies genuinely easy special settings in its introduction:
++Ciobanu and Logan give algorithms for immersion pairs, and fixed-subgroup cases
++have constructive theory for endomorphisms. More importantly for this task,
++the paper never asserts computational hardness for its counterexamples; the
++word "harder" in Section 1 concerns the mathematical rank problem, not the
++complexity of finding one of the explicitly exhibited words.
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G — sample the witness first | Pass in principle | Construct any listed `x_i` or graph-basis word before emitting the maps. |
++| H — no polynomial/closed-form solver | **Fail** | `x_1` solves every instance; the `2n-2` graph-basis words above solve the stronger batch task. |
++| V — cheap exact verification | Pass | Substitute generator images, freely reduce both words, and compare. |
++| G4/G6 | Not run | A deterministic 100% attack makes random-guess estimates irrelevant. |
++| G7 | Does not rescue H | Larger `n` creates more immediately visible witnesses. |
++| Oracle loop | Not run | Step 0 requires stopping once H fails. |
++
++The prior triage was correct about substitution verification but not about
++hardness: the colored Stallings graph plants witnesses by displaying the very
++loops that produce them.
+
+codex
+Rejected at Step 0 and documented in [REJECTED.md](/home/gson/gvrepo/results/2604.24502/REJECTED.md).
+
+The paper’s explicit construction sets \(g(x_i)=h(x_i)\), so `x_1` is a length-one equalizer witness for every instance. Even the full rank-\(2n-2\) witness family has the closed form \(x_i\) and \(t^i x_i t^{-i}\), directly exposed by [Section 4](https://arxiv.org/html/2604.24502v2#S4).
+
+Thus:
+
+- G passes in principle.
+- V passes by substitution and free reduction.
+- H fails through a deterministic 100% attack.
+
+Per the task instructions, I did not create a generator, fabricate gate results, or run the LLM hardening loop.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..c6be6f032198cface5e9f85005eeeb347f641c5b
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,150 @@
++# Rejected: exposed equalizer witnesses in the explicit Stallings-graph family
++
++Paper: Jialin Lei and Teng Zhang, [*Colored Stallings graphs and
++counterexamples to the Stallings equalizer conjecture*](https://arxiv.org/abs/2604.24502),
++arXiv:2604.24502v2 (9 May 2026).
++
++## Decision
++
++No problem generator is shipped. The natural witness task suggested by the
++paper—given two free-group homomorphisms, return a nontrivial word on which
++they agree—meets **G (inverse generation)** and **V (exact verification)** but
++fails **H (hardness)** on the paper's actual counterexample family. The
++construction exposes valid witnesses in closed form, including length-one
++witnesses. Increasing the rank or the word lengths does not remove that
++solver.
++
++Per Step 0 of the task, I stopped before writing a module, self-test report, or
++LLM-hardening transcript. Random-guess and oracle failures cannot override a
++deterministic construction that succeeds on every generated instance.
++
++## Exact definition and theorem regime
++
++Section 1 defines, for homomorphisms
++
++```text
++g,h : F(Sigma) -> F(Delta),
++```
++
++the equalizer
++
++```text
++Eq(g,h) = { w in F(Sigma) : g(w) = h(w) }.
++```
++
++Equality is equality in the free group, so a candidate word is checked by
++substituting the listed images of the domain generators into the word, freely
++reducing both results, and comparing them. This is an exact, inexpensive
++verifier and would satisfy V.
++
++Theorem 1.2 is structural, not a computational-hardness theorem. For every
++`n >= 2`, it constructs monomorphisms `g,h : F_n -> F_2` whose equalizer has
++rank at least `2n-2`. Proposition 3.3 and Construction 4.1 fix the domain basis
++
++```text
++F_n = <t, x_1, ..., x_(n-1)>
++```
++
++and define, with `c_i = a^(-i)b^i`,
++
++```text
++g(t) = a,              h(t) = b,
++g(x_i) = c_i^2,        h(x_i) = c_i^2.
++```
++
++Lemma 4.3 proves that the subgroup represented by the colored Stallings graph
++`Gamma_n` is a rank-`2n-2` free factor of `Eq(g,h)`.
++
++## Fatal closed-form solvers
++
++### One equalizer word
++
++For every `i` from `1` through `n-1`, the displayed definition gives
++
++```text
++g(x_i) = h(x_i).
++```
++
++Thus `x_1` is a valid nontrivial witness on every instance and can be found by
++one comparison of two input rows. Its reduced length is one. Permuting the
++input rows, renaming generators, or inverting generators does not help: compare
++each generator image under `g` and `h` and return any equal pair (or its
++inverse). This attack is linear in the displayed input size.
++
++Length constraints do not repair the family. For any positive target length
++`L`, the freely reduced word `x_1^L` is in the equalizer. Products and powers of
++the other `x_i` give unlimited further explicit witnesses.
++
++### A full rank-`2n-2` independent family
++
++The paper's own graph also exposes the larger witness family. Use the chain of
++`t`-edges as a maximal tree in `Gamma_n`. The two `x_i`-loops—one at the base
++vertex and one at the vertex reached by `t^i`—give the graph-basis words
++
++```text
++x_i                    for 1 <= i < n,
++t^i x_i t^(-i)         for 1 <= i < n.
++```
++
++There are exactly `2n-2` such words. Lemma 4.2 verifies their membership and
++Lemma 4.3 verifies the rank/free-factor claim. Consequently, even a stronger
++task asking for the whole independent family has the closed-form solution
++printed by Construction 4.1. A solver does not need to search the nominal word
++space or reconstruct a hidden planted answer.
++
++### Stabilized variants
++
++Propositions 5.1 and 5.2 only add dummy generators to the same maps. They
++explicitly retain the subgroup `A_m` and its colored graph, so they retain all
++of the witnesses above. Remark 5.3 is easier still: membership is exactly the
++linear exponent-sum condition `e_x(w) = e_y(w)`. These non-injective variants
++therefore do not supply a hard positive-witness family.
++
++## Why nearby modifications do not qualify
++
++- **Hide the construction with a random Nielsen automorphism.** Precomposing
++  both maps by a long hidden change of free basis would conceal the displayed
++  words, but recovering a planted basis is a new average-case problem. This
++  paper gives no complexity reduction, hard planted distribution, or theorem
++  transferring hardness to that distribution. Claiming H from the apparent
++  obscurity of the transformed strings would be unsupported. It would also
++  make canonicalization under changes of basis a substantive unresolved part
++  of G8 rather than a harmless relabelling check.
++- **Ask for the exact rank or a maximum-rank basis.** Section 6 only conjectures
++  the upper bound `rank Eq(g,h) <= 2n-2`. An exact-rank or maximum claim makes
++  optimality part of the answer, which the task forbids, and the paper does not
++  prove that its lower bound is the complete equalizer rank.
++- **Ask whether the equalizer is trivial or whether another word exists.** A
++  yes/no answer or an absence is not an admissible witness. On the explicit
++  family nontriviality is already witnessed by every `x_i`.
++- **Use a general or bounded Post Correspondence Problem instance.** Section 1
++  mentions algorithmic work connecting equalizers and PCP, but this paper does
++  not prove a computational-hardness regime or provide an answer-first hard
++  distribution for general PCP instances. Substituting that external problem
++  would no longer be generating the explicit family established here.
++- **Return a colored Stallings graph.** The paper constructs `Gamma_n`
++  explicitly in Section 4. Returning it is a transcription task, while asking
++  for a proof that it captures an entire equalizer would require more than the
++  requested substitution-style witness verification.
++
++The paper also identifies genuinely easy special settings in its introduction:
++Ciobanu and Logan give algorithms for immersion pairs, and fixed-subgroup cases
++have constructive theory for endomorphisms. More importantly for this task,
++the paper never asserts computational hardness for its counterexamples; the
++word "harder" in Section 1 concerns the mathematical rank problem, not the
++complexity of finding one of the explicitly exhibited words.
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G — sample the witness first | Pass in principle | Construct any listed `x_i` or graph-basis word before emitting the maps. |
++| H — no polynomial/closed-form solver | **Fail** | `x_1` solves every instance; the `2n-2` graph-basis words above solve the stronger batch task. |
++| V — cheap exact verification | Pass | Substitute generator images, freely reduce both words, and compare. |
++| G4/G6 | Not run | A deterministic 100% attack makes random-guess estimates irrelevant. |
++| G7 | Does not rescue H | Larger `n` creates more immediately visible witnesses. |
++| Oracle loop | Not run | Step 0 requires stopping once H fails. |
++
++The prior triage was correct about substitution verification but not about
++hardness: the colored Stallings graph plants witnesses by displaying the very
++loops that produce them.
+
+tokens used
+82,956
+Rejected at Step 0 and documented in [REJECTED.md](/home/gson/gvrepo/results/2604.24502/REJECTED.md).
+
+The paper’s explicit construction sets \(g(x_i)=h(x_i)\), so `x_1` is a length-one equalizer witness for every instance. Even the full rank-\(2n-2\) witness family has the closed form \(x_i\) and \(t^i x_i t^{-i}\), directly exposed by [Section 4](https://arxiv.org/html/2604.24502v2#S4).
+
+Thus:
+
+- G passes in principle.
+- V passes by substitution and free reduction.
+- H fails through a deterministic 100% attack.
+
+Per the task instructions, I did not create a generator, fabricate gate results, or run the LLM hardening loop.
