@@ -63,7 +63,28 @@ if not any(k.startswith("G8") for k in gates):
           "       never tested.  submit.sh counts distinct keys but cannot tell a real\n"
           "       invariant from a hash of the seed.  See prompts/codex_task.md, G8.")
     sys.exit(1)
-print(f"== gates ==\n  {len(gates)} gates pass, G8 canonical_key present")
+# G6 must include the domain-standard attack, not only the three generic probes.
+# 2408.04743 passed all eight gates AND the four-vendor oracle pool, then fell to a
+# spectral attack on 20/20 instances -- the generic outlier/greedy/restart panel is
+# blind to what is actually known about the problem class.
+g6 = next((v for k, v in gates.items() if k.startswith("G6")), None)
+atk = (g6 or {}).get("attacks")
+n_atk = len(atk) if isinstance(atk, (dict, list)) else 0
+if g6 is not None and not isinstance(atk, (dict, list)):
+    print("ERROR: G6 does not report an 'attacks' object.  Report the panel as\n"
+          "       {'pass': ..., 'attacks': {name: {'successes': n, 'attempts': m}, ...}}\n"
+          "       so the panel can be checked mechanically -- see prompts/codex_task.md, G6.")
+    sys.exit(1)
+if n_atk and n_atk < 4:
+    names = ", ".join(atk) if isinstance(atk, dict) else str(atk)
+    print(f"ERROR: G6 reports only {n_atk} attacks ({names}).\n"
+          "       The three generic probes are not sufficient on their own: run the\n"
+          "       standard algorithm for the problem class too (SAT/ILP/spectral/LLL/\n"
+          "       DLX -- see prompts/codex_task.md, G6). If you truly cannot run it,\n"
+          "       record it as an attack entry saying so and name it in the README.")
+    sys.exit(1)
+print(f"== gates ==\n  {len(gates)} gates pass, G8 canonical_key present, "
+      f"G6 panel = {n_atk or 'unknown'} attacks")
 PYGATE
 
 echo "== hardening transcript =="
