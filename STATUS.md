@@ -6,8 +6,8 @@
 |---|---:|
 | ✅ done | 44 |
 | 🚫 rejected (documented) | 33 |
-| 🔄 in progress | 1 |
-| ⚪ free | 12,089 |
+| 🔄 in progress | 5 |
+| ⚪ free | 12,085 |
 | **total** | **12,167** |
 
 ## In progress
@@ -15,6 +15,10 @@
 | paper | who | claimed |
 |---|---|---|
 | `2502.08624` | Wongi-Jang | 2026-09-03T03:22 |
+| `1604.08603` | GUIJIN SON | 2026-09-03T03:58 |
+| `2410.07666` | GUIJIN SON | 2026-09-03T03:58 |
+| `2512.24037` | GUIJIN SON | 2026-09-03T03:58 |
+| `2604.24502` | GUIJIN SON | 2026-09-03T03:58 |
 
 ## By family
 
@@ -33,4 +37,4 @@
 | words and permutations | 4 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-03 03:57Z by `scripts/status.sh --write`_
+_regenerated 2026-09-03 04:10Z by `scripts/status.sh --write`_
