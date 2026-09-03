@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **75 / 12,167** resolved (0.62%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **76 / 12,167** resolved (0.62%)
 
 | state | count |
 |---|---:|
-| ✅ done | 42 |
+| ✅ done | 43 |
 | 🚫 rejected (documented) | 33 |
-| 🔄 in progress | 3 |
+| 🔄 in progress | 2 |
 | ⚪ free | 12,089 |
 | **total** | **12,167** |
 
@@ -14,7 +14,6 @@
 
 | paper | who | claimed |
 |---|---|---|
-| `2408.17266` | GUIJIN SON | 2026-09-02T21:41 |
 | `2509.14357` | GUIJIN SON | 2026-09-02T21:42 |
 | `2502.08624` | Wongi-Jang | 2026-09-03T03:22 |
 
@@ -25,7 +24,7 @@
 | graph structures | 14 | 5,559 |
 | designs and codes | 10 | 1,022 |
 | algebraic decomposition | 2 | 804 |
-| integer equations | 3 | 607 |
+| integer equations | 4 | 607 |
 | reconfiguration | 7 | 551 |
 | geometric configurations | 5 | 533 |
 | constraint satisfaction | 7 | 508 |
