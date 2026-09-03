@@ -1,0 +1,124 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "attempts": 5,
+    "distinct_reasons": true,
+    "pass": true,
+    "reasons": {
+      "drop_one": "wrong length: expected 40 triple IDs, got 39",
+      "duplicate": "duplicate triple ID: every selected ID must be distinct",
+      "empty": "empty answer: expected exactly 40 triple IDs",
+      "out_of_range": "out of range: triple ID 200 is not in 0..199",
+      "replace_one": "overlap: triples 0 and 3 both contain element 23"
+    },
+    "rejected": 5
+  },
+  "G3_round_trip": {
+    "parsed_items": 40,
+    "pass": true,
+    "surrounding_prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "naive_search_space": 2050157995198589154962348028592667411382810,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over unordered size-n subsets of distinct in-range triple IDs",
+    "total": 200000
+  },
+  "G5_sparse": {
+    "baseline": {
+      "attack": "min-column Algorithm X",
+      "instance_seed": 271828,
+      "node_cap": 10000,
+      "nodes": 10001,
+      "result": "node cap reached",
+      "wall_seconds": 0.1076663970015943
+    },
+    "density": {
+      "candidate_space": 2050157995198589154962348028592667411382810,
+      "hits": 0,
+      "instance_seed": 271828,
+      "method": "uniform random_candidate sampling",
+      "observed_fraction": 0.0,
+      "sample_size": 200000,
+      "sampler_seed": 314159265
+    },
+    "pass": true,
+    "shipping_degree": 5,
+    "shipping_n": 40,
+    "shipping_preset": "medium",
+    "small_exact_calibration": {
+      "candidate_space": 3003,
+      "degree": 3,
+      "n": 5,
+      "solution_fraction": 0.000333000333000333,
+      "valid_answers": 1
+    }
+  },
+  "G6_adversary_panel": {
+    "algorithm_x_node_cap": 10000,
+    "algorithm_x_nodes_max": 10001,
+    "algorithm_x_nodes_min": 10001,
+    "attacks": {
+      "algorithm_x_min_column_10000": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_input_order": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_conflict_degree": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "spectral_bottom_eigenvector": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true
+  },
+  "G7_scales": {
+    "base_n": 40,
+    "base_search_space_digits": 43,
+    "base_triples": 200,
+    "doubled_n": 80,
+    "doubled_search_space_digits": 86,
+    "doubled_triples": 400,
+    "doubled_verify_reason": "ok",
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "invariance_checks": 60,
+    "invariance_successes": 60,
+    "key_kind": "typed incidence all-distance fingerprint; not complete GI canonicalization",
+    "pass": true,
+    "real_transform_checks": 60,
+    "real_transform_successes": 60,
+    "transformations": [
+      "element relabeling",
+      "triple/clique renumbering",
+      "composition of both (including within-triple reorder)"
+    ],
+    "unrelated_instances": 20
+  },
+  "all_passed": true,
+  "family": "regular exact-cover core encoded as split-graph list coloring",
+  "paper": "arXiv:1910.10364",
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "degree": 5,
+    "n": 40
+  }
+}

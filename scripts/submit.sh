@@ -60,6 +60,28 @@ if rep.get("all_passed") is False:
     print("ERROR: selftest_report.json says all_passed=false"); sys.exit(1)
 g5 = next((v for k, v in gates.items() if k.startswith("G5")), None)
 if isinstance(g5, dict):
+    import re as _re
+    def _num(k):
+        v = g5.get(k)
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+    DENS = _re.compile(r"fraction|density|valid|solution|count|hits", _re.I)
+    COST = _re.compile(r"second|node|iter|restart|wall|time|step|budget", _re.I)
+    # A candidate-space cardinality is NOT a density: 2503.01929 reported a 1536-bit
+    # space and fell to Algorithm X in 5s.  Require how MANY answers are valid, and
+    # what the strongest attack actually cost.
+    has_dens = any(DENS.search(k) and _num(k) for k in g5)
+    has_cost = any(COST.search(k) and _num(k) for k in g5)
+    if not (has_dens and has_cost):
+        missing = ("density" if not has_dens else "") + \
+                  (" and " if not has_dens and not has_cost else "") + \
+                  ("baseline cost" if not has_cost else "")
+        print(f"ERROR: G5 is missing {missing}.  Reporting the size of the candidate\n"
+              "       space is not difficulty -- 2503.01929 reported a 1536-bit space,\n"
+              "       passed G5, and fell to Algorithm X in five seconds.  Report how\n"
+              "       many answers are valid at the SHIPPING preset (exact or sampled)\n"
+              "       AND the measured cost of your strongest attack there.\n"
+              "       See prompts/codex_task.md, G5.")
+        sys.exit(1)
     nums = [v for k, v in g5.items()
             if k != "pass" and isinstance(v, (int, float)) and not isinstance(v, bool)]
     if not nums:

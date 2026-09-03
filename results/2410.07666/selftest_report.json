@@ -1,0 +1,143 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 15,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong token count: expected 192, got 191",
+        "rejected": true
+      },
+      "duplicate_index": {
+        "reason": "duplicate variable index 1",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "variable index out of range at token 1: 193",
+        "rejected": true
+      },
+      "single_sign_swap": {
+        "reason": "clause C293 is monochromatic (0,0,0)",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_tokens": 192,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "empirical_probability": 0.0,
+    "hits": 0,
+    "naive_semantic_space": 6277101735386680763835789423207666416102355444464034512896,
+    "pass": true,
+    "prior": "uniform over 2^n complete assignments; token syntax and uniqueness enforced",
+    "total": 200000
+  },
+  "G5_sparse": {
+    "baseline_cost": {
+      "attack": "random_restart_walksat_32x200n",
+      "iteration_limit": 1228800,
+      "iterations": 438392,
+      "restart_limit": 32,
+      "restarts_started": 12,
+      "result": "verified witness",
+      "success": true,
+      "wall_seconds": 3.6501815889496356
+    },
+    "density": {
+      "exact_solution_count": null,
+      "hits": 0,
+      "method": "uniform random_candidate sampling",
+      "observed_fraction": 0.0,
+      "sample_size": 200000
+    },
+    "pass": false,
+    "shipping_degree": 7,
+    "shipping_instance_seed": 314159,
+    "shipping_n": 192,
+    "shipping_preset": "medium",
+    "small_exact_calibration": {
+      "degree": 8,
+      "fraction": 1.52587890625e-05,
+      "n": 18,
+      "search_space": 262144,
+      "solutions": 4
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "dpll_unit_propagation_5000": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_left_to_right": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_literal_imbalance": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_walksat_32x200n": {
+        "attempts": 8,
+        "successes": 8
+      },
+      "spectral_signed_cooccurrence": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "domain_standard_attack": "dpll_unit_propagation_5000",
+    "pass": false
+  },
+  "G7_scales": {
+    "base_clauses": 448,
+    "base_n": 192,
+    "doubled_clauses": 896,
+    "doubled_n": 384,
+    "doubled_planted_verify": "ok",
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "determinism": {
+      "attempts": 20,
+      "passed": 20
+    },
+    "invariance": {
+      "attempts": 20,
+      "passed": 20
+    },
+    "pass": true,
+    "real_transform_carried_witness": {
+      "attempts": 20,
+      "passed": 20
+    },
+    "transformations": [
+      "variable permutation",
+      "clause permutation",
+      "literal permutation",
+      "independent variable complementation",
+      "independent clause complementation",
+      "all composed"
+    ],
+    "unrelated_distinct": {
+      "attempts": 20,
+      "distinct": 20
+    }
+  },
+  "all_passed": false,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "degree": 7,
+    "n": 192
+  }
+}
