@@ -155,14 +155,27 @@ def derive_core(inst, shown=""):
     if not isinstance(inst, dict):
         return UNKNOWN
     keys = " ".join(k for k in inst if k != "answer").lower()
-    if any(w in keys + " " + (shown or "").lower() for w in GRAPH_WORDS):
+    both = keys + " " + (shown or "").lower()
+    # Do NOT resolve by priority order.  Testing graph first pushed graph from 17 to
+    # 25 of 42 (GRAPH_WORDS now also reads render(), and nearly every combinatorial
+    # statement says "vertex" somewhere); testing the specific cores first pushed
+    # csp_sat from 4 to 10.  Both are artefacts of the tie-break, not measurements.
+    # Require an UNAMBIGUOUS structural match on the instance keys instead, and admit
+    # ambiguity as ambiguity -- an over-attributed histogram is worse than a wide one,
+    # because a quota is computed on top of it.
+    hits = [name for name, words in (("csp_sat", ASSIGN),
+                                     ("exact_cover", COVER),
+                                     ("permutation", PERM),
+                                     ("graph", GRAPH_WORDS))
+            if any(w in keys for w in words)]
+    if len(hits) == 1:
+        return hits[0]
+    if len(hits) > 1:
+        return UNKNOWN            # ambiguous: several cores match the same instance
+    # Nothing in the instance keys.  The rendered statement is weaker evidence -- use
+    # it only for graph, and only when the keys said nothing at all.
+    if any(w in both for w in GRAPH_WORDS):
         return "graph"
-    if any(w in keys for w in ASSIGN):
-        return "csp_sat"
-    if any(w in keys for w in COVER):
-        return "exact_cover"
-    if any(w in keys for w in PERM):
-        return "permutation"
     return UNKNOWN
 
 

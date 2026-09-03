@@ -12,13 +12,23 @@ This directory makes it testable. It does **not** settle it.
 ### Unverified citations in the gold set
 
 40 of the 60 gold entries cite a real arXiv id; 20 are explicitly constructed
-exemplars. **The 40 citations were not verified against arXiv** — the environment
-that wrote this file had no network, and only 4 of the 40 appear in
-`papers/papers.jsonl` (expected, since that file is a filtered subset). Before the
-gold set is used to *fail* a triage prompt, resolve each cited id and confirm the
-paper says what the entry claims. Until then treat the citations as leads, and the
-20 constructed exemplars — which stand on their own mathematics — as the load
-bearing part of the set.
+exemplars. **13 of the 40 citations have been verified against live arXiv** — an independent
+check resolved 13 ids, prioritising all 7 whose ids look future-dated, and 13/13
+titles matched character-for-character. The remaining 27 are unverified; only 4 of
+the 40 appear in `papers/papers.jsonl`, which is expected since that file is a
+filtered subset. Before the gold set is used to *fail* a triage prompt in anger,
+resolve the remaining 27 and confirm each paper says what its entry claims.
+
+### `keep` in the gold set is a triage verdict, not a shipping verdict
+
+24 of the 48 `keep` entries are in families whose certificate is produced by a
+known algorithm — SOS by an SDP, Farkas and primal-dual by an LP, Lyapunov by a
+linear solve, algebraic numbers by root isolation. That is deliberate and it is
+not a contradiction with `prompts/codex_task.md`: triage decides whether a paper is
+*worth a builder's read*, and the builder then decides Track A, Track B, or reject.
+Those families fail **H on Track A** and are exactly the population Track B exists
+to admit. A triage prompt that drops them is failing, which is what this gold set
+is built to detect.
 
 ## Read this first
 

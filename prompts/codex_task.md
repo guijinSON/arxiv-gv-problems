@@ -141,11 +141,26 @@ works:
    construction that solves the search directly.
 4. **What produces the certificate.** Find the theorem that hands you the witness and
    ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
-   characterisation", "an explicit formula" or "a classification table", stop here —
-   the witness rule above is not satisfied, and no amount of gate-passing repairs it.
-   Ask this **before** you write a line of code. It is the cheapest rejection
-   available and it is the one most often skipped: five recent rejections each cost a
-   full builder run to reach a conclusion stated in the paper's own main theorem.
+   characterisation", "an explicit formula" or "a classification table", then **the
+   family fails H on Track A** — not the witness rule. The certificate is a perfectly
+   good witness; what it is not is hard to obtain. Those are separate gates (see the
+   discriminating test above).
+
+   You then have exactly two honest options, and you must pick one **before** writing
+   code:
+
+   - **Reject**, if the compact route is no shorter than the mechanical one. This is
+     the cheapest rejection available and the one most often skipped: five recent
+     rejections each cost a full builder run to reach a conclusion stated in the
+     paper's own main theorem.
+   - **Declare `TRACK = "B"`**, if — and only if — running that algorithm by hand is
+     genuinely out of reach for a model with no sandbox, *and* a compact route exists
+     for someone who sees the structure. Name the algorithm and its measured cost in
+     `hardness_basis`, as **TWO TRACKS** requires. An SDP over a 40×40 Gram matrix is
+     not something a model executes in its head; a 2×2 linear solve is. Be honest
+     about which one you have.
+
+   What is never acceptable is declaring Track A while knowing the algorithm exists.
 
 ### Build in the paper's own objects first
 
