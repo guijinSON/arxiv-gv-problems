@@ -117,8 +117,25 @@ if n_atk and n_atk < 4:
           "       DLX -- see prompts/codex_task.md, G6). If you truly cannot run it,\n"
           "       record it as an attack entry saying so and name it in the README.")
     sys.exit(1)
+# The pass flag is self-reported.  Recompute from the numbers that are already on
+# disk: a panel that records a successful attack has broken its own family, whatever
+# the flag says.  Observed live: 2410.07666 recorded
+# random_restart_walksat_32x200n successes=8/8 -- it honestly set pass=false, but
+# nothing here would have caught it if it had not.
+_wins = []
+if isinstance(atk, dict):
+    for _name, _res in atk.items():
+        _s = _res.get("successes") if isinstance(_res, dict) else None
+        _a = _res.get("attempts") if isinstance(_res, dict) else None
+        if isinstance(_s, (int, float)) and _s > 0:
+            _wins.append(f"{_name} {_s}/{_a}")
+if _wins:
+    print("ERROR: G6 records a SUCCESSFUL attack: " + "; ".join(_wins) + "\n"
+          "       The family is solved by its own adversary panel.  Escalate the\n"
+          "       parameters or reject the paper -- do not ship it.")
+    sys.exit(1)
 print(f"== gates ==\n  {len(gates)} gates pass, G8 canonical_key present, "
-      f"G6 panel = {n_atk or 'unknown'} attacks")
+      f"G6 panel = {n_atk or 'unknown'} attacks, 0 attack successes")
 PYGATE
 
 echo "== hardening transcript =="
@@ -189,7 +206,7 @@ PY
 
 echo "== interface check =="
 python3 - "$MOD" <<'PY'
-import importlib.util, json, sys
+import importlib.util, json, os, sys
 p=sys.argv[1]
 s=importlib.util.spec_from_file_location("m",p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
 need=["make_instance","render","parse_answer","verify","random_candidate","search_space",
@@ -225,7 +242,12 @@ def _parse_contract(mod, inst, ans):
                 return True, "renderer example parses"
         except Exception:
             pass
-    for body in [json.dumps(ans)] + ([", ".join(map(str, ans))]
+    try:
+        _json_body = json.dumps(ans)
+    except TypeError as e:
+        return False, (f"answer is not JSON-native ({e}). Represent rationals as "
+                       "[num, den] and monomials as exponent lists -- see STEP 1")
+    for body in [_json_body] + ([", ".join(map(str, ans))]
                  if isinstance(ans, list) and all(isinstance(x,(int,float,str)) for x in ans) else []):
         try:
             if mod.parse_answer(f"<answer>{body}</answer>") == ans:
@@ -266,8 +288,17 @@ if missing:
 
 CONTINUOUS = {"geometry", "analysis", "dynamics", "optimization"}
 DISCRETE_CORE = {"graph", "csp_sat", "exact_cover", "subset_sum", "permutation"}
-keys = " ".join(k for k in i if k != "answer").lower()
-graphy = any(w in keys for w in ("adjac", "edges", "neighb", "vertex", "vertic", "conflict"))
+# Read what the SOLVER is actually shown, not the dict key names -- renaming
+# "edges" to "pairs" was enough to evade this entirely.  GRAPH_WORDS is mirrored in
+# scripts/corpus_report.py; the gate and the report must never disagree.
+GRAPH_WORDS = ("adjac", "edges", "neighb", "vertex", "vertic", "conflict",
+               "clique", "graph", "incident", "degree of")
+try:
+    _shown = m.render(i).lower()
+except Exception:
+    _shown = ""
+keys = (" ".join(k for k in i if k != "answer") + " " + _shown).lower()
+graphy = any(w in keys for w in GRAPH_WORDS)
 
 if graphy and NAT["core"] not in DISCRETE_CORE:
     print(f"ERROR: the solver is handed {sorted(k for k in i if k != 'answer')},\n"
@@ -275,12 +306,35 @@ if graphy and NAT["core"] not in DISCRETE_CORE:
           "       Label the core by what the solver actually searches.")
     sys.exit(1)
 
-if NAT["domain"] in CONTINUOUS and NAT["core"] in DISCRETE_CORE and not NAT["reduction"]:
-    print(f"ERROR: NATIVE says domain={NAT['domain']!r} but core={NAT['core']!r} with\n"
-          "       reduction=None.  A continuous-domain paper rendered as a discrete\n"
-          "       search is a discretised analogue: either build the family in the\n"
-          "       paper's own objects, or set NATIVE['reduction'] to the section that\n"
-          "       licenses the surrogate.  See prompts/codex_task.md, STEP 0.")
+# The old guard was NAT["domain"] in CONTINUOUS -- unreachable, because the prompt
+# tells builders to set domain by what the SOLVER reasons about, so an honest
+# geometry->graph reduction declares domain="combinatorics" and the gate never fired.
+# Measured: 0 of 7 NATIVE modules could ever trip it.  Guard on the paper's own arXiv
+# categories instead; the builder does not choose those.
+NON_DISCRETE_CATS = {
+    "math.AG","math.AC","math.RA","math.QA","math.RT","cs.SC",      # symbolic/algebraic
+    "math.MG","math.DG","math.GT","math.AT","cs.CG",                # geometric
+    "math.OC","math.DS","math.NA","math.AP","math.CA","math.FA",    # analytic/dynamic
+    "math.PR","math-ph","math.SP","eess.SY","cs.SY",
+}
+_pid = os.path.basename(os.path.dirname(os.path.abspath(p)))
+_cats = set()
+try:
+    for _line in open("papers/papers.jsonl"):
+        _r = json.loads(_line)
+        if _r.get("arxiv_id") == _pid:
+            _cats = set(_r.get("all_cats", "").split()); break
+except OSError:
+    pass
+_paper_is_non_discrete = bool(_cats & NON_DISCRETE_CATS)
+
+if _paper_is_non_discrete and NAT["core"] in DISCRETE_CORE and not NAT["reduction"]:
+    print(f"ERROR: {_pid} is categorised {sorted(_cats & NON_DISCRETE_CATS)} but ships\n"
+          f"       core={NAT['core']!r} with reduction=None.  A non-discrete paper\n"
+          "       rendered as a discrete search is a discretised analogue: either\n"
+          "       build the family in the paper's own objects, or name the section\n"
+          "       that licenses the surrogate in NATIVE['reduction'] (or\n"
+          "       PROBLEM_PROFILE['reduction']['citation']).  See STEP 0.")
     sys.exit(1)
 
 _track = "discretised analogue" if NAT["reduction"] else "native"

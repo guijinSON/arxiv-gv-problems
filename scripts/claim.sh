@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# Claim the next free paper.  Usage: scripts/claim.sh [arxiv_id]
+# Claim the next paper.  Usage: scripts/claim.sh [arxiv_id]
+# With no argument, selection is DEFICIT-BASED and STRATIFIED -- see
+# scripts/pick_paper.py.  The old rule took the first free line of
+# papers/papers.jsonl, which is grouped by family, so it handed out 73
+# consecutive "additive combinatorial structures" papers; that rule reproduced
+# the corpus's combinatorial skew by construction.
+# Set CLAIM_EXPLAIN=1 to see the deficit table before the pick.
 # Race-safe: a claim is a new file claims/<id>.json pushed to the shared repo.
-# If two people grab the same paper, the second push is rejected; we re-sync and
-# take the next free one. Run from a CLEAN working tree.
+# If two people grab the same paper, the second push is rejected; we re-sync,
+# EXCLUDE the contested id and draw again. Run from a CLEAN working tree.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 WHO="$(git config user.name 2>/dev/null || echo anon)"
@@ -13,6 +19,10 @@ if [ -n "$(git status --porcelain)" ]; then
   echo "ERROR: working tree not clean — submit or stash first."; exit 5
 fi
 
+CONTESTED=""          # ids we lost a race on; never re-drawn this run
+EXPLAIN_FLAG=""
+[ -n "${CLAIM_EXPLAIN:-}" ] && EXPLAIN_FLAG="--explain"
+
 for attempt in $(seq 1 200); do
   git fetch -q origin main || { echo "ERROR: git fetch failed."; exit 2; }
   git reset --hard -q origin/main
@@ -20,18 +30,14 @@ for attempt in $(seq 1 200); do
     pick="$WANT"
     [ -f "claims/$pick.json" ] && { echo "ERROR: $pick already claimed."; exit 4; }
   else
-    pick="$(python3 - <<'PY'
-import json, os
-for line in open("papers/papers.jsonl"):
-    pid = json.loads(line)["arxiv_id"]
-    if os.path.exists(f"claims/{pid}.json"):    continue
-    if os.path.isdir(f"results/{pid}"):         continue
-    print(pid); break
-PY
-)"
+    pick="$(python3 scripts/pick_paper.py --exclude "$CONTESTED" $EXPLAIN_FLAG)"
+    rc=$?
+    EXPLAIN_FLAG=""
+    if [ $rc -eq 3 ]; then echo "NO_FREE_PAPERS_LEFT"; exit 3; fi
+    if [ $rc -ne 0 ] || [ -z "$pick" ]; then
+      echo "ERROR: scripts/pick_paper.py failed (rc=$rc). Not claiming."; exit 4
+    fi
   fi
-  [ -z "$pick" ] && { echo "NO_FREE_PAPERS_LEFT 🎉"; exit 3; }
-
   printf '{"paper":"%s","who":"%s","status":"in_progress","claimed_at":"%s"}\n' \
     "$pick" "$WHO" "$(now)" > "claims/$pick.json"
   git add "claims/$pick.json" && git commit -q -m "claim $pick by $WHO"
@@ -40,6 +46,12 @@ PY
     echo "  next:  bash scripts/run_codex.sh $pick"
     exit 0
   fi
-  echo "  (race lost, retrying...)"; WANT=""
+  if [ -n "$WANT" ]; then
+    echo "ERROR: $WANT was claimed by someone else while we were pushing."; exit 4
+  fi
+  CONTESTED="${CONTESTED:+$CONTESTED,}$pick"
+  git reset --hard -q origin/main
+  sleep "0.$(( (RANDOM % 7) + 2 ))"
+  echo "  (race lost on $pick, redrawing...)"
 done
 echo "ERROR: could not claim after 200 attempts."; exit 6
