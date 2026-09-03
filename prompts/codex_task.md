@@ -40,6 +40,39 @@ works:
    *k* must grow with instance size), approximation schemes, and any explicit
    construction that solves the search directly.
 
+### Build in the paper's own objects first
+
+Before you reduce anything, write down the problem **in the objects the theorem and
+proof actually use** — vectors, Gram matrices, polynomials over ℚ or ℚ(i),
+coordinates, functions, trajectories, group elements. Ask whether a finite exact
+certificate exists *for that* object: a Gram or Seidel matrix, a rational SOS
+decomposition, a minimal polynomial with an isolating interval, a telescoping
+certificate, an antiderivative, a coordinate/sign construction checked by exact
+inner products, a dual witness. Verification stays exact — the *object* may be
+continuous even when its *certificate* is a finite symbolic thing.
+
+Only after that may you consider a discrete reduction.
+
+**Do not replace a problem over ℝ, ℂ, manifolds, functions or trajectories with a
+graph, SAT/CSP, finite field or integer-coordinate surrogate unless that reduction
+is central to the source paper.** If you do reduce, name the theorem or section that
+licenses it. If you reduce for convenience, the result is a *discretised analogue*:
+say so in `NATIVE["reduction"]`, and do not present it as coverage of the paper's
+native domain.
+
+This has gone wrong repeatedly and silently. Real examples from this corpus:
+
+- An equiangular-lines paper (Gram matrices, Seidel matrices, eigenvalue
+  interlacing) shipped as a 720-vertex adjacency matrix with `verify` documented as
+  *"check any size-k clique"*. **The instance contained no vectors at all.**
+- A quantum-satisfiability paper about complex polynomial systems shipped as an
+  assignment problem over 𝔽₁₁.
+- A kissing-number paper with explicit real coordinates and sign patterns shipped as
+  a conflict graph.
+
+In each case the paper's mathematics was discarded before the solver saw anything,
+every gate passed, and the row was counted as geometric or algebraic coverage.
+
 If after reading you conclude the family fails G, H or V, **say so and stop**. A
 correct rejection is a good outcome. Common disqualifiers: the task is in P; the
 paper's contribution *is* a complete classification (so the answer is a lookup); the
@@ -54,6 +87,24 @@ One file, standard library only, deterministic given `(n, seed)`. No file IO, no
 network, no printing at import. Use `random.Random(seed)`, never global `random`.
 
 ```python
+NATIVE: dict                # what this family really is -- see below.  Required.
+    # {"domain":    one of combinatorics|algebra|geometry|analysis|dynamics|
+    #                       optimization|number_theory|logic
+    #  "core":      what a solver actually searches, one of
+    #               graph|csp_sat|exact_cover|subset_sum|permutation|
+    #               linear_algebra|polynomial_identity|sos|telescoping|
+    #               symbolic_integration|interval_bound|other
+    #  "objects":   the mathematical objects the solver is handed, e.g.
+    #               ["adjacency matrix"] or ["Gram matrix over Q", "unit vectors"]
+    #  "intuition": the insight the problem is meant to test, e.g. "symmetry",
+    #               "invariant", "change of variables", "ansatz", "duality"
+    #  "reduction": None if the family is stated in the paper's own objects;
+    #               otherwise the section/theorem that licenses the surrogate.}
+    # `domain` is NOT the arXiv category -- it is what the solver reasons about.
+    # A geometry paper rendered as an adjacency matrix has domain="combinatorics"
+    # and core="graph".  Labelling it "geometry" is the failure this field exists
+    # to prevent.
+
 DIFFICULTY: dict            # named presets, e.g. {"easy": {...}, "hard": {...}}
                             # each maps to kwargs for make_instance
 
@@ -359,6 +410,9 @@ Write for someone who has **never read the paper** and wants to know, in this or
 what the problem is, whether they can trust it, and how to run it. Keep it tight —
 one screen of prose plus tables. Cover:
 
+- **The three axes up front**: native domain, computational core, intended
+  intuition — copied from `NATIVE`. If `reduction` is set, say plainly that this is
+  a discretised analogue of the paper's problem and name what was discarded.
 - **What the family is**, in plain language. What object is handed to the solver,
   what they must find, and why checking an answer is cheap. Name the paper, link it.
 - **Why it is hard.** The specific theorem and parameter regime you are inside, and

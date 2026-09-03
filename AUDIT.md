@@ -53,3 +53,75 @@ Both were true for all five. The oracle is a weak signal (an LLM is not a SAT
 solver), and the generic panel is blind by construction. Only the domain attack
 discriminates — which is why `606332e` makes it mandatory and `submit.sh` now
 refuses a panel with fewer than four attacks.
+
+
+---
+
+# Second finding: the computational core collapses
+
+The audit above asked whether shipped families were *hard*. A reviewer asked a
+different question — whether they are *diverse* — and the answer is no, in a way
+the family labels actively hide.
+
+## Measured
+
+`scripts/corpus_report.py` classifies each shipped generator by what the solver is
+actually handed:
+
+| computational core | share |
+|---|---|
+| graph / conflict-graph | 42.5% |
+| exact cover | 15.0% |
+| CSP / SAT | 10.0% |
+| other | 32.5% |
+
+**68% of shipped generators are discrete search at the core**, and **11 of 40 carry
+a family label that disagrees with their core** — including both "geometric
+configurations" rows.
+
+## How it happens
+
+Not (only) the triage prompt. The generator compiles native structure into a
+discrete surrogate, and nothing downstream notices:
+
+- `2104.04330` equiangular lines — a paper about Gram matrices, Seidel matrices and
+  eigenvalue interlacing — ships as a 720-vertex adjacency matrix whose `verify`
+  docstring reads *"check any size-k clique"*. **The instance contains no vectors.**
+- `2404.18447` quantum satisfiability over complex polynomial systems ships as an
+  assignment problem over 𝔽₁₁.
+- `2411.04916` kissing numbers, with explicit real coordinates and sign patterns,
+  ships as `planted_spherical_subcode_3colour` over a conflict graph.
+- `2311.15057` rectangle contacts takes the paper's integer-coordinate variant when
+  a real-coordinate one exists.
+
+Every one passed all gates and the oracle pool. The mathematics was discarded
+before the solver saw anything.
+
+The domain-attack audit was already evidence of this and I misread it: families
+fell to Algorithm X, 1-in-3 DPLL and spectral+greedy. Generic discrete solvers do
+not crack genuinely geometric or analytic problems. **The attack that works is a
+measurement of the core.**
+
+## Fixed
+
+- `NATIVE` is now a required module field: domain / core / objects / intuition /
+  reduction. `domain` is what the solver reasons about, not the arXiv category.
+- STEP 0 requires building in the paper's own objects first, and forbids replacing a
+  problem over ℝ, ℂ, manifolds or functions with a graph/SAT/finite-field surrogate
+  unless the paper licenses it — with these four cases quoted as the warning.
+- `submit.sh` refuses a module whose declared core contradicts the instance it hands
+  the solver, and refuses a continuous-domain claim over a discrete core with
+  `reduction=None`. Both real failures are blocked by it; honest declarations pass
+  and are recorded as *discretised analogue*.
+- `scripts/corpus_report.py` reports the corpus by core so the collapse is visible.
+
+## Not fixed
+
+The source pool. 45.7% of the 12,167 strong papers are `graph structures` and only
+5.3% touch any continuous category (math.AP: 6 papers). Better prompts recover some
+diversity from existing papers; a balanced benchmark needs a new retrieval pass
+targeting symbolic computation, real algebraic geometry, dynamical systems, ODEs,
+optimization and special functions — and quotas enforced on **core**, not category.
+
+Until then the accurate claim is **tool-free intuition for finite constructive
+search**, not mathematical intuition.

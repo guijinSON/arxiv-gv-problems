@@ -189,6 +189,49 @@ def _parse_contract(mod, inst, ans):
             pass
     return False, "parse_answer accepted neither the renderer example nor the planted answer"
 rt, rt_why = _parse_contract(m, i, i["answer"])
+
+# --- surrogate gate -------------------------------------------------------
+# A geometry/analysis paper compiled down to an adjacency matrix passes every
+# other check in this file: the module is correct, the gates pass, the oracle
+# fails.  What is lost is the paper's mathematics, before the solver sees
+# anything.  Observed live: an equiangular-lines paper (Gram matrices, Seidel
+# matrices, interlacing) shipped as a 720-vertex graph whose verify() is
+# documented "check any size-k clique" -- no vectors in the instance at all.
+NAT = getattr(m, "NATIVE", None)
+if not isinstance(NAT, dict):
+    print("ERROR: module has no NATIVE dict.  Declare what this family really is\n"
+          "       (domain / core / objects / intuition / reduction) -- see\n"
+          "       prompts/codex_task.md, STEP 1.")
+    sys.exit(1)
+missing = [k for k in ("domain", "core", "objects", "intuition", "reduction")
+           if k not in NAT]
+if missing:
+    print(f"ERROR: NATIVE is missing {missing} -- see prompts/codex_task.md, STEP 1.")
+    sys.exit(1)
+
+CONTINUOUS = {"geometry", "analysis", "dynamics", "optimization"}
+DISCRETE_CORE = {"graph", "csp_sat", "exact_cover", "subset_sum", "permutation"}
+keys = " ".join(k for k in i if k != "answer").lower()
+graphy = any(w in keys for w in ("adjac", "edges", "neighb", "vertex", "vertic", "conflict"))
+
+if graphy and NAT["core"] not in DISCRETE_CORE:
+    print(f"ERROR: the solver is handed {sorted(k for k in i if k != 'answer')},\n"
+          f"       which is a graph, but NATIVE['core'] says {NAT['core']!r}.\n"
+          "       Label the core by what the solver actually searches.")
+    sys.exit(1)
+
+if NAT["domain"] in CONTINUOUS and NAT["core"] in DISCRETE_CORE and not NAT["reduction"]:
+    print(f"ERROR: NATIVE says domain={NAT['domain']!r} but core={NAT['core']!r} with\n"
+          "       reduction=None.  A continuous-domain paper rendered as a discrete\n"
+          "       search is a discretised analogue: either build the family in the\n"
+          "       paper's own objects, or set NATIVE['reduction'] to the section that\n"
+          "       licenses the surrogate.  See prompts/codex_task.md, STEP 0.")
+    sys.exit(1)
+
+_track = "discretised analogue" if NAT["reduction"] else "native"
+print(f"== native check ==\n  domain={NAT['domain']} core={NAT['core']} "
+      f"intuition={NAT['intuition']} [{_track}]")
+# --------------------------------------------------------------------------
 # canonical_key must be a function of the instance, not of the call.  A key that
 # is not deterministic cannot detect a duplicate; we cannot check the harder
 # property (invariance under relabelling) without family-specific machinery, so
