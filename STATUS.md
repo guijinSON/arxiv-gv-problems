@@ -1,23 +1,35 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **78 / 12,167** resolved (0.64%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **79 / 12,167** resolved (0.65%)
 
 | state | count |
 |---|---:|
-| ✅ done | 39 |
+| ✅ done | 40 |
 | 🚫 rejected (documented) | 39 |
-| 🔄 in progress | 4 |
-| ⚪ free | 12,085 |
+| 🔄 in progress | 16 |
+| ⚪ free | 12,072 |
 | **total** | **12,167** |
 
 ## In progress
 
 | paper | who | claimed |
 |---|---|---|
-| `2502.08624` | Wongi-Jang | 2026-09-03T03:22 |
 | `1604.08603` | GUIJIN SON | 2026-09-03T03:58 |
 | `2410.07666` | GUIJIN SON | 2026-09-03T03:58 |
 | `2512.24037` | GUIJIN SON | 2026-09-03T03:58 |
+| `2411.16149` | GUIJIN SON | 2026-09-03T04:36 |
+| `2601.08530` | GUIJIN SON | 2026-09-03T04:37 |
+| `2604.25734` | GUIJIN SON | 2026-09-03T04:37 |
+| `1604.00052` | GUIJIN SON | 2026-09-03T06:44 |
+| `1103.0203` | GUIJIN SON | 2026-09-03T06:44 |
+| `2605.28674` | GUIJIN SON | 2026-09-03T06:44 |
+| `2601.07658` | GUIJIN SON | 2026-09-03T06:44 |
+| `2204.09356` | GUIJIN SON | 2026-09-03T06:44 |
+| `2411.10209` | GUIJIN SON | 2026-09-03T06:44 |
+| `2604.13514` | GUIJIN SON | 2026-09-03T06:44 |
+| `2601.05272` | GUIJIN SON | 2026-09-03T06:45 |
+| `2304.13478` | GUIJIN SON | 2026-09-03T06:45 |
+| `2508.18162` | GUIJIN SON | 2026-09-03T06:45 |
 
 ## By family
 
@@ -36,4 +48,4 @@
 | words and permutations | 5 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-03 04:34Z by `scripts/status.sh --write`_
+_regenerated 2026-09-03 06:56Z by `scripts/status.sh --write`_
