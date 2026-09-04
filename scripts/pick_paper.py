@@ -25,10 +25,25 @@ Exit codes: 0 picked (id on stdout) / 3 nothing free / 4 internal error.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import random
 import sys
+
+# The feedback loop: audit/attack_families.json records what actually cracked each
+# shipped family; scripts/solver_prior.py turns those measurements into a prior over
+# unbuilt papers; this file steers on that prior.  Steering on arXiv category was
+# measured to be a poor proxy -- constraint_search absorbed math.MG, math.GR,
+# math.LO, cs.GT and math.CO alike, so picking a geometry paper did not produce a
+# geometry question.
+_sp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "solver_prior.py")
+try:
+    _spec = importlib.util.spec_from_file_location("solver_prior", _sp)
+    solver_prior = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(solver_prior)
+except Exception:            # keep selection working if the prior is unavailable
+    solver_prior = None
 
 # --- bucket definition ------------------------------------------------------
 # Keyed on arXiv categories only, because that is all that exists for an
@@ -51,7 +66,7 @@ BUCKET_CATS = [
 # supply: dynamics_opt has ~524 papers total and ~25% acceptance, so it can never
 # supply more than roughly 131 problems.  scripts/corpus_report.py --gate holds the
 # release to these; this file only steers what gets ATTEMPTED next.
-TARGET_SHARE = {
+CATEGORY_TARGET_SHARE = {
     "discrete":         0.34,
     "symbolic_algebra": 0.18,
     "geometry_real":    0.12,
@@ -63,19 +78,56 @@ TARGET_SHARE = {
     "other":            0.01,
 }
 
+# PRIMARY axis: the predicted SOLVER FAMILY -- the skill the question will exercise.
+# Deliberately under-weights constraint_search, which is 74.7% of the free pool's
+# predicted supply and 57% of everything measured so far.  A bucket that cannot
+# supply is skipped rather than blocking, so these are steering pressures, not
+# guarantees -- the pool caps dense_subgraph_spectral at ~186 papers and
+# brute_force_structure at ~226.
+TARGET_SHARE = {
+    "constraint_search":           0.30,
+    "paper_constructive":          0.24,
+    "subset_sum_knapsack":         0.16,
+    "brute_force_structure":       0.10,
+    "dense_subgraph_spectral":     0.08,
+    "linear_algebra_finite_field": 0.07,
+    "unpredicted":                 0.05,
+}
 
-def bucket_of(all_cats: str) -> str:
-    """First matching bucket, in BUCKET_CATS order.
 
-    Order matters: `discrete` is LAST so that a math.AG paper cross-listed to
-    math.CO counts as symbolic_algebra.  The old accounting did the opposite and
-    hid most non-discrete work inside the discrete bucket.
-    """
+def category_of(all_cats: str) -> str:
+    """arXiv-category bucket. Kept for the --explain table and as a fallback only;
+    it is NOT the selection axis any more."""
     cats = set(all_cats.split())
     for name, keys in BUCKET_CATS:
         if cats & keys:
             return name
     return "other"
+
+
+def bucket_of(rec) -> str:
+    """The selection bucket: MEASURED solver family if we have one for this paper,
+    else the PREDICTED one.  Measurement always beats prediction, which is what
+    makes this a loop rather than a fixed heuristic."""
+    if isinstance(rec, str):                      # legacy callers passed all_cats
+        rec = {"all_cats": rec}
+    pid = rec.get("arxiv_id")
+    if pid and pid in _MEASURED:
+        return _MEASURED[pid]
+    if solver_prior is not None:
+        return solver_prior.predict(rec)[0]
+    return category_of(rec.get("all_cats", ""))
+
+
+def _load_measured(root):
+    try:
+        with open(os.path.join(root, "audit", "attack_families.json")) as fh:
+            return {k: v.get("family") for k, v in json.load(fh).get("measured", {}).items()}
+    except (OSError, ValueError):
+        return {}
+
+
+_MEASURED = {}
 
 
 def has_hardness(rec: dict) -> bool:
@@ -125,7 +177,7 @@ def census(root: str, recs: dict):
                     st = json.load(fh).get("status")
             except (OSError, ValueError):
                 continue
-            b = bucket_of(recs.get(pid, {}).get("all_cats", ""))
+            b = bucket_of(recs.get(pid, {}) or {"all_cats": ""})
             if st == "done":
                 accepted[b] = accepted.get(b, 0) + 1
             elif st in ("in_progress", "claimed"):
@@ -148,7 +200,9 @@ def priorities(accepted: dict, inprog: dict):
 
 
 def pick(root: str, exclude: set, rng: random.Random, explain: bool = False):
+    global _MEASURED
     recs, order = load(root)
+    _MEASURED = _load_measured(root)
     accepted, inprog, taken = census(root, recs)
     taken |= exclude
     prio, committed = priorities(accepted, inprog)
@@ -166,15 +220,15 @@ def pick(root: str, exclude: set, rng: random.Random, explain: bool = False):
         if "/" in pid:
             skipped_legacy += 1
             continue
-        free_by_bucket.setdefault(bucket_of(recs[pid].get("all_cats", "")), []).append(pid)
+        free_by_bucket.setdefault(bucket_of(recs[pid]), []).append(pid)
 
     if explain:
-        print(f"{'bucket':18} {'target':>7} {'acc':>4} {'wip':>4} {'have':>5} "
+        print(f"{'solver family':28} {'target':>7} {'acc':>4} {'wip':>4} {'have':>5} "
               f"{'priority':>9} {'free':>6} {'w/hard':>7}", file=sys.stderr)
         for b in sorted(prio, key=lambda x: -prio[x]):
             fr = free_by_bucket.get(b, [])
             nh = sum(1 for p in fr if has_hardness(recs[p]))
-            print(f"{b:18} {TARGET_SHARE[b]:>7.2f} {accepted.get(b,0):>4} "
+            print(f"{b:28} {TARGET_SHARE[b]:>7.2f} {accepted.get(b,0):>4} "
                   f"{inprog.get(b,0):>4} {accepted.get(b,0)+inprog.get(b,0):>5} "
                   f"{prio[b]:>9.2f} {len(fr):>6} {nh:>7}", file=sys.stderr)
         print(f"committed (accepted+in_progress) = {committed}", file=sys.stderr)
