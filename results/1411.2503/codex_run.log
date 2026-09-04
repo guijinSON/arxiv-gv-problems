@@ -1,0 +1,3356 @@
+Reading additional input from stdin...
+2026-09-04T12:32:33.396446Z ERROR codex_skills_extension::host_service: failed to install system skills: io error while remove existing system skills dir: Directory not empty (os error 39)
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/1411.2503
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a06c67-f9ae-7d62-95cb-3a6665d18dd4
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know a certificate for it by
+  construction*. Four routes count:
+  - **inverse generation** — sample the answer first and build the problem around it;
+  - **theorem-backed construction** — a theorem in the paper guarantees the object you
+    just assembled has the property, and the certificate is what its proof produces;
+  - **transformation of a known instance** — apply a structure-preserving map to an
+    instance whose certificate you hold, and carry the certificate through the map;
+  - **composition of identities** — build the instance from pieces whose certificates
+    compose: a product of telescoping terms, a sum of squares assembled from known
+    squares, a substitution chain with a known inverse.
+
+  What is forbidden is shipping a family whose answer you obtained by *solving* the
+  instance. If you had to search for it, so will your generator, and the family will
+  not scale.
+- **H — hard.** Hard in the sense your `TRACK` declares — see **TWO TRACKS** below.
+  Under either track the answer space must be far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+## The witness rule
+
+The answer must be a **witness**: a concrete object whose validity is decided by
+inspecting only the object and the instance. No search, no oracle, no appeal to a
+theorem the checker cannot execute.
+
+That is a statement about the *checker*, not about the answer's type. So certified
+negatives, certified optima and numeric answers **are admissible** — provided the
+certificate is itself such an object:
+
+| the claim | the certificate that makes it admissible |
+|---|---|
+| no solution exists | a Farkas certificate, a Nullstellensatz or Positivstellensatz certificate, a bounded-length refutation |
+| this is the optimum | a primal–dual pair with complementary slackness, or a feasible point plus a dual bound that meets it |
+| this real number | an algebraic number as (minimal polynomial, isolating interval with rational endpoints) |
+| this quantity lies here | a rigorous enclosure with **exact rational** endpoints |
+| this system is stable | a Lyapunov or barrier certificate with rational coefficients |
+
+**But — the discriminating test, and it is the one that matters:**
+
+> If the certificate is simply the output of a polynomial-time algorithm run on the
+> instance, you have not found a way past H. You have found the reason the family
+> fails it.
+
+An LP dual, a Gram matrix read off by coefficient matching, an SOS certificate that an
+SDP returns, a Lyapunov function that a linear solve produces, a root isolation — each
+is a perfectly good *witness* and a disqualifying *family*. The witness rule and the
+hardness rule are separate gates, and a certificate can clear the first while failing
+the second.
+
+Ask this at **STEP 0, before you write any code.** It is one question — *what algorithm
+produces this certificate, and what does it cost?* — and the paper's own theorem
+statements usually answer it in a line.
+
+The five algebraic papers rejected most recently were all rejected on exactly this
+point, and every one of them cost a full builder run first:
+
+| paper | what produces the certificate |
+|---|---|
+| `2605.28674` | disjunctive SOS: the paper reduces certificate search to an SDP, with SOCP and LP refinements |
+| `2504.18110` | the Gram matrix and the switching root are written out explicitly in Section 2 |
+| `2211.12582` | a necessary-and-sufficient spectral characterisation; the dimension is read off an eigenvalue multiplicity |
+| `1910.13133` | the witness is given by an explicit matrix formula |
+| `2512.19313` | the witness is a direct evaluation of a displayed trinomial construction — found after reading all 31 pages and the LaTeX source |
+
+One sentence applied at triage would have stopped all five. Instead each was claimed,
+read end to end, and rejected: five builder runs, roughly 90 minutes and 1.5M tokens, to
+rediscover a fact stated in each paper's own main theorem.
+
+---
+
+## TWO TRACKS — say which hardness you are claiming
+
+Declare `TRACK = "A"` or `TRACK = "B"` at module level. Required.
+
+**Track A — structural hardness.** No known efficient general method for the
+distribution you generate. Note *distribution*, not *worst case*: worst-case NP-hardness
+is a different claim and does not imply this one. `2503.01929` sat exactly inside the
+strongly NP-hard 3-PARTITION band and fell to Algorithm X in under five seconds, because
+random instances in that band are not hard. `PROBLEM_PROFILE["hardness_basis"]` must
+name the theorem *and* the parameter regime; G5's baseline cost is the evidence.
+
+**Track B — no-tool compression.** An efficient algorithm exists, and you say so. The
+claim is narrower and different: the evaluated model has no sandbox, no CAS and no
+solver, so it must find and execute a compact route unaided. The difficulty is the gap
+between the mechanical route (10⁶ operations — fine for a solver, impossible by hand)
+and the compact one (a change of variables, an invariant, a symmetry — a dozen
+operations, if you see it).
+
+**Track B families must be honest about the algorithm that exists.** In
+`hardness_basis`, name it, give its complexity, and give its measured cost at the
+shipping preset. A Track B family that hides the algorithm is a Track A claim, and a
+false one.
+
+The track also changes what G6 means:
+
+- **Track A** — every entry in `attacks` must have `successes == 0`, the domain-standard
+  algorithm included. Unchanged from today.
+- **Track B** — the domain-standard algorithm is *expected* to succeed. Report it under
+  a separate key `reference_algorithm` (name, complexity, wall-clock, operation count),
+  **not** inside `attacks`; that number is your `hardness_basis`, not a failure.
+  `attacks` still needs its ≥4 failing entries, and for Track B the fourth is an attack a
+  solver could actually run *in context, without tools* — the by-hand heuristic, the
+  greedy route, the obvious ansatz. If you cannot find a fourth in-context attack that
+  fails, the family is guessable by hand and you should reject it.
+
+Why the label is mandatory: without it the project drifts silently between
+complexity-theoretic hardness and practical model difficulty. Both are defensible
+benchmarks. They are not the same benchmark, and a corpus that mixes them unlabelled can
+support neither claim. Every family shipped so far is an unlabelled Track A claim, and
+`AUDIT.md` records five where that claim was simply false.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the four things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+4. **What produces the certificate.** Find the theorem that hands you the witness and
+   ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
+   characterisation", "an explicit formula" or "a classification table", then **the
+   family fails H on Track A** — not the witness rule. The certificate is a perfectly
+   good witness; what it is not is hard to obtain. Those are separate gates (see the
+   discriminating test above).
+
+   You then have exactly two honest options, and you must pick one **before** writing
+   code:
+
+   - **Reject**, if the compact route is no shorter than the mechanical one. This is
+     the cheapest rejection available and the one most often skipped: five recent
+     rejections each cost a full builder run to reach a conclusion stated in the
+     paper's own main theorem.
+   - **Declare `TRACK = "B"`**, if — and only if — running that algorithm by hand is
+     genuinely out of reach for a model with no sandbox, *and* a compact route exists
+     for someone who sees the structure. Name the algorithm and its measured cost in
+     `hardness_basis`, as **TWO TRACKS** requires. An SDP over a 40×40 Gram matrix is
+     not something a model executes in its head; a 2×2 linear solve is. Be honest
+     about which one you have.
+
+   What is never acceptable is declaring Track A while knowing the algorithm exists.
+
+### Build in the paper's own objects first
+
+Before you reduce anything, write down the problem **in the objects the theorem and
+proof actually use** — vectors, Gram matrices, polynomials over ℚ or ℚ(i),
+coordinates, functions, trajectories, group elements. Ask whether a finite exact
+certificate exists *for that* object: a Gram or Seidel matrix, a rational SOS
+decomposition, a minimal polynomial with an isolating interval, a telescoping
+certificate, an antiderivative, a coordinate/sign construction checked by exact
+inner products, a dual witness. Verification stays exact — the *object* may be
+continuous even when its *certificate* is a finite symbolic thing.
+
+Only after that may you consider a discrete reduction.
+
+**Do not replace a problem over ℝ, ℂ, manifolds, functions or trajectories with a
+graph, SAT/CSP, finite field or integer-coordinate surrogate unless that reduction
+is central to the source paper.** If you do reduce, name the theorem or section that
+licenses it. If you reduce for convenience, the result is a *discretised analogue*:
+declare `reduction_kind="convenience"` in `PROBLEM_PROFILE` (and mirror the citation
+text in `NATIVE["reduction"]`), and do not present it as coverage of the paper's native
+domain. Such a family is archived, never counted in the native release — see
+PROBLEM_PROFILE in STEP 1.
+
+This has gone wrong repeatedly and silently. Real examples from this corpus:
+
+- An equiangular-lines paper (Gram matrices, Seidel matrices, eigenvalue
+  interlacing) shipped as a 720-vertex adjacency matrix with `verify` documented as
+  *"check any size-k clique"*. **The instance contained no vectors at all.**
+- A quantum-satisfiability paper about complex polynomial systems shipped as an
+  assignment problem over 𝔽₁₁.
+- A kissing-number paper with explicit real coordinates and sign patterns shipped as
+  a conflict graph.
+
+In each case the paper's mathematics was discarded before the solver saw anything,
+every gate passed, and the row was counted as geometric or algebraic coverage.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, deterministic given `(n, seed)`. No file IO, no network, no printing at
+import. Use `random.Random(seed)`, never global `random`.
+
+**What you may import.** The standard library, and `gvlib/` from the repo root. `gvlib`
+is standard-library-only itself, so importing it keeps the module dependency-free: it
+carries exact rationals with JSON encoding (`gvlib.rationals`), multivariate polynomials
+over ℚ (`gvlib.sparse_poly`), rational matrices with Bareiss determinant, rank, solve,
+Gram and LDL/PSD (`gvlib.exact_matrices`), and Sturm sequences and real-root isolation
+(`gvlib.roots`). Use it — a certificate that is a polynomial identity, a Gram matrix or
+an isolating interval should not cost you a day of writing `Fraction` row reduction for
+the fifth time. Nothing else may be imported.
+
+`gvlib` sits at the repo root and your module sits in `results/<id>/`, so the import
+needs the root on `sys.path` — `emit.sh` and `submit.sh` run from the root and find it,
+but `harden.py` is invoked from your own directory and will not. Do it once, at the top,
+and degrade gracefully:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals
+except ImportError:                 # not present: stay standard-library-only
+    exact_matrices = rationals = None
+```
+
+If it does not import, stay standard-library-only and say so in the README rather than
+adding a dependency. Do not let a missing helper library become the reason a family
+ships as a graph.
+
+**`inst["answer"]` must be JSON-native.** `emit.sh` writes it straight into
+`artifacts/<id>.jsonl` with `json.dumps`, so a `Fraction`, a `complex` or a custom class
+does not fail your selftest — it fails the emit, after the expensive part is paid for.
+Serialise: **rationals as `[num, den]`**, **monomials as exponent lists**, polynomials as
+lists of `[[num, den], [e1, e2, ...]]`, matrices as lists of lists. `json.loads(
+json.dumps(a)) == a` must hold for every answer the family produces, and whatever
+`verify` accepts, `parse_answer` must be able to return.
+
+```python
+TRACK: str                  # "A" or "B" -- see TWO TRACKS.  Required.
+    # scripts/corpus_report.py reads this straight into its `track` column; anything
+    # that is not "A" or "B" is recorded as "unknown", which is what every family
+    # shipped before this prompt reads as today.
+
+PROBLEM_PROFILE: dict       # what this family really is, on a controlled vocabulary.
+    # PREFERRED.  NATIVE (below) is the LEGACY form and is still what submit.sh reads,
+    # so declare BOTH and keep them consistent.  Seven shipped modules declare only
+    # NATIVE; they stay valid and nothing here orphans them.
+    #
+    # The token spellings below are the ones scripts/corpus_report.py reads.  Inventing
+    # a synonym does not produce a warning -- it silently drops your row out of the
+    # coverage counts, which is the exact failure mode this schema exists to stop.
+    #
+    # {"native_domain":  combinatorics|algebra|geometry|analysis|dynamics|
+    #                    optimization|number_theory|logic
+    #                    -- what the SOLVER reasons about, NOT the arXiv category.
+    #
+    #  "object_regime":  what kind of object the solver actually manipulates:
+    #      finite_discrete     finite, exactly representable as ints and structures
+    #      finite_field        elements of GF(q)
+    #      integer_lattice     integer vectors / lattice points
+    #      rational_exact      rationals, polynomials, matrices over Q; exact
+    #                          arithmetic end to end, no approximation anywhere
+    #      real_algebraic      the object is a real number, but the certificate is a
+    #                          finite exact symbolic thing -- (minimal polynomial,
+    #                          isolating interval with rational endpoints)
+    #      continuous_analytic the object lives in R, C, a manifold, a function space
+    #                          or a trajectory.  Then the certificate MUST be exact:
+    #                          a rational SOS, a Lyapunov function over Q, or a
+    #                          rigorous enclosure with exact rational endpoints
+    #                          (declare certificate_form="interval" for that last one).
+    #                          A float anywhere in verify() is a bug, not a regime.
+    #
+    #  "computational_core":  what the solver actually searches, one of
+    #                    graph|csp_sat|exact_cover|subset_sum|permutation|
+    #                    linear_algebra|polynomial_identity|sos|telescoping|
+    #                    symbolic_integration|interval_bound|other
+    #
+    #  "certificate_form":  the shape of the answer, one of
+    #                    sos|telescoping|symbolic_integral|algebraic_number|
+    #                    matrix_certificate|interval|polynomial|rational|exact_symbolic
+    #                        -- these count toward the release quota on symbolic
+    #                           certificates
+    #                    integer_tuple
+    #                        -- this one does not, and it is what the corpus already
+    #                           has far too much of.  Do not reach for it by reflex:
+    #                           an answer that IS a tuple of small ints is one thing,
+    #                           an answer flattened into one to make G4 easy to report
+    #                           is the collapse this schema exists to measure.
+    #  "native_objects": the objects the solver is HANDED, e.g.
+    #                    ["Gram matrix over Q", "unit vectors"].  If the honest answer
+    #                    is ["adjacency matrix"], write that and take the consequence.
+    #  "verification_operations": the exact operations verify() performs, e.g.
+    #                    ["exact rational inner product", "PSD check via LDL",
+    #                     "sign comparison"].  If this list is nothing but set
+    #                    membership and integer comparison, your core is discrete
+    #                    whatever native_domain says.
+    #
+    #  "domain_essentiality":  how load-bearing the paper's mathematics is:
+    #      native               ESSENTIAL -- the paper's objects are handed to the
+    #                           solver AND verify() operates on them; delete the domain
+    #                           structure and the problem is gone
+    #      licensed_reduction   REPRESENTATIONAL -- a reduction the paper itself
+    #                           licenses; the native objects are visible but the search
+    #                           is carried by the surrogate
+    #      discretised_analogue ANALOGUE -- the paper's mathematics was compiled away
+    #                           before the solver saw anything
+    #
+    #  "reduction_kind":  none | paper_licensed | convenience
+    #  "reduction":       None when reduction_kind == "none" -- it MUST be falsy then,
+    #                     or the report labels a native family a discretised analogue.
+    #                     Otherwise the citation string: "Section 5, Lemma 5 (...)".
+    #  "reduction_source": paper_central | external_standard | benchmark_convenience
+    #                     -- the finer distinction reduction_kind cannot spell.
+    #                     paper_central     -> reduction_kind "paper_licensed"
+    #                     external_standard -> reduction_kind "convenience": a textbook
+    #                                          reduction is not this paper's
+    #                                          mathematics and must not buy coverage
+    #                     benchmark_convenience -> reduction_kind "convenience"
+    #
+    #  "intuition_type":  one of, and write it with SPACES, not underscores --
+    #                     "symmetry" | "invariant" | "duality" |
+    #                     "change of variables" | "ansatz" | "extremal bound" |
+    #                     "decomposition" | "constraint propagation" |
+    #                     "reduction recognition" | "search pruning".
+    #                     The reporter matches this as prose: "change_of_variables"
+    #                     with underscores does NOT match and lands as
+    #                     "unclassified".  All ten match when written with spaces.
+    #  "intuition_description": one sentence: the insight, and what a solver who does
+    #                     not have it must do instead.
+    #  "hardness_basis":  one sentence, and it must match TRACK.  Track A: the theorem
+    #                     and the parameter regime.  Track B: the algorithm that
+    #                     exists, its complexity, its measured cost at the shipping
+    #                     preset, and why the compact route is not mechanically
+    #                     executable in context.
+    #  "max_answer_tokens": your MEASURED worst-case serialised answer length at the
+    #                     shipping preset, in tokens.  See G9(c) for the cap.}
+    #
+    # **Only `domain_essentiality == "native"` together with `reduction_kind` in
+    # {none, paper_licensed} counts toward native-domain coverage.**  Everything else
+    # is recorded honestly and reported separately, and `benchmark_convenience` is
+    # archived and excluded from the native release entirely.  Declaring
+    # `discretised_analogue` costs you a coverage row.  Declaring `native` when the
+    # solver is handed an adjacency matrix costs the corpus its credibility, which is
+    # the failure this schema exists to prevent.
+
+NATIVE: dict                # LEGACY form.  Still REQUIRED: submit.sh reads this one.
+    # {"domain":    one of combinatorics|algebra|geometry|analysis|dynamics|
+    #                       optimization|number_theory|logic
+    #  "core":      what a solver actually searches, one of
+    #               graph|csp_sat|exact_cover|subset_sum|permutation|
+    #               linear_algebra|polynomial_identity|sos|telescoping|
+    #               symbolic_integration|interval_bound|other
+    #  "objects":   the mathematical objects the solver is handed, e.g.
+    #               ["adjacency matrix"] or ["Gram matrix over Q", "unit vectors"]
+    #  "intuition": the insight the problem is meant to test, e.g. "symmetry",
+    #               "invariant", "change of variables", "ansatz", "duality"
+    #  "reduction": None if the family is stated in the paper's own objects;
+    #               otherwise the section/theorem that licenses the surrogate.}
+    # Derive it from PROBLEM_PROFILE and keep the two consistent:
+    #   domain    <- native_domain        core      <- computational_core
+    #   objects   <- native_objects       reduction <- reduction  (same value)
+    #   intuition <- intuition_type + ": " + intuition_description
+    # `domain` is NOT the arXiv category -- it is what the solver reasons about.
+    # A geometry paper rendered as an adjacency matrix has domain="combinatorics"
+    # and core="graph".  Labelling it "geometry" is the failure this field exists
+    # to prevent.
+
+DIFFICULTY: dict            # exactly four presets, named "demo", "easy", "medium"
+                            # and "hard", in that order -- harden.py walks the dict
+                            # in insertion order, so it is the ladder, ascending.
+                            # Each maps to kwargs for make_instance.
+                            # "demo" is the smallest setting the family supports:
+                            # a person must be able to solve it and check the
+                            # answer on paper.  It is an illustration, not a
+                            # difficulty level -- harden.py skips it, and
+                            # SHIPPING_DIFFICULTY must never name it.
+
+def make_instance(n, seed=0, **params) -> dict
+    """Build an instance whose certificate you know BY CONSTRUCTION -- by inverse
+    generation, theorem-backed construction, transformation of a known instance, or
+    composition of identities (see G above). Never by solving the instance you just
+    built. Returns a dict containing key "answer" (the certificate, JSON-native)
+    plus all data the solver needs. `n` is the size parameter; larger n must mean
+    harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT.
+
+    Hint modes, for G9: when os.environ.get("GV_HINT_MODE") is "structural" append
+    STRUCTURAL_HINT, when it is "placebo" append PLACEBO_HINT, and otherwise append
+    NOTHING. The default MUST be no hint -- emit.sh, submit.sh and the STEP 4
+    hardening run all call render(), and a hint leaking into artifacts/ would
+    silently change what the dataset is."""
+
+STRUCTURAL_HINT: str        # ONE sentence naming the structural insight -- the thing
+                            # intuition_description says this family tests.  Required.
+                            # "The columns of the Gram matrix repeat with period 7."
+PLACEBO_HINT: str           # ONE sentence of the same length and register carrying no
+                            # structural information.  Required.  "This problem
+                            # rewards being careful with the indexing."  See G9(a).
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
+    # {"description": a human-readable grammar/bounds statement, e.g.
+    #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed
+    #                  monomial basis, rational coefficients with |num|,|den| < 2^32"
+    #  "bounds":      the numeric bounds that make it finite, e.g.
+    #                 {"n_squares": 6, "max_degree": 4, "basis": 45, "coeff_bits": 32}}
+    #
+    # This field exists because requiring an integer `search_space` silently forces
+    # every family to be a tuple of small integers.  Measured over the first 40
+    # shipped generators: search_space returned an int 40/40 and None 0/40, and not
+    # one answer was a rational, a polynomial or a symbolic expression -- because a
+    # symbolic answer has no uniformly-sampleable candidate set, so G4 could not be
+    # reported and the family was never built.
+    #
+    # Declaring bounds fixes that.  An antiderivative is infinite; an antiderivative
+    # over a fixed operator set with depth <= 4 and coefficients under 2^16 is a
+    # finite, countable, samplable space.  Bound the language and the continuous
+    # families become expressible without weakening exact verification at all.
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of CERTIFICATE_LANGUAGE at these parameters -- the space
+    `random_candidate` samples from, not a looser superset. Return None ONLY if
+    the declared language is genuinely uncountable; then G5 must carry a sampled
+    density estimate instead."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+- **Keep the answer writable.** The solver has to type it out, by hand, with no
+  scratchpad. An answer running to thousands of elements measures transcription
+  stamina, not intuition, and the failures it produces tell you nothing. G9(c) puts a
+  hard cap on this.
+- **Serialise rationals and polynomials the way `parse_answer` reads them back**, and
+  say so in the statement: rationals as `num/den`, monomials as exponent lists. The
+  rendered form and the JSON form must agree.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship** — except where a part is explicitly marked
+*recorded, not gated*, which is true of G9(a) and of nothing else.
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples drawn from `CERTIFICATE_LANGUAGE`, measured **structure-aware** (see below). Report hits/total. |
+| **G5 density + baseline cost** | A real number, never "not feasible": an exact solution count where enumeration works at any preset, otherwise a sampled density estimate — **plus** the measured cost of your strongest attack. See below. |
+| **G6 adversary panel** | ≥4 attacks in `attacks`, each FAILING across ≥8 seeds. Track A: three cheap probes **plus the standard algorithm for the problem class**. Track B: three cheap probes plus an in-context attack, with the standard algorithm reported separately under `reference_algorithm`. See TWO TRACKS and below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+| **G9 no-tool suitability** | Two gated parts — the family still defeats the oracle pool **with** its structural hint, and the answer and route fit the caps — plus a three-arm diagnostic (bare / hinted / placebo) that is **recorded, never gated**. See below. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G5: measure difficulty, do not infer it from cardinality
+
+Across the first 40 shipped generators, `enumerate_all` returned `None` at the
+**shipping** preset **40/40**. G5 was therefore measured on a reduced instance
+(n = 4–40, against shipping n up to 512) or carried no number at all (7/40). It
+never described the instance that actually ships — and a density at n=4 says
+nothing about n=32.
+
+Worse, a reduced-preset number can be passed while being alarming: `2104.04330`
+reported a solution fraction of **5.7e-4** at n=18 — roughly one candidate in 1768
+is valid — and passed G5 anyway.
+
+A large space is not difficulty. `2503.01929` reported a 1536-bit candidate space
+and fell to Algorithm X in under five seconds. Report both of these, as numbers,
+**at the shipping preset**:
+
+1. **Density at the shipping preset.** Exact count if `enumerate_all` terminates
+   there; otherwise sample `random_candidate` and report the observed fraction of
+   valid answers with the sample size. A count from a smaller preset may be given
+   in addition, labelled with its `n` — never instead. `None` is not an answer.
+2. **Baseline cost.** Run your strongest G6 attack at the *shipping* preset and
+   record what it actually cost: wall-clock seconds, and nodes/restarts/iterations.
+   A family whose best attack fails in 0.2 s is not obviously hard — it may simply
+   be unsatisfiable-looking to that attack. Cost is the honest difficulty signal.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+- **The standard algorithm for the problem class — REQUIRED, not optional.** The
+  three above are generic and they are *not sufficient*; they probe how you built
+  the instance, not what is known about the problem. Ask what a specialist would
+  reach for first and run *that*:
+
+  | the problem is about | run at least |
+  |---|---|
+  | satisfiability / CSP | a SAT or SMT solver, or DPLL with unit propagation |
+  | covering, packing, assignment, scheduling | an ILP/LP relaxation, or matching |
+  | a planted subgraph, colouring, partition, or community | **a spectral method** — top eigenvectors of the adjacency/Laplacian, and an SDP or nuclear-norm relaxation if the paper mentions one |
+  | subset sum, knapsack, lattice, or small-coefficient integer relations | LLL / lattice reduction |
+  | exact cover, tiling, set partition | Algorithm X / DLX, or a CP solver |
+  | paths, cycles, flows, connectivity | the classical polynomial algorithm for the relaxed version, then repair |
+  | permutations, words, group elements | normal forms and the natural rewriting/canonicalisation |
+
+  If no library is available, implement the cheap version — power iteration is a
+  dozen lines and breaks most planted-subgraph constructions. If you genuinely
+  cannot run the standard attack, say so explicitly in the README caveats and name
+  the attack you could not run. Never silently omit it.
+
+**Report G6 in this shape**, so the panel can be checked mechanically rather than
+read prose-by-prose:
+
+```python
+report["G6_adversary_panel"] = {
+    "pass": all_failed,
+    "attacks": {                      # one entry per attack, name -> result
+        "outlier_degree":     {"successes": 0, "attempts": 8},
+        "greedy_largest_first":{"successes": 0, "attempts": 8},
+        "random_restart_256": {"successes": 0, "attempts": 8},
+        "spectral_top_eigenvector": {"successes": 0, "attempts": 8},   # the domain attack
+    },
+}
+```
+
+Extra keys alongside `attacks` are fine. `submit.sh` requires `attacks` to be
+present with **at least 4 entries** — three generic probes plus the domain attack — and
+it **recomputes `pass` from the `successes` on disk**: a panel that records a solved
+attack is refused no matter what `pass` says. `2410.07666` logged walksat at 8/8 and
+honestly set `pass=false`; nothing else would have caught it.
+
+That recomputation is exactly why a **Track B** family must not put its
+domain-standard algorithm in `attacks`. On Track B that algorithm is *supposed* to
+succeed — it is the `hardness_basis`, not a failure — so it goes in a sibling key and
+`attacks` keeps its meaning:
+
+```python
+report["G6_adversary_panel"]["reference_algorithm"] = {   # Track B only
+    "name": "Bareiss elimination over Q",
+    "complexity": "O(n^3) exact",
+    "wall_clock_sec": 0.4,
+    "operations": 1_240_000,      # this number IS the Track B hardness claim
+    "solves": "8/8, as expected",
+}
+```
+
+Track B still needs four *failing* entries in `attacks`, and its fourth is an attack a
+solver could actually run in context without tools — the by-hand heuristic, the greedy
+route, the obvious ansatz. If you cannot find one that fails, the family is guessable by
+hand and you should reject it.
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+- **A bounded Token Jumping family (arXiv:2408.04743) passed every gate, and the
+  four-vendor oracle pool returned `hardened`.** A construction-aware spectral
+  attack then recovered a verified witness on **20/20 shipping instances in
+  polynomial time** — the planted colour classes formed an exact −3 eigenvector.
+  The generic outlier/greedy/restart panel saw nothing. This is why the domain
+  attack is mandatory: gates passing and the oracle failing to solve are jointly
+  *not* evidence of hardness, and this family would have shipped on that evidence.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+### G9: is the failure informative? — measured, mostly not gated
+
+Every family here is built so that a model fails it. That makes "the model failed"
+almost uninformative on its own: a model also fails a question whose answer is forty
+thousand tokens long, and one that needs ten thousand exact multiplications. Those
+failures say nothing about mathematical intuition, and a corpus full of them measures
+patience.
+
+G9 separates the two. **It is not a "the model must succeed" gate.** That would be the
+exact negation of STEP 4, which holds a level only when all three oracles fail, and it
+would delete every family that survives the hardening loop. Three parts, and only two of
+them are gates.
+
+#### (a) The three-arm diagnostic — recorded, never gated
+
+Run the shipping preset three times and record solved/attempts for each arm:
+
+| arm | prompt |
+|---|---|
+| bare | `render(inst)` as shipped |
+| hinted | `render(inst)` + `STRUCTURAL_HINT` |
+| placebo | `render(inst)` + `PLACEBO_HINT` |
+
+**Why the placebo arm exists.** Appending *any* sentence changes the prompt — its
+length, its register, and the signal that the asker thought a hint was warranted.
+Comparing hinted against bare confounds all of that with the hint's actual content. The
+placebo holds everything fixed except the structural information, so **hinted − placebo**
+is the estimate of real structural help; hinted − bare is contaminated by prompt leakage
+and is not.
+
+If hinted ≈ placebo, your hint carried no information: either it is badly written, or
+the family does not respond to the intuition you claimed in `intuition_type`. That is a
+finding, not a failure. Record the three numbers and say what you conclude in the
+README. **It does not block the ship** — this arm exists so the corpus knows what it is
+measuring, and gating on it would let a builder tune the hint instead of the family.
+
+#### (b) The polarity-flipped gate — this part IS gated
+
+> The family must still defeat the oracle pool **when it is given its one-sentence
+> structural hint.**
+
+This is strictly stronger than today's bar and it contradicts nothing: STEP 4 already
+requires the pool to fail on the bare statement; this requires it to fail on an easier
+version of the same statement. A family that survives bare but dissolves the moment you
+name the trick was never testing whether a model can *find* the structure — it was
+testing whether the model had already memorised it.
+
+Run it with the harness, not by hand:
+
+```bash
+mkdir -p g9_hinted && cp gen_<arxiv_id>.py g9_hinted/
+# in the COPY, cut DIFFICULTY down to the shipping preset alone, so the ladder
+# has one rung and the verdict is about that rung
+cd g9_hinted && GV_HINT_MODE=structural python3 ../../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+`harden.py` opens `llm_loop_transcript.jsonl` and `.meta.json` with mode `"w"` — it
+**overwrites**. Run every G9 arm in its own scratch directory, never in the result
+directory, or you will destroy the STEP 4 evidence you already paid for. Copy the
+finished transcripts back as `g9_<arm>_transcript.jsonl`.
+
+Read the verdict with the polarity flipped: `hardened` means the hint did not break the
+family and G9(b) passes. `too_easy` means the hint broke it, and the family fails G9(b).
+You may then move **one** rung up the `DIFFICULTY` ladder and re-run STEP 4 bare *and*
+this arm at the new level, **once**. If the hint still breaks it, write `REJECTED.md`
+citing G9(b) and stop. This is not hand-tuning past a verdict — the bare verdict was
+`hardened` and the whole loop is re-run at the new level — but the cap of one is there
+so that it cannot become hand-tuning.
+
+#### (c) The size and effort caps — gated
+
+| cap | limit at the shipping preset |
+|---|---|
+| serialised answer | ≤ **2,000 characters** (≈ **500 tokens**) and ≤ **256 atomic elements** |
+| intended route | ≤ **300 exact arithmetic operations** |
+
+Measure both, put the numbers in the gate dict, and put the token figure in
+`PROBLEM_PROFILE["max_answer_tokens"]`.
+
+"Intended route" means the operations left **after** the insight — the compact route the
+family claims to test, not the search it replaces. A family over the answer cap is a
+transcription test. A family whose intended method needs thousands of arithmetic
+operations is a calculator test, and the evaluated model has no calculator; that is a
+fact about the harness, not a property of the mathematics.
+
+If you are genuinely over a cap and believe the family should ship anyway, say so in the
+README caveats with the measured number and expect to be argued with. Do not quietly
+round it down.
+
+Report the gate like this:
+
+```python
+report["G9_no_tool_suitability"] = {
+    "pass": hinted_still_hardened and within_caps,     # (b) and (c) only
+    "arms": {                                          # (a): recorded, not gated
+        "bare":    {"solved": 0, "attempts": 3},
+        "hinted":  {"solved": 0, "attempts": 3},
+        "placebo": {"solved": 0, "attempts": 3},
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",                      # (b)
+    "answer_chars": 412, "answer_tokens": 104, "answer_elements": 32,   # (c)
+    "intended_route_operations": 47,                   # (c)
+}
+```
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- The ladder starts at `easy`. `demo` is skipped: it is built to be solvable, so
+  starting there would spend an escalation proving exactly that.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+- It opens both files with mode `"w"`. **A second run in the same directory overwrites
+  the evidence from the first.** This run — bare, no hint — is the one that ships, so
+  G9's extra arms run in their own scratch directories. See G9(b).
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, the four names are already taken, so
+  **slide the ladder up**: drop the rung the oracle solved, keep the survivors in
+  ascending order, and put the escalated level in as the new `hard`, leaving
+  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+  whichever name now carries the level that held, then re-run STEP 3's gates at it.
+  `demo` never moves: it stays the hand-solvable rung.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results,
+   G9's three arms and its measured answer size and operation count).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. `g9_hinted_transcript.jsonl` and `g9_placebo_transcript.jsonl` — the G9 arms,
+   produced by `harden.py` in scratch directories and copied back. See G9(b).
+5. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+6. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **The profile up front**: `TRACK`, native domain, object regime, computational core,
+  certificate form, intended intuition and `domain_essentiality` — copied from
+  `PROBLEM_PROFILE`. If `reduction_kind` is anything but `none` or `paper_licensed`,
+  say plainly that this is **not** native coverage of the paper's domain, and name what
+  was discarded.
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard**, in the sense your `TRACK` declares. Track A: the specific theorem
+  and parameter regime you are inside, and — just as important — the easy regimes you
+  had to avoid and the results that identify them. Track B: **name the algorithm that
+  solves it**, its complexity and its measured cost, then say why the compact route is
+  not something a model can execute in context. A Track B README that reads like a
+  Track A README is the failure mode here. Cite sections by number either way. This is
+  the part only you know.
+- **A worked example.** A rendered instance small enough to read in full — use the
+  `demo` preset, which exists for this — its answer, `verify` returning True on it,
+  and `verify` returning False with its reason on a corrupted variant. Say plainly
+  whether a person can actually solve it by hand, and if not, why the family's
+  smallest supported setting still is not hand-scale.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **The G9 arms**, as a table: bare / hinted / placebo solved-out-of-attempts, the
+  hinted − placebo difference, and what you conclude. If the structural hint bought the
+  oracle nothing, say so — that is evidence about your `intuition_type`, and this
+  README is the only place it will ever be written down. Give the measured answer size
+  and intended-route operation count here too.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 1411.2503
+url: https://arxiv.org/abs/1411.2503
+title: Generating S-Boxes from Semi-fields Pseudo-extensions
+categories: cs.CR
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: finite field constructions
+  method: invariant computation
+  candidate generator: construct functions from semifield pseudo-extensions with known cryptographic properties
+  candidate verifier: compute truth-table invariants: nonlinearity, differential uniformity, degree, balance
+codex
+I’ll begin with the paper’s exact construction, hardness regime, easy cases, and—most importantly—the algorithm that produces the certificate. I’ll make the Track A/B or rejection decision before writing generator code.
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!artifacts'"' .. ../.. ../../.. | head -100 && python3 - <<'PY'
+import urllib.request
+for url,name in [
+ ('https://arxiv.org/pdf/1411.2503','/tmp/1411.2503.pdf'),
+ ('https://arxiv.org/e-print/1411.2503','/tmp/1411.2503.tar')]:
+    try:
+        urllib.request.urlretrieve(url,name)
+        print(name, 'downloaded')
+    except Exception as e:
+        print(name, repr(e))
+PY
+file /tmp/1411.2503.pdf /tmp/1411.2503.tar
+ls -lh /tmp/1411.2503.pdf /tmp/1411.2503.tar" in /home/gson/gvrepo/results/1411.2503
+ succeeded in 1425ms:
+../../../qwen-training-kit/AGENTS.md
+../../../oh-my-openagent/AGENTS.md
+../../../oh-my-openagent/src/hooks/keyword-detector/AGENTS.md
+../../../oh-my-openagent/src/hooks/ralph-loop/AGENTS.md
+../../../oh-my-openagent/src/hooks/session-recovery/AGENTS.md
+../../../oh-my-openagent/src/hooks/claude-code-hooks/AGENTS.md
+../../../oh-my-openagent/src/hooks/atlas/AGENTS.md
+../../../oh-my-openagent/src/hooks/AGENTS.md
+../../../oh-my-openagent/src/hooks/todo-continuation-enforcer/AGENTS.md
+../../../oh-my-openagent/src/hooks/anthropic-context-window-limit-recovery/AGENTS.md
+../../../oh-my-openagent/src/hooks/rules-injector/AGENTS.md
+../../../oh-my-openagent/src/cli/config-manager/AGENTS.md
+../../../oh-my-openagent/src/cli/AGENTS.md
+../../../oh-my-openagent/src/cli/run/AGENTS.md
+../../../oh-my-openagent/src/agents/AGENTS.md
+../../../oh-my-openagent/src/plugin/AGENTS.md
+../../../oh-my-openagent/src/shared/AGENTS.md
+../../../oh-my-openagent/src/mcp/AGENTS.md
+../../../oh-my-openagent/src/tools/background-task/AGENTS.md
+../../../oh-my-openagent/src/tools/call-omo-agent/AGENTS.md
+../../../oh-my-openagent/src/tools/lsp/AGENTS.md
+../../../oh-my-openagent/src/tools/AGENTS.md
+../../../oh-my-openagent/src/tools/delegate-task/AGENTS.md
+../../../oh-my-openagent/src/tools/hashline-edit/AGENTS.md
+../../../oh-my-openagent/src/AGENTS.md
+../../../oh-my-openagent/src/features/mcp-oauth/AGENTS.md
+../../../oh-my-openagent/src/features/tmux-subagent/AGENTS.md
+../../../oh-my-openagent/src/features/opencode-skill-loader/AGENTS.md
+../../../oh-my-openagent/src/features/claude-tasks/AGENTS.md
+../../../oh-my-openagent/src/features/AGENTS.md
+../../../oh-my-openagent/src/features/background-agent/AGENTS.md
+../../../oh-my-openagent/src/config/AGENTS.md
+../../../oh-my-openagent/src/plugin-handlers/AGENTS.md
+../../../Hephaestus/AGENTS.md
+../../../Hephaestus/third_party/deepagents/examples/content-builder-agent/AGENTS.md
+../../../Hephaestus/third_party/deepagents/examples/text-to-sql-agent/AGENTS.md
+../../../Hephaestus/third_party/deepagents/AGENTS.md
+../../../Hephaestus/third_party/deepagents/examples/nvidia_deep_agent/src/AGENTS.md
+/tmp/1411.2503.pdf downloaded
+/tmp/1411.2503.tar downloaded
+/tmp/1411.2503.pdf: PDF document, version 1.4, 12 page(s)
+/tmp/1411.2503.tar: gzip compressed data, last modified: Tue Nov 11 01:17:48 2014, from Unix, original size modulo 2^32 40960
+-rw-rw-r-- 1 gson gson 172K Sep  4 12:32 /tmp/1411.2503.pdf
+-rw-rw-r-- 1 gson gson  13K Sep  4 12:32 /tmp/1411.2503.tar
+
+exec
+/bin/bash -lc 'work=$(mktemp -d /tmp/arxiv1411.XXXXXX); tar -xzf /tmp/1411.2503.tar -C "$work"; echo "$work"; rg --files "$work"; if command -v pdftotext >/dev/null; then pdftotext -layout /tmp/1411.2503.pdf /tmp/1411.2503.txt; fi; wc -l /tmp/1411.2503.txt; sed -n '"'1,260p' /tmp/1411.2503.txt" in /home/gson/gvrepo/results/1411.2503
+ exited 2 in 0ms:
+/tmp/arxiv1411.0DKOHp
+/tmp/arxiv1411.0DKOHp/semifieldsbox.tex
+/tmp/arxiv1411.0DKOHp/semifieldsbox.bbl
+wc: /tmp/1411.2503.txt: No such file or directory
+sed: can't read /tmp/1411.2503.txt: No such file or directory
+
+exec
+/bin/bash -lc "sed -n '1,320p' /tmp/arxiv1411.0DKOHp/semifieldsbox.tex" in /home/gson/gvrepo/results/1411.2503
+ succeeded in 0ms:
+\documentclass{article}\usepackage{amsthm}
+
+%
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amsfonts,xspace}
+
+\newtheorem{mydef}{Definition}
+\newtheorem{mylem}{Lemma}
+\newtheorem{mypropo}{Proposition}
+\newcommand{\F}{{\mathbb F}}
+\newcommand{\Sf}{{\mathbb S}}
+\newcommand{\SBox}{S-Box\xspace}
+\newcommand{\SBoxes}{S-Boxes\xspace}
+
+ \date{\today}
+ \title{Generating S-Boxes from Semifields Pseudo-extensions}
+
+\author{Jean-Guillaume Dumas \and Jean-Baptiste Orfila}
+\date{\small Laboratoire J. Kuntzmann, Universit\'e de Grenoble. 51, rue des
+  Math\'ematiques, umr CNRS 5224, bp 53X, F38041 Grenoble, France,
+\href{mailto:Jean-Guillaume.Dumas@imag.fr,Jean-Baptiste.Orfila@imag.fr}{\{Jean-Guillaume.Dumas,Jean-Baptiste.Orfila\}@imag.fr}.
+} 
+
+
+ \usepackage{color,svgcolor}
+ \makeatletter
+ \usepackage{hyperref}
+ \hypersetup{
+   pdftitle={\@title},
+   pdfauthor={Jean-Guillaume Dumas and Jean-Baptiste Orfila},
+   breaklinks=true, %
+   colorlinks=true,
+   linkcolor=blue,
+   citecolor=darkred,
+   urlcolor=darkblue,
+   %
+ }
+\makeatother
+
+\begin{document}
+
+\maketitle
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+
+
+
+
+\begin{abstract}
+  Specific vectorial boolean functions, such as \SBoxes or APN functions have many
+applications, for instance in symmetric ciphers. 
+In cryptography they must satisfy some criteria (balancedness, high
+nonlinearity, high algebraic degree, avalanche, or
+transparency~\cite{Alvarez:2008:apn,Prouff:2005:transparency}) to provide best
+possible resistance against attacks.
+Functions satisfying most criteria are however difficult to find. 
+Indeed, random generation does not
+work~\cite{Danjean:2007:pasco,Hussain:2012:chaotic} and the \SBoxes used in the AES
+or Camellia ciphers are actually variations around a single function, the inverse
+function in $\F_{2^n}$. Would the latter function have an unforeseen weakness (for instance if more
+practical algebraic attacks are developped), it would be desirable to have some
+replacement candidates. For that matter, we propose to weaken a little bit the algebraic part of the
+design of \SBoxes and use finite semifields instead of finite fields to build
+such \SBoxes. Since it is not even known how
+many semifields there are of order $2^8$, we propose
+to build \SBoxes and APN functions via semifields pseudo-extensions of the form $\Sf^2_{2^4}$,
+where $\Sf_{2^4}$ is any semifield of order $2^4$. Then, we mimic in this
+structure the use of functions applied on a finite fields, such as the inverse or
+the cube. We report here the construction of $12781$ non equivalent \SBoxes with with maximal nonlinearity, differential invariants, degrees
+ and bit interdependency, and $2684$ APN functions.
+
+%
+%
+%
+%
+%
+%
+%
+\end{abstract}
+
+
+Keywords: \SBoxes; APN functions; semifields.
+\section{Introduction}
+
+
+A substitution-box (denoted \SBox), is a tool used in
+symmetric ciphers in order to increase their resistance against known
+attacks, such as linear and differential cryptanalysis, by breaking cipher linearity.
+\SBoxes are commonly represented by boolean functions i.e. $ S : \mathbb{F}_2^n
+\to \mathbb{F}_2^m $ , whose dimensions $n,m$ depend on the cipher. 
+For example, the AES \SBox uses $n=m=8$, views the finite field with $256$
+elements as a vector space on its base field, and is generated by: 
+\begin{equation}\label{eq:aes}\begin{array}{ccccc}
+	T & : & \mathbb{F}_{2^8} & \to & \mathbb{F}_{2^8} \\
+	& & 0 & \mapsto & 0 \\
+	& & a & \mapsto & a^{-1} \\
+\end{array}
+\end{equation}
+
+Once $T$ is computed, an affine transformation is
+applied~\cite{Daemen:1998:rijndael}, and the result is in an excellent \SBox
+from the point 
+of view of security characteristics. More precisely, in the following, we will
+use the list of criteria described in~\cite{Alvarez:2008:apn}. 
+These criteria measure \SBoxes robustness with respect to possible attacks.
+Among bijective \SBoxes, only AES and Camellia's \SBoxes have good scores on all
+of these measures and both \SBoxes are build on a modified inverse computation.
+Thus, would the latter function have an unforeseen weakness (for instance if
+more practical algebraic attacks are developped), it would be desirable to have
+some replacement candidates. 
+%
+%
+%
+
+Rather than trying different constructions, some works~\cite{Alvarez:2008:apn},
+~\cite{Danjean:2007:pasco}  have been made on random searches among the $256!$
+possibilities of bijective \SBoxes. 
+Another approach is to design \SBoxes via the use of chaotic
+maps~\cite{Hussain:2012:chaotic}.
+Unfortunately, none of the \SBoxes build from these searches have the resistance
+of AES against linear nor differential attacks.
+
+Our idea is different, we replace the algebraic structure of AES and Camellia
+(namely viewing the vector space as a finite field) by another structure, a
+semifield. 
+First, there exists different semifields of a given order up to isomorphism. 
+Even when considering the more restrictive notion of isotopy~\cite{Albert:1960:finite}, the
+semifields are still non unique. Therefore there could be several choices of
+underlying structure, even with a single function.
+Second, the nonzero elements of semifields still form a multiplicative group. 
+Thus an inverse-like function could very well preserve good cryptographic
+properties.
+This idea could also be efficient for Almost Perfect non-Linear functions, defined as vectorial boolean function
+verifying an almost perfect score to the differential invariant (see
+also~\cite{Alvarez:2008:apn}, for instance). In the latter case, we will show that mimicking,
+e.g., the cube function on semifields enables us to generate
+APN functions.
+%
+
+%
+%
+
+%
+%
+%
+%
+%
+
+%
+%
+%
+
+In Section~\ref{sec:exten}, we recall the definition of semifields and propose a
+construction of a degree~2 pseudo-extension of semifields of order $16$. 
+From this construction we deduce bijective \SBoxes from $\F_2^8$ to $\F_2^8$, that mimic
+the behavior of the above Function~(\ref{eq:aes}). 
+We also present some efficient algorithms for semifields constructions in
+Section~\ref{sec:gener}. 
+Then we recall in Section~\ref{sec:crit}, the criteria that we use to rank the
+obtained \SBoxes.
+Finally, we show in Section~\ref{sec:expe} that our construction indeed yields
+novel \SBoxes and APN functions that match the resistance of the best known ones.
+
+\section{Semifields pseudo-extensions}\label{sec:exten}
+In this section, after defining semifields, we describe the construction of
+pseudo-extensions of degree $2$ of semifields containing $16$ elements. 
+
+\begin{mydef}
+A finite semifield $(\mathbb{S},+,\times)$ is a set $\mathbb{S}$ containing at least two elements, and associated with two binary laws (addition and multiplication), such that: 
+\begin{enumerate}
+	\item $(\mathbb{S}, +)$ is a group with neutral $0$
+	\item $\forall a,b \in \mathbb{S}, ab=0 \Rightarrow a=0$ or $b=0$
+	\item $\forall a,b,c \in \mathbb{S} : a(b+c)=ab+ac$ and $(a+b)c = ac+bc$
+	\item $\forall a \in \mathbb{S}, \exists$ a neutral element for $\times$ denoted as $e$ which satisfies: $ea=ae=a$ \\
+\end{enumerate}
+\end{mydef}
+
+Ideally, we would like to construct \SBoxes using:
+$$\begin{array}{ccccc}
+	T' & : & \mathbb{S}_{2^8} & \to & \mathbb{S}_{2^8} \\
+	& & 0 & \mapsto & 0 \\
+	& & a & \mapsto & a^{-1} \\
+\end{array}$$
+
+Unfortunately, we do not know the complete classification of these semifields for the moment. Currently, the 
+largest classification in characteristic $2$ is of order 64~\cite{Rua:2009:classification_sf}.
+Thus, in order to build \SBoxes with $256$ elements, we mimic the finite fields construction, based on a quotient structure: $\mathbb{F}_{2^8} = \mathbb{F}_{2^4}[X]/P_2$. 
+However, the same notion of polynomial irreducibility is more difficult to
+define in semifields, due to the possible non-associativity.
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+
+Actually, we just need to
+build a bijection  $T': (\mathbb{S}_{2^4})^2 \to  (\mathbb{S}_{2^4})^2 $ as
+close as possible to the inverse function, in order to (hopefully) take advantage of its cryptographic properties.
+Therefore, we have to find an equivalent characterization to the polynomial irreducibility notion on in finite fields, applicable on semifields.
+Let $P(X)=X^2 + \alpha X + \beta$, with $\alpha, \beta \in \mathbb{F}_{2^4} $, 
+be an irreducible polynomial of degree $2$.
+Elements of $\mathbb{F}_{2^8}$ viewed as $\mathbb{F}_{2^4}[X]/P$ are polynomials of degree $1$ of the form $aX+b$, denoted as couple $(a,b)\in \mathbb{F}^2_{2^4}$.  
+%
+%
+%
+%
+%
+Over the finite field $\mathbb{F}_{2^8}$, the inverse of $0X+b$ is $0X+u$, where $u=b^{-1}\in\mathbb{F}_{2^4}$ if $b\neq 0$. Then if $a\neq 0$, 
+we let $\gamma \in  \mathbb{F}_{2^4}$ be such that $\gamma = a^{-1}b$, in order to obtain an unitary couple and thus simplify the following computations.
+Then, the inverse of $aX+b$ is denoted $c'X+d'$ and we have $(aX+b)(c'X+d') = 1 \Leftrightarrow a(X+\gamma)(c'X+d') = 1$ or also $(X+\gamma)(cX+d)=1$, with $c'=a^{-1}c$ and $d'=a^{-1}d$. \\
+After degree identification, and replacing $X^2=-\alpha X-\beta$, we obtain: 
+\begin{equation}
+\left \{
+\begin{array}{ccc}
+    d\gamma - c \beta & = & 1 \\
+   c\gamma + d - c \alpha & = & 0 \\
+\end{array}
+\right. 
+\end{equation}
+
+
+Finally, we have:
+\begin{equation}  
+\left \{
+\begin{array}{ccc}
+    c & = & [(\alpha - \gamma)\gamma -\beta]^{-1} \\
+  	d & = & c(\alpha - \gamma) \\
+\end{array}
+\right.
+\label{eq2} 
+\end{equation}
+%
+%
+%
+
+From the previous equations, it is now easy to deduce the following alternative characterisation of irreducible polynomials of degree $2$ over finite fields: 
+\begin{mylem}\label{lem:charact}
+Let $P : X^2 + \alpha X + \beta, \in \mathbb{F}_{2^4}[X] $, $P$ is irreducible if and only if $ \forall \gamma \in \mathbb{F}_{2^4}, [(\alpha - \gamma)\gamma -\beta]  \neq 0$.
+\end{mylem}
+
+Using Lemma~\ref{lem:charact}, we thus propose the following definition over semifields:
+\begin{mydef}[Pseudo-irreducibility]\label{def:pseudoirred}
+Let $P=X^2 + \alpha X + \beta \in \mathbb{S}_{2^4}[X] $, $P$ is pseudo-irreducible if and only if $ \forall \gamma \in \mathbb{S}_{2^4}, [(\alpha - \gamma)\gamma -\beta]  \neq 0$.
+%
+%
+\end{mydef} 
+
+Thus, in the case where $\mathbb{S}_{2^4} \simeq  \mathbb{F}_{2^4}$,
+our pseudo-irreducibility notion reduces to irreducibility. 
+Now we are able to define our pseudo-inversion as:
+\begin{mylem}\label{lem:pseudoinv}
+Let $P : X^2 + \alpha X + \beta, \in \mathbb{S}_{2^4}[X] $ be a pseudo-irreducible polynomial. The transformation: 
+
+%
+%
+$$\begin{array}{ccccc}
+	T' & : & (\mathbb{S}_{2^4})^2 & \to & (\mathbb{S}_{2^4})^2 \\
+	& & (0,0) & \mapsto & (0,0) \\
+	& & (0,b) & \mapsto & (0, b^{-1}) \\	
+	& & (a,b) & \mapsto &(a^{-1}c,a^{-1}d)\\
+\end{array}$$
+
+such that $\gamma = a^{-1}b, c=[(\alpha - \gamma)\gamma -\beta]^{-1}$, and $d=c(\alpha - \gamma)$, is a bijection.
+\end{mylem}
+
+\begin{proof}
+
+In the case where $a=0$, $T'$ is obviously one-to-one.
+
+exec
+/bin/bash -lc "sed -n '320,760p' /tmp/arxiv1411.0DKOHp/semifieldsbox.tex" in /home/gson/gvrepo/results/1411.2503
+ succeeded in 0ms:
+In the case where $a=0$, $T'$ is obviously one-to-one.
+Let us assume now that $a \ne 0$. 
+%
+
+For proving injectivity, we suppose that $\exists \gamma_1, \gamma_2 \in \mathbb{S}_{2^4}$ such that $c(\alpha-\gamma_1)=c(\alpha-\gamma_2)$.
+Then $c\alpha-c\gamma_1=c\alpha-c\gamma_2$, so that $c(\gamma_1-\gamma_2)=0$ and thus $c^{-1}c(\gamma_1-\gamma_2)=0$. Finally $\gamma_1 = \gamma_2$.
+
+Then, as $\mathbb{S}^2_{2^4}$ has a finite cardinality, any injective endofunction 
+is bijective.
+%
+%
+%
+%
+%
+%
+%
+\end{proof}
+
+
+\section{Semifields efficient generation}\label{sec:gener}
+As a prerequisite for constructing pseudo-extensions, we need semifields of order $2^{4}$. In this section, we expose some results and optimizations about efficient generation of semifields.
+Recent results about semifields are detailed in~\cite{Combarro:2011:advances_sf} and in particular, they  show that we can represent semifields as matrix vector spaces:
+%
+%
+%
+%
+
+\begin{mypropo}[~\cite{Combarro:2011:advances_sf}, Prop 3.]
+There exists a finite semifield $\mathbb{S}$ of dimension $n$ over $ \mathbb{F}_q \subseteq \mathbb{S} $ iff there exists a set of $n$ matrices  $\{A_1,...A_n\} \subseteq GL(n,q)$ such that: 
+\begin{itemize}
+\item $A_1$ is the identity matrix
+\item $\displaystyle\sum_{i=1}^n \lambda_iA_i \in GL(n,q), \forall (\lambda_1,...,\lambda_n) \in \mathbb{F}_q^n  \backslash \{0\} $ 
+\item The first column of the matrix $A_i$ is the column vector with a $1$ in the $i^{th}$ position, and $0$ everywhere else.\\
+\end{itemize}
+\end{mypropo}
+
+
+This proposition is fundamental, since it allows us to use efficients matrix computations to discover new semifields.
+In our case, we restrict this proposition to $q=2$, and $n \le 8 $. 
+
+In order to generate semifields, we use the algorithms described in~\cite{Rua:2009:classification_sf}. 
+The idea is to select lists of matrices extracted from $GL(n,2)$ with a prescribed first column.
+It is thus necessary to check invertibility of all possible linear combinations, in order to gradually reduce the possible semifield candidates.
+In practice, the invertibility check is done by a determinant computation.
+Then, in order to accelerate the process, some combinations of matrices can be discarded, as they can yield already found spaces. This is formalized via the notion of {\em isotopy} of semifields:
+\begin{mydef}[Isotopy]\label{def:isotopy}
+Let $\mathbb{S}_1$and $\mathbb{S}_2$ be two semifields over the same finite field $\mathbb{F}_p$, then an isotopy between $\mathbb{S}_1$ and $\mathbb{S}_2$ is a triple $(F,G,H)$ of bijective linear maps $\mathbb{S}_1 \to \mathbb{S}_2$ over $\mathbb{F}_p$ such that $H(ab) = F(a)G(b), \forall a,b \in \mathbb{S}_1$
+\end{mydef}
+%
+%
+Definition~\ref{def:isotopy} is used to define an equivalence relation between semifields, which can be verified with the help of matrix multiplications, see~\cite[Prop. 2]{Combarro:2011:advances_sf}.
+
+%
+%
+
+%
+%
+
+Even if only square matrices with small size are involved, semifield generation remains complex for the large amount of computations involved. 
+For instance, generation of all matrices constituting $GL(8,2)$ could require $2^{64}$ determinant computations. 
+
+For $\Sf_{2^4}$ this is less important, but any improvement becomes substantial
+if you are to generate many \SBoxes and experiment with them. We thus propose in
+the following some optimization for the computation of the determinant and of
+matrix multiplication, based on tabulation and Gray codes. 
+
+\subsection{Optimizing determinant using double level Gray codes and tabulations}
+Classical determinant computations use Gaussian elimination, with a $O(\frac{2}{3}n^3)$ complexity for a single determinant computation. 
+Thus, in order to build $GL(n,2)$ by testing all the possible matrices, we obtain an overall complexity of $O(\frac{2}{3}n^3 2^{n^2})$. 
+Here, we present two ways to reduce this complexity.
+
+The first optimization is about tabulating the computations via the recurrence
+formula of the Laplace expansion of determinants:
+\begin{itemize}
+	\item If $A$ is $1\times 1$ matrix, $det(A) = a$, with $A=(a)$.
+	\item Otherwise, $n \ge 2$,  $$det(A) = \displaystyle \sum_{i=1}^n (-1)^{i+j}a_{j}M_{1j}$$ with $M_{1j}$ the determinant of the submatrix defined as A deprived of its first row and of its $j^{th}$ column (we chose the first row deletion and the column development arbitrarilly). 
+\end{itemize}
+		
+		
+More precisely, since we have to compute all determinants for each matrix size, the idea is to store them in order to accelerate the computations of the larger matrix dimension. 
+By doing this, we replace a sub-determinant computation by a table access. The drawback of this method is the memory limitation, and we succeeded to apply it for square matrices up to size $6$. Indeed, for $n=7$, we should store $2^{49}$ computations, that being around 500 Tb of data. 
+
+
+%
+%
+
+
+Our second optimization is about improving the way of passing through all
+matrices. Since each matrix has a unique integer representation (using the $n^2$
+bits as digits), the easiest method to go through all the determinants is to
+increment this integer representation until its largest value. However, it implies "random" modifications on the matrix binaries coefficients. By using a Gray code, which allows to pass from a value to another by modifying only one bit between them, we are thus able to pass from one determinant to the other by modifying only one term in the sum:
+the idea is to cut the matrix in two parts, the first row on the one hand, containing $n$ bits, and the remainding ${n(n-1)}$ coefficients, which we call the base, on the other hand.
+Then we apply two distinct Gray codes, one for each hand. 
+First, we fix a value for the base, and then we go all over possible values for the first row, following a Gray code on this row. 
+Second, we change the base value with another dedicated Gray code, and go again through all possible values from the first line. 
+Memory exchange is thus reduced because we only need to access the lower dimension table $n$ times for each possible submatrix determinant, but for $2^n$ computations. 
+
+The complexity is also drastically reduced by linking successive computations. Indeed, by modifying only one bit between two values, the determinant computation is reduced to the following formula: 
+$\Delta_{k} = \Delta_{k-1} \oplus M_{1j}$, where $ M_{1j}$ is defined as in the previous formula, and $\Delta_0 = 0 $, since in a Gray code the first number is $0$. 
+Thus, we reduced the determinant computation, which would normally requires $n-1$ XOR operations to only one, for $n \le 7$. 
+
+Finally, we obtain the following lemma: 
+\begin{mylem}
+Let $n$ be the dimension of squares matrices, $n \le 6$, then the complexity of the determination of $GL(n,2)$, using tabulation and Gray codes, is bounded by $D_n$ that satisfies:
+\begin{equation}
+D_n = 2^{n^2} + O(2^{n^2-n-2})
+\end{equation}
+\end{mylem}
+
+\begin{proof}
+The complexity of the above algorithm is obtained by counting XOR operations and is given by the following recurrence formula:  
+\begin{equation}
+\left \{
+\begin{array}{ccc}
+    D_1 & = & 0 \\
+  	D_n & = & D_{n-1} + 2^{n^2} - 1 \\
+\end{array}
+\right. 
+\end{equation}
+Therefore, we have:
+$$\begin{array}{ccc}
+	D_n  & = & \sum\limits_{i=2}^{n} \left(2^{i^2} -1\right)  \\
+	&  = & \sum\limits_{j=0}^{n-2} 2^{(n-j)^2} - (n-1) \\
+	& = & 2^{n^2}\sum\limits_{j=0}^{n-2} 2^{-2nj+j^2} - (n-1) \\
+	& \le & 2^{n^2}\sum\limits_{j=0}^{n-2} 2^{-2nj+(n-2)j} - (n-1)\\
+	& = & 2^{n^2}\sum\limits_{j=0}^{n-2} 2^{(-n-2)j} - (n-1) \\ 
+	& = & \frac{1 - 2^{(-n-2)(n-1)}}{1 - 2^{-n-2}} -(n-1)\\
+	& \le & 2^{n^2} (1 + \frac{1}{2^{n+2}-1}) - (n-1)
+\end{array}$$
+\end{proof}
+We thus have a gain of a factor $\frac{2}{3}n^3$ over the naive Gaussian
+elimination. 
+
+
+
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+
+\subsection{Optimization of matrix multiplication by tabulation}
+
+%
+
+Similarly, we can optimize matrix multiplication with some tabulations. 
+A first step consists in computing and storing all
+possible products between all values of the first row of the left matrix, and
+half the right one. Then, the matrix product $A \cdot B$ will simply  be
+obtained by two table accesses per row of $A$ (one for each half of
+$B$). Therefore, for computing $k$ products, 
+we obtain a complexity bound of $O(2^{n+ n \lceil \frac{n}{2}
+  \rceil}(n-1) + k2n) $. 
+As comparison, if we used a scalars products and transposition algorithms, we
+would have a complexity of $O(kn^2(n-1))$. As a conclusion, we see that our
+optimization is interesting only if $k > \frac{2^{n+ n \lceil \frac{n}{2}
+  \rceil}}{n^2 + \frac{2n}{n-1}}$. 
+For semifields generation, the number of equivalence test is of the order of $2^{n^2}$ and the second term of the first complexity is therefore dominant.
+In this case our optimization allows to gain another factor of $n^2$ in the complexity bound. 
+
+%
+%
+%
+%
+
+
+
+%
+%
+%
+%
+%
+%
+%
+%
+
+
+\section{\SBoxes criterion}\label{sec:crit}
+
+Several criteria have been defined to measure \SBoxes resistance when faced to different types of attacks. In order to select our \SBoxes, we have chosen the following criteria, following mostly~\cite{Alvarez:2008:apn}. 
+We denote by $S$ the \SBox function.
+\begin{enumerate}
+\item Bijectivity. By construction we only look for bijective functions.
+%
+\item Fixed Points. We favor functions without any fix points nor reverse fix points (as for the AES, this can be avoided by some affine transform on the trial). 
+%
+\item Non-linearity. We return the linear invariant $\lambda_S$, defined as follows:  
+						$$\lambda_S = \displaystyle \max_{a,b\in \mathbb{F}_{2^n}, b\ne 0} \{ |-2^{n-1} + \#\{x \in \mathbb{F}_{2^n} : (a|x) \oplus (b|S(x)) = 0 \} | \} $$
+\item XOR table and differential invariant.  A XOR table of S is based on the
+  computation of $\delta_S(a,b) = \{x \in \mathbb{F}_{2^n} : S(x) \oplus S(a
+  \oplus x) = b \}, \forall a,b\in \mathbb{F}_2^n$. The differential invariant
+  $\delta_S$ is equal to  
+$$ \delta_S=\max_{a,b\in \mathbb{F}_2^n, a\ne 0} |\delta_S(a,b)| 
+=\max_{a,b\in \mathbb{F}_2^n, a\ne 0} | \{x \in \mathbb{F}_{2^n} : S(x) \oplus S(a
+  \oplus x) = b \}|
+.$$ 
+%
+%
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+	
+%
+
+\item Avalanche. Strict avalanche criterion of order $k$ ($SAC(k)$) requires
+  that the function $x \mapsto S(x) \oplus S(a \oplus x)$ stays balanced for all
+  $a \in \mathbb{F}_{2^n}$ of weight inferior to $k$. The goal is to provide a
+  1/2 probability of outputs modifications in case of $k$ bits complemented for
+  entries.  
+ In our case, we measure the distance of the \SBox to $SAC(1)$, component
+ function by component function, and we denote by $A_S = \displaystyle \max_{i=1..8} |
+ 2^{n-1}-\sum_x S_i(x) \oplus S_i(a \oplus x)|$ the obtained maximum.
+%
+%
+%
+%
+%
+%
+%
+
+\item Bit independance. Bit independancy is modelized by the computation of
+  SAC(1) on the function defined by the sum of any two columns or any column of
+  the matrix representation of S. As previously, we then measure its distance to
+  SAC(1), and we denote it by $B_S$.  
+%
+%
+%
+%
+%
+%
+%
+
+\item Transparency. This notion has been introduced by Prouff in~\cite{Prouff:2005:transparency}, and allows to measure the resistance of \SBoxes against differential power analysis. 
+The definition is the following: 
+\begin{multline*}
+  T_S = \max_{\beta \in \mathbb{F}_2^n} \biggl(\left|n - 2H(\beta)\right|\\ - 
+    \frac{1}{2^n(2^n-1)}\sum\limits_{a \in \mathbb{F}_2^n} \Bigl| \sum\limits_{v
+        \in \mathbb{F}_2^n, H(v)=1}(-1)^{v\beta}W_{D_a,S}(0,v)\Bigr|\biggr)
+\end{multline*}
+ where $W_{D_a,S}(u,v) = \sum\limits_{x \in \mathbb{F}_2^n}(-1)^{v[S(x) +
+   S(x+a)] + ux} $ and $H(x)$ is the hamming weight.
+\end{enumerate}
+
+By using this criteria, we are able to compare the efficiency of our \SBoxes with the already existing ones.
+
+For instance, the \SBoxes of AES and Camellia have minimal non-linearity $\lambda_{AES}=\lambda_{Camellia}=16$, minimal
+differential invariant among non-APN functions,
+$\delta_{AES}=\delta_{Camellia}=4$, very good bit independence
+$B_{AES}=B_{Camellia}=8$ and avalanche criterion with Camellia slightly better
+on the latter: $A_{AES}=8$ and $A_{Camellia}=6$.
+%
+
+\section{Experimental results}\label{sec:expe}
+\subsection{Results of \SBoxes based on semifields
+  pseudo-extensions}
+
+We have implemented a simple matrix arithmetic using our optimizations, in order
+to generate semifields of order 16 plus their pseudo-extensions. We have then
+constructed \SBoxes with the help of the pseudo-inverse bijection of
+Lemma~\ref{lem:pseudoinv}, and apply all the tests of Section~\ref{sec:crit}. 
+
+We managed to generate 19336 semifields of order $2^{4}$ (with possible isomorphic ones). 
+In average, $98$ polynomials per semifields
+were pseudo-irreducible, with a minimum of $91$ and a maximum of $120$ (the
+latter for the finite field).
+By testing all possible pseudo-irreducible polynomials for each semifield, we
+obtained $12781$ \SBoxes, with maximal nonlinearity, differential invariants,
+degrees and bit interdependency. 
+%
+%
+
+
+Among the latter $8364$ had fix points, and among the ones without fix points,
+$4122$ had avalanche equal to $8$ (as good as AES) and $288$ had avalanche
+equal to $6$ (as good as Camellia).
+Among the ($4122+288$) latter \SBoxes, $863$ have a better transparency level than the inverse function on
+a finite field. \\
+
+%
+%
+%
+%
+%
+%
+
+
+\begin{table}[htb]\center
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+  \hline 
+  & $\delta $ &  $\lambda $ & Alg deg & Poly deg & 
+  Fix point & Av & Bi &  Tr \\
+  \hline
+  AES & 4 & 16 & 7 & 254 & 0 & 8 & 8  & 7.85319 \\
+  Camellia1 & 4 & 16 & 7 & 254 & 0 & 6 & 8 & 7.85564 \\
+  15306 & 4 & 16 & 7 & 254 & 0 & 8 & 8 & 7.84314 \\
+  19203 & 4 & 16 & 7 & 254 & 0 & 6 & 8 & 7.84804 \\
+  \hline
+\end{tabular}
+\caption{Some resistance criteria for \SBoxes}\label{tab:critbox}
+\end{table}
+
+For instance, in Table~\ref{tab:critbox}, $'15306'$ represents the \SBox obtained with an avalanche equals to $8$, and
+lowest transparency score. The \SBox $'19203'$ has the best transparency score
+with an avalanche equals to 6. \\
+
+
+To illustrate our approach, we give here the construction of our \SBox
+$'19203'$. It is generated by the semifield generated by the linear combinations
+of the matrices in Equation~(\ref{eq:sf19203}) below, with $X^2 + 6X + 1$ as 
+pseudo-irreducible polynomial for the pseudo-extension, with $6$
+corresponding to $0110$ in binary and thus to the linear combination $A_2 + A_3$.
+\begin{equation}\label{eq:sf19203}
+\left \{ A_1 = 
+\begin{pmatrix}
+  1 & 0 & 0 & 0 \\
+  0 & 1 & 0 & 0 \\
+  0 & 0 & 1 & 0 \\
+  0 & 0 & 0 & 1
+\end{pmatrix} , 
+A_2 =
+\begin{pmatrix}
+  0 & 0 & 0 & 1 \\
+  1 & 1 & 0 & 0 \\
+  0 & 1 & 0 & 1 \\
+  0 & 0 & 1 & 0
+\end{pmatrix} , 
+A_3 =
+\begin{pmatrix}
+  0 & 0 & 1 & 1 \\
+  0 & 1 & 0 & 0 \\
+  1 & 1 & 1 & 1 \\
+  0 & 1 & 0 & 0
+\end{pmatrix}, 
+A_4 =
+\begin{pmatrix}
+  0 & 1 & 0 & 1 \\
+  0 & 1 & 1 & 1 \\
+  0 & 1 & 1 & 0 \\
+  1 & 0 & 0 & 1
+\end{pmatrix} 
+\right \} 
+\end{equation}
+
+Finally, we get Table~\ref{tab:23016} which shows the $'19203'$ \SBox in
+hexadecimal.
+
+\begin{table}[htb]\center
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+  \hline
+  & 0 & 1 &2 &3 &4 &5&6&7&8&9&a&b&c&d&e&f \\
+  \hline
+  \hline
+  0&  3f & 20 & 9a & f9 & 5c & 43 & d8 & a4 & bb & 7d & 1e & 85 & c7 & 62 & e6 & 1  \\ \hline
+  1&  8c & b9 & 80 & 39 & a1 & 9c & ce & a6 & 2c & 97 & 5d & 9d & c6 & a3 & 4f & 6f \\ \hline
+  2&  5b & aa & de & 61 & ab & 32 & 24 & 22 & 9e & 3d & 4c & ca & 7b & e5 & 65 & d6 \\ \hline
+  3&  b4 & bf & 4b & 35 & fb & b6 & 6b & 50 & 53 & 5 & 92 & f3 & e4 & 4e & 29 & 33 \\ \hline
+  4&  d0 & 40 & 4a & bc & d4 & 45 & 49 & 10 & e0 & b7 & 6c & 8f & c4 & 9 & 82 & 8 \\ \hline
+  5&  63 & db & 7f & f1 & e3 & 52 & 13 & 2a & 28 & 60 & 5f & f8 & ec & eb & 2e & c2 \\ \hline
+  6&  5e & 25 & 4 & 41 & 69 & 95 & 72 & 34 & 75 & 4d & 31 & ac & 26 & f0 & b2 & 83 \\ \hline
+  7&  2 & a & 84 & 5a & 57 & 86 & ff & 1f & 30 & 14 & 36 & 88 & d2 & d7 & 70 & 74 \\ \hline
+  8&  b1 & 6 & d3 & 98 & 87 & 8e & 38 & 77 & 99 & 96 & 8a & 67 & 46 & 6d & f5 & 1d \\ \hline
+  9&  3a & 1b & 37 & ee & 3b & 81 & e1 & df & d1 & 93 & cc & 91 & b8 & 3c & 51 & a9 \\ \hline
+  a&  d5 & 1a & 2b & 59 & b & 12 & bd & f7 & a0 & 2d & 78 & 76 & 71 & cd & 8b & 18 \\ \hline
+  b&  e8 & 11 & ad & be & e2 & 7e & 0 & a8 & cb & 9b & fa & 58 & 9f & ef & f6 & 94 \\ \hline
+  c&  ed & 27 & ba & f & 2f & d & c & 54 & 21 & 73 & b0 & 19 & f4 & 8d & c8 & 6e \\ \hline
+  d&  89 & 48 & c5 & 23 & 64 & 47 & 7c & 16 & c1 & fd & e7 & cf & ea & 15 & da & a7 \\ \hline
+  e&  7 & e9 & c3 & 44 & a2 & e & 79 & 7a & 3e & 90 & 6a & fc & a5 & 56 & b3 & dd \\ \hline
+  f&  66 & c9 & dc & b5 & ae & af & 68 & f2 & 17 & 42 & 55 & d9 & 3 & c0 & 1c & fe \\ \hline
+
+\end{tabular} 
+\caption{An \SBox generated from a semifield with maximal linear and differential invariants}\label{tab:23016}
+\end{table}
+
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+    
+%
+%
+%
+    
+
+\subsection{APN functions based on semifields}
+Vectorial boolean functions obtaining the best possible result for the $\delta$ invariant,
+i.e. $\delta =2$, are called almost perfect non-linear functions (denoted APN). For instance,
+in~\cite{Alvarez:2008:apn}, the cube
+function is APN over the finite field with $256$ elements. As previously, we mimic this function on
+semifields, instead of finite fields. In $\F_{2^8} =
+\mathbb{F}_{2^4}[X]/P$, with $P$ an irreducible polynomial of the form
+$X^2+\alpha X + \beta$, the cube function is defined as $(aX+b) \mapsto (cX+d)$ such that $(aX+b)^3 = (cX+d),
+a,b,c,d \in \F_{2^8}$. One of the possibilities is: 
+\begin{equation}
+  \begin{array}{lclclc}
+    c & = &[(aa^2)\alpha]\alpha - (aa^2)\beta +a(ab) +a(ba) + ab^2 -(ba^2)\alpha \\
+
+exec
+/bin/bash -lc "sed -n '760,1100p' /tmp/arxiv1411.0DKOHp/semifieldsbox.tex && ls -la && find ../.. -maxdepth 2 -type f \\( -name 'harden.py' -o -name 'submit.sh' -o -name 'emit.sh' \\) -print && find ../../gvlib -maxdepth 2 -type f -print | sort" in /home/gson/gvrepo/results/1411.2503
+ succeeded in 0ms:
+    c & = &[(aa^2)\alpha]\alpha - (aa^2)\beta +a(ab) +a(ba) + ab^2 -(ba^2)\alpha \\
+    d & = &[(aa^2)\alpha]\beta -(ba^2)\beta +b(ab) +b(ba) + bb^2. 
+  \end{array}
+  \label{eq6}
+\end{equation}
+
+Finally, we have generated $2684$ APN functions, $336$ having perfect avalanche,
+and bit independence scores, i.e. $A_{APN_i}=0$ and $B_{APN_i}=0$.
+
+For instance, one of the APN function obtained is given in Table~\ref{tab:apncube}.
+
+\begin{table}[htb]\center
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+  \hline
+  & 0 & 1 &2 &3 &4 &5&6&7&8&9&a&b&c&d&e&f \\
+  \hline
+  \hline
+  0&00 & 01 & 04 & 0f & 0f & 08 & 02 & 0f & 02 & 04 & 08 & 04 & 01 & 01 & 02 & 08\\ \hline 
+  1&cf & fa & c4 & fb & 12 & 21 & 10 & 29 & 7c & 4e & 79 & 41 & ad & 99 & a1 & 9f\\ \hline 
+  2&38 & 58 & 8e & e4 & 93 & f5 & 2c & 40 & 32 & 55 & 8a & e7 & 95 & f4 & 24 & 4f\\ \hline 
+  3&a4 & f0 & 1d & 43 & dd & 8f & 6d & 35 & 1f & 4c & a8 & f1 & 6a & 3f & d4 & 8b\\ \hline 
+  4&a4 & 6a & f1 & 35 & 43 & 8b & 1f & dd & d4 & 1d & 8f & 4c & 3f & f0 & 6d & a8\\ \hline 
+  5&e2 & 18 & b8 & 48 & d7 & 2b & 84 & 72 & 23 & de & 77 & 80 & 1a & e1 & 47 & b6\\ \hline 
+  6&b1 & 1e & 56 & f3 & f2 & 5b & 1c & bf & c9 & 61 & 20 & 82 & 86 & 28 & 66 & c2\\ \hline 
+  7&a4 & 3f & 4c & dd & 35 & a8 & d4 & 43 & 6d & f1 & 8b & 1d & f0 & 6a & 1f & 8f\\ \hline 
+  8&b1 & 28 & 61 & f2 & bf & 20 & 66 & f3 & 1c & 82 & c2 & 56 & 1e & 86 & c9 & 5b\\ \hline 
+  9&38 & 95 & e7 & 40 & e4 & 4f & 32 & 93 & 24 & 8e & f5 & 55 & f4 & 58 & 2c & 8a\\ \hline 
+  a&e2 & 1a & 80 & 72 & 48 & b6 & 23 & d7 & 47 & b8 & 2b & de & e1 & 18 & 84 & 77\\ \hline 
+  b&38 & f4 & 55 & 93 & 40 & 8a & 24 & e4 & 2c & e7 & 4f & 8e & 58 & 95 & 32 & f5\\ \hline 
+  c&cf & 99 & 4e & 12 & 29 & 79 & a1 & fb & 10 & 41 & 9f & c4 & fa & ad & 7c & 21\\ \hline 
+  d&cf & ad & 41 & 29 & fb & 9f & 7c & 12 & a1 & c4 & 21 & 4e & 99 & fa & 10 & 79\\ \hline 
+  e&b1 & 86 & 82 & bf & f3 & c2 & c9 & f2 & 66 & 56 & 5b & 61 & 28 & 1e & 1c & 20\\ \hline 
+  f&e2 & e1 & de & d7 & 72 & 77 & 47 & 48 & 84 & 80 & b6 & b8 & 18 & 1a & 23 & 2b\\ \hline 
+
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+\end{tabular}
+\caption{An APN function generated via a pseudo-cube function over a product of semifields}\label{tab:apncube}
+\end{table}
+
+%
+%
+%
+%
+%
+
+\subsection[S-Boxes based on degree 4 extensions of S(4)]{\SBoxes based on $\mathbb{S}_4^4$}
+In~\cite{Combarro:2011:advances_sf}, the classification of semifields of order $256$ has been
+done for characteristic four, i.e. $\mathbb{S}_{4^4}$. 
+We thus have also tried to construct \SBoxes based on all these $28$
+semifields up to isotopy, by using the inverse function. However, none of the
+thus generated \SBoxes had a couple $(\delta, \lambda) = (4,16)$,  apart from
+the one build in the semifield isomorphic to $\F_{2^8}$. 
+
+
+\section{Conclusion}\label{sec:concl}
+
+%
+In order to construct new efficient $8\times 8$ bijective \SBoxes, we replace the usual finite fields algebraic structure by semifields. However, our current knowledge about this subject does not allow us to construct directly $\mathbb{S}_{2^8}$.
+We therefore build pseudo-extensions of degree $2$ of $\mathbb{S}_{2^4}$. Pseudo-extensions are based on the notion of pseudo-irreducibility, derived from a characterisation of polynomial irreducibility in finite fields. 
+This allows us to define in the product of semifields, a novel function as close
+as possible to the inverse function in a finite field. We call it a
+pseudo-inverse and use it to build new \SBoxes. 
+Many of the obtained \SBoxes have then very good evaluations on different
+criterion for cryptographic resitance. Indeed, we obtained $120$ \SBoxes with
+better scores than those of already known \SBoxes, including AES and
+Camellia. 
+We then used the same technique to generate $2684$ novel APN functions by mimicking the cube function. 
+%
+%
+
+About bijective \SBoxes and APN functions, some more exhaustive search could be
+done via associative variations
+of Equations~(\ref{eq2}) and~(\ref{eq6}).
+It could also be interesting to try to adapt to semifields other functions 
+(bijective or not), like the ones described in~\cite[\S6]{Alvarez:2008:apn}. 
+ %
+
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+%
+
+%
+\bibliographystyle{plainurl}
+\bibliography{semifieldsbox}
+
+
+\end{document}
+
+
+
+%
+%
+%
+%
+%
+%
+%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%
+
+%
+%
+%
+
+%
+
+%
+%
+
+%
+
+%
+
+%
+
+%
+%
+
+%
+%
+
+%
+
+%
+%
+
+
+%
+%
+
+%
+
+%
+%
+
+%
+
+%
+
+
+%
+
+%
+
+%
+
+%
+
+%
+
+%
+
+
+%
+
+%
+
+
+%
+
+%
+
+
+
+%
+%
+
+%
+
+
+%
+
+%
+
+%
+
+
+
+%
+%
+%
+%
+%
+%
+%
+total 160
+drwxrwxr-x   2 gson gson  4096 Sep  4 12:32 .
+drwxrwxr-x 102 gson gson  4096 Sep  4 12:32 ..
+-rw-rw-r--   1 gson gson   160 Sep  4 12:32 .meta.json
+-rw-rw-r--   1 gson gson   529 Sep  4 12:32 .runner.sh
+-rw-rw-r--   1 gson gson 56146 Sep  4 12:32 .task.md
+-rw-rw-r--   1 gson gson 89337 Sep  4 12:32 codex_run.log
+../../scripts/harden.py
+../../scripts/submit.sh
+../../scripts/emit.sh
+../../gvlib/README.md
+../../gvlib/__init__.py
+../../gvlib/__pycache__/__init__.cpython-312.pyc
+../../gvlib/__pycache__/exact_matrices.cpython-312.pyc
+../../gvlib/__pycache__/rationals.cpython-312.pyc
+../../gvlib/__pycache__/roots.cpython-312.pyc
+../../gvlib/__pycache__/sparse_poly.cpython-312.pyc
+../../gvlib/exact_matrices.py
+../../gvlib/rationals.py
+../../gvlib/roots.py
+../../gvlib/sparse_poly.py
+../../gvlib/test_gvlib.py
+
+codex
+Step 0 points to rejection, not a build: the paper proves that its displayed pseudo-inverse is a bijection, but it does not prove the advertised nonlinearity/APN properties for a scalable regime. Those properties are obtained by exhaustively evaluating truth-table criteria. I’m checking the repository contract now and will record the precise G/H failures rather than manufacture a misleading Track A claim.
+exec
+/bin/bash -lc "sed -n '1,280p' ../../scripts/submit.sh && sed -n '1,260p' ../../scripts/harden.py && sed -n '1,220p' ../../scripts/corpus_report.py 2>/dev/null || true" in /home/gson/gvrepo/results/1411.2503
+ succeeded in 0ms:
+#!/usr/bin/env bash
+# Submit a finished paper.  Usage: scripts/submit.sh <arxiv_id>
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
+D="results/$ID"
+[ -d "$D" ] || { echo "ERROR: $D missing."; exit 1; }
+
+if [ -n "$REJECT" ]; then
+  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+  python3 -c "
+import json,datetime,os
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='rejected'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d,open(p,'w'))"
+  rm -f "$D/.orkey" "$D/.task.md" "$D/.runner.sh"; rm -rf "$D/__pycache__"
+  bash scripts/status.sh --write >/dev/null
+  git add "$D" "claims/$ID.json" STATUS.md
+  git commit -q -m "reject $ID"
+  git pull -q --rebase origin main && bash scripts/status.sh --write >/dev/null && git add STATUS.md \
+    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+    echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+  exit 0
+fi
+
+MOD="$(ls "$D"/gen_*.py 2>/dev/null | head -1)"
+[ -n "$MOD" ] || { echo "ERROR: no gen_*.py in $D — nothing to submit."; exit 2; }
+
+# The builder writes these; a result nobody can read or re-check is not a result.
+for f in README.md selftest_report.json llm_loop_transcript.jsonl; do
+  [ -s "$D/$f" ] || { echo "ERROR: $D/$f missing or empty — see prompts/codex_task.md STEP 5."; exit 7; }
+done
+if [ "$(wc -l < "$D/README.md")" -lt 25 ]; then
+  echo "ERROR: $D/README.md is too short to explain the task — see STEP 5."; exit 7
+fi
+
+# Gate results are the builder's to produce, but "the file exists" is not evidence
+# it ran them.  G8 gets named explicitly: it is the one gate nothing downstream can
+# reconstruct, because a canonical_key built on the seed or on hash(render(inst))
+# passes the diversity count below while making it meaningless.
+python3 - "$D/selftest_report.json" <<'PYGATE' || exit 7
+import json, sys
+try:
+    rep = json.load(open(sys.argv[1]))
+except Exception as e:
+    print(f"ERROR: selftest_report.json is not readable JSON: {e}"); sys.exit(1)
+if not isinstance(rep, dict):
+    print("ERROR: selftest_report.json must be a JSON object"); sys.exit(1)
+gates = {k: v for k, v in rep.items() if k.startswith("G") and k[1:2].isdigit()}
+if not gates:
+    print("ERROR: selftest_report.json records no G* gates — see STEP 3."); sys.exit(1)
+failed = [k for k, v in sorted(gates.items())
+          if not (isinstance(v, dict) and v.get("pass"))]
+if failed:
+    print("ERROR: gates not passing in selftest_report.json: " + ", ".join(failed)); sys.exit(1)
+if rep.get("all_passed") is False:
+    print("ERROR: selftest_report.json says all_passed=false"); sys.exit(1)
+g5 = next((v for k, v in gates.items() if k.startswith("G5")), None)
+if isinstance(g5, dict):
+    import re as _re
+    def _num(k):
+        v = g5.get(k)
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+    DENS = _re.compile(r"fraction|density|valid|solution|count|hits", _re.I)
+    COST = _re.compile(r"second|node|iter|restart|wall|time|step|budget", _re.I)
+    # A candidate-space cardinality is NOT a density: 2503.01929 reported a 1536-bit
+    # space and fell to Algorithm X in 5s.  Require how MANY answers are valid, and
+    # what the strongest attack actually cost.
+    has_dens = any(DENS.search(k) and _num(k) for k in g5)
+    has_cost = any(COST.search(k) and _num(k) for k in g5)
+    if not (has_dens and has_cost):
+        missing = ("density" if not has_dens else "") + \
+                  (" and " if not has_dens and not has_cost else "") + \
+                  ("baseline cost" if not has_cost else "")
+        print(f"ERROR: G5 is missing {missing}.  Reporting the size of the candidate\n"
+              "       space is not difficulty -- 2503.01929 reported a 1536-bit space,\n"
+              "       passed G5, and fell to Algorithm X in five seconds.  Report how\n"
+              "       many answers are valid at the SHIPPING preset (exact or sampled)\n"
+              "       AND the measured cost of your strongest attack there.\n"
+              "       See prompts/codex_task.md, G5.")
+        sys.exit(1)
+    nums = [v for k, v in g5.items()
+            if k != "pass" and isinstance(v, (int, float)) and not isinstance(v, bool)]
+    if not nums:
+        print("ERROR: G5 reports no measured number.  enumerate_all returned None in\n"
+              "       40/40 of the first shipped generators, so the sparsity gate never\n"
+              "       fired -- 2503.01929 passed it with a 1536-bit space and fell to\n"
+              "       Algorithm X in 5s.  Report an exact count, or a sampled density\n"
+              "       estimate, AND the measured cost of your strongest attack.\n"
+              "       See prompts/codex_task.md, G5.")
+        sys.exit(1)
+if not any(k.startswith("G8") for k in gates):
+    print("ERROR: no G8 gate in selftest_report.json — canonical_key invariance was\n"
+          "       never tested.  submit.sh counts distinct keys but cannot tell a real\n"
+          "       invariant from a hash of the seed.  See prompts/codex_task.md, G8.")
+    sys.exit(1)
+# G6 must include the domain-standard attack, not only the three generic probes.
+# 2408.04743 passed all eight gates AND the four-vendor oracle pool, then fell to a
+# spectral attack on 20/20 instances -- the generic outlier/greedy/restart panel is
+# blind to what is actually known about the problem class.
+g6 = next((v for k, v in gates.items() if k.startswith("G6")), None)
+atk = (g6 or {}).get("attacks")
+n_atk = len(atk) if isinstance(atk, (dict, list)) else 0
+if g6 is not None and not isinstance(atk, (dict, list)):
+    print("ERROR: G6 does not report an 'attacks' object.  Report the panel as\n"
+          "       {'pass': ..., 'attacks': {name: {'successes': n, 'attempts': m}, ...}}\n"
+          "       so the panel can be checked mechanically -- see prompts/codex_task.md, G6.")
+    sys.exit(1)
+if n_atk and n_atk < 4:
+    names = ", ".join(atk) if isinstance(atk, dict) else str(atk)
+    print(f"ERROR: G6 reports only {n_atk} attacks ({names}).\n"
+          "       The three generic probes are not sufficient on their own: run the\n"
+          "       standard algorithm for the problem class too (SAT/ILP/spectral/LLL/\n"
+          "       DLX -- see prompts/codex_task.md, G6). If you truly cannot run it,\n"
+          "       record it as an attack entry saying so and name it in the README.")
+    sys.exit(1)
+# The pass flag is self-reported.  Recompute from the numbers that are already on
+# disk: a panel that records a successful attack has broken its own family, whatever
+# the flag says.  Observed live: 2410.07666 recorded
+# random_restart_walksat_32x200n successes=8/8 -- it honestly set pass=false, but
+# nothing here would have caught it if it had not.
+_wins = []
+if isinstance(atk, dict):
+    for _name, _res in atk.items():
+        _s = _res.get("successes") if isinstance(_res, dict) else None
+        _a = _res.get("attempts") if isinstance(_res, dict) else None
+        if isinstance(_s, (int, float)) and _s > 0:
+            _wins.append(f"{_name} {_s}/{_a}")
+if _wins:
+    print("ERROR: G6 records a SUCCESSFUL attack: " + "; ".join(_wins) + "\n"
+          "       The family is solved by its own adversary panel.  Escalate the\n"
+          "       parameters or reject the paper -- do not ship it.")
+    sys.exit(1)
+print(f"== gates ==\n  {len(gates)} gates pass, G8 canonical_key present, "
+      f"G6 panel = {n_atk or 'unknown'} attacks, 0 attack successes")
+PYGATE
+
+echo "== hardening transcript =="
+python3 - "$D" <<'PY'
+import json, os, sys
+D = sys.argv[1]
+try:
+    meta = json.load(open(os.path.join(D, ".meta.json")))
+except (OSError, ValueError):
+    meta = {}
+ver = meta.get("schema_version", 1)
+rows = [json.loads(l) for l in open(os.path.join(D, "llm_loop_transcript.jsonl")) if l.strip()]
+
+if ver < 2:
+    # Built before scripts/harden.py existed: single fixed oracle, builder-authored
+    # transcript.  Grandfathered rather than re-run, and tagged so that nobody has
+    # to guess later which rules it was checked against.
+    print(f"  schema_version={ver} (legacy, pre-harden.py) — {len(rows)} calls, not re-validated")
+    sys.exit(0)
+
+NEED = {"schema_version","model","effort","preset","params","seed","escalation_round",
+        "solved","parsed","verify_ok","verify_reason","reply","error","elapsed_sec",
+        "http_status","finish_reason"}
+fail = []
+for n, r in enumerate(rows, 1):
+    missing = NEED - set(r)
+    if missing:
+        fail.append(f"line {n}: missing keys {sorted(missing)}")
+if not rows:
+    fail.append("transcript is empty")
+
+models = {r.get("model") for r in rows}
+if len(models) < 3:
+    fail.append(f"only {len(models)} distinct oracle model(s) used: {sorted(models)} — "
+                "the pool must be redrawn per call")
+seeds = [r.get("seed") for r in rows]
+if len(set(seeds)) != len(seeds):
+    fail.append("repeated seeds — every attempt must use a distinct instance")
+rounds = [r.get("escalation_round", 0) for r in rows]
+cap = meta.get("max_escalations", 3)
+if rounds and max(rounds) > cap:
+    fail.append(f"escalation_round reached {max(rounds)}, above the cap of {cap}")
+# The hardness claim rests on the level that held, not on the run as a whole:
+# a transcript can show four vendors overall while the shipping level was decided
+# by two of them.
+verdict = meta.get("harden_verdict", {})
+if verdict.get("verdict") == "hardened" and rows:
+    top = max(rounds)
+    deciders = {r.get("model") for r in rows
+                if r.get("escalation_round") == top and r.get("solved") != "error"}
+    want = min(3, len(meta.get("oracle_pool") or []) or 3)
+    if len(deciders) < want:
+        fail.append(f"the shipping level was decided by only {len(deciders)} distinct "
+                    f"vendor(s) {sorted(deciders)}; the all-fail claim needs {want}")
+if verdict.get("verdict") == "too_easy":
+    fail.append("harden.py returned verdict too_easy — this family is given up on; "
+                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+
+if fail:
+    print("TRANSCRIPT INVALID:")
+    for f in fail: print("  -", f)
+    sys.exit(1)
+print(f"  {len(rows)} calls | {len(models)} distinct models | "
+      f"{max(rounds)+1} difficulty level(s) | verdict "
+      f"{meta.get('harden_verdict',{}).get('verdict')}")
+PY
+[ $? -eq 0 ] || { echo "SUBMIT BLOCKED — see prompts/codex_task.md STEP 4."; exit 8; }
+
+echo "== interface check =="
+python3 - "$MOD" <<'PY'
+import importlib.util, json, os, sys
+p=sys.argv[1]
+s=importlib.util.spec_from_file_location("m",p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
+need=["make_instance","render","parse_answer","verify","random_candidate","search_space",
+      "enumerate_all","canonical_key","escalate"]
+miss=[f for f in need if not callable(getattr(m,f,None))]
+if miss: print("MISSING:", miss); sys.exit(1)
+# The ladder is the same four rungs in every family.  harden.py walks DIFFICULTY
+# in insertion order, so the order is the ladder; and the emitted "difficulty"
+# field only means something across papers if the names mean the same thing.
+# `demo` is the hand-scale rung: harden.py skips it and it must never ship.
+D=getattr(m,"DIFFICULTY",None)
+if not isinstance(D,dict) or list(D)!=["demo","easy","medium","hard"]:
+    print("DIFFICULTY FAIL: expected exactly demo, easy, medium, hard in that order; got",
+          list(D) if isinstance(D,dict) else repr(D)); sys.exit(1)
+if getattr(m,"SHIPPING_DIFFICULTY",None) not in ("easy","medium","hard"):
+    print("SHIPPING_DIFFICULTY FAIL: must be easy, medium or hard (never demo):",
+          repr(getattr(m,"SHIPPING_DIFFICULTY",None))); sys.exit(1)
+i=m.make_instance(**D[m.SHIPPING_DIFFICULTY], seed=0)
+ok,why=m.verify(i, i["answer"])
+if not ok: print("G1 FAIL: planted answer does not verify:", why); sys.exit(1)
+# Can parse_answer consume real solver output?  The wire format is the module's
+# own choice and often differs from the internal answer representation (binary
+# strings vs ints, nested JSON vs a flat list), so guessing a rendering of
+# inst["answer"] produces false failures.  Test the contract the renderer itself
+# advertises: pull the example out of render() and require parse_answer to accept
+# it.  That is format-agnostic and still independent of the builder's own gate.
+def _parse_contract(mod, inst, ans):
+    import re
+    ex = re.findall(r"<answer>(.*?)</answer>", mod.render(inst), re.S)
+    for body in reversed(ex):
+        try:
+            if mod.parse_answer(f"<answer>{body}</answer>") is not None:
+                return True, "renderer example parses"
+        except Exception:
+            pass
+    try:
+        _json_body = json.dumps(ans)
+    except TypeError as e:
+        return False, (f"answer is not JSON-native ({e}). Represent rationals as "
+                       "[num, den] and monomials as exponent lists -- see STEP 1")
+    for body in [_json_body] + ([", ".join(map(str, ans))]
+                 if isinstance(ans, list) and all(isinstance(x,(int,float,str)) for x in ans) else []):
+        try:
+            if mod.parse_answer(f"<answer>{body}</answer>") == ans:
+                return True, "planted answer round-trips"
+        except Exception:
+            pass
+    return False, "parse_answer accepted neither the renderer example nor the planted answer"
+rt, rt_why = _parse_contract(m, i, i["answer"])
+
+# --- surrogate gate -------------------------------------------------------
+# A geometry/analysis paper compiled down to an adjacency matrix passes every
+# other check in this file: the module is correct, the gates pass, the oracle
+# fails.  What is lost is the paper's mathematics, before the solver sees
+# anything.  Observed live: an equiangular-lines paper (Gram matrices, Seidel
+# matrices, interlacing) shipped as a 720-vertex graph whose verify() is
+# documented "check any size-k clique" -- no vectors in the instance at all.
+CL = getattr(m, "CERTIFICATE_LANGUAGE", None)
+if not isinstance(CL, dict) or not CL.get("description") or "bounds" not in CL:
+    print("ERROR: module has no CERTIFICATE_LANGUAGE {description, bounds}.\n"
+          "       Requiring an integer search_space without a declared language\n"
+          "       silently forces every answer to be a tuple of small ints: across\n"
+          "       the first 40 shipped generators search_space was an int 40/40 and\n"
+          "       None 0/40, with zero rational, polynomial or symbolic answers.\n"
+          "       Bound the language instead -- see prompts/codex_task.md, STEP 1.")
+    sys.exit(1)
+
+NAT = getattr(m, "NATIVE", None)
+if not isinstance(NAT, dict):
+    print("ERROR: module has no NATIVE dict.  Declare what this family really is\n"
+          "       (domain / core / objects / intuition / reduction) -- see\n"
+#!/usr/bin/env python3
+"""The LLM hardening loop.  Usage: python3 scripts/harden.py <path to gen_*.py>
+
+This file, not the builder, owns the loop.  The builder writes gen_<id>.py and
+runs this; everything about which model is asked, with which seed, and when a
+family is declared too easy is decided here.  That is deliberate: a builder that
+reports its own hardening result has an obvious incentive not to report a
+failure, and a transcript whose schema is chosen per run cannot be validated.
+
+Requires OPENROUTER_API_KEY.  The oracle pool spans four vendors, so a single
+OpenAI key is not enough.  Standard library only.
+"""
+
+import importlib.util
+import json
+import os
+import random
+import sys
+import threading
+import time
+import ssl
+import urllib.error
+import urllib.request
+
+# --- configuration ----------------------------------------------------------
+# The oracle pool.  Four vendors at the same price tier as the model this
+# replaced (openai/gpt-5.6-terra, $2/$12 per M tokens).  A model is drawn afresh
+# for every single call: a family that only defeats one model's blind spots is
+# not hard, it is overfitted to.
+#
+# openai/gpt-5.6-sol is deliberately absent — it is the builder model, and a
+# family checked against its own author proves nothing.
+DEFAULT_POOL = [
+    "openai/gpt-5.6-terra",
+    "anthropic/claude-sonnet-5",
+    "google/gemini-3.1-pro-preview",
+    "x-ai/grok-4.6",
+]
+ORACLE_POOL = [m.strip() for m in os.environ.get(
+    "ORACLE_POOL", ",".join(DEFAULT_POOL)).split(",") if m.strip()]
+
+ORACLE_EFFORT = os.environ.get("ORACLE_EFFORT", "medium")
+ATTEMPTS_PER_PRESET = 3      # distinct models per difficulty level
+MAX_ESCALATIONS = 3          # raises of difficulty before the family is given up on
+MAX_ERROR_RETRIES = 3        # per attempt; API errors do not count as attempts
+MAX_TOKENS = int(os.environ.get("ORACLE_MAX_TOKENS", "32000"))
+# Reasoning tokens are billed against max_tokens on some vendors, so a budget
+# sized for the answer alone comes back HTTP 200 with an empty body — observed
+# live at 16000 against claude-sonnet-5 on a 2030-character statement.
+REQUEST_TIMEOUT = 900
+# urlopen(timeout=) is a per-socket-operation timeout, NOT a total deadline: a
+# provider that trickles bytes (or holds a streaming connection open) resets it on
+# every read, so a single call can hang indefinitely.  Observed live -- one call
+# sat open 44 minutes against a 900s "timeout" and blocked the paper for 74.  The
+# request therefore runs on a worker thread under a hard wall-clock deadline.
+TOTAL_DEADLINE = int(os.environ.get("ORACLE_TOTAL_DEADLINE", str(REQUEST_TIMEOUT)))
+
+ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _ssl_context():
+    """A context with a CA bundle that actually exists.
+
+    A python.org build on macOS whose "Install Certificates.command" was never
+    run has openssl_cafile pointing at a file that is not there, and every call
+    dies with CERTIFICATE_VERIFY_FAILED.  The loop treats that as an API error
+    and refuses to make a hardness claim, which is the right failure, but it is
+    a failure of the machine and not of the family — so find a usable bundle
+    first.  Never fall back to an unverified context: this call carries an API
+    key.
+    """
+    ctx = ssl.create_default_context()
+    if ctx.cert_store_stats().get("x509_ca", 0) > 0:
+        return ctx
+    candidates = [os.environ.get("SSL_CERT_FILE"), "/etc/ssl/cert.pem",
+                  "/etc/pki/tls/certs/ca-bundle.crt",
+                  "/etc/ssl/certs/ca-certificates.crt"]
+    try:
+        import certifi
+        candidates.append(certifi.where())
+    except ImportError:
+        pass
+    for path in candidates:
+        if path and os.path.exists(path):
+            try:
+                return ssl.create_default_context(cafile=path)
+            except Exception:                                 # noqa: BLE001
+                continue
+    sys.exit("ERROR: no usable CA bundle — TLS verification would fail for every "
+             "oracle call. On a python.org build, run the bundled "
+             "'Install Certificates.command', or set SSL_CERT_FILE.")
+
+
+SSL_CONTEXT = None
+SCHEMA_VERSION = 2
+
+TRANSCRIPT = "llm_loop_transcript.jsonl"
+META = ".meta.json"
+
+
+# --- module loading ---------------------------------------------------------
+def load_module(path):
+    spec = importlib.util.spec_from_file_location("gen", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for fn in ("make_instance", "render", "parse_answer", "verify", "escalate"):
+        if not callable(getattr(mod, fn, None)):
+            sys.exit(f"ERROR: {path} has no callable {fn}() — see prompts/codex_task.md STEP 1")
+    if not isinstance(getattr(mod, "DIFFICULTY", None), dict) or not mod.DIFFICULTY:
+        sys.exit(f"ERROR: {path} has no non-empty DIFFICULTY dict")
+    return mod
+
+
+# --- metadata ---------------------------------------------------------------
+def read_meta():
+    try:
+        with open(META) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def update_meta(**fields):
+    meta = read_meta()
+    meta.update(fields)
+    with open(META, "w") as f:
+        json.dump(meta, f, indent=1)
+
+
+# --- the oracle call --------------------------------------------------------
+def _ask_blocking(model, prompt, key):
+    """Return (reply_text, http_status, finish_reason, error, empty).
+
+    Exactly one of reply/error is set.  An empty body is NOT an API error: it is
+    flagged via `empty`, and attempt() scores it as an unsolved attempt.  A model
+    that spends its whole budget on reasoning and emits nothing did not produce a
+    witness under the conditions the pool is measured at, so it consumes its slot
+    rather than being redrawn.  The diagnostic is preserved in verify_reason so a
+    level hardened this way can still be told apart from one hardened on wrong
+    answers -- if ORACLE_MAX_TOKENS is the real constraint, raise it and re-run.
+
+    Every model in the default pool accepts OpenRouter's normalised `reasoning`
+    field, so no per-vendor body mapping is needed.  A model that rejects it is
+    reported as an error rather than silently retried without it — dropping the
+    effort setting would change what the hardness claim means.
+    """
+    body = json.dumps({
+        "model": model,
+        "reasoning": {"effort": ORACLE_EFFORT},
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": MAX_TOKENS,
+    }).encode()
+    req = urllib.request.Request(
+        ENDPOINT, data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT,
+                                    context=SSL_CONTEXT) as resp:
+            status = resp.status
+            payload = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        return None, e.code, None, f"http {e.code}: {e.read()[:400].decode('utf-8', 'replace')}", False
+    except Exception as e:                                    # noqa: BLE001
+        return None, None, None, f"{type(e).__name__}: {e}", False
+    try:
+        choice = payload["choices"][0]
+        text = choice["message"]["content"]
+        finish = choice.get("finish_reason") or choice.get("native_finish_reason")
+    except (KeyError, IndexError, TypeError):
+        return None, status, None, f"unparseable response: {json.dumps(payload)[:400]}", False
+    if not (text or "").strip():
+        usage = payload.get("usage") or {}
+        return None, status, finish, (
+            f"empty reply (finish_reason={finish}, usage={json.dumps(usage)[:160]}) — "
+            f"the model returned no content, most likely because reasoning consumed "
+            f"max_tokens={MAX_TOKENS}; raise ORACLE_MAX_TOKENS"), True
+    return text, status, finish, None, False
+
+
+def ask(model, prompt, key):
+    """_ask_blocking under a hard wall-clock deadline.
+
+    A deadline overrun is reported as an ERROR, not a failure to solve: the model
+    never got to answer, so scoring it as unsolved would manufacture hardness out
+    of a hung socket.  attempt() redraws against a different vendor.
+    """
+    box = {}
+
+    def run():
+        try:
+            box["v"] = _ask_blocking(model, prompt, key)
+        except Exception as e:                                # noqa: BLE001
+            box["v"] = (None, None, None, f"{type(e).__name__}: {e}", False)
+
+    # daemon=True matters: a wedged socket must not keep the interpreter alive at
+    # exit, which is exactly what a ThreadPoolExecutor worker would do.
+    t = threading.Thread(target=run, daemon=True, name=f"oracle-{model}")
+    t.start()
+    t.join(TOTAL_DEADLINE)
+    if t.is_alive():
+        return (None, None, None,
+                f"total deadline exceeded: no complete response in {TOTAL_DEADLINE}s",
+                False)
+    return box.get("v", (None, None, None, "worker produced no result", False))
+
+
+def attempt(mod, model, params, seed, key):
+    """One oracle call.  Returns the transcript record for it."""
+    inst = mod.make_instance(seed=seed, **params)
+    t0 = time.time()
+    reply, status, finish, error, empty = ask(model, mod.render(inst), key)
+    elapsed = round(time.time() - t0, 2)
+
+    rec = {
+        "schema_version": SCHEMA_VERSION,
+        "model": model,
+        "effort": ORACLE_EFFORT,
+        "params": dict(params),
+        "seed": seed,
+        "solved": "error",
+        "parsed": False,
+        "verify_ok": None,
+        "verify_reason": None,
+        "reply": reply,
+        "error": error,
+        "elapsed_sec": elapsed,
+        "http_status": status,
+        "finish_reason": finish,
+    }
+    if empty:
+        # Scored as an unsolved attempt, not an API error: the model returned no
+        # witness within its budget.  error stays None so the invariant
+        # "error is not None => solved == 'error'" holds.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = f"empty length-limited response ({error})"
+        rec["error"] = None
+        return rec
+    if error is not None:
+        return rec
+
+    ans = mod.parse_answer(reply)
+    rec["parsed"] = ans is not None
+    if ans is None:
+        # Not an error, and not evidence of hardness either: a reply that
+        # visibly contains an answer but does not parse is a renderer bug.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = "parse_answer returned None"
+        return rec
+
+    ok, why = mod.verify(inst, ans)
+    rec["verify_ok"] = bool(ok)
+    rec["verify_reason"] = why
+    rec["solved"] = "solved" if ok else "failed"
+    return rec
+
+
+# --- the loop ---------------------------------------------------------------
+def run_level(mod, params, preset, escalation_round, rng, key, out):
+    """Ask the pool to solve this difficulty.  Returns True if any model solved it.
+#!/usr/bin/env python3
+"""Report the corpus by native domain, computational core and certificate form.
+
+An aggregate count hides the failure this exists to catch: a benchmark can look
+domain-diverse while every problem is internally graph search.
+
+Three things this file gets right that the first version did not.
+
+1. **Unknown is not a domain.**  The first version derived a core from the keys of
+   the instance and, when no keyword matched, called the result ``"other"`` -- then
+   reported ``other`` beside ``graph`` and ``exact_cover`` as if it were a measured
+   non-discrete core.  It was 31.7% of the shipped corpus and it meant *we did not
+   look*.  Inspecting those 13 rows found sets, points, clue grids and a Seidel
+   row-matrix: mostly discrete, none of them measured.  A no-match now yields
+   ``unknown``, is counted separately, and never dilutes the discrete share.  The
+   discrete share is printed twice -- over all modules, and over the modules whose
+   core is actually determined -- because those are a lower and an upper bound and
+   the honest number lies between them.
+
+2. **In-progress work is visible.**  The first version walked only ``status=="done"``
+   claims, so 6 of the 7 modules then built under the NATIVE machinery -- the entire
+   evidence base for whether the new rules changed anything -- were invisible.  Both
+   statuses are walked and labelled; ``--done-only`` restores the old scope.
+
+3. **Provenance is recorded per module.**  ``PROBLEM_PROFILE`` if the module declares
+   one, else ``NATIVE``, else derived from the instance the solver is handed.  A
+   quota that a *stated arXiv family label* can satisfy is worthless -- AUDIT.md
+   records "geometric configurations" rows that ship a 720-vertex adjacency matrix --
+   so the positive quotas below only count declared rows.
+
+Two sibling contracts this file is bound by:
+
+* ``scripts/submit.sh`` states that ``GRAPH_WORDS`` is mirrored here and that "the
+  gate and the report must never disagree".  ``GRAPH_WORDS`` below is that list
+  verbatim, and like submit.sh the graph test reads ``render(inst)`` as well as the
+  instance keys -- renaming ``edges`` to ``pairs`` was enough to evade a keys-only
+  test.  Change one, change both.
+* ``scripts/pick_paper.py`` steers what gets *attempted*, using arXiv-category
+  buckets and ``TARGET_SHARE``, because categories are the only signal that exists
+  before a paper is claimed.  ``--gate`` here measures what actually got *shipped*,
+  on the declared core / certificate / domain axis, which only exists after the
+  build.  They are deliberately different axes and neither substitutes for the
+  other: a paper can be drawn from the ``geometry_real`` bucket and still ship a
+  conflict graph, and that is precisely the failure --gate is looking for.
+
+Usage:
+
+    python3 scripts/corpus_report.py                    # summary
+    python3 scripts/corpus_report.py --rows             # one line per module
+    python3 scripts/corpus_report.py --gate             # quotas, non-zero on violation
+    python3 scripts/corpus_report.py --gate --advisory  # quotas, always exit 0
+    python3 scripts/corpus_report.py --done-only        # exclude in-progress claims
+
+``profile_for_module`` is imported by ``scripts/emit.sh``, which stamps the same
+profile onto every emitted dataset record so the release can be sliced afterwards
+instead of being split in advance.  Keep it importable: nothing at module scope may
+print, touch the network, or change global interpreter state.
+"""
+import argparse
+import glob
+import importlib.util
+import json
+import os
+import re
+import sys
+from collections import Counter
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# ---------------------------------------------------------------------------
+# QUOTAS.  Every threshold is named here and nowhere else.
+#
+# WHAT --gate IS FOR.  These are release-manifest quotas: they describe the shape of
+# a *curated set* of problems chosen for publication.  They are NOT a per-submission
+# gate and scripts/submit.sh does not call them.  A single paper cannot be 15%
+# analytic; asking one submission to satisfy a distributional constraint would
+# reject every honest module.
+#
+# WHY --advisory EXISTS.  A quota that cannot fail is decoration, but a quota that
+# cannot be satisfied deadlocks the project.  The binding constraint here is the
+# source pool, not the builders: scripts/pick_paper.py records that the dynamics_opt
+# bucket holds ~524 papers at ~25% acceptance, so it can never supply more than
+# about POOL_CAP_DYNAMICS_OPT_ANALYTIC families in total.  At a 15% floor that caps
+# a fully compliant release at roughly POOL_CAP_DYNAMICS_OPT_ANALYTIC /
+# MIN_DYNAMICS_OPT_ANALYTIC_SHARE problems; past that the quota is arithmetically
+# unsatisfiable no matter how well anyone works.  `--gate --advisory` reports the
+# violations and exits 0 so the numbers stay in front of people without blocking a
+# pipeline on a bound the pipeline cannot move.  Fix the pool, then tighten the gate.
+# ---------------------------------------------------------------------------
+MAX_SINGLE_CORE_SHARE = 0.25            # no single computational_core above this
+MAX_DISCRETE_SEARCH_SHARE = 0.50        # graph+csp_sat+exact_cover+subset_sum+permutation
+MIN_SYMBOLIC_CERT_SHARE = 0.15          # exact-symbolic or polynomial certificate forms
+MIN_GEOMETRY_LINALG_SHARE = 0.15        # native geometry / linear-algebraic
+MIN_DYNAMICS_OPT_ANALYTIC_SHARE = 0.15  # dynamics / optimization / certified analytic
+MAX_SINGLE_INTUITION_SHARE = 0.30       # no single intuition_type above this
+
+# Ceiling on how many dynamics/optimization/analytic families the 12,167-paper pool
+# can ever yield.  Source: scripts/pick_paper.py, TARGET_SHARE comment.
+POOL_CAP_DYNAMICS_OPT_ANALYTIC = 131
+
+UNKNOWN = "unknown"            # we did not measure it
+UNCLASSIFIED = "unclassified"  # free text that no taxonomy entry matched
+
+# Cores that are discrete combinatorial search, per prompts/codex_task.md STEP 1.
+# Mirrors DISCRETE_CORE in scripts/submit.sh.
+DISCRETE_SEARCH_CORES = frozenset(
+    {"graph", "csp_sat", "exact_cover", "subset_sum", "permutation"})
+# Certificate forms that are exact-symbolic or polynomial rather than a tuple of
+# small integers.  CERTIFICATE_LANGUAGE exists precisely because search_space came
+# back an int 40/40 across the first shipped generators.
+SYMBOLIC_CERT_FORMS = frozenset(
+    {"exact_symbolic", "polynomial", "rational", "sos", "telescoping",
+     "symbolic_integral", "algebraic_number", "matrix_certificate", "interval"})
+GEOMETRY_LINALG_DOMAINS = frozenset({"geometry"})
+GEOMETRY_LINALG_CORES = frozenset({"linear_algebra"})
+DYNAMICS_OPT_ANALYTIC_DOMAINS = frozenset({"dynamics", "optimization", "analysis"})
+DYNAMICS_OPT_ANALYTIC_CORES = frozenset({"interval_bound", "symbolic_integration"})
+
+# A row counts toward a positive quota only if its labels were DECLARED by the
+# module.  A derived label is an inference from instance keys or, worse, from the
+# stated arXiv family -- and the family label is exactly what AUDIT.md caught lying
+# on 11 of 40 rows.
+DECLARED_PROVENANCE = frozenset({"profile", "native"})
+# ...and only if the family is stated in the paper's own objects.  A discretised
+# analogue of a dynamics paper is not dynamics coverage.
+NATIVE_ESSENTIALITY = "native"
+
+# ---------------------------------------------------------------------------
+# Derivation heuristics.  These run ONLY when the module declares nothing.  They
+# are deliberately one-sided: they can recognise a discrete core, and they refuse to
+# guess a non-discrete one.  A wrong "unknown" costs a row in the denominator; a
+# wrong "analysis" would manufacture exactly the diversity this file exists to
+# measure.
+# ---------------------------------------------------------------------------
+# MIRRORED from scripts/submit.sh -- see the module docstring.  Read what the SOLVER
+# is shown, not the dict key names.  The cost of reading render() is false positives
+# from prose ("degree of the polynomial"); that is the same trade submit.sh makes,
+# and disagreeing with the gate would be worse.
+GRAPH_WORDS = ("adjac", "edges", "neighb", "vertex", "vertic", "conflict",
+               "clique", "graph", "incident", "degree of")
+ASSIGN = ("clause", "assign", "variab", "literal", "colour", "color", "constraint")
+COVER = ("lengths", "items", "weights", "subset", "blocks", "target", "capacit")
+PERM = ("permutation", "ordering", "ranking", "bracket", "seeding")
+
+
+def derive_core(inst, shown=""):
+    """Core inferred from what the solver is actually handed, or UNKNOWN.
+
+    Never returns a non-discrete core: nothing about a dict of instance keys is
+    evidence that a family is analytic.  "other" is a legitimate *declared* value (a
+    module saying "my core is none of the listed ones"); it is not a legitimate
+    *derived* one, and conflating the two is the bug this function was rewritten to
+    remove.
+    """
+    if not isinstance(inst, dict):
+        return UNKNOWN
+    keys = " ".join(k for k in inst if k != "answer").lower()
+    both = keys + " " + (shown or "").lower()
+    # Do NOT resolve by priority order.  Testing graph first pushed graph from 17 to
+    # 25 of 42 (GRAPH_WORDS now also reads render(), and nearly every combinatorial
+    # statement says "vertex" somewhere); testing the specific cores first pushed
+    # csp_sat from 4 to 10.  Both are artefacts of the tie-break, not measurements.
+    # Require an UNAMBIGUOUS structural match on the instance keys instead, and admit
+    # ambiguity as ambiguity -- an over-attributed histogram is worse than a wide one,
+    # because a quota is computed on top of it.
+    hits = [name for name, words in (("csp_sat", ASSIGN),
+                                     ("exact_cover", COVER),
+                                     ("permutation", PERM),
+                                     ("graph", GRAPH_WORDS))
+            if any(w in keys for w in words)]
+    if len(hits) == 1:
+        return hits[0]
+    if len(hits) > 1:
+        return UNKNOWN            # ambiguous: several cores match the same instance
+    # Nothing in the instance keys.  The rendered statement is weaker evidence -- use
+    # it only for graph, and only when the keys said nothing at all.
+    if any(w in both for w in GRAPH_WORDS):
+        return "graph"
+    return UNKNOWN
+
+
+# Ordered: the more specific certificate languages are tested before the generic
+# "has coefficients" one, so an SOS description is not filed as a polynomial.
+CERT_PATTERNS = (
+    ("sos", r"sum[\s-]*of[\s-]*squares|\bsos\b|positivstellensatz"),
+    ("telescoping", r"telescop|gosper|zeilberger|wz\s+pair"),
+    ("symbolic_integral", r"antideriv|indefinite\s+integral|risch|"
+                          r"integration\s+in\s+closed\s+form"),
+    ("algebraic_number", r"minimal\s+polynomial|isolating\s+interval|algebraic\s+number"),
+    ("matrix_certificate", r"\b(gram|seidel|positive[\s-]*semidefinite|psd|cholesky|"
+                           r"eigenvalue)\b"),
+    ("interval", r"interval\s+(arithmetic|enclosure)|rigorous\s+enclosure|"
+                 r"certified\s+bound"),
+    ("polynomial", r"polynomial|monomial|nullstellensatz|coefficient\s+vector"),
+    ("rational", r"\brational\b|\bfraction\b|numerator|denominator|\bover\s+Q\b"),
+    ("integer_tuple", r"integer|tuple|index|indices|subset|permutation|bitmask|"
+                      r"assignment|colou?r|vertex|vertices|bit\s*string"),
+)
+
+REGIME_PATTERNS = (
+    ("continuous_analytic", r"\breal\s+(number|coordinate|vector|valued)|manifold|"
+                            r"trajector|\bflow\b|\bODE\b|differential\s+equation|"
+                            r"floating|\bR\^|ℝ"),
+    ("real_algebraic", r"algebraic\s+number|minimal\s+polynomial|isolating\s+interval|"
+                       r"real\s+algebraic"),
+    ("rational_exact", r"\brational\b|\bover\s+Q\b|ℚ|fraction|exact\s+arithmetic"),
+    ("finite_field", r"finite\s+field|\bGF\(|\bF_?\d+\b|\bmod(ulo)?\s+p\b"),
+    ("integer_lattice", r"lattice|integer\s+(point|coordinate)|\bZ\^"),
+    ("finite_discrete", r"graph|adjacen|hypergraph|set\s+system|permutation|clause|"
+                        r"colou?r|bitmask|tournament|matroid|\bword\b|design|"
+                        r"incidence|partition|sequence"),
+)
+
+# Free-text NATIVE["intuition"] normalised into a bounded vocabulary.  Without this
+# the "no single intuition_type above 30%" quota is decoration: every module writes a
+# different sentence, so no bucket ever holds more than one row and the quota cannot
+# fail.  Order is priority order -- "constraint satisfaction under signal-switching
+# symmetry" is a symmetry problem, not a propagation problem.
+INTUITION_PATTERNS = (
+    ("symmetry", r"symmetr|equivarian|orbit|group\s+action|relabel"),
+
+exec
+/bin/bash -lc "rg -n -i 'algorithm|complex|exhaust|test|generate|n ?\\\\le|order 16|2\\"'^'"\\{4\\}|2\\"'^4|pseudo-irreduc|biject|APN|non-linearity|differential invariant|classification'"' /tmp/arxiv1411.0DKOHp/semifieldsbox.tex" in /home/gson/gvrepo/results/1411.2503
+ succeeded in 0ms:
+94:  Specific vectorial boolean functions, such as \SBoxes or APN functions have many
+98:transparency~\cite{Alvarez:2008:apn,Prouff:2005:transparency}) to provide best
+110:to build \SBoxes and APN functions via semifields pseudo-extensions of the form $\Sf^2_{2^4}$,
+111:where $\Sf_{2^4}$ is any semifield of order $2^4$. Then, we mimic in this
+113:the cube. We report here the construction of $12781$ non equivalent \SBoxes with with maximal nonlinearity, differential invariants, degrees
+114: and bit interdependency, and $2684$ APN functions.
+126:Keywords: \SBoxes; APN functions; semifields.
+136:elements as a vector space on its base field, and is generated by: 
+148:use the list of criteria described in~\cite{Alvarez:2008:apn}. 
+150:Among bijective \SBoxes, only AES and Camellia's \SBoxes have good scores on all
+159:Rather than trying different constructions, some works~\cite{Alvarez:2008:apn},
+161:possibilities of bijective \SBoxes. 
+178:verifying an almost perfect score to the differential invariant (see
+179:also~\cite{Alvarez:2008:apn}, for instance). In the latter case, we will show that mimicking,
+180:e.g., the cube function on semifields enables us to generate
+181:APN functions.
+199:From this construction we deduce bijective \SBoxes from $\F_2^8$ to $\F_2^8$, that mimic
+201:We also present some efficient algorithms for semifields constructions in
+206:novel \SBoxes and APN functions that match the resistance of the best known ones.
+229:Unfortunately, we do not know the complete classification of these semifields for the moment. Currently, the 
+230:largest classification in characteristic $2$ is of order 64~\cite{Rua:2009:classification_sf}.
+231:Thus, in order to build \SBoxes with $256$ elements, we mimic the finite fields construction, based on a quotient structure: $\mathbb{F}_{2^8} = \mathbb{F}_{2^4}[X]/P_2$. 
+249:build a bijection  $T': (\mathbb{S}_{2^4})^2 \to  (\mathbb{S}_{2^4})^2 $ as
+252:Let $P(X)=X^2 + \alpha X + \beta$, with $\alpha, \beta \in \mathbb{F}_{2^4} $, 
+254:Elements of $\mathbb{F}_{2^8}$ viewed as $\mathbb{F}_{2^4}[X]/P$ are polynomials of degree $1$ of the form $aX+b$, denoted as couple $(a,b)\in \mathbb{F}^2_{2^4}$.  
+260:Over the finite field $\mathbb{F}_{2^8}$, the inverse of $0X+b$ is $0X+u$, where $u=b^{-1}\in\mathbb{F}_{2^4}$ if $b\neq 0$. Then if $a\neq 0$, 
+261:we let $\gamma \in  \mathbb{F}_{2^4}$ be such that $\gamma = a^{-1}b$, in order to obtain an unitary couple and thus simplify the following computations.
+290:Let $P : X^2 + \alpha X + \beta, \in \mathbb{F}_{2^4}[X] $, $P$ is irreducible if and only if $ \forall \gamma \in \mathbb{F}_{2^4}, [(\alpha - \gamma)\gamma -\beta]  \neq 0$.
+294:\begin{mydef}[Pseudo-irreducibility]\label{def:pseudoirred}
+295:Let $P=X^2 + \alpha X + \beta \in \mathbb{S}_{2^4}[X] $, $P$ is pseudo-irreducible if and only if $ \forall \gamma \in \mathbb{S}_{2^4}, [(\alpha - \gamma)\gamma -\beta]  \neq 0$.
+300:Thus, in the case where $\mathbb{S}_{2^4} \simeq  \mathbb{F}_{2^4}$,
+301:our pseudo-irreducibility notion reduces to irreducibility. 
+304:Let $P : X^2 + \alpha X + \beta, \in \mathbb{S}_{2^4}[X] $ be a pseudo-irreducible polynomial. The transformation: 
+309:	T' & : & (\mathbb{S}_{2^4})^2 & \to & (\mathbb{S}_{2^4})^2 \\
+315:such that $\gamma = a^{-1}b, c=[(\alpha - \gamma)\gamma -\beta]^{-1}$, and $d=c(\alpha - \gamma)$, is a bijection.
+324:For proving injectivity, we suppose that $\exists \gamma_1, \gamma_2 \in \mathbb{S}_{2^4}$ such that $c(\alpha-\gamma_1)=c(\alpha-\gamma_2)$.
+327:Then, as $\mathbb{S}^2_{2^4}$ has a finite cardinality, any injective endofunction 
+328:is bijective.
+340:As a prerequisite for constructing pseudo-extensions, we need semifields of order $2^{4}$. In this section, we expose some results and optimizations about efficient generation of semifields.
+358:In our case, we restrict this proposition to $q=2$, and $n \le 8 $. 
+360:In order to generate semifields, we use the algorithms described in~\cite{Rua:2009:classification_sf}. 
+366:Let $\mathbb{S}_1$and $\mathbb{S}_2$ be two semifields over the same finite field $\mathbb{F}_p$, then an isotopy between $\mathbb{S}_1$ and $\mathbb{S}_2$ is a triple $(F,G,H)$ of bijective linear maps $\mathbb{S}_1 \to \mathbb{S}_2$ over $\mathbb{F}_p$ such that $H(ab) = F(a)G(b), \forall a,b \in \mathbb{S}_1$
+378:Even if only square matrices with small size are involved, semifield generation remains complex for the large amount of computations involved. 
+381:For $\Sf_{2^4}$ this is less important, but any improvement becomes substantial
+382:if you are to generate many \SBoxes and experiment with them. We thus propose in
+387:Classical determinant computations use Gaussian elimination, with a $O(\frac{2}{3}n^3)$ complexity for a single determinant computation. 
+388:Thus, in order to build $GL(n,2)$ by testing all the possible matrices, we obtain an overall complexity of $O(\frac{2}{3}n^3 2^{n^2})$. 
+389:Here, we present two ways to reduce this complexity.
+417:The complexity is also drastically reduced by linking successive computations. Indeed, by modifying only one bit between two values, the determinant computation is reduced to the following formula: 
+419:Thus, we reduced the determinant computation, which would normally requires $n-1$ XOR operations to only one, for $n \le 7$. 
+423:Let $n$ be the dimension of squares matrices, $n \le 6$, then the complexity of the determination of $GL(n,2)$, using tabulation and Gray codes, is bounded by $D_n$ that satisfies:
+430:The complexity of the above algorithm is obtained by counting XOR operations and is given by the following recurrence formula:  
+491:we obtain a complexity bound of $O(2^{n+ n \lceil \frac{n}{2}
+493:As comparison, if we used a scalars products and transposition algorithms, we
+494:would have a complexity of $O(kn^2(n-1))$. As a conclusion, we see that our
+497:For semifields generation, the number of equivalence test is of the order of $2^{n^2}$ and the second term of the first complexity is therefore dominant.
+498:In this case our optimization allows to gain another factor of $n^2$ in the complexity bound. 
+519:Several criteria have been defined to measure \SBoxes resistance when faced to different types of attacks. In order to select our \SBoxes, we have chosen the following criteria, following mostly~\cite{Alvarez:2008:apn}. 
+522:\item Bijectivity. By construction we only look for bijective functions.
+526:\item Non-linearity. We return the linear invariant $\lambda_S$, defined as follows:  
+528:\item XOR table and differential invariant.  A XOR table of S is based on the
+530:  \oplus x) = b \}, \forall a,b\in \mathbb{F}_2^n$. The differential invariant
+596:For instance, the \SBoxes of AES and Camellia have minimal non-linearity $\lambda_{AES}=\lambda_{Camellia}=16$, minimal
+597:differential invariant among non-APN functions,
+608:to generate semifields of order 16 plus their pseudo-extensions. We have then
+609:constructed \SBoxes with the help of the pseudo-inverse bijection of
+610:Lemma~\ref{lem:pseudoinv}, and apply all the tests of Section~\ref{sec:crit}. 
+612:We managed to generate 19336 semifields of order $2^{4}$ (with possible isomorphic ones). 
+614:were pseudo-irreducible, with a minimum of $91$ and a maximum of $120$ (the
+616:By testing all possible pseudo-irreducible polynomials for each semifield, we
+617:obtained $12781$ \SBoxes, with maximal nonlinearity, differential invariants,
+658:$'19203'$. It is generated by the semifield generated by the linear combinations
+660:pseudo-irreducible polynomial for the pseudo-extension, with $6$
+721:\caption{An \SBox generated from a semifield with maximal linear and differential invariants}\label{tab:23016}
+749:\subsection{APN functions based on semifields}
+751:i.e. $\delta =2$, are called almost perfect non-linear functions (denoted APN). For instance,
+752:in~\cite{Alvarez:2008:apn}, the cube
+753:function is APN over the finite field with $256$ elements. As previously, we mimic this function on
+755:\mathbb{F}_{2^4}[X]/P$, with $P$ an irreducible polynomial of the form
+766:Finally, we have generated $2684$ APN functions, $336$ having perfect avalanche,
+767:and bit independence scores, i.e. $A_{APN_i}=0$ and $B_{APN_i}=0$.
+769:For instance, one of the APN function obtained is given in Table~\ref{tab:apncube}.
+812:\caption{An APN function generated via a pseudo-cube function over a product of semifields}\label{tab:apncube}
+822:In~\cite{Combarro:2011:advances_sf}, the classification of semifields of order $256$ has been
+826:thus generated \SBoxes had a couple $(\delta, \lambda) = (4,16)$,  apart from
+833:In order to construct new efficient $8\times 8$ bijective \SBoxes, we replace the usual finite fields algebraic structure by semifields. However, our current knowledge about this subject does not allow us to construct directly $\mathbb{S}_{2^8}$.
+834:We therefore build pseudo-extensions of degree $2$ of $\mathbb{S}_{2^4}$. Pseudo-extensions are based on the notion of pseudo-irreducibility, derived from a characterisation of polynomial irreducibility in finite fields. 
+842:We then used the same technique to generate $2684$ novel APN functions by mimicking the cube function. 
+846:About bijective \SBoxes and APN functions, some more exhaustive search could be
+850:(bijective or not), like the ones described in~\cite[\S6]{Alvarez:2008:apn}. 
+
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1411.2503/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..e258435d1b0d2a7ca458bc97003a320399178ad4
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,71 @@
++# Rejected at Step 0: arXiv:1411.2503
++
++Paper: Jean-Guillaume Dumas and Jean-Baptiste Orfila, [Generating S-Boxes
++from Semifields Pseudo-extensions](https://arxiv.org/abs/1411.2503).
++
++## Decision
++
++No module is produced. The paper supplies exact, cheaply checkable finite-field
++and semifield objects, so verification is not the problem. It supplies neither a
++scalable hard search distribution (Track A) nor a compact, sub-300-operation
++route to the truth-table invariants that differs from their mechanical
++computation (Track B). Shipping the suggested invariant-computation family would
++therefore make a hardness claim contradicted by the paper's own method.
++
++## The Step 0 question
++
++**What algorithm produces the certificate, and what does it cost?**
++
++For the proposed S-box construction, Section 2, Lemma 2 gives the certificate
++directly. Given a pseudo-irreducible `X^2 + alpha X + beta`, it defines every
++value of the bijection `T'` using a constant number of additions,
++multiplications, and inversions in the 16-element semifield. Constructing its
++entire 256-entry truth table is consequently a direct 256-step table
++calculation, not a hard witness search.
++
++For the cryptographic properties, Section 4 gives executable finite sums and
++maxima. For a truth table of size `N`, a differential-distribution table takes
++`O(N^2)` exact updates. All vectorial Walsh coefficients can be computed in
++`O(N^2 log N)` exact butterfly updates (or the displayed definition can be used
++naively in `O(N^3)`), and algebraic degree follows from Boolean Möbius transforms
++in polynomial time. At the paper's only S-box size, `N = 256`, these are small,
++deterministic computations.
++
++Section 5 confirms that this is how the advertised properties were obtained:
++the authors construct the S-boxes, "apply all the tests of Section 4," and say
++that they obtained the selected boxes "by testing all possible
++pseudo-irreducible polynomials." The APN and avalanche claims are likewise
++reported as experimental results, not guaranteed for a scalable parameter
++regime by a theorem.
++
++## Gate analysis
++
++| Gate | Result | Reason |
++|---|---|---|
++| G | Partial only | Lemma 2 theorem-backs bijectivity, but not maximal nonlinearity, differential uniformity 4, APN behavior, degree, avalanche, or bit independence. Those are learned by running the tests. |
++| H / Track A | Fail | The paper states no average-case or distributional hardness theorem. The natural certificates are produced by the displayed formula or polynomial-time truth-table algorithms. |
++| H / Track B | Fail | Computing all invariants by hand is tedious, but the paper gives no compact route that recovers them in at most 300 exact operations. Asking for one or a few `T'` values instead makes the displayed formula itself the short mechanical route and leaves too small an answer space. Asking for the whole table exceeds the intended-route cap and tests transcription/arithmetic. |
++| V | Pass in isolation | Bijection and every listed truth-table invariant can be recomputed exactly from finite tables. This does not rescue H. |
++| Scaling | Fail | The native construction studied is an 8-by-8 S-box on `(S_16)^2`. Section 3 discusses semifield generation only for `q = 2, n <= 8`; the good cryptographic scores are experimental specifically at 256 entries, with no hardness-preserving asymptotic regime. |
++
++## Easy regimes and misleading alternatives
++
++- Section 2's pseudo-inverse is an explicit formula. Turning it into an
++  evaluation problem is an arithmetic exercise, not search hardness.
++- On an actual finite field the construction reduces to ordinary inversion in
++  `F_(2^8)`, which has standard efficient arithmetic and is even more structured.
++- The matrix-spread-set characterization in Section 3 makes a proposed
++  semifield easy to verify, but the paper's enumeration algorithm is explicitly
++  exhaustive (`O(n^3 2^(n^2))` naively, improved by Gray-code tabulation). The
++  paper does not turn that worst-case enumeration into a hard generated
++  distribution. Planting field multiplication matrices would instead create an
++  efficiently constructible special case.
++- Relabellings or affine variants of one of the fixed 256-entry tables do not
++  establish a scalable distribution; a correct canonicalization must also not
++  count mere reorderings as unlimited new mathematics.
++
++The prior triage hypothesis therefore fails at its key step: the paper can
++construct functions and can *compute* their invariants, but it does not construct
++functions together with the claimed cryptographic invariants by theorem or
++identity. Treating those computed values as the hard witness would violate the
++discriminating test in the task.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..e258435d1b0d2a7ca458bc97003a320399178ad4
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,71 @@
++# Rejected at Step 0: arXiv:1411.2503
++
++Paper: Jean-Guillaume Dumas and Jean-Baptiste Orfila, [Generating S-Boxes
++from Semifields Pseudo-extensions](https://arxiv.org/abs/1411.2503).
++
++## Decision
++
++No module is produced. The paper supplies exact, cheaply checkable finite-field
++and semifield objects, so verification is not the problem. It supplies neither a
++scalable hard search distribution (Track A) nor a compact, sub-300-operation
++route to the truth-table invariants that differs from their mechanical
++computation (Track B). Shipping the suggested invariant-computation family would
++therefore make a hardness claim contradicted by the paper's own method.
++
++## The Step 0 question
++
++**What algorithm produces the certificate, and what does it cost?**
++
++For the proposed S-box construction, Section 2, Lemma 2 gives the certificate
++directly. Given a pseudo-irreducible `X^2 + alpha X + beta`, it defines every
++value of the bijection `T'` using a constant number of additions,
++multiplications, and inversions in the 16-element semifield. Constructing its
++entire 256-entry truth table is consequently a direct 256-step table
++calculation, not a hard witness search.
++
++For the cryptographic properties, Section 4 gives executable finite sums and
++maxima. For a truth table of size `N`, a differential-distribution table takes
++`O(N^2)` exact updates. All vectorial Walsh coefficients can be computed in
++`O(N^2 log N)` exact butterfly updates (or the displayed definition can be used
++naively in `O(N^3)`), and algebraic degree follows from Boolean Möbius transforms
++in polynomial time. At the paper's only S-box size, `N = 256`, these are small,
++deterministic computations.
++
++Section 5 confirms that this is how the advertised properties were obtained:
++the authors construct the S-boxes, "apply all the tests of Section 4," and say
++that they obtained the selected boxes "by testing all possible
++pseudo-irreducible polynomials." The APN and avalanche claims are likewise
++reported as experimental results, not guaranteed for a scalable parameter
++regime by a theorem.
++
++## Gate analysis
++
++| Gate | Result | Reason |
++|---|---|---|
++| G | Partial only | Lemma 2 theorem-backs bijectivity, but not maximal nonlinearity, differential uniformity 4, APN behavior, degree, avalanche, or bit independence. Those are learned by running the tests. |
++| H / Track A | Fail | The paper states no average-case or distributional hardness theorem. The natural certificates are produced by the displayed formula or polynomial-time truth-table algorithms. |
++| H / Track B | Fail | Computing all invariants by hand is tedious, but the paper gives no compact route that recovers them in at most 300 exact operations. Asking for one or a few `T'` values instead makes the displayed formula itself the short mechanical route and leaves too small an answer space. Asking for the whole table exceeds the intended-route cap and tests transcription/arithmetic. |
++| V | Pass in isolation | Bijection and every listed truth-table invariant can be recomputed exactly from finite tables. This does not rescue H. |
++| Scaling | Fail | The native construction studied is an 8-by-8 S-box on `(S_16)^2`. Section 3 discusses semifield generation only for `q = 2, n <= 8`; the good cryptographic scores are experimental specifically at 256 entries, with no hardness-preserving asymptotic regime. |
++
++## Easy regimes and misleading alternatives
++
++- Section 2's pseudo-inverse is an explicit formula. Turning it into an
++  evaluation problem is an arithmetic exercise, not search hardness.
++- On an actual finite field the construction reduces to ordinary inversion in
++  `F_(2^8)`, which has standard efficient arithmetic and is even more structured.
++- The matrix-spread-set characterization in Section 3 makes a proposed
++  semifield easy to verify, but the paper's enumeration algorithm is explicitly
++  exhaustive (`O(n^3 2^(n^2))` naively, improved by Gray-code tabulation). The
++  paper does not turn that worst-case enumeration into a hard generated
++  distribution. Planting field multiplication matrices would instead create an
++  efficiently constructible special case.
++- Relabellings or affine variants of one of the fixed 256-entry tables do not
++  establish a scalable distribution; a correct canonicalization must also not
++  count mere reorderings as unlimited new mathematics.
++
++The prior triage hypothesis therefore fails at its key step: the paper can
++construct functions and can *compute* their invariants, but it does not construct
++functions together with the claimed cryptographic invariants by theorem or
++identity. Treating those computed values as the hard witness would violate the
++discriminating test in the task.
+
+exec
+/bin/bash -lc "sed -n '1,260p' REJECTED.md && git status --short -- ." in /home/gson/gvrepo/results/1411.2503
+ exited 128 in 0ms:
+# Rejected at Step 0: arXiv:1411.2503
+
+Paper: Jean-Guillaume Dumas and Jean-Baptiste Orfila, [Generating S-Boxes
+from Semifields Pseudo-extensions](https://arxiv.org/abs/1411.2503).
+
+## Decision
+
+No module is produced. The paper supplies exact, cheaply checkable finite-field
+and semifield objects, so verification is not the problem. It supplies neither a
+scalable hard search distribution (Track A) nor a compact, sub-300-operation
+route to the truth-table invariants that differs from their mechanical
+computation (Track B). Shipping the suggested invariant-computation family would
+therefore make a hardness claim contradicted by the paper's own method.
+
+## The Step 0 question
+
+**What algorithm produces the certificate, and what does it cost?**
+
+For the proposed S-box construction, Section 2, Lemma 2 gives the certificate
+directly. Given a pseudo-irreducible `X^2 + alpha X + beta`, it defines every
+value of the bijection `T'` using a constant number of additions,
+multiplications, and inversions in the 16-element semifield. Constructing its
+entire 256-entry truth table is consequently a direct 256-step table
+calculation, not a hard witness search.
+
+For the cryptographic properties, Section 4 gives executable finite sums and
+maxima. For a truth table of size `N`, a differential-distribution table takes
+`O(N^2)` exact updates. All vectorial Walsh coefficients can be computed in
+`O(N^2 log N)` exact butterfly updates (or the displayed definition can be used
+naively in `O(N^3)`), and algebraic degree follows from Boolean Möbius transforms
+in polynomial time. At the paper's only S-box size, `N = 256`, these are small,
+deterministic computations.
+
+Section 5 confirms that this is how the advertised properties were obtained:
+the authors construct the S-boxes, "apply all the tests of Section 4," and say
+that they obtained the selected boxes "by testing all possible
+pseudo-irreducible polynomials." The APN and avalanche claims are likewise
+reported as experimental results, not guaranteed for a scalable parameter
+regime by a theorem.
+
+## Gate analysis
+
+| Gate | Result | Reason |
+|---|---|---|
+| G | Partial only | Lemma 2 theorem-backs bijectivity, but not maximal nonlinearity, differential uniformity 4, APN behavior, degree, avalanche, or bit independence. Those are learned by running the tests. |
+| H / Track A | Fail | The paper states no average-case or distributional hardness theorem. The natural certificates are produced by the displayed formula or polynomial-time truth-table algorithms. |
+| H / Track B | Fail | Computing all invariants by hand is tedious, but the paper gives no compact route that recovers them in at most 300 exact operations. Asking for one or a few `T'` values instead makes the displayed formula itself the short mechanical route and leaves too small an answer space. Asking for the whole table exceeds the intended-route cap and tests transcription/arithmetic. |
+| V | Pass in isolation | Bijection and every listed truth-table invariant can be recomputed exactly from finite tables. This does not rescue H. |
+| Scaling | Fail | The native construction studied is an 8-by-8 S-box on `(S_16)^2`. Section 3 discusses semifield generation only for `q = 2, n <= 8`; the good cryptographic scores are experimental specifically at 256 entries, with no hardness-preserving asymptotic regime. |
+
+## Easy regimes and misleading alternatives
+
+- Section 2's pseudo-inverse is an explicit formula. Turning it into an
+  evaluation problem is an arithmetic exercise, not search hardness.
+- On an actual finite field the construction reduces to ordinary inversion in
+  `F_(2^8)`, which has standard efficient arithmetic and is even more structured.
+- The matrix-spread-set characterization in Section 3 makes a proposed
+  semifield easy to verify, but the paper's enumeration algorithm is explicitly
+  exhaustive (`O(n^3 2^(n^2))` naively, improved by Gray-code tabulation). The
+  paper does not turn that worst-case enumeration into a hard generated
+  distribution. Planting field multiplication matrices would instead create an
+  efficiently constructible special case.
+- Relabellings or affine variants of one of the fixed 256-entry tables do not
+  establish a scalable distribution; a correct canonicalization must also not
+  count mere reorderings as unlimited new mathematics.
+
+The prior triage hypothesis therefore fails at its key step: the paper can
+construct functions and can *compute* their invariants, but it does not construct
+functions together with the claimed cryptographic invariants by theorem or
+identity. Treating those computed values as the hard witness would violate the
+discriminating test in the task.
+fatal: not a git repository (or any of the parent directories): .git
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..e258435d1b0d2a7ca458bc97003a320399178ad4
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,71 @@
++# Rejected at Step 0: arXiv:1411.2503
++
++Paper: Jean-Guillaume Dumas and Jean-Baptiste Orfila, [Generating S-Boxes
++from Semifields Pseudo-extensions](https://arxiv.org/abs/1411.2503).
++
++## Decision
++
++No module is produced. The paper supplies exact, cheaply checkable finite-field
++and semifield objects, so verification is not the problem. It supplies neither a
++scalable hard search distribution (Track A) nor a compact, sub-300-operation
++route to the truth-table invariants that differs from their mechanical
++computation (Track B). Shipping the suggested invariant-computation family would
++therefore make a hardness claim contradicted by the paper's own method.
++
++## The Step 0 question
++
++**What algorithm produces the certificate, and what does it cost?**
++
++For the proposed S-box construction, Section 2, Lemma 2 gives the certificate
++directly. Given a pseudo-irreducible `X^2 + alpha X + beta`, it defines every
++value of the bijection `T'` using a constant number of additions,
++multiplications, and inversions in the 16-element semifield. Constructing its
++entire 256-entry truth table is consequently a direct 256-step table
++calculation, not a hard witness search.
++
++For the cryptographic properties, Section 4 gives executable finite sums and
++maxima. For a truth table of size `N`, a differential-distribution table takes
++`O(N^2)` exact updates. All vectorial Walsh coefficients can be computed in
++`O(N^2 log N)` exact butterfly updates (or the displayed definition can be used
++naively in `O(N^3)`), and algebraic degree follows from Boolean Möbius transforms
++in polynomial time. At the paper's only S-box size, `N = 256`, these are small,
++deterministic computations.
++
++Section 5 confirms that this is how the advertised properties were obtained:
++the authors construct the S-boxes, "apply all the tests of Section 4," and say
++that they obtained the selected boxes "by testing all possible
++pseudo-irreducible polynomials." The APN and avalanche claims are likewise
++reported as experimental results, not guaranteed for a scalable parameter
++regime by a theorem.
++
++## Gate analysis
++
++| Gate | Result | Reason |
++|---|---|---|
++| G | Partial only | Lemma 2 theorem-backs bijectivity, but not maximal nonlinearity, differential uniformity 4, APN behavior, degree, avalanche, or bit independence. Those are learned by running the tests. |
++| H / Track A | Fail | The paper states no average-case or distributional hardness theorem. The natural certificates are produced by the displayed formula or polynomial-time truth-table algorithms. |
++| H / Track B | Fail | Computing all invariants by hand is tedious, but the paper gives no compact route that recovers them in at most 300 exact operations. Asking for one or a few `T'` values instead makes the displayed formula itself the short mechanical route and leaves too small an answer space. Asking for the whole table exceeds the intended-route cap and tests transcription/arithmetic. |
++| V | Pass in isolation | Bijection and every listed truth-table invariant can be recomputed exactly from finite tables. This does not rescue H. |
++| Scaling | Fail | The native construction studied is an 8-by-8 S-box on `(S_16)^2`. Section 3 discusses semifield generation only for `q = 2, n <= 8`; the good cryptographic scores are experimental specifically at 256 entries, with no hardness-preserving asymptotic regime. |
++
++## Easy regimes and misleading alternatives
++
++- Section 2's pseudo-inverse is an explicit formula. Turning it into an
++  evaluation problem is an arithmetic exercise, not search hardness.
++- On an actual finite field the construction reduces to ordinary inversion in
++  `F_(2^8)`, which has standard efficient arithmetic and is even more structured.
++- The matrix-spread-set characterization in Section 3 makes a proposed
++  semifield easy to verify, but the paper's enumeration algorithm is explicitly
++  exhaustive (`O(n^3 2^(n^2))` naively, improved by Gray-code tabulation). The
++  paper does not turn that worst-case enumeration into a hard generated
++  distribution. Planting field multiplication matrices would instead create an
++  efficiently constructible special case.
++- Relabellings or affine variants of one of the fixed 256-entry tables do not
++  establish a scalable distribution; a correct canonicalization must also not
++  count mere reorderings as unlimited new mathematics.
++
++The prior triage hypothesis therefore fails at its key step: the paper can
++construct functions and can *compute* their invariants, but it does not construct
++functions together with the claimed cryptographic invariants by theorem or
++identity. Treating those computed values as the hard witness would violate the
++discriminating test in the task.
+
+codex
+Rejected at Step 0. I documented the analysis in [REJECTED.md](/home/gson/gvrepo/results/1411.2503/REJECTED.md).
+
+Core reasons:
+
+- Lemma 2 directly computes the pseudo-inverse S-box.
+- The cryptographic invariants are obtained by polynomial-time truth-table scans.
+- The paper provides no scalable distributional-hardness result for Track A.
+- It provides no compact alternative to those scans satisfying Track B’s operation cap.
+- Its demonstrated construction is fixed at 8×8 S-boxes, so it lacks the required scaling regime.
+
+Accordingly, no generator, self-test report, or hardening transcript was fabricated.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..e258435d1b0d2a7ca458bc97003a320399178ad4
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,71 @@
++# Rejected at Step 0: arXiv:1411.2503
++
++Paper: Jean-Guillaume Dumas and Jean-Baptiste Orfila, [Generating S-Boxes
++from Semifields Pseudo-extensions](https://arxiv.org/abs/1411.2503).
++
++## Decision
++
++No module is produced. The paper supplies exact, cheaply checkable finite-field
++and semifield objects, so verification is not the problem. It supplies neither a
++scalable hard search distribution (Track A) nor a compact, sub-300-operation
++route to the truth-table invariants that differs from their mechanical
++computation (Track B). Shipping the suggested invariant-computation family would
++therefore make a hardness claim contradicted by the paper's own method.
++
++## The Step 0 question
++
++**What algorithm produces the certificate, and what does it cost?**
++
++For the proposed S-box construction, Section 2, Lemma 2 gives the certificate
++directly. Given a pseudo-irreducible `X^2 + alpha X + beta`, it defines every
++value of the bijection `T'` using a constant number of additions,
++multiplications, and inversions in the 16-element semifield. Constructing its
++entire 256-entry truth table is consequently a direct 256-step table
++calculation, not a hard witness search.
++
++For the cryptographic properties, Section 4 gives executable finite sums and
++maxima. For a truth table of size `N`, a differential-distribution table takes
++`O(N^2)` exact updates. All vectorial Walsh coefficients can be computed in
++`O(N^2 log N)` exact butterfly updates (or the displayed definition can be used
++naively in `O(N^3)`), and algebraic degree follows from Boolean Möbius transforms
++in polynomial time. At the paper's only S-box size, `N = 256`, these are small,
++deterministic computations.
++
++Section 5 confirms that this is how the advertised properties were obtained:
++the authors construct the S-boxes, "apply all the tests of Section 4," and say
++that they obtained the selected boxes "by testing all possible
++pseudo-irreducible polynomials." The APN and avalanche claims are likewise
++reported as experimental results, not guaranteed for a scalable parameter
++regime by a theorem.
++
++## Gate analysis
++
++| Gate | Result | Reason |
++|---|---|---|
++| G | Partial only | Lemma 2 theorem-backs bijectivity, but not maximal nonlinearity, differential uniformity 4, APN behavior, degree, avalanche, or bit independence. Those are learned by running the tests. |
++| H / Track A | Fail | The paper states no average-case or distributional hardness theorem. The natural certificates are produced by the displayed formula or polynomial-time truth-table algorithms. |
++| H / Track B | Fail | Computing all invariants by hand is tedious, but the paper gives no compact route that recovers them in at most 300 exact operations. Asking for one or a few `T'` values instead makes the displayed formula itself the short mechanical route and leaves too small an answer space. Asking for the whole table exceeds the intended-route cap and tests transcription/arithmetic. |
++| V | Pass in isolation | Bijection and every listed truth-table invariant can be recomputed exactly from finite tables. This does not rescue H. |
++| Scaling | Fail | The native construction studied is an 8-by-8 S-box on `(S_16)^2`. Section 3 discusses semifield generation only for `q = 2, n <= 8`; the good cryptographic scores are experimental specifically at 256 entries, with no hardness-preserving asymptotic regime. |
++
++## Easy regimes and misleading alternatives
++
++- Section 2's pseudo-inverse is an explicit formula. Turning it into an
++  evaluation problem is an arithmetic exercise, not search hardness.
++- On an actual finite field the construction reduces to ordinary inversion in
++  `F_(2^8)`, which has standard efficient arithmetic and is even more structured.
++- The matrix-spread-set characterization in Section 3 makes a proposed
++  semifield easy to verify, but the paper's enumeration algorithm is explicitly
++  exhaustive (`O(n^3 2^(n^2))` naively, improved by Gray-code tabulation). The
++  paper does not turn that worst-case enumeration into a hard generated
++  distribution. Planting field multiplication matrices would instead create an
++  efficiently constructible special case.
++- Relabellings or affine variants of one of the fixed 256-entry tables do not
++  establish a scalable distribution; a correct canonicalization must also not
++  count mere reorderings as unlimited new mathematics.
++
++The prior triage hypothesis therefore fails at its key step: the paper can
++construct functions and can *compute* their invariants, but it does not construct
++functions together with the claimed cryptographic invariants by theorem or
++identity. Treating those computed values as the hard witness would violate the
++discriminating test in the task.
+
+tokens used
+92,714
+Rejected at Step 0. I documented the analysis in [REJECTED.md](/home/gson/gvrepo/results/1411.2503/REJECTED.md).
+
+Core reasons:
+
+- Lemma 2 directly computes the pseudo-inverse S-box.
+- The cryptographic invariants are obtained by polynomial-time truth-table scans.
+- The paper provides no scalable distributional-hardness result for Track A.
+- It provides no compact alternative to those scans satisfying Track B’s operation cap.
+- Its demonstrated construction is fixed at 8×8 S-boxes, so it lacks the required scaling regime.
+
+Accordingly, no generator, self-test report, or hardening transcript was fabricated.
