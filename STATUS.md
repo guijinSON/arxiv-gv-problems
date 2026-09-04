@@ -1,13 +1,13 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **89 / 12,167** resolved (0.73%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **90 / 12,167** resolved (0.74%)
 
 | state | count |
 |---|---:|
 | ✅ done | 42 |
-| 🚫 rejected (documented) | 47 |
+| 🚫 rejected (documented) | 48 |
 | 🔄 in progress | 20 |
-| ⚪ free | 12,058 |
+| ⚪ free | 12,057 |
 | **total** | **12,167** |
 
 ## In progress
@@ -15,7 +15,6 @@
 | paper | who | claimed |
 |---|---|---|
 | `1604.08603` | GUIJIN SON | 2026-09-03T03:58 |
-| `2410.07666` | GUIJIN SON | 2026-09-03T03:58 |
 | `2512.24037` | GUIJIN SON | 2026-09-03T03:58 |
 | `1910.10364` | GUIJIN SON | 2026-09-03T04:20 |
 | `2411.16149` | GUIJIN SON | 2026-09-03T04:36 |
@@ -34,6 +33,7 @@
 | `1902.03164` | GUIJIN SON | 2026-09-03T07:15 |
 | `0812.4158` | GUIJIN SON | 2026-09-03T07:15 |
 | `1503.03192` | GUIJIN SON | 2026-09-03T07:15 |
+| `2506.17521` | Wongi-Jang | 2026-09-04T05:56 |
 
 ## By family
 
@@ -43,7 +43,7 @@
 | designs and codes | 10 | 1,022 |
 | algebraic decomposition | 7 | 804 |
 | integer equations | 4 | 607 |
-| reconfiguration | 7 | 551 |
+| reconfiguration | 8 | 551 |
 | geometric configurations | 5 | 533 |
 | constraint satisfaction | 8 | 508 |
 | algebraic identity solutions | 2 | 398 |
@@ -52,4 +52,4 @@
 | words and permutations | 6 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-04 05:52Z by `scripts/status.sh --write`_
+_regenerated 2026-09-04 07:37Z by `scripts/status.sh --write`_
