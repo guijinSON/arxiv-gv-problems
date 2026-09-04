@@ -16,6 +16,69 @@ if [ -n "$REJECT" ]; then
   # constraint was our answer FORMAT, not the paper.  2601.05272 climbed n=64..84,
   # stopped at 249 atoms against a 256 cap, reported "cannot be made harder", and was
   # rejected.  Instruction alone did not prevent that; this guard does.
+  # A G9(b) rejection blames the PAPER for a result produced by the builder's own
+  # hint.  Measured over the 17 modules on disk that carry a STRUCTURAL_HINT: 4 of 9
+  # rejected papers hand the solver a procedure, against 1 of 8 accepted.  This gate
+  # only ever runs on --reject, so that one accepted paper is never touched by it.
+  #
+  # 1904.00563 is the pattern: "Among target-one vertices, keep edges whose endpoints
+  # have equal eligible degree; the result is three even cycles, so take alternating
+  # edges on each."  That is the whole algorithm, including the derived count and the
+  # final step.  The hinted oracle solving it says nothing about the paper.
+  python3 - "$D" <<'PYHINT' || exit 6
+import ast, glob, re, sys, os
+d = sys.argv[1]
+rj = os.path.join(d, "REJECTED.md")
+try:
+    note = open(rj, encoding="utf-8", errors="ignore").read()
+except OSError:
+    sys.exit(0)
+# only gate rejections that actually turn on G9
+if not re.search(r"G9\(b\)|G9\b", note):
+    sys.exit(0)
+hint = None
+for f in glob.glob(os.path.join(d, "*gen_*.py")):
+    try:
+        tree = ast.parse(open(f, encoding="utf-8", errors="ignore").read())
+    except Exception:
+        continue
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign):
+            for t in n.targets:
+                if isinstance(t, ast.Name) and t.id == "STRUCTURAL_HINT":
+                    try:
+                        hint = " ".join(str(ast.literal_eval(n.value)).split())
+                    except Exception:
+                        pass
+    if hint:
+        break
+if not hint:
+    sys.exit(0)                      # no module or no hint kept: cannot check
+CHAIN = re.compile(r";\s*(the\s+)?\w+|,\s*then\b|\bthen\b|\bso (take|use|apply|read|pick|choose)\b"
+                   r"|\bbefore using\b|\bfirst,|\bnext,|\bfinally\b", re.I)
+DERIVED = re.compile(r"\bthe result is\b|\bthis (gives|yields|produces)\b|\byou (get|obtain)\b"
+                     r"|\bthere are (two|three|four|five|\d+)\b|\bexactly (two|three|four|\d+)\b", re.I)
+bad = []
+if CHAIN.search(hint):
+    bad.append("it chains a SECOND step (\"then\" / \"; ...\" / \"so take\" / \"first,\")")
+if DERIVED.search(hint):
+    bad.append("it hands over a DERIVED FACT the solver was supposed to find "
+               "(\"the result is ...\", \"there are three ...\")")
+if not bad:
+    sys.exit(0)
+print("ERROR: this rejection cites G9, but the STRUCTURAL_HINT is a PROCEDURE, not a")
+print("       structural hint, so G9(b) measured your hint and not the paper.")
+print(f"       hint: {hint[:200]}")
+for b in bad:
+    print(f"       - {b}")
+print("       A structural hint names the INVARIANT a solver has to notice -- the thing")
+print("       to look at. It does not say what to do with it, does not chain steps, and")
+print("       does not state a quantity the solver was supposed to derive.")
+print("       Rewrite the hint to name only the invariant, re-run the G9(b) arm, and")
+print("       reject only if the family still dissolves. See prompts/codex_task.md G9(b).")
+sys.exit(1)
+PYHINT
+
   python3 - "$D/.meta.json" <<'PYCAP' || exit 6
 import json, sys
 try:

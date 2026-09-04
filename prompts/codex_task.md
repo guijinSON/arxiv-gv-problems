@@ -841,6 +841,39 @@ cd g9_hinted && GV_HINT_MODE=structural python3 ../../../scripts/harden.py gen_<
 directory, or you will destroy the STEP 4 evidence you already paid for. Copy the
 finished transcripts back as `g9_<arm>_transcript.jsonl`.
 
+#### What a structural hint may contain — read this before you write one
+
+G9(b) rejects a paper when the hinted oracle solves it. That inference is only valid if
+the hint carries **the insight and nothing else**. If you hand over the algorithm, the
+oracle solving it measures your hint, not the paper — and the paper is discarded for it.
+
+A structural hint **names the invariant a solver has to notice**. It says what to look
+at. It does not say what to do next, it does not chain a second step, and it does not
+state a quantity the solver was supposed to derive.
+
+Measured over the 17 modules on disk carrying a `STRUCTURAL_HINT`: 4 of 9 rejected
+papers handed over a procedure, against 1 of 8 accepted. Real examples, all four from
+rejected papers:
+
+| hint | why it is a procedure |
+|---|---|
+| "Among target-one vertices, keep edges whose endpoints have equal eligible degree; **the result is three even cycles, so take alternating edges on each**." | states the derived count *and* the final step — the whole algorithm |
+| "Subtract the displayed center modulo p, **then** enumerate the two named exponent cosets by repeated multiplication" | chains a second step |
+| "Link repeated-letter word patterns **first, then** propagate one bijection across every occurrence **before using** ordinary letter frequencies" | a three-step method |
+
+Contrast one that is fine, from a paper whose G9(b) rejection stands on other grounds:
+
+> "Reduce every magnitude modulo 997: each four-element residue bucket contains two
+> complementary pairs with identical sums."
+
+It names the invariant — residue buckets carry complementary pairs — and stops. What to
+do with that is left to the solver.
+
+`submit.sh --reject` refuses a G9-citing rejection whose hint chains steps ("then",
+"; ...", "so take", "first,") or hands over a derived fact ("the result is ...",
+"there are three ..."). Rewrite the hint to name only the invariant, re-run the G9(b)
+arm, and reject only if the family still dissolves.
+
 Read the verdict with the polarity flipped: `hardened` means the hint did not break the
 family and G9(b) passes. `too_easy` means the hint broke it, and the family fails G9(b).
 You may then move **one** rung up the `DIFFICULTY` ladder and re-run STEP 4 bare *and*
