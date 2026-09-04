@@ -1,0 +1,155 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "generation_route": "inverse generation before target summation",
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "wrong length: expected 12, got 11",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "duplicate integer: all twelve bases must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "empty answer: twelve positive integers are required",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "out of range: every integer must lie in 1..22454090607780053422480364603535422890209956806883948615747140139362443962503727246633585583071959629522862080",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "wrong order: the twelve bases must be strictly increasing",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 111162132341761046299603376405428945314722334375936,
+    "candidate_space_bits": 167,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "prior": "uniform over one legal smooth base from each valuation band",
+    "total": 200000,
+    "wall_clock_sec": 8.034227
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.008605,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "reference_candidate_probes": 90465,
+    "reference_operation_count": 624726,
+    "reference_wall_clock_sec": 0.026438,
+    "shipping_candidate_count": 111162132341761046299603376405428945314722334375936,
+    "shipping_exact_solution_count": 1,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 8.995869177154342e-51,
+    "uniqueness_basis": "induction by reduction modulo the next valuation band"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_nearest_fourth_root": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000299
+      },
+      "greedy_largest_first": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.00035
+      },
+      "independent_band_minima": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000284
+      },
+      "outlier_band_midpoint": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000446
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.068836
+      }
+    },
+    "intended_compact_route": {
+      "name": "least-valuation 2-adic peeling",
+      "operations_upper_bound": 120,
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "candidate_probes": 90465,
+      "complexity": "O(12*a_width*M_R(odd_bits)) candidate probes",
+      "name": "exact band-by-band modular candidate sieve",
+      "operations": 624726,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.026438
+    }
+  },
+  "G7_scales": {
+    "answer_elements_doubled": 12,
+    "answer_elements_shipping": 12,
+    "candidate_space_bits_doubled": 181,
+    "candidate_space_bits_shipping": 167,
+    "doubled_build_sec": 0.001062,
+    "doubled_n": 58,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 29
+  },
+  "G8_canonical_key": {
+    "invariant_relabellings": 60,
+    "pass": true,
+    "real_transformations_verified": 60,
+    "transformations": [
+      "input-band reordering",
+      "global multiplication of every base by a power of two",
+      "composition of band reordering with global scaling"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 1295,
+    "answer_elements": 12,
+    "answer_tokens": 324,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 120,
+    "pass": true,
+    "worst_case_answer_chars": 1332,
+    "worst_case_answer_tokens": 333
+  },
+  "all_passed": true
+}
