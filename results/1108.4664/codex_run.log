@@ -1,0 +1,3182 @@
+Reading additional input from stdin...
+2026-09-04T12:44:33.479638Z ERROR codex_skills_extension::host_service: failed to install system skills: io error while remove existing system skills dir: Directory not empty (os error 39)
+2026-09-04T12:44:38.476216Z ERROR codex_skills_extension::host_service: failed to install system skills: io error while create system skills file parent: File exists (os error 17)
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/1108.4664
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a06c73-0a89-7953-9ca7-2fdfc35cfb9d
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know a certificate for it by
+  construction*. Four routes count:
+  - **inverse generation** — sample the answer first and build the problem around it;
+  - **theorem-backed construction** — a theorem in the paper guarantees the object you
+    just assembled has the property, and the certificate is what its proof produces;
+  - **transformation of a known instance** — apply a structure-preserving map to an
+    instance whose certificate you hold, and carry the certificate through the map;
+  - **composition of identities** — build the instance from pieces whose certificates
+    compose: a product of telescoping terms, a sum of squares assembled from known
+    squares, a substitution chain with a known inverse.
+
+  What is forbidden is shipping a family whose answer you obtained by *solving* the
+  instance. If you had to search for it, so will your generator, and the family will
+  not scale.
+- **H — hard.** Hard in the sense your `TRACK` declares — see **TWO TRACKS** below.
+  Under either track the answer space must be far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+## The witness rule
+
+The answer must be a **witness**: a concrete object whose validity is decided by
+inspecting only the object and the instance. No search, no oracle, no appeal to a
+theorem the checker cannot execute.
+
+That is a statement about the *checker*, not about the answer's type. So certified
+negatives, certified optima and numeric answers **are admissible** — provided the
+certificate is itself such an object:
+
+| the claim | the certificate that makes it admissible |
+|---|---|
+| no solution exists | a Farkas certificate, a Nullstellensatz or Positivstellensatz certificate, a bounded-length refutation |
+| this is the optimum | a primal–dual pair with complementary slackness, or a feasible point plus a dual bound that meets it |
+| this real number | an algebraic number as (minimal polynomial, isolating interval with rational endpoints) |
+| this quantity lies here | a rigorous enclosure with **exact rational** endpoints |
+| this system is stable | a Lyapunov or barrier certificate with rational coefficients |
+
+**But — the discriminating test, and it is the one that matters:**
+
+> If the certificate is simply the output of a polynomial-time algorithm run on the
+> instance, you have not found a way past H. You have found the reason the family
+> fails it.
+
+An LP dual, a Gram matrix read off by coefficient matching, an SOS certificate that an
+SDP returns, a Lyapunov function that a linear solve produces, a root isolation — each
+is a perfectly good *witness* and a disqualifying *family*. The witness rule and the
+hardness rule are separate gates, and a certificate can clear the first while failing
+the second.
+
+Ask this at **STEP 0, before you write any code.** It is one question — *what algorithm
+produces this certificate, and what does it cost?* — and the paper's own theorem
+statements usually answer it in a line.
+
+The five algebraic papers rejected most recently were all rejected on exactly this
+point, and every one of them cost a full builder run first:
+
+| paper | what produces the certificate |
+|---|---|
+| `2605.28674` | disjunctive SOS: the paper reduces certificate search to an SDP, with SOCP and LP refinements |
+| `2504.18110` | the Gram matrix and the switching root are written out explicitly in Section 2 |
+| `2211.12582` | a necessary-and-sufficient spectral characterisation; the dimension is read off an eigenvalue multiplicity |
+| `1910.13133` | the witness is given by an explicit matrix formula |
+| `2512.19313` | the witness is a direct evaluation of a displayed trinomial construction — found after reading all 31 pages and the LaTeX source |
+
+One sentence applied at triage would have stopped all five. Instead each was claimed,
+read end to end, and rejected: five builder runs, roughly 90 minutes and 1.5M tokens, to
+rediscover a fact stated in each paper's own main theorem.
+
+---
+
+## TWO TRACKS — say which hardness you are claiming
+
+Declare `TRACK = "A"` or `TRACK = "B"` at module level. Required.
+
+**Track A — structural hardness.** No known efficient general method for the
+distribution you generate. Note *distribution*, not *worst case*: worst-case NP-hardness
+is a different claim and does not imply this one. `2503.01929` sat exactly inside the
+strongly NP-hard 3-PARTITION band and fell to Algorithm X in under five seconds, because
+random instances in that band are not hard. `PROBLEM_PROFILE["hardness_basis"]` must
+name the theorem *and* the parameter regime; G5's baseline cost is the evidence.
+
+**Track B — no-tool compression.** An efficient algorithm exists, and you say so. The
+claim is narrower and different: the evaluated model has no sandbox, no CAS and no
+solver, so it must find and execute a compact route unaided. The difficulty is the gap
+between the mechanical route (10⁶ operations — fine for a solver, impossible by hand)
+and the compact one (a change of variables, an invariant, a symmetry — a dozen
+operations, if you see it).
+
+**Track B families must be honest about the algorithm that exists.** In
+`hardness_basis`, name it, give its complexity, and give its measured cost at the
+shipping preset. A Track B family that hides the algorithm is a Track A claim, and a
+false one.
+
+The track also changes what G6 means:
+
+- **Track A** — every entry in `attacks` must have `successes == 0`, the domain-standard
+  algorithm included. Unchanged from today.
+- **Track B** — the domain-standard algorithm is *expected* to succeed. Report it under
+  a separate key `reference_algorithm` (name, complexity, wall-clock, operation count),
+  **not** inside `attacks`; that number is your `hardness_basis`, not a failure.
+  `attacks` still needs its ≥4 failing entries, and for Track B the fourth is an attack a
+  solver could actually run *in context, without tools* — the by-hand heuristic, the
+  greedy route, the obvious ansatz. If you cannot find a fourth in-context attack that
+  fails, the family is guessable by hand and you should reject it.
+
+Why the label is mandatory: without it the project drifts silently between
+complexity-theoretic hardness and practical model difficulty. Both are defensible
+benchmarks. They are not the same benchmark, and a corpus that mixes them unlabelled can
+support neither claim. Every family shipped so far is an unlabelled Track A claim, and
+`AUDIT.md` records five where that claim was simply false.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the four things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+4. **What produces the certificate.** Find the theorem that hands you the witness and
+   ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
+   characterisation", "an explicit formula" or "a classification table", then **the
+   family fails H on Track A** — not the witness rule. The certificate is a perfectly
+   good witness; what it is not is hard to obtain. Those are separate gates (see the
+   discriminating test above).
+
+   You then have exactly two honest options, and you must pick one **before** writing
+   code:
+
+   - **Reject**, if the compact route is no shorter than the mechanical one. This is
+     the cheapest rejection available and the one most often skipped: five recent
+     rejections each cost a full builder run to reach a conclusion stated in the
+     paper's own main theorem.
+   - **Declare `TRACK = "B"`**, if — and only if — running that algorithm by hand is
+     genuinely out of reach for a model with no sandbox, *and* a compact route exists
+     for someone who sees the structure. Name the algorithm and its measured cost in
+     `hardness_basis`, as **TWO TRACKS** requires. An SDP over a 40×40 Gram matrix is
+     not something a model executes in its head; a 2×2 linear solve is. Be honest
+     about which one you have.
+
+   What is never acceptable is declaring Track A while knowing the algorithm exists.
+
+### Build in the paper's own objects first
+
+Before you reduce anything, write down the problem **in the objects the theorem and
+proof actually use** — vectors, Gram matrices, polynomials over ℚ or ℚ(i),
+coordinates, functions, trajectories, group elements. Ask whether a finite exact
+certificate exists *for that* object: a Gram or Seidel matrix, a rational SOS
+decomposition, a minimal polynomial with an isolating interval, a telescoping
+certificate, an antiderivative, a coordinate/sign construction checked by exact
+inner products, a dual witness. Verification stays exact — the *object* may be
+continuous even when its *certificate* is a finite symbolic thing.
+
+Only after that may you consider a discrete reduction.
+
+**Do not replace a problem over ℝ, ℂ, manifolds, functions or trajectories with a
+graph, SAT/CSP, finite field or integer-coordinate surrogate unless that reduction
+is central to the source paper.** If you do reduce, name the theorem or section that
+licenses it. If you reduce for convenience, the result is a *discretised analogue*:
+declare `reduction_kind="convenience"` in `PROBLEM_PROFILE` (and mirror the citation
+text in `NATIVE["reduction"]`), and do not present it as coverage of the paper's native
+domain. Such a family is archived, never counted in the native release — see
+PROBLEM_PROFILE in STEP 1.
+
+This has gone wrong repeatedly and silently. Real examples from this corpus:
+
+- An equiangular-lines paper (Gram matrices, Seidel matrices, eigenvalue
+  interlacing) shipped as a 720-vertex adjacency matrix with `verify` documented as
+  *"check any size-k clique"*. **The instance contained no vectors at all.**
+- A quantum-satisfiability paper about complex polynomial systems shipped as an
+  assignment problem over 𝔽₁₁.
+- A kissing-number paper with explicit real coordinates and sign patterns shipped as
+  a conflict graph.
+
+In each case the paper's mathematics was discarded before the solver saw anything,
+every gate passed, and the row was counted as geometric or algebraic coverage.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, deterministic given `(n, seed)`. No file IO, no network, no printing at
+import. Use `random.Random(seed)`, never global `random`.
+
+**What you may import.** The standard library, and `gvlib/` from the repo root. `gvlib`
+is standard-library-only itself, so importing it keeps the module dependency-free: it
+carries exact rationals with JSON encoding (`gvlib.rationals`), multivariate polynomials
+over ℚ (`gvlib.sparse_poly`), rational matrices with Bareiss determinant, rank, solve,
+Gram and LDL/PSD (`gvlib.exact_matrices`), and Sturm sequences and real-root isolation
+(`gvlib.roots`). Use it — a certificate that is a polynomial identity, a Gram matrix or
+an isolating interval should not cost you a day of writing `Fraction` row reduction for
+the fifth time. Nothing else may be imported.
+
+`gvlib` sits at the repo root and your module sits in `results/<id>/`, so the import
+needs the root on `sys.path` — `emit.sh` and `submit.sh` run from the root and find it,
+but `harden.py` is invoked from your own directory and will not. Do it once, at the top,
+and degrade gracefully:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals
+except ImportError:                 # not present: stay standard-library-only
+    exact_matrices = rationals = None
+```
+
+If it does not import, stay standard-library-only and say so in the README rather than
+adding a dependency. Do not let a missing helper library become the reason a family
+ships as a graph.
+
+**`inst["answer"]` must be JSON-native.** `emit.sh` writes it straight into
+`artifacts/<id>.jsonl` with `json.dumps`, so a `Fraction`, a `complex` or a custom class
+does not fail your selftest — it fails the emit, after the expensive part is paid for.
+Serialise: **rationals as `[num, den]`**, **monomials as exponent lists**, polynomials as
+lists of `[[num, den], [e1, e2, ...]]`, matrices as lists of lists. `json.loads(
+json.dumps(a)) == a` must hold for every answer the family produces, and whatever
+`verify` accepts, `parse_answer` must be able to return.
+
+```python
+TRACK: str                  # "A" or "B" -- see TWO TRACKS.  Required.
+    # scripts/corpus_report.py reads this straight into its `track` column; anything
+    # that is not "A" or "B" is recorded as "unknown", which is what every family
+    # shipped before this prompt reads as today.
+
+PROBLEM_PROFILE: dict       # what this family really is, on a controlled vocabulary.
+    # PREFERRED.  NATIVE (below) is the LEGACY form and is still what submit.sh reads,
+    # so declare BOTH and keep them consistent.  Seven shipped modules declare only
+    # NATIVE; they stay valid and nothing here orphans them.
+    #
+    # The token spellings below are the ones scripts/corpus_report.py reads.  Inventing
+    # a synonym does not produce a warning -- it silently drops your row out of the
+    # coverage counts, which is the exact failure mode this schema exists to stop.
+    #
+    # {"native_domain":  combinatorics|algebra|geometry|analysis|dynamics|
+    #                    optimization|number_theory|logic
+    #                    -- what the SOLVER reasons about, NOT the arXiv category.
+    #
+    #  "object_regime":  what kind of object the solver actually manipulates:
+    #      finite_discrete     finite, exactly representable as ints and structures
+    #      finite_field        elements of GF(q)
+    #      integer_lattice     integer vectors / lattice points
+    #      rational_exact      rationals, polynomials, matrices over Q; exact
+    #                          arithmetic end to end, no approximation anywhere
+    #      real_algebraic      the object is a real number, but the certificate is a
+    #                          finite exact symbolic thing -- (minimal polynomial,
+    #                          isolating interval with rational endpoints)
+    #      continuous_analytic the object lives in R, C, a manifold, a function space
+    #                          or a trajectory.  Then the certificate MUST be exact:
+    #                          a rational SOS, a Lyapunov function over Q, or a
+    #                          rigorous enclosure with exact rational endpoints
+    #                          (declare certificate_form="interval" for that last one).
+    #                          A float anywhere in verify() is a bug, not a regime.
+    #
+    #  "computational_core":  what the solver actually searches, one of
+    #                    graph|csp_sat|exact_cover|subset_sum|permutation|
+    #                    linear_algebra|polynomial_identity|sos|telescoping|
+    #                    symbolic_integration|interval_bound|other
+    #
+    #  "certificate_form":  the shape of the answer, one of
+    #                    sos|telescoping|symbolic_integral|algebraic_number|
+    #                    matrix_certificate|interval|polynomial|rational|exact_symbolic
+    #                        -- these count toward the release quota on symbolic
+    #                           certificates
+    #                    integer_tuple
+    #                        -- this one does not, and it is what the corpus already
+    #                           has far too much of.  Do not reach for it by reflex:
+    #                           an answer that IS a tuple of small ints is one thing,
+    #                           an answer flattened into one to make G4 easy to report
+    #                           is the collapse this schema exists to measure.
+    #  "native_objects": the objects the solver is HANDED, e.g.
+    #                    ["Gram matrix over Q", "unit vectors"].  If the honest answer
+    #                    is ["adjacency matrix"], write that and take the consequence.
+    #  "verification_operations": the exact operations verify() performs, e.g.
+    #                    ["exact rational inner product", "PSD check via LDL",
+    #                     "sign comparison"].  If this list is nothing but set
+    #                    membership and integer comparison, your core is discrete
+    #                    whatever native_domain says.
+    #
+    #  "domain_essentiality":  how load-bearing the paper's mathematics is:
+    #      native               ESSENTIAL -- the paper's objects are handed to the
+    #                           solver AND verify() operates on them; delete the domain
+    #                           structure and the problem is gone
+    #      licensed_reduction   REPRESENTATIONAL -- a reduction the paper itself
+    #                           licenses; the native objects are visible but the search
+    #                           is carried by the surrogate
+    #      discretised_analogue ANALOGUE -- the paper's mathematics was compiled away
+    #                           before the solver saw anything
+    #
+    #  "reduction_kind":  none | paper_licensed | convenience
+    #  "reduction":       None when reduction_kind == "none" -- it MUST be falsy then,
+    #                     or the report labels a native family a discretised analogue.
+    #                     Otherwise the citation string: "Section 5, Lemma 5 (...)".
+    #  "reduction_source": paper_central | external_standard | benchmark_convenience
+    #                     -- the finer distinction reduction_kind cannot spell.
+    #                     paper_central     -> reduction_kind "paper_licensed"
+    #                     external_standard -> reduction_kind "convenience": a textbook
+    #                                          reduction is not this paper's
+    #                                          mathematics and must not buy coverage
+    #                     benchmark_convenience -> reduction_kind "convenience"
+    #
+    #  "intuition_type":  one of, and write it with SPACES, not underscores --
+    #                     "symmetry" | "invariant" | "duality" |
+    #                     "change of variables" | "ansatz" | "extremal bound" |
+    #                     "decomposition" | "constraint propagation" |
+    #                     "reduction recognition" | "search pruning".
+    #                     The reporter matches this as prose: "change_of_variables"
+    #                     with underscores does NOT match and lands as
+    #                     "unclassified".  All ten match when written with spaces.
+    #  "intuition_description": one sentence: the insight, and what a solver who does
+    #                     not have it must do instead.
+    #  "hardness_basis":  one sentence, and it must match TRACK.  Track A: the theorem
+    #                     and the parameter regime.  Track B: the algorithm that
+    #                     exists, its complexity, its measured cost at the shipping
+    #                     preset, and why the compact route is not mechanically
+    #                     executable in context.
+    #  "max_answer_tokens": your MEASURED worst-case serialised answer length at the
+    #                     shipping preset, in tokens.  See G9(c) for the cap.}
+    #
+    # **Only `domain_essentiality == "native"` together with `reduction_kind` in
+    # {none, paper_licensed} counts toward native-domain coverage.**  Everything else
+    # is recorded honestly and reported separately, and `benchmark_convenience` is
+    # archived and excluded from the native release entirely.  Declaring
+    # `discretised_analogue` costs you a coverage row.  Declaring `native` when the
+    # solver is handed an adjacency matrix costs the corpus its credibility, which is
+    # the failure this schema exists to prevent.
+
+NATIVE: dict                # LEGACY form.  Still REQUIRED: submit.sh reads this one.
+    # {"domain":    one of combinatorics|algebra|geometry|analysis|dynamics|
+    #                       optimization|number_theory|logic
+    #  "core":      what a solver actually searches, one of
+    #               graph|csp_sat|exact_cover|subset_sum|permutation|
+    #               linear_algebra|polynomial_identity|sos|telescoping|
+    #               symbolic_integration|interval_bound|other
+    #  "objects":   the mathematical objects the solver is handed, e.g.
+    #               ["adjacency matrix"] or ["Gram matrix over Q", "unit vectors"]
+    #  "intuition": the insight the problem is meant to test, e.g. "symmetry",
+    #               "invariant", "change of variables", "ansatz", "duality"
+    #  "reduction": None if the family is stated in the paper's own objects;
+    #               otherwise the section/theorem that licenses the surrogate.}
+    # Derive it from PROBLEM_PROFILE and keep the two consistent:
+    #   domain    <- native_domain        core      <- computational_core
+    #   objects   <- native_objects       reduction <- reduction  (same value)
+    #   intuition <- intuition_type + ": " + intuition_description
+    # `domain` is NOT the arXiv category -- it is what the solver reasons about.
+    # A geometry paper rendered as an adjacency matrix has domain="combinatorics"
+    # and core="graph".  Labelling it "geometry" is the failure this field exists
+    # to prevent.
+
+DIFFICULTY: dict            # exactly four presets, named "demo", "easy", "medium"
+                            # and "hard", in that order -- harden.py walks the dict
+                            # in insertion order, so it is the ladder, ascending.
+                            # Each maps to kwargs for make_instance.
+                            # "demo" is the smallest setting the family supports:
+                            # a person must be able to solve it and check the
+                            # answer on paper.  It is an illustration, not a
+                            # difficulty level -- harden.py skips it, and
+                            # SHIPPING_DIFFICULTY must never name it.
+
+def make_instance(n, seed=0, **params) -> dict
+    """Build an instance whose certificate you know BY CONSTRUCTION -- by inverse
+    generation, theorem-backed construction, transformation of a known instance, or
+    composition of identities (see G above). Never by solving the instance you just
+    built. Returns a dict containing key "answer" (the certificate, JSON-native)
+    plus all data the solver needs. `n` is the size parameter; larger n must mean
+    harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT.
+
+    Hint modes, for G9: when os.environ.get("GV_HINT_MODE") is "structural" append
+    STRUCTURAL_HINT, when it is "placebo" append PLACEBO_HINT, and otherwise append
+    NOTHING. The default MUST be no hint -- emit.sh, submit.sh and the STEP 4
+    hardening run all call render(), and a hint leaking into artifacts/ would
+    silently change what the dataset is."""
+
+STRUCTURAL_HINT: str        # ONE sentence naming the structural insight -- the thing
+                            # intuition_description says this family tests.  Required.
+                            # "The columns of the Gram matrix repeat with period 7."
+PLACEBO_HINT: str           # ONE sentence of the same length and register carrying no
+                            # structural information.  Required.  "This problem
+                            # rewards being careful with the indexing."  See G9(a).
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
+    # {"description": a human-readable grammar/bounds statement, e.g.
+    #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed
+    #                  monomial basis, rational coefficients with |num|,|den| < 2^32"
+    #  "bounds":      the numeric bounds that make it finite, e.g.
+    #                 {"n_squares": 6, "max_degree": 4, "basis": 45, "coeff_bits": 32}}
+    #
+    # This field exists because requiring an integer `search_space` silently forces
+    # every family to be a tuple of small integers.  Measured over the first 40
+    # shipped generators: search_space returned an int 40/40 and None 0/40, and not
+    # one answer was a rational, a polynomial or a symbolic expression -- because a
+    # symbolic answer has no uniformly-sampleable candidate set, so G4 could not be
+    # reported and the family was never built.
+    #
+    # Declaring bounds fixes that.  An antiderivative is infinite; an antiderivative
+    # over a fixed operator set with depth <= 4 and coefficients under 2^16 is a
+    # finite, countable, samplable space.  Bound the language and the continuous
+    # families become expressible without weakening exact verification at all.
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of CERTIFICATE_LANGUAGE at these parameters -- the space
+    `random_candidate` samples from, not a looser superset. Return None ONLY if
+    the declared language is genuinely uncountable; then G5 must carry a sampled
+    density estimate instead."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+- **Keep the answer writable.** The solver has to type it out, by hand, with no
+  scratchpad. An answer running to thousands of elements measures transcription
+  stamina, not intuition, and the failures it produces tell you nothing. G9(c) puts a
+  hard cap on this.
+- **Serialise rationals and polynomials the way `parse_answer` reads them back**, and
+  say so in the statement: rationals as `num/den`, monomials as exponent lists. The
+  rendered form and the JSON form must agree.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship** — except where a part is explicitly marked
+*recorded, not gated*, which is true of G9(a) and of nothing else.
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples drawn from `CERTIFICATE_LANGUAGE`, measured **structure-aware** (see below). Report hits/total. |
+| **G5 density + baseline cost** | A real number, never "not feasible": an exact solution count where enumeration works at any preset, otherwise a sampled density estimate — **plus** the measured cost of your strongest attack. See below. |
+| **G6 adversary panel** | ≥4 attacks in `attacks`, each FAILING across ≥8 seeds. Track A: three cheap probes **plus the standard algorithm for the problem class**. Track B: three cheap probes plus an in-context attack, with the standard algorithm reported separately under `reference_algorithm`. See TWO TRACKS and below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+| **G9 no-tool suitability** | Two gated parts — the family still defeats the oracle pool **with** its structural hint, and the answer and route fit the caps — plus a three-arm diagnostic (bare / hinted / placebo) that is **recorded, never gated**. See below. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G5: measure difficulty, do not infer it from cardinality
+
+Across the first 40 shipped generators, `enumerate_all` returned `None` at the
+**shipping** preset **40/40**. G5 was therefore measured on a reduced instance
+(n = 4–40, against shipping n up to 512) or carried no number at all (7/40). It
+never described the instance that actually ships — and a density at n=4 says
+nothing about n=32.
+
+Worse, a reduced-preset number can be passed while being alarming: `2104.04330`
+reported a solution fraction of **5.7e-4** at n=18 — roughly one candidate in 1768
+is valid — and passed G5 anyway.
+
+A large space is not difficulty. `2503.01929` reported a 1536-bit candidate space
+and fell to Algorithm X in under five seconds. Report both of these, as numbers,
+**at the shipping preset**:
+
+1. **Density at the shipping preset.** Exact count if `enumerate_all` terminates
+   there; otherwise sample `random_candidate` and report the observed fraction of
+   valid answers with the sample size. A count from a smaller preset may be given
+   in addition, labelled with its `n` — never instead. `None` is not an answer.
+2. **Baseline cost.** Run your strongest G6 attack at the *shipping* preset and
+   record what it actually cost: wall-clock seconds, and nodes/restarts/iterations.
+   A family whose best attack fails in 0.2 s is not obviously hard — it may simply
+   be unsatisfiable-looking to that attack. Cost is the honest difficulty signal.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+- **The standard algorithm for the problem class — REQUIRED, not optional.** The
+  three above are generic and they are *not sufficient*; they probe how you built
+  the instance, not what is known about the problem. Ask what a specialist would
+  reach for first and run *that*:
+
+  | the problem is about | run at least |
+  |---|---|
+  | satisfiability / CSP | a SAT or SMT solver, or DPLL with unit propagation |
+  | covering, packing, assignment, scheduling | an ILP/LP relaxation, or matching |
+  | a planted subgraph, colouring, partition, or community | **a spectral method** — top eigenvectors of the adjacency/Laplacian, and an SDP or nuclear-norm relaxation if the paper mentions one |
+  | subset sum, knapsack, lattice, or small-coefficient integer relations | LLL / lattice reduction |
+  | exact cover, tiling, set partition | Algorithm X / DLX, or a CP solver |
+  | paths, cycles, flows, connectivity | the classical polynomial algorithm for the relaxed version, then repair |
+  | permutations, words, group elements | normal forms and the natural rewriting/canonicalisation |
+
+  If no library is available, implement the cheap version — power iteration is a
+  dozen lines and breaks most planted-subgraph constructions. If you genuinely
+  cannot run the standard attack, say so explicitly in the README caveats and name
+  the attack you could not run. Never silently omit it.
+
+**Report G6 in this shape**, so the panel can be checked mechanically rather than
+read prose-by-prose:
+
+```python
+report["G6_adversary_panel"] = {
+    "pass": all_failed,
+    "attacks": {                      # one entry per attack, name -> result
+        "outlier_degree":     {"successes": 0, "attempts": 8},
+        "greedy_largest_first":{"successes": 0, "attempts": 8},
+        "random_restart_256": {"successes": 0, "attempts": 8},
+        "spectral_top_eigenvector": {"successes": 0, "attempts": 8},   # the domain attack
+    },
+}
+```
+
+Extra keys alongside `attacks` are fine. `submit.sh` requires `attacks` to be
+present with **at least 4 entries** — three generic probes plus the domain attack — and
+it **recomputes `pass` from the `successes` on disk**: a panel that records a solved
+attack is refused no matter what `pass` says. `2410.07666` logged walksat at 8/8 and
+honestly set `pass=false`; nothing else would have caught it.
+
+That recomputation is exactly why a **Track B** family must not put its
+domain-standard algorithm in `attacks`. On Track B that algorithm is *supposed* to
+succeed — it is the `hardness_basis`, not a failure — so it goes in a sibling key and
+`attacks` keeps its meaning:
+
+```python
+report["G6_adversary_panel"]["reference_algorithm"] = {   # Track B only
+    "name": "Bareiss elimination over Q",
+    "complexity": "O(n^3) exact",
+    "wall_clock_sec": 0.4,
+    "operations": 1_240_000,      # this number IS the Track B hardness claim
+    "solves": "8/8, as expected",
+}
+```
+
+Track B still needs four *failing* entries in `attacks`, and its fourth is an attack a
+solver could actually run in context without tools — the by-hand heuristic, the greedy
+route, the obvious ansatz. If you cannot find one that fails, the family is guessable by
+hand and you should reject it.
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+- **A bounded Token Jumping family (arXiv:2408.04743) passed every gate, and the
+  four-vendor oracle pool returned `hardened`.** A construction-aware spectral
+  attack then recovered a verified witness on **20/20 shipping instances in
+  polynomial time** — the planted colour classes formed an exact −3 eigenvector.
+  The generic outlier/greedy/restart panel saw nothing. This is why the domain
+  attack is mandatory: gates passing and the oracle failing to solve are jointly
+  *not* evidence of hardness, and this family would have shipped on that evidence.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+### G9: is the failure informative? — measured, mostly not gated
+
+Every family here is built so that a model fails it. That makes "the model failed"
+almost uninformative on its own: a model also fails a question whose answer is forty
+thousand tokens long, and one that needs ten thousand exact multiplications. Those
+failures say nothing about mathematical intuition, and a corpus full of them measures
+patience.
+
+G9 separates the two. **It is not a "the model must succeed" gate.** That would be the
+exact negation of STEP 4, which holds a level only when all three oracles fail, and it
+would delete every family that survives the hardening loop. Three parts, and only two of
+them are gates.
+
+#### (a) The three-arm diagnostic — recorded, never gated
+
+Run the shipping preset three times and record solved/attempts for each arm:
+
+| arm | prompt |
+|---|---|
+| bare | `render(inst)` as shipped |
+| hinted | `render(inst)` + `STRUCTURAL_HINT` |
+| placebo | `render(inst)` + `PLACEBO_HINT` |
+
+**Why the placebo arm exists.** Appending *any* sentence changes the prompt — its
+length, its register, and the signal that the asker thought a hint was warranted.
+Comparing hinted against bare confounds all of that with the hint's actual content. The
+placebo holds everything fixed except the structural information, so **hinted − placebo**
+is the estimate of real structural help; hinted − bare is contaminated by prompt leakage
+and is not.
+
+If hinted ≈ placebo, your hint carried no information: either it is badly written, or
+the family does not respond to the intuition you claimed in `intuition_type`. That is a
+finding, not a failure. Record the three numbers and say what you conclude in the
+README. **It does not block the ship** — this arm exists so the corpus knows what it is
+measuring, and gating on it would let a builder tune the hint instead of the family.
+
+#### (b) The polarity-flipped gate — this part IS gated
+
+> The family must still defeat the oracle pool **when it is given its one-sentence
+> structural hint.**
+
+This is strictly stronger than today's bar and it contradicts nothing: STEP 4 already
+requires the pool to fail on the bare statement; this requires it to fail on an easier
+version of the same statement. A family that survives bare but dissolves the moment you
+name the trick was never testing whether a model can *find* the structure — it was
+testing whether the model had already memorised it.
+
+Run it with the harness, not by hand:
+
+```bash
+mkdir -p g9_hinted && cp gen_<arxiv_id>.py g9_hinted/
+# in the COPY, cut DIFFICULTY down to the shipping preset alone, so the ladder
+# has one rung and the verdict is about that rung
+cd g9_hinted && GV_HINT_MODE=structural python3 ../../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+`harden.py` opens `llm_loop_transcript.jsonl` and `.meta.json` with mode `"w"` — it
+**overwrites**. Run every G9 arm in its own scratch directory, never in the result
+directory, or you will destroy the STEP 4 evidence you already paid for. Copy the
+finished transcripts back as `g9_<arm>_transcript.jsonl`.
+
+Read the verdict with the polarity flipped: `hardened` means the hint did not break the
+family and G9(b) passes. `too_easy` means the hint broke it, and the family fails G9(b).
+You may then move **one** rung up the `DIFFICULTY` ladder and re-run STEP 4 bare *and*
+this arm at the new level, **once**. If the hint still breaks it, write `REJECTED.md`
+citing G9(b) and stop. This is not hand-tuning past a verdict — the bare verdict was
+`hardened` and the whole loop is re-run at the new level — but the cap of one is there
+so that it cannot become hand-tuning.
+
+#### (c) The size and effort caps — gated
+
+| cap | limit at the shipping preset |
+|---|---|
+| serialised answer | ≤ **2,000 characters** (≈ **500 tokens**) and ≤ **256 atomic elements** |
+| intended route | ≤ **300 exact arithmetic operations** |
+
+Measure both, put the numbers in the gate dict, and put the token figure in
+`PROBLEM_PROFILE["max_answer_tokens"]`.
+
+"Intended route" means the operations left **after** the insight — the compact route the
+family claims to test, not the search it replaces. A family over the answer cap is a
+transcription test. A family whose intended method needs thousands of arithmetic
+operations is a calculator test, and the evaluated model has no calculator; that is a
+fact about the harness, not a property of the mathematics.
+
+If you are genuinely over a cap and believe the family should ship anyway, say so in the
+README caveats with the measured number and expect to be argued with. Do not quietly
+round it down.
+
+Report the gate like this:
+
+```python
+report["G9_no_tool_suitability"] = {
+    "pass": hinted_still_hardened and within_caps,     # (b) and (c) only
+    "arms": {                                          # (a): recorded, not gated
+        "bare":    {"solved": 0, "attempts": 3},
+        "hinted":  {"solved": 0, "attempts": 3},
+        "placebo": {"solved": 0, "attempts": 3},
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",                      # (b)
+    "answer_chars": 412, "answer_tokens": 104, "answer_elements": 32,   # (c)
+    "intended_route_operations": 47,                   # (c)
+}
+```
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- The ladder starts at `easy`. `demo` is skipped: it is built to be solvable, so
+  starting there would spend an escalation proving exactly that.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+- It opens both files with mode `"w"`. **A second run in the same directory overwrites
+  the evidence from the first.** This run — bare, no hint — is the one that ships, so
+  G9's extra arms run in their own scratch directories. See G9(b).
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, the four names are already taken, so
+  **slide the ladder up**: drop the rung the oracle solved, keep the survivors in
+  ascending order, and put the escalated level in as the new `hard`, leaving
+  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+  whichever name now carries the level that held, then re-run STEP 3's gates at it.
+  `demo` never moves: it stays the hand-solvable rung.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results,
+   G9's three arms and its measured answer size and operation count).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. `g9_hinted_transcript.jsonl` and `g9_placebo_transcript.jsonl` — the G9 arms,
+   produced by `harden.py` in scratch directories and copied back. See G9(b).
+5. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+6. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **The profile up front**: `TRACK`, native domain, object regime, computational core,
+  certificate form, intended intuition and `domain_essentiality` — copied from
+  `PROBLEM_PROFILE`. If `reduction_kind` is anything but `none` or `paper_licensed`,
+  say plainly that this is **not** native coverage of the paper's domain, and name what
+  was discarded.
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard**, in the sense your `TRACK` declares. Track A: the specific theorem
+  and parameter regime you are inside, and — just as important — the easy regimes you
+  had to avoid and the results that identify them. Track B: **name the algorithm that
+  solves it**, its complexity and its measured cost, then say why the compact route is
+  not something a model can execute in context. A Track B README that reads like a
+  Track A README is the failure mode here. Cite sections by number either way. This is
+  the part only you know.
+- **A worked example.** A rendered instance small enough to read in full — use the
+  `demo` preset, which exists for this — its answer, `verify` returning True on it,
+  and `verify` returning False with its reason on a corrupted variant. Say plainly
+  whether a person can actually solve it by hand, and if not, why the family's
+  smallest supported setting still is not hand-scale.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **The G9 arms**, as a table: bare / hinted / placebo solved-out-of-attempts, the
+  hinted − placebo difference, and what you conclude. If the structural hint bought the
+  oracle nothing, say so — that is evidence about your `intuition_type`, and this
+  README is the only place it will ever be written down. Give the measured answer size
+  and intended-route operation count here too.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 1108.4664
+url: https://arxiv.org/abs/1108.4664
+title: Sparse Approximation is Hard
+categories: cs.CC cs.IT math.IT
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: algebraic decomposition
+  method: inverse construction
+  candidate generator: choose sparse coefficients and dictionary, compute target signal as their linear combination
+  candidate verifier: check sparsity bound and multiply dictionary by coefficients to match target
+codex
+I’ll begin with the paper’s exact definitions, hardness theorem, easy regimes, and certificate-production cost. I’ll reject the proposed inverse-planted family immediately if the paper or its distribution leaves a standard recovery algorithm that contradicts the chosen track.
+web search: 
+web search: https://arxiv.org/abs/1108.4664
+web search: 
+web search: https://arxiv.org/pdf/1108.4664v2
+web search: 
+web search: 'Theorem 10'
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g 'gen_*.py' -g 'harden.py' -g 'submit.sh' -g 'emit.sh' -g 'gvlib/**' | sed -n '1,160p'" in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+/home/gson/gvrepo/results/1108.4664
+
+exec
+/bin/bash -lc "find .. -name AGENTS.md -print; rg --files ../.. | rg '("'^|/)(gen_[''^/]+'"\\.py|harden\\.py|submit\\.sh|emit\\.sh|gvlib/)' | sed -n '1,200p'" in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+../../examples/1912.09051/gen_1912_09051.py
+../../scripts/emit.sh
+../../scripts/submit.sh
+../../scripts/harden.py
+../../gvlib/__init__.py
+../../gvlib/rationals.py
+../../gvlib/exact_matrices.py
+../../gvlib/test_gvlib.py
+../../gvlib/sparse_poly.py
+../../gvlib/roots.py
+../../gvlib/README.md
+../../gvlib/__pycache__/rationals.cpython-312.pyc
+../../gvlib/__pycache__/exact_matrices.cpython-312.pyc
+../../gvlib/__pycache__/roots.cpython-312.pyc
+../../gvlib/__pycache__/__init__.cpython-312.pyc
+../../gvlib/__pycache__/sparse_poly.cpython-312.pyc
+../../results/2401.06027/gen_2401_06027.py
+../../results/2508.18162/gen_2508_18162.py
+../../results/2508.18162/__pycache__/gen_2508_18162.cpython-312.pyc
+../../results/2105.10184/gen_2105_10184.py
+../../results/2302.11250/gen_2302_11250.py
+../../results/2507.17878/gen_2507_17878.py
+../../results/2504.12430/gen_2504_12430.py
+../../results/2110.05917/gen_2110_05917.py
+../../results/2411.07981/gen_2411_07981.py
+../../results/1303.2162/gen_1303_2162.py
+../../results/2506.24001/gen_2506_24001.py
+../../results/1303.2162/g9_placebo/gen_1303_2162.py
+../../results/1303.2162/g9_placebo/__pycache__/gen_1303_2162.cpython-312.pyc
+../../results/1303.2162/g9_hinted/gen_1303_2162.py
+../../results/1303.2162/g9_hinted/__pycache__/gen_1303_2162.cpython-312.pyc
+../../results/1512.03127/gen_1512_03127.py
+../../results/1910.10364/gen_1910_10364.py
+../../results/2508.11570/gen_2508_11570.py
+../../results/2307.10607/gen_2307_10607.py
+../../results/2512.24037/gen_2512_24037.py
+../../results/2509.10361/gen_2509_10361.py
+../../results/2207.14270/gen_2207_14270.py
+../../results/2311.15057/gen_2311_15057.py
+../../results/1103.0203/gen_1103_0203.py
+../../results/2509.14357/gen_2509_14357.py
+../../results/2008.09415/gen_2008_09415.py
+../../results/2112.06333/gen_2112_06333.py
+../../results/2412.14615/gen_2412_14615.py
+../../results/2511.01003/gen_2511_01003.py
+../../results/2411.16149/gen_2411_16149.py
+../../results/0901.3348/gen_0901_3348.py
+../../results/2306.12713/gen_2306_12713.py
+../../results/2205.04710/gen_2205_04710.py
+../../results/2310.02137/gen_2310_02137.py
+../../results/2102.01986/gen_2102_01986.py
+../../results/2011.04650/gen_2011_04650.py
+../../results/2408.17266/gen_2408_17266.py
+../../results/1604.00052/gen_1604_00052.py
+../../results/2404.18447/gen_2404_18447.py
+../../results/2007.09736/gen_2007_09736.py
+../../results/2604.25734/gen_2604_25734.py
+../../results/1008.2814/gen_1008_2814.py
+../../results/2405.20406/gen_2405_20406.py
+../../results/1604.08603/gen_1604_08603.py
+../../results/2506.23363/gen_2506_23363.py
+../../results/2601.19161/gen_2601_19161.py
+../../results/2309.11256/gen_2309_11256.py
+../../results/2601.08530/gen_2601_08530.py
+../../results/2104.04330/gen_2104_04330.py
+../../results/2407.11768/gen_2407_11768.py
+../../results/2411.14821/gen_2411_14821.py
+../../results/2411.04916/gen_2411_04916.py
+../../results/2509.03064/gen_2509_03064.py
+../../results/2002.10145/gen_2002_10145.py
+../../results/2001.09362/gen_2001_09362.py
+
+exec
+/bin/bash -lc "sed -n '1,280p' ../../results/1303.2162/gen_1303_2162.py; sed -n '1,260p' ../../scripts/harden.py" in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+"""Verified generator for arXiv:1303.2162."""
+
+from __future__ import annotations
+
+import copy
+import hashlib
+import itertools
+import json
+import math
+import os
+import random
+import re
+import statistics
+import time
+
+TRACK: str = "B"
+
+STRUCTURAL_HINT: str = (
+    "Group clauses by their three indices: each four-clause block is one XOR, and "
+    "the resulting incidence hypergraph peels to a five-variable core."
+)
+PLACEBO_HINT: str = (
+    "Track the coordinate conventions and check each listed index carefully before "
+    "committing to the final certificate."
+)
+
+PROBLEM_PROFILE: dict = {
+    "native_domain": "geometry",
+    "object_regime": "integer_lattice",
+    "computational_core": "csp_sat",
+    "certificate_form": "exact_symbolic",
+    "native_objects": [
+        "horizontal unit segments with integer endpoints",
+        "horizontal and vertical hitting lines",
+    ],
+    "verification_operations": [
+        "integer coordinate comparison",
+        "exact line-segment intersection",
+        "Boolean decoder evaluation",
+    ],
+    "domain_essentiality": "licensed_reduction",
+    "reduction_kind": "paper_licensed",
+    "reduction": (
+        "Section 3, Definition 3 and Lemma 3: Min Segment Hitting is the geometric "
+        "source problem carried into MCSC With Holes"
+    ),
+    "reduction_source": "paper_central",
+    "intuition_type": "reduction recognition",
+    "intuition_description": (
+        "Recognize four clauses on one triple as a parity equation and peel the "
+        "scrambled recurrence; without that recognition one faces the full geometric "
+        "hitting-set search."
+    ),
+    "hardness_basis": (
+        "Track B: parity-block recovery followed by GF(2) Gaussian elimination is "
+        "O(n^3) bit operations; at shipping n=96 it took a median 65,222 counted "
+        "bit operations and 0.000804 seconds over the eight G6 seeds, while the compact "
+        "peel-and-propagate route uses 192 XORs."
+    ),
+    "max_answer_tokens": 37,
+}
+
+NATIVE: dict = {
+    "domain": PROBLEM_PROFILE["native_domain"],
+    "core": PROBLEM_PROFILE["computational_core"],
+    "objects": PROBLEM_PROFILE["native_objects"],
+    "intuition": PROBLEM_PROFILE["intuition_type"] + ": "
+    + PROBLEM_PROFILE["intuition_description"],
+    "reduction": PROBLEM_PROFILE["reduction"],
+}
+
+DIFFICULTY: dict = {
+    "demo": {"n": 6},
+    "easy": {"n": 96},
+    "medium": {"n": 108},
+    "hard": {"n": 120},
+}
+SHIPPING_DIFFICULTY: str = "easy"
+
+CERTIFICATE_LANGUAGE: dict = {
+    "description": (
+        "A strictly increasing list of exactly n/2 distinct 1-based variable indices "
+        "from 1..n. It is a bounded symbolic recipe which the stated decoder expands "
+        "to exactly 3n+2m orthogonal hitting lines."
+    ),
+    "bounds": {
+        "max_n": 136,
+        "max_selected_indices": 68,
+        "index_base": 1,
+        "coefficient_bits": 0,
+    },
+}
+
+NOTES: str = (
+    "Section 1 fixes closed visibility and orthogonal trajectories. Section 2, "
+    "Theorem 2 makes minimum-length sliding cameras polynomial-time via weighted "
+    "bipartite vertex cover, so that family was rejected for Track A. Section 3, "
+    "Definition 3 gives Min Segment Hitting exactly, and Lemma 3 uses it as the "
+    "hardness source for minimum-cardinality sliding cameras with holes. The six-"
+    "segment variable and five-segment clause gadgets are the Hassin--Meggido "
+    "construction cited there. Here four 3-CNF clauses compose into each planted "
+    "XOR identity. Literal-frequency, balanced greedy swapping, stochastic restarts, "
+    "and fixed-pattern ansatz attacks are tested; the polynomial GF(2) reference "
+    "algorithm is disclosed separately, as Track B requires."
+)
+
+G9_RESULTS = {
+    "arms": {
+        "bare": {"solved": 0, "attempts": 3},
+        "hinted": {"solved": 0, "attempts": 3},
+        "placebo": {"solved": 0, "attempts": 3},
+    },
+    "hinted_verdict": "hardened",
+}
+
+
+def _xor_clauses(variables, rhs):
+    """Four 3-clauses whose satisfying assignments have the requested parity."""
+    out = []
+    for mask in range(8):
+        if (mask.bit_count() & 1) == rhs:
+            continue
+        clause = []
+        for pos, variable in enumerate(variables):
+            false_value = (mask >> pos) & 1
+            clause.append(-variable if false_value else variable)
+        out.append(clause)
+    return out
+
+
+def _canonical_segment_data(n, clauses):
+    """Return [a,b] for the unit segment [(a,b),(a+1,b)]."""
+    segments = []
+    variable_shape = ((1, 2), (2, 4), (3, 3), (5, 2), (6, 1), (7, 3))
+    for i in range(n):
+        for dx, dy in variable_shape:
+            segments.append([8 * i + dx, 4 * i + dy])
+    for j, clause in enumerate(clauses):
+        c = 8 * n + 6 * j
+        segments.append([c + 2, -2 * j - 1])
+        segments.append([c + 4, -2 * j - 2])
+        for pos, literal in enumerate(clause):
+            i = abs(literal) - 1
+            y = 4 * i + (2 if literal > 0 else 3)
+            segments.append([c + 1 + 2 * pos, y])
+    return segments
+
+
+def _map_segment(segment, frame):
+    a, b = segment
+    sx, sy = frame["sx"], frame["sy"]
+    ox, oy = frame["ox"], frame["oy"]
+    left = ox + a if sx == 1 else ox - a - 1
+    return [left, oy + sy * b]
+
+
+def _map_line(orientation, coordinate, frame):
+    if orientation == "V":
+        return ("V", frame["ox"] + frame["sx"] * coordinate)
+    return ("H", frame["oy"] + frame["sy"] * coordinate)
+
+
+def make_instance(n, seed=0, **params) -> dict:
+    """Build a unique planted parity instance and its compressed line certificate."""
+    del params
+    if isinstance(n, bool) or not isinstance(n, int) or n < 6 or n % 2:
+        raise ValueError("n must be an even integer at least 6")
+    rng = random.Random(seed)
+
+    hidden_solution = [0] * n
+    for i in rng.sample(range(n), n // 2):
+        hidden_solution[i] = 1
+
+    permutation = list(range(1, n + 1))
+    rng.shuffle(permutation)
+    equations = []
+    for i in range(5):
+        hidden_vars = (i, (i + 1) % 5, (i + 2) % 5)
+        rhs = 0
+        for v in hidden_vars:
+            rhs ^= hidden_solution[v]
+        equations.append(([permutation[v] for v in hidden_vars], rhs))
+    for i in range(5, n):
+        hidden_vars = (i, i - 1, i - 2)
+        rhs = hidden_solution[i] ^ hidden_solution[i - 1] ^ hidden_solution[i - 2]
+        equations.append(([permutation[v] for v in hidden_vars], rhs))
+
+    clauses = []
+    for variables, rhs in equations:
+        block = _xor_clauses(variables, rhs)
+        for clause in block:
+            rng.shuffle(clause)
+        clauses.extend(block)
+    rng.shuffle(clauses)
+
+    visible_solution = [0] * n
+    for hidden_i, visible_i in enumerate(permutation):
+        visible_solution[visible_i - 1] = hidden_solution[hidden_i]
+    answer = [i + 1 for i, bit in enumerate(visible_solution) if bit]
+
+    frame = {"ox": 0, "oy": 0, "sx": 1, "sy": 1}
+    segments = [_map_segment(s, frame) for s in _canonical_segment_data(n, clauses)]
+    rng.shuffle(segments)
+    return {
+        "family": "minimum hitting of horizontal unit segments",
+        "n": n,
+        "m": len(clauses),
+        "target_lines": 3 * n + 2 * len(clauses),
+        "true_count": n // 2,
+        "frame": frame,
+        "clauses": clauses,
+        "segments": segments,
+        "answer": answer,
+    }
+
+
+def _answer_text(answer):
+    return ", ".join(str(x) for x in answer)
+
+
+def render(inst) -> str:
+    n, m = inst["n"], inst["m"]
+    frame = inst["frame"]
+    sorted_segments = sorted(inst["segments"], key=lambda p: (p[0], p[1]))
+    segment_lines = []
+    for start in range(0, len(sorted_segments), 16):
+        chunk = sorted_segments[start : start + 16]
+        segment_lines.append("  " + "  ".join(f"[{a},{b}]" for a, b in chunk))
+
+    statement = f"""MINIMUM HITTING OF HORIZONTAL UNIT SEGMENTS (compressed witness)
+
+For integers a,b, the notation [a,b] below means the closed horizontal unit
+segment from (a,b) to (a+1,b). A horizontal line H(y) hits [a,b] exactly when
+y=b. A vertical line V(x) hits it exactly when a <= x <= a+1. Endpoints count.
+
+The instance has n={n} variable gadgets, m={m} clause gadgets, and asks for the
+following exactly specified set of {inst['target_lines']} axis-parallel hitting
+lines. To keep the witness writable, submit the decoder set T rather than listing
+all lines: T must contain exactly {inst['true_count']} distinct indices from 1..{n}.
+Indices are 1-based and must be written in strictly increasing order.
+
+Coordinate frame: X(t)={frame['ox']}+({frame['sx']})*t and
+Y(t)={frame['oy']}+({frame['sy']})*t.
+
+Decoder. For each i=1..n put r=i-1. If i is in T, include
+H(Y(4r+2)), V(X(8r+3)), V(X(8r+7)); otherwise include
+H(Y(4r+3)), V(X(8r+2)), V(X(8r+6)).
+
+There are m clause gadgets numbered j=0..m-1. Put c=8n+6j. Their three
+literal segments are the listed segments whose canonical left x-coordinates are
+c+1,c+3,c+5 (positions 1,2,3). A position is already hit horizontally if its y
+equals one of the decoded H-lines. Let p be the first such position. If no p
+exists, T is invalid. Add two vertical lines for the gadget as follows:
+  p=1: V(X(c+3)), V(X(c+5))
+  p=2: V(X(c+2)), V(X(c+5))
+  p=3: V(X(c+2)), V(X(c+4)).
+
+The complete decoded line set must hit every listed segment. The checker expands
+the recipe and tests every intersection using exact integer comparisons. Any T
+whose decoded lines satisfy this condition is accepted.
+
+Segments (input order is immaterial):
+{chr(10).join(segment_lines)}
+
+Give your final answer inside <answer></answer> tags, as a comma-separated list
+of exactly {inst['true_count']} increasing 1-based indices, with no brackets.
+Example format: <answer>{', '.join(str(i) for i in range(1, inst['true_count'] + 1))}</answer>
+Output nothing else inside the tags."""
+    mode = os.environ.get("GV_HINT_MODE")
+    if mode == "structural":
+        statement += "\n\nHint: " + STRUCTURAL_HINT
+    elif mode == "placebo":
+        statement += "\n\nHint: " + PLACEBO_HINT
+    return statement
+
+
+def parse_answer(text) -> object | None:
+    try:
+        matches = re.findall(r"<answer\b[^>]*>(.*?)</answer\s*>", str(text), re.I | re.S)
+        if not matches:
+#!/usr/bin/env python3
+"""The LLM hardening loop.  Usage: python3 scripts/harden.py <path to gen_*.py>
+
+This file, not the builder, owns the loop.  The builder writes gen_<id>.py and
+runs this; everything about which model is asked, with which seed, and when a
+family is declared too easy is decided here.  That is deliberate: a builder that
+reports its own hardening result has an obvious incentive not to report a
+failure, and a transcript whose schema is chosen per run cannot be validated.
+
+Requires OPENROUTER_API_KEY.  The oracle pool spans four vendors, so a single
+OpenAI key is not enough.  Standard library only.
+"""
+
+import importlib.util
+import json
+import os
+import random
+import sys
+import threading
+import time
+import ssl
+import urllib.error
+import urllib.request
+
+# --- configuration ----------------------------------------------------------
+# The oracle pool.  Four vendors at the same price tier as the model this
+# replaced (openai/gpt-5.6-terra, $2/$12 per M tokens).  A model is drawn afresh
+# for every single call: a family that only defeats one model's blind spots is
+# not hard, it is overfitted to.
+#
+# openai/gpt-5.6-sol is deliberately absent — it is the builder model, and a
+# family checked against its own author proves nothing.
+DEFAULT_POOL = [
+    "openai/gpt-5.6-terra",
+    "anthropic/claude-sonnet-5",
+    "google/gemini-3.1-pro-preview",
+    "x-ai/grok-4.6",
+]
+ORACLE_POOL = [m.strip() for m in os.environ.get(
+    "ORACLE_POOL", ",".join(DEFAULT_POOL)).split(",") if m.strip()]
+
+ORACLE_EFFORT = os.environ.get("ORACLE_EFFORT", "medium")
+ATTEMPTS_PER_PRESET = 3      # distinct models per difficulty level
+MAX_ESCALATIONS = 3          # raises of difficulty before the family is given up on
+MAX_ERROR_RETRIES = 3        # per attempt; API errors do not count as attempts
+MAX_TOKENS = int(os.environ.get("ORACLE_MAX_TOKENS", "32000"))
+# Reasoning tokens are billed against max_tokens on some vendors, so a budget
+# sized for the answer alone comes back HTTP 200 with an empty body — observed
+# live at 16000 against claude-sonnet-5 on a 2030-character statement.
+REQUEST_TIMEOUT = 900
+# urlopen(timeout=) is a per-socket-operation timeout, NOT a total deadline: a
+# provider that trickles bytes (or holds a streaming connection open) resets it on
+# every read, so a single call can hang indefinitely.  Observed live -- one call
+# sat open 44 minutes against a 900s "timeout" and blocked the paper for 74.  The
+# request therefore runs on a worker thread under a hard wall-clock deadline.
+TOTAL_DEADLINE = int(os.environ.get("ORACLE_TOTAL_DEADLINE", str(REQUEST_TIMEOUT)))
+
+ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _ssl_context():
+    """A context with a CA bundle that actually exists.
+
+    A python.org build on macOS whose "Install Certificates.command" was never
+    run has openssl_cafile pointing at a file that is not there, and every call
+    dies with CERTIFICATE_VERIFY_FAILED.  The loop treats that as an API error
+    and refuses to make a hardness claim, which is the right failure, but it is
+    a failure of the machine and not of the family — so find a usable bundle
+    first.  Never fall back to an unverified context: this call carries an API
+    key.
+    """
+    ctx = ssl.create_default_context()
+    if ctx.cert_store_stats().get("x509_ca", 0) > 0:
+        return ctx
+    candidates = [os.environ.get("SSL_CERT_FILE"), "/etc/ssl/cert.pem",
+                  "/etc/pki/tls/certs/ca-bundle.crt",
+                  "/etc/ssl/certs/ca-certificates.crt"]
+    try:
+        import certifi
+        candidates.append(certifi.where())
+    except ImportError:
+        pass
+    for path in candidates:
+        if path and os.path.exists(path):
+            try:
+                return ssl.create_default_context(cafile=path)
+            except Exception:                                 # noqa: BLE001
+                continue
+    sys.exit("ERROR: no usable CA bundle — TLS verification would fail for every "
+             "oracle call. On a python.org build, run the bundled "
+             "'Install Certificates.command', or set SSL_CERT_FILE.")
+
+
+SSL_CONTEXT = None
+SCHEMA_VERSION = 2
+
+TRANSCRIPT = "llm_loop_transcript.jsonl"
+META = ".meta.json"
+
+
+# --- module loading ---------------------------------------------------------
+def load_module(path):
+    spec = importlib.util.spec_from_file_location("gen", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for fn in ("make_instance", "render", "parse_answer", "verify", "escalate"):
+        if not callable(getattr(mod, fn, None)):
+            sys.exit(f"ERROR: {path} has no callable {fn}() — see prompts/codex_task.md STEP 1")
+    if not isinstance(getattr(mod, "DIFFICULTY", None), dict) or not mod.DIFFICULTY:
+        sys.exit(f"ERROR: {path} has no non-empty DIFFICULTY dict")
+    return mod
+
+
+# --- metadata ---------------------------------------------------------------
+def read_meta():
+    try:
+        with open(META) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def update_meta(**fields):
+    meta = read_meta()
+    meta.update(fields)
+    with open(META, "w") as f:
+        json.dump(meta, f, indent=1)
+
+
+# --- the oracle call --------------------------------------------------------
+def _ask_blocking(model, prompt, key):
+    """Return (reply_text, http_status, finish_reason, error, empty).
+
+    Exactly one of reply/error is set.  An empty body is NOT an API error: it is
+    flagged via `empty`, and attempt() scores it as an unsolved attempt.  A model
+    that spends its whole budget on reasoning and emits nothing did not produce a
+    witness under the conditions the pool is measured at, so it consumes its slot
+    rather than being redrawn.  The diagnostic is preserved in verify_reason so a
+    level hardened this way can still be told apart from one hardened on wrong
+    answers -- if ORACLE_MAX_TOKENS is the real constraint, raise it and re-run.
+
+    Every model in the default pool accepts OpenRouter's normalised `reasoning`
+    field, so no per-vendor body mapping is needed.  A model that rejects it is
+    reported as an error rather than silently retried without it — dropping the
+    effort setting would change what the hardness claim means.
+    """
+    body = json.dumps({
+        "model": model,
+        "reasoning": {"effort": ORACLE_EFFORT},
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": MAX_TOKENS,
+    }).encode()
+    req = urllib.request.Request(
+        ENDPOINT, data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT,
+                                    context=SSL_CONTEXT) as resp:
+            status = resp.status
+            payload = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        return None, e.code, None, f"http {e.code}: {e.read()[:400].decode('utf-8', 'replace')}", False
+    except Exception as e:                                    # noqa: BLE001
+        return None, None, None, f"{type(e).__name__}: {e}", False
+    try:
+        choice = payload["choices"][0]
+        text = choice["message"]["content"]
+        finish = choice.get("finish_reason") or choice.get("native_finish_reason")
+    except (KeyError, IndexError, TypeError):
+        return None, status, None, f"unparseable response: {json.dumps(payload)[:400]}", False
+    if not (text or "").strip():
+        usage = payload.get("usage") or {}
+        return None, status, finish, (
+            f"empty reply (finish_reason={finish}, usage={json.dumps(usage)[:160]}) — "
+            f"the model returned no content, most likely because reasoning consumed "
+            f"max_tokens={MAX_TOKENS}; raise ORACLE_MAX_TOKENS"), True
+    return text, status, finish, None, False
+
+
+def ask(model, prompt, key):
+    """_ask_blocking under a hard wall-clock deadline.
+
+    A deadline overrun is reported as an ERROR, not a failure to solve: the model
+    never got to answer, so scoring it as unsolved would manufacture hardness out
+    of a hung socket.  attempt() redraws against a different vendor.
+    """
+    box = {}
+
+    def run():
+        try:
+            box["v"] = _ask_blocking(model, prompt, key)
+        except Exception as e:                                # noqa: BLE001
+            box["v"] = (None, None, None, f"{type(e).__name__}: {e}", False)
+
+    # daemon=True matters: a wedged socket must not keep the interpreter alive at
+    # exit, which is exactly what a ThreadPoolExecutor worker would do.
+    t = threading.Thread(target=run, daemon=True, name=f"oracle-{model}")
+    t.start()
+    t.join(TOTAL_DEADLINE)
+    if t.is_alive():
+        return (None, None, None,
+                f"total deadline exceeded: no complete response in {TOTAL_DEADLINE}s",
+                False)
+    return box.get("v", (None, None, None, "worker produced no result", False))
+
+
+def attempt(mod, model, params, seed, key):
+    """One oracle call.  Returns the transcript record for it."""
+    inst = mod.make_instance(seed=seed, **params)
+    t0 = time.time()
+    reply, status, finish, error, empty = ask(model, mod.render(inst), key)
+    elapsed = round(time.time() - t0, 2)
+
+    rec = {
+        "schema_version": SCHEMA_VERSION,
+        "model": model,
+        "effort": ORACLE_EFFORT,
+        "params": dict(params),
+        "seed": seed,
+        "solved": "error",
+        "parsed": False,
+        "verify_ok": None,
+        "verify_reason": None,
+        "reply": reply,
+        "error": error,
+        "elapsed_sec": elapsed,
+        "http_status": status,
+        "finish_reason": finish,
+    }
+    if empty:
+        # Scored as an unsolved attempt, not an API error: the model returned no
+        # witness within its budget.  error stays None so the invariant
+        # "error is not None => solved == 'error'" holds.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = f"empty length-limited response ({error})"
+        rec["error"] = None
+        return rec
+    if error is not None:
+        return rec
+
+    ans = mod.parse_answer(reply)
+    rec["parsed"] = ans is not None
+    if ans is None:
+        # Not an error, and not evidence of hardness either: a reply that
+        # visibly contains an answer but does not parse is a renderer bug.
+        rec["solved"] = "failed"
+        rec["verify_reason"] = "parse_answer returned None"
+        return rec
+
+    ok, why = mod.verify(inst, ans)
+    rec["verify_ok"] = bool(ok)
+    rec["verify_reason"] = why
+    rec["solved"] = "solved" if ok else "failed"
+    return rec
+
+
+# --- the loop ---------------------------------------------------------------
+def run_level(mod, params, preset, escalation_round, rng, key, out):
+    """Ask the pool to solve this difficulty.  Returns True if any model solved it.
+
+codex
+The paper’s hardness result is worst-case and comes from a randomized Label-Cover reduction; it does not establish hardness for arbitrary inverse-planted dictionaries. It also explicitly identifies incoherent/RIP dictionaries as algorithmically favorable and OMP as the standard recovery route. I’m now checking whether a faithful Track B construction can retain the paper’s native matrix problem without falsely borrowing the worst-case theorem.
+exec
+/bin/bash -lc "rg -n \"sparse approximation|Diff-Sparse|Orthogonal Matching Pursuit|Hadamard\" ../../results ../../examples | sed -n '1,240p'; sed -n '400,900p' ../../results/1303.2162/gen_1303_2162.py" in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+../../results/2410.12251/codex_run.log:2318:while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2410.12251/codex_run.log:2376:unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/1806.08706/codex_run.log:1994:A narrower native formulation survives Step 0 under Track B, so I’m not using the rejected Track A “find any bent function” formulation. The viable problem gives the complete Walsh spectrum of a promised Maiorana–McFarland-form Boolean function and asks for its finite symbolic parameters. Inverse Walsh–Hadamard plus extraction is an efficient \(O(n2^n)\) reference algorithm and will be reported honestly; the compact route instead reads one base sign and the unit-direction signs from each spectrum row. I’ll build this version and let the mandatory oracle/hint gates decide whether it actually ships.
+../../results/2605.28674/codex_run.log:4090:while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2605.28674/codex_run.log:4148:unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/2412.14615/src/additive_griesmer.tex:2292:   Let $b_q(k,d)$ the minimum length of a block code with an alphabet $\cA$ of size $q$, minimum Hamming distance $d$, and code size $q^k$, where $k\in\mathbb{Q}$. Clearly, we have $b_q(k,d)\le g_q(k,d)$ for sufficiently large $d$ due to the existence of linear Griesmer codes. It is an interesting problem to determine parameters where $b_q(k,d)< g_q(k,d)$. In \cite{guerrini2016optimal} $b_2(2,d)=g_2(2,d)$ and $b_2(3,d)=g_2(3,d)$ was shown. For $(q,k)=(2,2)$ all optimal codes even have to be linear. There exists a binary block code of size $20$, length $19$, and minimum Hamming distance $10$ attaining the Plotkin bound, see e.g.\ \cite{agrell2001table}. So, we have $b_2(4,10+15t)<g_2(4,10+15t)$ and $b_2(4,9+15t)<g_2(4,9+15t)$ for all $t\in\N$ using $4$-dimensional simplex codes. Given the existence of a \emph{Hadamard matrix} of order
+../../results/2412.14615/src/additive_griesmer.tex:2294:   some minimum distance $d$ with $b_2(k,d)< g_2(k,d)$ for $k\ge 4$. Indeed, it is well known that Hadamard matrices can be used to construct good binary block codes, see e.g.\ \cite{levenshtein1964application}. A good recursive construction for block codes is the \emph{Plotkin sum} a.k.a.\
+../../results/2412.14615/codex_run.log:567:2292:   Let $b_q(k,d)$ the minimum length of a block code with an alphabet $\cA$ of size $q$, minimum Hamming distance $d$, and code size $q^k$, where $k\in\mathbb{Q}$. Clearly, we have $b_q(k,d)\le g_q(k,d)$ for sufficiently large $d$ due to the existence of linear Griesmer codes. It is an interesting problem to determine parameters where $b_q(k,d)< g_q(k,d)$. In \cite{guerrini2016optimal} $b_2(2,d)=g_2(2,d)$ and $b_2(3,d)=g_2(3,d)$ was shown. For $(q,k)=(2,2)$ all optimal codes even have to be linear. There exists a binary block code of size $20$, length $19$, and minimum Hamming distance $10$ attaining the Plotkin bound, see e.g.\ \cite{agrell2001table}. So, we have $b_2(4,10+15t)<g_2(4,10+15t)$ and $b_2(4,9+15t)<g_2(4,9+15t)$ for all $t\in\N$ using $4$-dimensional simplex codes. Given the existence of a \emph{Hadamard matrix} of order
+../../results/2412.14615/codex_run.log:568:2294:   some minimum distance $d$ with $b_2(k,d)< g_2(k,d)$ for $k\ge 4$. Indeed, it is well known that Hadamard matrices can be used to construct good binary block codes, see e.g.\ \cite{levenshtein1964application}. A good recursive construction for block codes is the \emph{Plotkin sum} a.k.a.\
+../../results/2604.24502/codex_run.log:1597:while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2604.24502/codex_run.log:1655:unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/2402.17528/REJECTED.md:24:while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/REJECTED.md:82:unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/2402.17528/codex_run.log:592:In addition to the above, Theorem~\ref{thm:des} provides constructions of infinite families of  $3$-designs from symmetric conference matrices; infinite families of $2$-designs from doubly regular tournaments, real equiangular tight frames, and Hermitian complex Hadamard matrices over the third roots of unity.
+../../results/2402.17528/codex_run.log:596:In particular, we obtain infinite families of partially balanced block designs from distance regular graphs, skew-Bush type Hadamard matrices and group divisible designs, signed hypercubes and binary Hamming schemes, and balanced generalised weighing matrices. 
+../../results/2402.17528/codex_run.log:597:Lastly, we show how Hadamard matrices can be used to construct infinite families of pairwise balanced designs (see Theorem~\ref{thm:hmpbd}).
+../../results/2402.17528/codex_run.log:617:In Section~\ref{sec:pbd}, as a further application of the results in Section~\ref{sec:pbibd}, we construct an infinite family of regular pairwise balanced designs from a family of Hadamard matrices. 
+../../results/2402.17528/codex_run.log:678:197:In addition to the above, Theorem~\ref{thm:des} provides constructions of infinite families of  $3$-designs from symmetric conference matrices; infinite families of $2$-designs from doubly regular tournaments, real equiangular tight frames, and Hermitian complex Hadamard matrices over the third roots of unity.
+../../results/2402.17528/codex_run.log:713:726:\subsection{2-designs from equiangular tight frames and Hadamard matrices}
+../../results/2402.17528/codex_run.log:714:727:In this subsection, we show how $2$-designs can be obtained from Seidel matrices with precisely two distinct eigenvalues and complex Hadamard matrices over the third roots of unity.
+../../results/2402.17528/codex_run.log:721:885:A complex $v \times v$ matrix $H$ is called \textbf{Hadamard} if each of its entries has absolute value $1$ and if $H H^* = vI$, where $H^*$ denotes the Hermitian transpose of $H$.
+../../results/2402.17528/codex_run.log:722:922:%We next provide examples of $2$-designs from real ETFs and complex Hadamard matrices over the third root of unity. 
+../../results/2402.17528/codex_run.log:723:924:% A complex $v \times v$ matrix $H$ is called \textbf{Hadamard} is each of its entries has absolute value $1$ and if $H H^* = vI$, where $H^*$ denotes the Hermitian transpose of $H$.
+../../results/2402.17528/codex_run.log:728:1000:A \textbf{Butson Hadamard matrix} of order $n$ and phase $q$, denoted by $\text{BH}(n,q)$, is a complex Hadamard matrix of order $n$ whose entries are $q$-th roots of unity. 
+../../results/2402.17528/codex_run.log:729:1016:% If there exists BH$(n,3)$, then there exists a Hermitian BH$(n^2,3)$. %complex Hadamard matrix of order $n^2$ with entries from $\{1,w,w^2\}$. 
+../../results/2402.17528/codex_run.log:730:1030:% Then it follows from \eqref{eq:C} and the fact $L$ being a symmetric Latin square that $M$ is a Hermitian complex Hadamard matrix of order $n^2$ over the third roots of unity.  
+../../results/2402.17528/codex_run.log:747:1571:\subsection{Skew-Bush type Hadamard matrices and group divisible designs}\label{sec:gdd}
+../../results/2402.17528/codex_run.log:765:2450:\subsection{Pairwise balanced designs from Hadamard matrices}
+../../results/2402.17528/codex_run.log:810:3221: \emph{Regular complex Hadamard matrices}, 
+../../results/2402.17528/codex_run.log:1086:In this subsection, we show how $3$-designs can be obtained from symmetric conference matrices, skew-symmetric conference matrices, and skew Hadamard matrices.  
+../../results/2402.17528/codex_run.log:1199:% It is easy to see that $S+I$ is a skew Hadamard matrix of order $4n$ and  
+../../results/2402.17528/codex_run.log:1283:\subsection{2-designs from equiangular tight frames and Hadamard matrices}
+../../results/2402.17528/codex_run.log:1284:In this subsection, we show how $2$-designs can be obtained from Seidel matrices with precisely two distinct eigenvalues and complex Hadamard matrices over the third roots of unity.
+../../results/2402.17528/codex_run.log:1322:\subsection{2-designs from equiangular tight frames and Hadamard matrices}
+../../results/2402.17528/codex_run.log:1323:In this subsection, we show how $2$-designs can be obtained from Seidel matrices with precisely two distinct eigenvalues and complex Hadamard matrices over the third roots of unity.
+../../results/2402.17528/codex_run.log:1481:A complex $v \times v$ matrix $H$ is called \textbf{Hadamard} if each of its entries has absolute value $1$ and if $H H^* = vI$, where $H^*$ denotes the Hermitian transpose of $H$.
+../../results/2402.17528/codex_run.log:1482:A real, symmetric Hadamard matrix with a constant diagonal is known as a \textbf{graphical Hadamard} matrix.
+../../results/2402.17528/codex_run.log:1484:\begin{example}\label{ex:graphHadamard}
+../../results/2402.17528/codex_run.log:1485:Let $H$ be a graphical Hadamard matrix of order $n \geqslant 4$.
+../../results/2402.17528/codex_run.log:1509:%     \caption{The $2$-$(n,k,\lambda)$ designs $\mathfrak H_{S+\varepsilon I}(n,k,a)$ of Example~\ref{ex:graphHadamard}.}
+../../results/2402.17528/codex_run.log:1510:%     \label{tab:graphHadamard}
+../../results/2402.17528/codex_run.log:1514:Various infinite families of graphical Hadamard matrices are known to exist.
+../../results/2402.17528/codex_run.log:1518:%We next provide examples of $2$-designs from real ETFs and complex Hadamard matrices over the third root of unity. 
+../../results/2402.17528/codex_run.log:1519:% *** define Hermitian Hadamard matrices and $\omega$***
+../../results/2402.17528/codex_run.log:1520:% A complex $v \times v$ matrix $H$ is called \textbf{Hadamard} is each of its entries has absolute value $1$ and if $H H^* = vI$, where $H^*$ denotes the Hermitian transpose of $H$.
+../../results/2402.17528/codex_run.log:1522:Our next example produces $2$-designs from Hermitian Hadamard matrices over the third roots of unity.
+../../results/2402.17528/codex_run.log:1526:Let $H$ be a Hermitian Hadamard matrix of order $n^2 \geqslant 9$ with entries from $\{1,\omega,\omega^2\}$. %, where $w$ is a primitive third root of unity.%, and with diagonal entries $1$. 
+../../results/2402.17528/codex_run.log:1595:% *** As a companion to the above example, we provide a recursive construction for Hermitian Hadamard matrices over the third roots of unity. ***
+../../results/2402.17528/codex_run.log:1596:A \textbf{Butson Hadamard matrix} of order $n$ and phase $q$, denoted by $\text{BH}(n,q)$, is a complex Hadamard matrix of order $n$ whose entries are $q$-th roots of unity. 
+../../results/2402.17528/codex_run.log:1600:% \begin{example}[Butson Hadamard matrices BH$(n,3)$]
+../../results/2402.17528/codex_run.log:1612:% If there exists BH$(n,3)$, then there exists a Hermitian BH$(n^2,3)$. %complex Hadamard matrix of order $n^2$ with entries from $\{1,w,w^2\}$. 
+../../results/2402.17528/codex_run.log:1626:% Then it follows from \eqref{eq:C} and the fact $L$ being a symmetric Latin square that $M$ is a Hermitian complex Hadamard matrix of order $n^2$ over the third roots of unity.  
+../../results/2402.17528/codex_run.log:1717:By \cite[Theorem 2]{RB72}, the existence of doubly regular tournaments of order $n$ is equivalent to that of so-called \textit{skew Hadamard matrices} of order $n+1$.
+../../results/2402.17528/codex_run.log:1718:Note that $H$ is a skew Hadamard matrix if and only if $H-I$ is a skew-conference matrix.   
+../../results/2402.17528/codex_run.log:1719:We refer again the reader to \cite[Section 9.3.1]{SY} for further details on the existence of skew Hadamard matrices.
+../../results/2402.17528/codex_run.log:1797:% \section{Kronecker powers of Hadamard matrices}
+../../results/2402.17528/codex_run.log:1820:% The blocks of the menon design corresponding to a regular Hadamard matrix correspond to principal minors of a certain determinant e.g., with $n = 16$ the $6$-sets had determinant $-128$.  Here, the menon design is a symmetric $2$-design.
+../../results/2402.17528/codex_run.log:2176:\subsection{Skew-Bush type Hadamard matrices and group divisible designs}\label{sec:gdd}
+../../results/2402.17528/codex_run.log:2177:Next, we give an example of PBIBD on a $2$-class association scheme from a skew-Bush type Hadamard matrix. 
+../../results/2402.17528/codex_run.log:2180:A Hadamard matrix of order $n^2$ is said to be \textbf{skew-Bush type} if $H$ is of block form $H=(H_{ij})_{i,j=1}^n$,  where each $H_{ij}$ is an $n\times n$ matrix, such that $H_{ii}=J$ for any $i$ and $H_{ij}J=JH_{ij}=O$, $H_{ij}^\transpose=-H_{ji}$ for any 
+../../results/2402.17528/codex_run.log:2212:Let $H$ be a skew-Bush type Hadamard matrix of order $n^2$ and $A=(J-H)/2$. 
+../../results/2402.17528/codex_run.log:2266:Let $H$ be a skew-Bush type Hadamard matrix of order $n^2$.
+../../results/2402.17528/codex_run.log:3004:% \subsection{Symmetric Butson Hadamard matrix BH$(9,3)$}
+../../results/2402.17528/codex_run.log:3006:% Symmetric Butson Hadamard matrices BH$(3^n,3)$ are constructed in \cite{KS16}. 
+../../results/2402.17528/codex_run.log:3077:\subsection{Pairwise balanced designs from Hadamard matrices}
+../../results/2402.17528/codex_run.log:3079:In this section, we provide an infinite family of regular pairwise balanced designs that can be obtained from a Hadamard matrix. 
+../../results/2402.17528/codex_run.log:3081:Let $H$ be a Hadamard matrix of order $v$, and define $A=\left [\begin{smallmatrix}I & H \\ H^\transpose & I \end{smallmatrix} \right ]$.  
+../../results/2402.17528/codex_run.log:3135:Let $H$ be a Hadamard matrix of order $v$ and $A=\left [\begin{smallmatrix}
+../../results/2402.17528/codex_run.log:3143:We now construct a regular PBD from a Hadamard matrix. 
+../../results/2402.17528/codex_run.log:3148:Let $H$ be a Hadamard matrix of order $v$ and $A=\left [\begin{smallmatrix}
+../../results/2402.17528/codex_run.log:3642:% Can Menon designs be obtained as index sets corresponding to principal submatrices of a regular Hadamard matrix having certain determinants?
+../../results/2402.17528/codex_run.log:3733:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:3825:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:3920:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:4011:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:4099:while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:4191:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:4285:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:4343:+unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/2402.17528/codex_run.log:4380:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:4438:+unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/2402.17528/codex_run.log:4485:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:4543:+unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/2402.17528/codex_run.log:4589:+while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/2402.17528/codex_run.log:4647:+unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/2306.09948/codex_run.log:1421:  Letting $B=(b_{ij})\in \Z^{m,n}$, the Hadamard product of
+../../results/1708.07419/codex_run.log:2977:while the equiangular-tight-frame, Hadamard, and doubly-regular-tournament
+../../results/1708.07419/codex_run.log:3035:unsupported.  Asking the solver to construct the conference, Hadamard, or
+../../results/2104.04330/codex_run.log:2008:We denote Schur (Hadamard, or entrywise) multiplication for two vectors $\mathbf v$ and $\mathbf w$ as $\mathbf v \circ \mathbf w$.
+../../results/2304.13478/codex_run.log:2390:where $\ket{M} = (1, \ldots, 1)^t$ and $\star$ is the Hadamard product, i.e.\
+../../results/2306.12848/codex_run.log:402:134:\textit{Near-MDS} (NMDS) matrices have sub-optimal branch numbers, leading to a slower diffusion speed compared to MDS matrices. However, NMDS matrices can provide a more favorable trade-off between security and efficiency as a diffusion layer, when compared to MDS matrices. Despite their potential benefits, research on NMDS matrices has been limited in the literature, and there is currently no direct construction method available for them in a recursive approach. In 2017, Li et al.~\cite{Li_Wang_2017} explored the construction of NMDS matrices from circulant and Hadamard matrices. In~\cite{Recursive_nMDS_2021}, the focus is on studying the recursive NMDS matrices with the goal of achieving the lowest possible hardware cost. Additionally, recent studies such as~\cite{Huang2021,NMDS_code_2022,NMDS_code_2022_2} have presented direct constructions of NMDS codes, which can be utilized to derive nonrecursive NMDS matrices. In a more recent study~\cite{NMDS_2023}, Gupta et al. explored the construction of NMDS matrices in both recursive and nonrecursive settings and delved into the hardware efficiency of these construction techniques.
+../../results/2306.12848/codex_run.log:594:\textit{Near-MDS} (NMDS) matrices have sub-optimal branch numbers, leading to a slower diffusion speed compared to MDS matrices. However, NMDS matrices can provide a more favorable trade-off between security and efficiency as a diffusion layer, when compared to MDS matrices. Despite their potential benefits, research on NMDS matrices has been limited in the literature, and there is currently no direct construction method available for them in a recursive approach. In 2017, Li et al.~\cite{Li_Wang_2017} explored the construction of NMDS matrices from circulant and Hadamard matrices. In~\cite{Recursive_nMDS_2021}, the focus is on studying the recursive NMDS matrices with the goal of achieving the lowest possible hardware cost. Additionally, recent studies such as~\cite{Huang2021,NMDS_code_2022,NMDS_code_2022_2} have presented direct constructions of NMDS codes, which can be utilized to derive nonrecursive NMDS matrices. In a more recent study~\cite{NMDS_2023}, Gupta et al. explored the construction of NMDS matrices in both recursive and nonrecursive settings and delved into the hardware efficiency of these construction techniques.
+    for index, (a, b) in enumerate(inst["segments"]):
+        if b not in horizontal and not any(a <= x <= a + 1 for x in vertical):
+            return False, f"segment {index} is not hit"
+    return True, "ok"
+
+
+def random_candidate(inst, rng: random.Random) -> object:
+    return sorted(rng.sample(range(1, inst["n"] + 1), inst["true_count"]))
+
+
+def search_space(inst) -> int | None:
+    return math.comb(inst["n"], inst["true_count"])
+
+
+def enumerate_all(inst) -> int | None:
+    space = search_space(inst)
+    if space > 200_000:
+        return None
+    count = 0
+    for candidate in itertools.combinations(range(1, inst["n"] + 1), inst["true_count"]):
+        if verify(inst, list(candidate))[0]:
+            count += 1
+    return count
+
+
+def canonical_key(inst) -> str:
+    """Canonical under input order, translation, and either axis reflection."""
+    variants = []
+    for sx in (1, -1):
+        for sy in (1, -1):
+            transformed = []
+            for a, b in inst["segments"]:
+                x = a if sx == 1 else -a - 1
+                y = sy * b
+                transformed.append((x, y))
+            min_x = min(x for x, _ in transformed)
+            min_y = min(y for _, y in transformed)
+            normalized = sorted((x - min_x, y - min_y) for x, y in transformed)
+            variants.append(normalized)
+    payload = {
+        "segments": min(variants),
+        "target_lines": inst["target_lines"],
+        "true_count": inst["true_count"],
+    }
+    raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("ascii")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def escalate(params) -> dict | None:
+    n = int(params["n"])
+    if n >= 136:
+        return None
+    harder = min(136, n + 16)
+    if harder % 2:
+        harder += 1
+    return {"n": harder}
+
+
+def _extract_xor_equations(inst):
+    groups = {}
+    for clause in inst["clauses"]:
+        key = tuple(sorted(abs(literal) for literal in clause))
+        groups.setdefault(key, []).append(clause)
+    equations = []
+    if len(groups) != inst["n"]:
+        return None
+    for key, block in groups.items():
+        if len(key) != 3 or len(block) != 4:
+            return None
+        wrong_parities = set()
+        false_patterns = set()
+        for clause in block:
+            false_values = {abs(lit): int(lit < 0) for lit in clause}
+            pattern = tuple(false_values[v] for v in key)
+            false_patterns.add(pattern)
+            wrong_parities.add(pattern[0] ^ pattern[1] ^ pattern[2])
+        if len(false_patterns) != 4 or len(wrong_parities) != 1:
+            return None
+        equations.append((key, 1 - next(iter(wrong_parities))))
+    return equations
+
+
+def _reference_gaussian(inst):
+    """Recover parity blocks and solve them without using inst['answer']."""
+    equations = _extract_xor_equations(inst)
+    if equations is None:
+        return None, {"pivot_tests": 0, "row_xors": 0, "bit_operations": 0}
+    n = inst["n"]
+    rows = []
+    for variables, rhs in equations:
+        mask = 0
+        for variable in variables:
+            mask |= 1 << (variable - 1)
+        rows.append(mask | (rhs << n))
+    rank = 0
+    pivot_tests = 0
+    row_xors = 0
+    for col in range(n):
+        pivot = None
+        for r in range(rank, n):
+            pivot_tests += 1
+            if (rows[r] >> col) & 1:
+                pivot = r
+                break
+        if pivot is None:
+            continue
+        rows[rank], rows[pivot] = rows[pivot], rows[rank]
+        for r in range(n):
+            if r != rank and ((rows[r] >> col) & 1):
+                rows[r] ^= rows[rank]
+                row_xors += 1
+        rank += 1
+    stats = {
+        "pivot_tests": pivot_tests,
+        "row_xors": row_xors,
+        "bit_operations": pivot_tests + row_xors * (n + 1),
+    }
+    if rank != n:
+        return None, stats
+    bits = [0] * n
+    for row in rows:
+        coefficient = row & ((1 << n) - 1)
+        if coefficient == 0 or coefficient & (coefficient - 1):
+            return None, stats
+        variable = coefficient.bit_length() - 1
+        bits[variable] = (row >> n) & 1
+    answer = [i + 1 for i, bit in enumerate(bits) if bit]
+    return answer, stats
+
+
+def _equation_violations(equations, selected):
+    return sum(
+        ((sum(variable in selected for variable in variables) & 1) != rhs)
+        for variables, rhs in equations
+    )
+
+
+def _attack_outlier(inst):
+    scores = {i: 0 for i in range(1, inst["n"] + 1)}
+    for clause in inst["clauses"]:
+        for literal in clause:
+            scores[abs(literal)] += 1 if literal > 0 else -1
+    return sorted(scores, key=lambda i: (-scores[i], i))[: inst["true_count"]]
+
+
+def _greedy_swap_candidate(inst, max_steps=None):
+    equations = _extract_xor_equations(inst)
+    n = inst["n"]
+    selected = set(range(1, inst["true_count"] + 1))
+    current = _equation_violations(equations, selected)
+    steps = 0
+    limit = n if max_steps is None else max_steps
+    while steps < limit and current:
+        best_delta = 0
+        best_pair = None
+        chosen = sorted(selected)
+        unchosen = [i for i in range(1, n + 1) if i not in selected]
+        for take_out in chosen:
+            for put_in in unchosen:
+                trial = selected.copy()
+                trial.remove(take_out)
+                trial.add(put_in)
+                value = _equation_violations(equations, trial)
+                delta = current - value
+                if delta > best_delta:
+                    best_delta = delta
+                    best_pair = (take_out, put_in, value)
+        if best_pair is None:
+            break
+        selected.remove(best_pair[0])
+        selected.add(best_pair[1])
+        current = best_pair[2]
+        steps += 1
+    return sorted(selected), steps
+
+
+def _random_restart_candidate(inst, rng, restarts=12):
+    equations = _extract_xor_equations(inst)
+    n = inst["n"]
+    best = None
+    best_value = n + 1
+    iterations = 0
+    for _ in range(restarts):
+        selected = set(rng.sample(range(1, n + 1), inst["true_count"]))
+        value = _equation_violations(equations, selected)
+        for _step in range(4 * n):
+            iterations += 1
+            if value == 0:
+                return sorted(selected), iterations
+            violated = [eq for eq in equations if _equation_violations([eq], selected)]
+            variables, _rhs = rng.choice(violated)
+            flip = rng.choice(variables)
+            if flip in selected:
+                partners = [i for i in range(1, n + 1) if i not in selected]
+            else:
+                partners = list(selected)
+            partner = rng.choice(partners)
+            trial = selected.copy()
+            trial.symmetric_difference_update((flip, partner))
+            trial_value = _equation_violations(equations, trial)
+            if trial_value <= value or rng.random() < 0.015:
+                selected, value = trial, trial_value
+        if value < best_value:
+            best, best_value = set(selected), value
+    return sorted(best), iterations
+
+
+def _attack_obvious_ansatz(inst):
+    n, h = inst["n"], inst["true_count"]
+    patterns = [
+        list(range(1, h + 1)),
+        list(range(n - h + 1, n + 1)),
+        list(range(1, n + 1, 2))[:h],
+        list(range(2, n + 1, 2))[:h],
+    ]
+    for candidate in patterns:
+        if len(candidate) == h and verify(inst, sorted(candidate))[0]:
+            return sorted(candidate)
+    return patterns[0]
+
+
+def _transform_instance(inst, sx=1, sy=1, dx=0, dy=0, reorder_seed=None):
+    out = copy.deepcopy(inst)
+    transformed = []
+    for a, b in inst["segments"]:
+        left = dx + a if sx == 1 else dx - a - 1
+        transformed.append([left, dy + sy * b])
+    if reorder_seed is not None:
+        random.Random(reorder_seed).shuffle(transformed)
+    out["segments"] = transformed
+    old = inst["frame"]
+    out["frame"] = {
+        "ox": dx + sx * old["ox"],
+        "oy": dy + sy * old["oy"],
+        "sx": sx * old["sx"],
+        "sy": sy * old["sy"],
+    }
+    return out
+
+
+def selftest():
+    report = {"track": TRACK, "shipping_difficulty": SHIPPING_DIFFICULTY}
+
+    g1_attempts = 0
+    g1_failures = []
+    json_roundtrips = 0
+    for preset, params in DIFFICULTY.items():
+        for seed in (0, 1, 17):
+            inst = make_instance(seed=seed, **params)
+            ok, reason = verify(inst, inst["answer"])
+            g1_attempts += 1
+            if not ok:
+                g1_failures.append([preset, seed, reason])
+            if json.loads(json.dumps(inst["answer"])) == inst["answer"]:
+                json_roundtrips += 1
+    report["G1_planted_verifies"] = {
+        "pass": not g1_failures and json_roundtrips == g1_attempts,
+        "attempts": g1_attempts,
+        "json_roundtrips": json_roundtrips,
+        "failures": g1_failures,
+    }
+
+    ship_params = DIFFICULTY[SHIPPING_DIFFICULTY]
+    inst = make_instance(seed=90210, **ship_params)
+    answer = inst["answer"]
+    swapped = list(answer)
+    swapped[0], swapped[1] = swapped[1], swapped[0]
+    duplicate = list(answer)
+    duplicate[1] = duplicate[0]
+    corruptions = {
+        "drop": answer[:-1],
+        "swap": swapped,
+        "duplicate": duplicate,
+        "empty": [],
+        "out_of_range": answer[:-1] + [inst["n"] + 1],
+    }
+    g2_results = {}
+    for name, candidate in corruptions.items():
+        ok, reason = verify(inst, candidate)
+        g2_results[name] = {"rejected": not ok, "reason": reason}
+    reasons = [entry["reason"] for entry in g2_results.values()]
+    report["G2_rejects_corruption"] = {
+        "pass": all(x["rejected"] for x in g2_results.values())
+        and len(set(reasons)) == len(reasons),
+        "cases": g2_results,
+    }
+
+    realistic = (
+        "I decoded the parity blocks and checked the line intersections.\n\n"
+        "~~~text\n<answer>" + _answer_text(answer) + "</answer>\n~~~"
+    )
+    parsed = parse_answer(realistic)
+    report["G3_round_trip"] = {
+        "pass": parsed == answer and parse_answer("no tagged answer") is None,
+        "parsed_elements": len(parsed) if isinstance(parsed, list) else None,
+        "garbage_returns_none": parse_answer("no tagged answer") is None,
+    }
+
+    samples = 200_000
+    guess_rng = random.Random(0x13032162)
+    hits = 0
+    for _ in range(samples):
+        if verify(inst, random_candidate(inst, guess_rng))[0]:
+            hits += 1
+    report["G4_guess_resistance"] = {
+        "pass": hits / samples < 1e-6,
+        "hits": hits,
+        "total": samples,
+        "observed_probability": hits / samples,
+        "structure_aware_space": search_space(inst),
+        "sampler": "uniform n/2-subset (all stated shape and balance constraints enforced)",
+    }
+
+    t0 = time.perf_counter()
+    _candidate, restart_iterations = _random_restart_candidate(
+        inst, random.Random(99173), restarts=12
+    )
+    restart_wall = time.perf_counter() - t0
+    demo_count = enumerate_all(make_instance(seed=3, **DIFFICULTY["demo"]))
+    report["G5_density_and_baseline"] = {
+        "pass": hits / samples < 1e-6 and demo_count is not None,
+        "shipping_valid_hits": hits,
+        "shipping_density_samples": samples,
+        "shipping_observed_solution_fraction": hits / samples,
+        "demo_exact_solution_count": demo_count,
+        "baseline_wall_seconds": round(restart_wall, 6),
+        "baseline_iterations": restart_iterations,
+    }
+
+    attack_results = {
+        "outlier_literal_frequency": {"successes": 0, "attempts": 0},
+        "greedy_balanced_swaps": {"successes": 0, "attempts": 0},
+        "random_restart_balanced_12x": {"successes": 0, "attempts": 0},
+        "in_context_fixed_ansatz": {"successes": 0, "attempts": 0},
+    }
+    ref_successes = 0
+    ref_times = []
+    ref_operations = []
+    for seed in range(3100, 3108):
+        attacked = make_instance(seed=seed, **ship_params)
+        candidates = {}
+        candidates["outlier_literal_frequency"] = _attack_outlier(attacked)
+        candidates["greedy_balanced_swaps"], _ = _greedy_swap_candidate(attacked)
+        candidates["random_restart_balanced_12x"], _ = _random_restart_candidate(
+            attacked, random.Random(seed ^ 0xA5A5), restarts=12
+        )
+        candidates["in_context_fixed_ansatz"] = _attack_obvious_ansatz(attacked)
+        for name, candidate in candidates.items():
+            attack_results[name]["attempts"] += 1
+            if verify(attacked, candidate)[0]:
+                attack_results[name]["successes"] += 1
+        start = time.perf_counter()
+        ref_answer, ref_stats = _reference_gaussian(attacked)
+        ref_times.append(time.perf_counter() - start)
+        ref_operations.append(ref_stats["bit_operations"])
+        if ref_answer is not None and verify(attacked, ref_answer)[0]:
+            ref_successes += 1
+    all_failed = all(result["successes"] == 0 for result in attack_results.values())
+    report["G6_adversary_panel"] = {
+        "pass": all_failed and ref_successes == 8,
+        "attacks": attack_results,
+        "reference_algorithm": {
+            "name": "four-clause XOR recognition plus GF(2) Gaussian elimination",
+            "complexity": "O(n^3) bit operations",
+            "median_wall_clock_sec": round(statistics.median(ref_times), 6),
+            "median_operations": int(statistics.median(ref_operations)),
+            "operation_definition": "pivot-bit inspections plus (n+1) bit XORs per row XOR",
+            "solves": f"{ref_successes}/8, as expected",
+        },
+    }
+
+    doubled = make_instance(n=2 * ship_params["n"], seed=77)
+    doubled_ok, doubled_reason = verify(doubled, doubled["answer"])
+    report["G7_scales"] = {
+        "pass": doubled_ok and search_space(doubled) > search_space(inst),
+        "shipping_n": ship_params["n"],
+        "doubled_n": doubled["n"],
+        "shipping_space_bits": round(math.log2(search_space(inst)), 3),
+        "doubled_space_bits": round(math.log2(search_space(doubled)), 3),
+        "doubled_verify_reason": doubled_reason,
+    }
+
+    invariant_checks = 0
+    carried_witness_checks = 0
+    distinct_keys = []
+    for seed in range(20):
+        original = make_instance(seed=7000 + seed, **ship_params)
+        key = canonical_key(original)
+        distinct_keys.append(key)
+        variants = [
+            _transform_instance(original, dx=17, dy=-23, reorder_seed=seed),
+            _transform_instance(original, sx=-1, dx=31, reorder_seed=100 + seed),
+            _transform_instance(original, sy=-1, dy=47, reorder_seed=200 + seed),
+            _transform_instance(
+                original, sx=-1, sy=-1, dx=-11, dy=29, reorder_seed=300 + seed
+            ),
+        ]
+        for variant in variants:
+            invariant_checks += 1
+            if canonical_key(variant) != key:
+                continue
+            if verify(variant, original["answer"])[0]:
+                carried_witness_checks += 1
+    report["G8_canonical_key"] = {
+        "pass": invariant_checks == 80
+        and carried_witness_checks == 80
+        and len(set(distinct_keys)) == 20,
+        "invariance_checks": invariant_checks,
+        "carried_witness_checks": carried_witness_checks,
+        "unrelated_distinct": len(set(distinct_keys)),
+        "unrelated_attempts": 20,
+        "symmetries": ["input reorder", "translation", "x reflection", "y reflection"],
+    }
+
+    largest_serialized_answer = list(
+        range(inst["n"] - inst["true_count"] + 1, inst["n"] + 1)
+    )
+    serialized = json.dumps(largest_serialized_answer, separators=(",", ":"))
+    answer_chars = len(serialized)
+    answer_tokens = math.ceil(answer_chars / 4)
+    answer_elements = len(answer)
+    intended_ops = 10 + 2 * (inst["n"] - 5)
+    arms = copy.deepcopy(G9_RESULTS["arms"])
+    hinted = arms["hinted"]
+    placebo = arms["placebo"]
+    hinted_rate = hinted["solved"] / hinted["attempts"] if hinted["attempts"] else 0.0
+    placebo_rate = placebo["solved"] / placebo["attempts"] if placebo["attempts"] else 0.0
+    within_caps = answer_chars <= 2000 and answer_elements <= 256 and intended_ops <= 300
+    hinted_hardened = G9_RESULTS["hinted_verdict"] == "hardened"
+    report["G9_no_tool_suitability"] = {
+        "pass": hinted_hardened and within_caps,
+        "arms": arms,
+        "hinted_minus_placebo": hinted_rate - placebo_rate,
+        "hinted_verdict": G9_RESULTS["hinted_verdict"],
+        "answer_chars": answer_chars,
+        "answer_tokens": answer_tokens,
+        "answer_elements": answer_elements,
+        "intended_route_operations": intended_ops,
+    }
+
+    report["all_passed"] = all(
+        value.get("pass") is True
+        for key, value in report.items()
+        if key.startswith("G") and isinstance(value, dict)
+    )
+    return report
+
+
+if __name__ == "__main__":
+    print(json.dumps(selftest(), indent=2, sort_keys=True))
+
+web search: 
+web search: 
+exec
+/bin/bash -lc "sed -n '1,360p' ../../results/1806.08706/gen_1806_08706.py 2>/dev/null || true; ls -la ../../results/1806.08706 | sed -n '1,120p'" in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+total 244
+drwxrwxr-x   2 gson gson   4096 Sep  4 12:33 .
+drwxrwxr-x 110 gson gson   4096 Sep  4 12:44 ..
+-rw-rw-r--   1 gson gson    161 Sep  4 12:33 .meta.json
+-rw-rw-r--   1 gson gson    529 Sep  4 12:33 .runner.sh
+-rw-rw-r--   1 gson gson  56225 Sep  4 12:33 .task.md
+-rw-rw-r--   1 gson gson 173523 Sep  4 12:42 codex_run.log
+
+exec
+/bin/bash -lc 'tail -n 220 ../../results/1806.08706/codex_run.log' in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+
+The family is the fixed-C graph-colouring problem defined in Section 2 of
+arXiv:2002.10145 and used as the ETH-hard source problem in Section 4.  Every
+generated graph is sampled around a colouring chosen before any non-anchor
+edge is drawn.
+
+This module uses only the Python standard library, performs no I/O, and prints
+nothing when imported.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import itertools
+import json
+import math
+import random
+import re
+from collections import Counter
+
+
+COLOURS = 4
+ENUMERATION_CAP = 1_500_000
+
+DIFFICULTY = {
+    "easy": {
+        "n": 140,
+        "avg_degree": 9.0,
+        "attack_restarts": 32,
+        "backtrack_floor": 10_000,
+    },
+    "medium": {
+        "n": 160,
+        "avg_degree": 9.0,
+        "attack_restarts": 48,
+        "backtrack_floor": 30_000,
+    },
+    "hard": {
+        "n": 180,
+        "avg_degree": 9.0,
+        "attack_restarts": 64,
+        "backtrack_floor": 60_000,
+    },
+}
+
+# harden.py held this named rung against three distinct vendors.
+SHIPPING_DIFFICULTY = "easy"
+
+NOTES = """
+Definition: Section 2 (Preliminaries, 'C-Coloring') defines a C-colouring as a
+map V -> [1..C] whose endpoints differ on every edge.  The same section states
+that every fixed C >= 3 is NP-complete and, under ETH, has no
+2^o(|V|+|E|)-time algorithm.  Section 4, especially Theorem 15 and Lemma 18,
+uses exactly that regime as the source for the paper's equation reductions.
+
+Easy regimes avoided: C=1 and C=2 are elementary (2-colouring is bipartite
+testing), so C is fixed at 4 and n grows.  For the paper's headline group
+problem, the Introduction records polynomial algorithms for nilpotent groups
+and several Fitting-length-two groups; a naive balanced random group word also
+leaves about 1/|G| of assignments valid.  This generator therefore instantiates
+the explicitly defined hard colouring source family rather than claiming that
+such random words inherit Theorem 20's worst-case hardness.
+
+Planting and attacks: a balanced colouring is sampled first.  Apart from the
+four stated symmetry-breaking clique edges, every edge is selected uniformly
+without replacement from all pairs separated by the plant.  Candidate graphs
+are rejected if a degree-statistic outlier guess, deterministic DSATUR greedy,
+randomised DSATUR restarts, or bounded exact DSATUR backtracking finds any valid
+colouring.  Difficulty comes from the near-threshold density, increasing n,
+and an increasing backtracking floor, not from a different decoy distribution.
+""".strip()
+
+
+def _normalise_edges(edges):
+    return sorted((u, v) if u < v else (v, u) for u, v in edges)
+
+
+def _adjacency(inst):
+    n = inst["n"]
+    adj = [set() for _ in range(n)]
+    for u, v in inst["edges"]:
+        adj[u].add(v)
+        adj[v].add(u)
+    return adj
+
+
+def _is_connected(adj):
+    if not adj:
+        return False
+    seen = {0}
+    todo = [0]
+    while todo:
+        v = todo.pop()
+        for w in adj[v]:
+            if w not in seen:
+                seen.add(w)
+                todo.append(w)
+    return len(seen) == len(adj)
+
+
+def _anchors(inst):
+    return {int(v): int(c) for v, c in inst["anchors"]}
+
+
+def verify(inst, answer):
+    """Check any proper colouring; this function never consults the plant."""
+    n = inst["n"]
+    q = inst["colours"]
+    if not isinstance(answer, (list, tuple)):
+        return False, "answer must be a list of colours"
+    if len(answer) == 0:
+        return False, "answer is empty"
+    if len(answer) < n:
+        return False, f"too few colours: expected {n}, got {len(answer)}"
+    if len(answer) > n:
+        return False, f"too many colours: expected {n}, got {len(answer)}"
+    for v, colour in enumerate(answer):
+        if type(colour) is not int:
+            return False, f"colour at vertex {v} is not an integer"
+        if not 1 <= colour <= q:
+            return False, f"colour at vertex {v} is outside 1..{q}"
+    for v, colour in sorted(_anchors(inst).items()):
+        if answer[v] != colour:
+            return False, f"symmetry anchor requires vertex {v} to have colour {colour}"
+    for u, v in inst["edges"]:
+        if answer[u] == answer[v]:
+            return False, f"edge ({min(u, v)}, {max(u, v)}) has equal endpoint colours"
+    return True, "ok"
+
+
+def _degree_outlier_attack(inst):
+    """Try to read the hidden classes from per-vertex degree statistics."""
+    n = inst["n"]
+    q = inst["colours"]
+    adj = _adjacency(inst)
+    fixed = _anchors(inst)
+    answer = [None] * n
+    for v, colour in fixed.items():
+        answer[v] = colour
+
+    # Degree, neighbour-degree sum and local triangle count are all cheap
+    # per-vertex statistics that could reveal a poorly planted class.
+    features = []
+    for v in range(n):
+        if v in fixed:
+            continue
+        neighbour_degree_sum = sum(len(adj[w]) for w in adj[v])
+        triangles = sum(1 for w in adj[v] for x in adj[v] if w < x and x in adj[w])
+        features.append(((len(adj[v]), neighbour_degree_sum, triangles, v), v))
+    features.sort()
+
+    # Round-robin ranks create balanced guessed classes, matching the only
+    # obvious marginal property of the hidden construction.
+    counts = Counter(fixed.values())
+    for _, v in features:
+        colour = min(range(1, q + 1), key=lambda c: (counts[c], c))
+        answer[v] = colour
+        counts[colour] += 1
+    return answer
+
+
+def _dsatur_greedy(inst, rng=None):
+    """One-pass DSATUR; random tie/colour choices if rng is supplied."""
+    n = inst["n"]
+    q = inst["colours"]
+    adj = _adjacency(inst)
+    answer = [0] * n
+    fixed = _anchors(inst)
+    for v, colour in fixed.items():
+        answer[v] = colour
+
+    for _ in range(n - len(fixed)):
+        uncoloured = [v for v in range(n) if answer[v] == 0]
+        best_score = max(
+            (len({answer[w] for w in adj[v] if answer[w]}), len(adj[v]))
+            for v in uncoloured
+        )
+        tied = [
+            v
+            for v in uncoloured
+            if (len({answer[w] for w in adj[v] if answer[w]}), len(adj[v]))
+            == best_score
+        ]
+        v = rng.choice(tied) if rng is not None else min(tied)
+        available = [
+            colour
+            for colour in range(1, q + 1)
+            if all(answer[w] != colour for w in adj[v])
+        ]
+        if not available:
+            return None
+        answer[v] = rng.choice(available) if rng is not None else available[0]
+    return answer
+
+
+def _attack_rng(inst, label):
+    payload = {
+        "label": label,
+        "n": inst["n"],
+        "colours": inst["colours"],
+        "anchors": sorted(map(tuple, inst["anchors"])),
+        "edges": _normalise_edges(inst["edges"]),
+    }
+    digest = hashlib.sha256(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    ).digest()
+    return random.Random(int.from_bytes(digest[:16], "big"))
+
+
+def _random_restart_attack(inst, restarts):
+    rng = _attack_rng(inst, "random-dsatur-restarts")
+    for _ in range(restarts):
+        answer = _dsatur_greedy(inst, rng)
+        if answer is not None and verify(inst, answer)[0]:
+            return answer
+    return None
+
+
+def _bounded_backtracking_attack(inst, node_limit):
+
+
+exec
+/bin/bash -lc 'rg -n "A narrower native formulation|Walsh spectrum|REJECTED|hardened|too_easy|G9" ../../results/1806.08706/codex_run.log | tail -n 80' in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+866:- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+873:- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+895:   G9's three arms and its measured answer size and operation count).
+902:4. `g9_hinted_transcript.jsonl` and `g9_placebo_transcript.jsonl` — the G9 arms,
+903:   produced by `harden.py` in scratch directories and copied back. See G9(b).
+943:- **The G9 arms**, as a table: bare / hinted / placebo solved-out-of-attempts, the
+976:  candidate verifier: compute Walsh spectrum and cryptographic invariants from truth table
+1125:The Walsh spectrum is an important concept to characterize different criteria. For any $a\cdot x \in \mathbb{F}_2$, the Walsh transform is the real-valued function over $\mathbb{F}^n_2$ defined as,
+1170:Assuming that the truth table is $[\lambda_1,\lambda_2,\lambda_3,\lambda_4]$, where $\lambda_u \in \{0,1\}$, $u=1,2,3,4$, then a shift transformation $b_u=1-2\lambda_u \in \{-1,1\}$ maps the truth table onto $[b_1,b_2,b_3,b_4]$. Then, the Walsh spectrum can be given as,
+1190:Accordingly, the function is bent with the maximal nonlinearity if and only if $|W_{f_1}(b)|=|W_{f_2}(b)|=... =|W_{f_{2^n}}(b)|$. This is, the nonlinearity can become maximal if and only if all the absolute values of the Walsh spectrum are the same. In other words, the more uniform the absolute value of the Walsh spectrum, the higher the nonlinearity of the functions. Then, one can construct the Ising model for 2-variable bent functions in one unit cell as shown in Figure \ref{fig2bentfunIsing} based on the Hamiltonian as below,
+1626:/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g 'REJECTED.md' -g 'README.md' -g 'gen_1806_08706.py' -g 'gen_1806.08706.py' . .. ../.. | sed -n '1,160p'" in /home/gson/gvrepo/results/1806.08706
+1637:../1709.02079/REJECTED.md
+1638:../2502.14674/REJECTED.md
+1640:../../results/1601.07131/REJECTED.md
+1641:../2310.01945/REJECTED.md
+1642:../1910.13133/REJECTED.md
+1644:../2101.05057/REJECTED.md
+1645:../2304.13478/REJECTED.md
+1650:../2306.09948/REJECTED.md
+1653:../2306.00850/REJECTED.md
+1657:../../results/2211.12582/REJECTED.md
+1658:../1601.07131/REJECTED.md
+1661:../2402.17528/REJECTED.md
+1663:../../results/2501.06427/REJECTED.md
+1665:../2604.13514/REJECTED.md
+1669:../2411.10209/REJECTED.md
+1673:../2604.24502/REJECTED.md
+1674:../2306.12848/REJECTED.md
+1675:../2512.19313/REJECTED.md
+1682:../2211.12582/REJECTED.md
+1683:../../results/2604.24502/REJECTED.md
+1685:../2501.06427/REJECTED.md
+1691:../2410.07666/REJECTED.md
+1695:../1409.6092/REJECTED.md
+1697:../2212.01053/REJECTED.md
+1700:../2605.03893/REJECTED.md
+1702:../2408.04743/REJECTED.md
+1708:../2605.28674/REJECTED.md
+1709:../2403.03885/REJECTED.md
+1710:../2006.01256/REJECTED.md
+1711:../../results/2212.01053/REJECTED.md
+1714:../2504.18110/REJECTED.md
+1716:../../results/2408.04743/REJECTED.md
+1722:../1212.3517/REJECTED.md
+1724:../2304.07157/REJECTED.md
+1729:../2601.05272/REJECTED.md
+1730:../2602.19989/REJECTED.md
+1731:../1904.00563/REJECTED.md
+1732:../../results/1409.6092/REJECTED.md
+1734:../../results/2101.05057/REJECTED.md
+1735:../2302.04718/REJECTED.md
+1736:../../results/2306.00850/REJECTED.md
+1743:../../results/2006.01256/REJECTED.md
+1747:../../results/1910.13133/REJECTED.md
+1751:../../results/2403.03885/REJECTED.md
+1754:../../results/2512.19313/REJECTED.md
+1755:../../results/2306.09948/REJECTED.md
+1761:../../results/2410.07666/REJECTED.md
+1765:../../results/2304.13478/REJECTED.md
+1769:../../results/2605.03893/REJECTED.md
+1770:../../results/2402.17528/REJECTED.md
+1772:../../results/2411.10209/REJECTED.md
+1773:../../results/2601.05272/REJECTED.md
+1775:../../results/2605.28674/REJECTED.md
+1776:../../results/2604.13514/REJECTED.md
+1780:../../results/2306.12848/REJECTED.md
+1783:../../results/2310.01945/REJECTED.md
+1784:../../results/2304.07157/REJECTED.md
+1786:../../results/2504.18110/REJECTED.md
+1787:../../results/2502.14674/REJECTED.md
+1791:/bin/bash -lc "sed -n '1,240p' ../1910.13133/REJECTED.md && sed -n '1,240p' ../2512.19313/REJECTED.md && sed -n '1,220p' ../2403.03885/REJECTED.md" in /home/gson/gvrepo/results/1806.08706
+1864:| Output or verify a Walsh spectrum / bentness claim | V | Direct exact Walsh evaluation enumerates the entire field (and all coefficients for a full check). That is exponential in `n`. In the regimes where Sections 4–5 provide symbolic Walsh formulas, verification becomes a theorem/formula lookup and again fails H. |
+1994:A narrower native formulation survives Step 0 under Track B, so I’m not using the rejected Track A “find any bent function” formulation. The viable problem gives the complete Walsh spectrum of a promised Maiorana–McFarland-form Boolean function and asks for its finite symbolic parameters. Inverse Walsh–Hadamard plus extraction is an efficient \(O(n2^n)\) reference algorithm and will be reported honestly; the compact route instead reads one base sign and the unit-direction signs from each spectrum row. I’ll build this version and let the mandatory oracle/hint gates decide whether it actually ships.
+2136:    level hardened this way can still be told apart from one hardened on wrong
+2308:  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+2321:    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+2482:if verdict.get("verdict") == "hardened" and rows:
+2490:if verdict.get("verdict") == "too_easy":
+2491:    fail.append("harden.py returned verdict too_easy — this family is given up on; "
+2492:                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+
+exec
+/bin/bash -lc 'if [ -n "${OPENROUTER_API_KEY:-}" ]; then echo openrouter_key_present; else echo openrouter_key_missing; fi; git status --short -- .' in /home/gson/gvrepo/results/1108.4664
+ exited 128 in 0ms:
+openrouter_key_present
+fatal: not a git repository (or any of the parent directories): .git
+
+web search: 
+web search: 
+web search: 
+web search: 
+exec
+/bin/bash -lc "sed -n '1,240p' ../../results/1910.13133/REJECTED.md; sed -n '1,220p' ../../results/2408.04743/REJECTED.md; sed -n '1,220p' ../../results/2504.18110/REJECTED.md" in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+# Rejected at Step 0: no qualifying hard witness family
+
+Paper: Vedrana Mikulić Crnković and Ivona Traunkar, [*Self-orthogonal codes constructed from weakly self-orthogonal designs invariant under an action of M11*](https://arxiv.org/abs/1910.13133), arXiv:1910.13133v5.
+
+## Verdict
+
+This paper does not support a problem family satisfying **G + H + V**. The natural family suggested by the paper—construct a self-orthogonal code from a weakly self-orthogonal design—is generatable and exactly verifiable, but it fails **H (hardness)**: the paper's main results give the witness by an explicit, direct matrix formula.
+
+No generator module, self-test report, or oracle transcript was created. Running the hardening loop on a family already known to have a polynomial-time construction would manufacture misleading evidence rather than test a defensible hardness claim.
+
+## What the paper actually defines
+
+Section 1 defines a weakly self-orthogonal design as a design whose pairwise block-intersection numbers all have the same parity. It is self-orthogonal when those intersections and the block size are even. Its incidence matrix has one binary row per block, and the associated code is the row span over the chosen finite field.
+
+Sections 2 and 3 then construct self-orthogonal codes from incidence matrices and orbit matrices. These are sufficient conditions accompanied by explicit formulas, not search problems.
+
+## Why the proposed witness is easy
+
+For a binary incidence matrix `M` with `b` rows, Theorem 1 gives the output immediately in all four parity cases:
+
+| Design case | Explicit generator matrix |
+|---|---|
+| even block size, even intersections | `M` |
+| even block size, odd intersections | `[I_b | M | 1]` |
+| odd block size, even intersections | `[I_b | M]` |
+| odd block size, odd intersections | `[M | 1]` |
+
+Theorem 2 gives the analogous formulas over arbitrary finite fields. Theorems 6–21 do the same for orbit matrices and their fixed-point/fixed-block submatrices, with the applicable formula selected by simple divisibility and congruence tests. Constructing these matrices and checking their Gram matrix are polynomial-time operations in the displayed matrix size. Increasing `n` only enlarges the same deterministic concatenation; it does not create a hard search task.
+
+Thus the prior-triage proposal fails **H** even though it satisfies **G** and **V**. A solver does not have to guess or search for the planted witness: it can reproduce the theorem's construction directly from the public instance.
+
+## Why the results section does not rescue the family
+
+Section 4, Theorem 22 constructs a 1-design by taking the orbit of a selected union of point-stabilizer orbits under a finite transitive permutation group. The authors use the fixed finite group `M11` to list 178 pairwise non-isomorphic weakly self-orthogonal designs on 22, 55, 66, 110, 132, 144, and 165 points, then tabulate the resulting codes. This is a finite catalog, not an unlimited scalable hard regime.
+
+The paper mentions that some minimum distances and automorphism groups were not computed because of computational limitations, but it states no complexity or hardness theorem for those tasks and supplies no inverse generator for a hard distribution. Turning minimum distance into the requested answer would either ask for an optimum (forbidden by the task) or require inventing a separate planted low-weight-codeword problem whose hardness is not established by this paper. Likewise, asking for an automorphism admits the identity unless extra conditions are added, while certifying the full automorphism group is not a bounded witness with cheap completeness verification.
+
+## Gate status
+
+| Criterion | Status | Reason |
+|---|---|---|
+| G — generatable | Would pass | Theorems 1–21 explicitly construct a code generator matrix. |
+| H — hard | **Fails** | The same theorems are a closed-form polynomial-time solution. No hard parameter regime is stated. |
+| V — verifiable | Would pass | Pairwise row inner products can be recomputed exactly. |
+| Unlimited scaling | **Fails for the paper's M11 catalog** | Section 4 reports only 178 designs at seven fixed point counts. |
+
+Because **H** is mandatory, implementation stopped before Steps 1–4, as required by the task's Step-0 rejection rule.
+# Rejected: spectrally exposed Token Jumping barrier
+
+Paper: Daniel W. Cranston, Moritz Mühlenthaler, and Benjamin Peyrille,
+[*A simple quadratic kernel for Token Jumping on surfaces*](https://arxiv.org/abs/2408.04743),
+arXiv:2408.04743.
+
+## Decision
+
+No generator is shipped. The proposed bounded-length Token Jumping family met
+inverse generation and exact replay, and it even received a `hardened` verdict
+from the prescribed LLM loop. A subsequent construction-aware spectral attack,
+motivated by the planted-colouring literature, recovered a verified witness on
+**20/20 shipping instances in polynomial time**. The family therefore fails
+**H (hardness)** and **G6 (adversary panel)**. The misleading generator,
+self-test report, README, and oracle transcript were removed rather than leave
+an apparently validated but easy family in the corpus.
+
+## What the paper actually defines
+
+Section 2 defines Token Jumping on a finite, undirected, simple graph. A state
+is an independent vertex set. Consecutive states have the same cardinality and
+differ by exactly one removed and one added vertex. Given independent sets `I`
+and `J`, each of size `k`, the decision problem asks whether such a sequence
+connects them.
+
+Section 1 states the relevant hard and easy regimes. Unrestricted Token
+Jumping is PSPACE-complete even on subcubic planar graphs of bounded bandwidth,
+and the version parameterised by both token count `k` and number of jumps
+`ell` is W[1]-hard. On the positive side, the problem is FPT on planar and,
+more generally, `K_{3,t}`-free graphs when parameterised by `k`; it also has
+kernels on bounded-degree, bounded-degeneracy, and fixed-surface graph classes.
+Theorem 1 proves an `O(g^2 + gk + k^2)` kernel when both genus `g` and token
+count `k` are parameters. These facts require `k` and `ell` to grow and rule
+out treating a small planted path as hard merely because unrestricted
+reachability is PSPACE-complete.
+
+## The attempted bounded-witness reduction
+
+The attempted family used an auxiliary graph `H` on `n` vertices. The Token
+Jumping graph had:
+
+- `n+1` independent start vertices `S` and `n+1` independent goal vertices
+  `T`, with every `S`--`T` edge present;
+- three choice vertices `X(v,0)`, `X(v,1)`, `X(v,2)` forming a triangle for
+  every `v` in `H`; and
+- an edge `X(u,c)`--`X(v,c)` for every edge `uv` of `H` and colour `c`.
+
+A sequence of exactly `2n+1` jumps from all of `S` to all of `T` is forced to
+move `n` tokens onto choice vertices before its unique `S -> T` jump. The
+choice triangles force one choice per vertex of `H`, and same-colour conflict
+edges make those choices a proper 3-colouring. Conversely, every proper
+3-colouring gives a valid sequence. This supplied a polynomially bounded
+witness and a cheap exact verifier, and it contains the ordinary worst-case
+3-COLOURING relation.
+
+For inverse generation, the code sampled three equal planted colour classes
+first and then drew three edge-disjoint perfect matchings between every pair
+of classes. Thus every vertex of `H` had exactly three neighbours in each of
+the other two classes and none in its own class. This equalised all visible
+degrees and defeated the original outlier, greedy, and short random-restart
+attacks. It also created the fatal algebraic signature.
+
+## Polynomial spectral attack
+
+Let `A` be the adjacency matrix of `H`, and let `1_C` be the indicator vector
+of a planted colour class. For
+
+`x = 1_C0 - 1_C1`,
+
+every vertex in `C0` has three neighbours in `C1`, every vertex in `C1` has
+three neighbours in `C0`, and every vertex in `C2` has three neighbours in
+both. Hence
+
+`A x = -3 x`.
+
+A second independent difference of class indicators has the same eigenvalue.
+The supposedly hidden colouring is therefore an exact two-dimensional
+eigenspace of eigenvalue `-3`. Computing that eigenspace and grouping vertices
+by their two coordinates recovers the three classes whenever no accidental
+extra `-3` eigenvectors occur. This takes polynomial time using standard exact
+or numerical linear algebra.
+
+The attack was tested on 20 unrelated `n=180` shipping seeds. In every case:
+
+1. eigenvalue `-3` had multiplicity exactly two;
+2. the eigenspace row embeddings formed three groups of exactly 60 vertices;
+3. those groups were a proper 3-colouring; and
+4. converting the colouring to the prescribed 361-jump witness made the public
+   verifier return `(True, "ok")`.
+
+Result: **20/20 verified solves**. This is not a marginal statistical leak; it
+is a direct polynomial construction of the witness.
+
+The failure is consistent with known work on planted colouring. David and
+Feige's [*On the effect of randomness on planted 3-coloring models*](https://arxiv.org/abs/1603.05183)
+reviews polynomial spectral recovery for random planted balanced colourings,
+and Kumar, Louis, and Tulsiani's [*Finding Pseudorandom Colorings of
+Pseudorandom Graphs*](https://doi.org/10.4230/LIPIcs.FSTTCS.2017.37) gives
+polynomial recovery results for expanding graphs with pseudorandom balanced
+colourings. The attempted construction was even more exposed because its
+between-class neighbour counts were exact rather than merely concentrated.
+
+## Why the LLM and initial gates were insufficient
+
+Before the spectral check, the `n=180` version had these measurements:
+
+| check | observed result |
+|---|---:|
+| planted replay | 12/12 preset/seed checks passed |
+| corruptions | 5/5 rejected with distinct reasons |
+| structure-aware random guessing | 0/200,000 |
+| degree outlier | 0/8 |
+| deterministic greedy colouring | 0/8 |
+| 32-restart randomised DSATUR | 0/8 |
+| relabelling/key checks | 120/120 invariant; 20/20 unrelated keys distinct |
+| four-vendor hardening | `hardened` at `n=180` after the easy rung was solved |
+| **spectral colouring** | **20/20 verified solves — failure** |
+
+The LLM result was especially weak evidence: one decisive model exhausted its
+32,000-token budget without emitting content, one explicitly declined to
+answer, and one emitted an invalid sequence. None tried the two-line
+eigenvector observation above. Random guessing and local heuristics measured
+the wrong attack surface; their failures say nothing against a deterministic
+global invariant.
+
+An earlier `n=90` rung had already shown why the adversary panel matters: three
+LLM vendors failed it, but the randomized-DSATUR attack solved 6/8 seeds. It was
+retired before the final run. The spectral attack then invalidated the larger
+rung too.
+
+## Why this was not retuned again
+
+Varying the between-class degrees could remove the exact eigenvalue, but that
+would start a new planted-colouring family whose average-case hardness is not
+established by the Token Jumping paper. Published planted-colouring algorithms
+also make a quick density retune unsafe. The prompt explicitly forbids using
+manual post-oracle tuning to chase a passing run. A defensible replacement
+would require a new hard planted distribution (or a faithful worst-case
+reduction with answer-first sampling), a spectral/SDP attack panel, and a fresh
+hardening process. That is materially different work, not a repair to this
+generator.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G — inverse generation | Passed: the colouring and bounded jump sequence were sampled before edges. |
+| H — no known polynomial/closed-form method | **Failed:** eigenspace recovery solved 20/20 and is polynomial. |
+| V — cheap exact verification | Passed: replay checks occupancy, independence, length, and final state. |
+| G6 — adversary panel | **Failed after adding the required spectral attack: 20/20 successes.** |
+| Overall | **Rejected.** |
+
+The rejection is based on a stronger attack than the required LLM loop. An
+oracle transcript cannot override a known polynomial solution method.
+# Rejected: arXiv:2504.18110
+
+Paper: Hong-Jun Ge, Jack Koolen, and Akihiro Munemasa, [*A 2-distance set with 277 points in the Euclidean space of dimension 23*](https://arxiv.org/html/2504.18110v4) (v4).
+
+## Decision
+
+This paper does not supply a problem family satisfying **G (generatable), H (hard), and V (cheaply verifiable)**. No `gen_2504_18110.py` was produced, and the self-test and LLM hardening loop were intentionally not run. The task explicitly requires stopping when any of G/H/V fails.
+
+## What the paper actually proves
+
+[Section 2](https://arxiv.org/html/2504.18110v4#S2) defines one fixed construction. It takes
+
+- `X = F_3 x {1,...,11}` (33 vertices),
+- `Y = C^perp` for the ternary Golay code (243 vertices), and
+- an explicitly defined graph on `X union Y`.
+
+The matrix `A(Gamma) + 3I` is positive semidefinite of rank 24 and is used as a Gram matrix for 276 vectors. The switching root is given explicitly by
+
+```text
+r = x1 + x2 + x3 - (4/33) sum_{x in X} x + (1/81) sum_{y in Y} y,
+```
+
+and the extra point is then given explicitly by
+
+```text
+u = x1 + x2 + x3 - r.
+```
+
+Theorem 1 proves that the resulting 277 points lie in an affine copy of `R^23` and have squared pairwise distances exactly 4 and 6. Lemma 2 further proves that `u` is independent of which of the 11 three-point parts is used.
+
+[Section 3](https://arxiv.org/html/2504.18110v4#S3) proves maximality. In the 23-dimensional affine hyperplane there is no extension. In `R^24`, Proposition 3 says that the only additional points are the two explicitly displayed multiples
+
+```text
+((1 + sqrt(3))/2) r  and  ((1 - sqrt(3))/2) r.
+```
+
+The appendix supplies Magma code implementing the construction and the exhaustive maximality check. It reports 16,689,170 short nonzero dual-lattice vectors and a run time of 788.6 seconds with 4.58 GB of memory.
+
+## Why candidate problem formulations fail
+
+| Candidate witness task | G | H | V | Disqualifier |
+|---|---:|---:|---:|---|
+| Construct the 277-point two-distance set | only at one fixed size | **fail** | pass with an exact Gram representation | Section 2 is a direct, explicit construction; there is no growing parameter regime. |
+| Add the 277th point to the 276-point set | pass | **fail** | pass | Theorem 1 gives `u` by a short linear formula, and Lemma 2 gives 11 immediately recognizable ways to compute the same point. |
+| Extend `Z` inside its `R^23` affine hull | **fail** | not applicable | fail for the required witness model | Proposition 3 says no extension exists; an absence is expressly forbidden as an answer. |
+| Extend `Z` in `R^24` | pass | **fail** | pass | Proposition 3 completely classifies the answer as two explicit multiples of `r`; this is a lookup/closed-form task. |
+| Decide whether 325 points exist in `R^24` | **fail** | unknown | fail for the required witness model | The paper calls this an open existence question and supplies no witness from which an instance can be inversely generated. |
+| Recover coordinates from the supplied Gram matrix | pass | **fail** | pass | Positive-semidefinite Gram factorization is direct linear algebra, and the appendix performs it explicitly. |
+
+The paper contains no complexity-hardness theorem, NP-hard parameter regime, FPT boundary, or scalable parameterized construction. Its only nontrivial regime is the fixed pair `(dimension, size) = (23, 277)`. Permuting vertices, changing coordinates by an isometry, or changing the seed would merely relabel the same problem and therefore must collapse under `canonical_key`; those operations cannot provide an unlimited supply of structurally distinct instances.
+
+The standard general-dimensional construction mentioned in the introduction (midpoints of the edges of a regular simplex) also cannot rescue the family: it is itself a closed-form construction and therefore fails H.
+
+## Gate status
+
+| Gate | Status | Reason |
+|---|---|---|
+| G1--G8 | not run | No admissible family exists to implement or test. |
+| LLM hardening loop | not run | `scripts/harden.py` requires a qualifying generator; running it on a knowingly closed-form or fixed-instance task would not establish H. |
+
+The decisive failure is **H**, with additional **G/scaling** failures for the fixed construction and the open problem. Although pairwise distances or an integer Gram matrix could be checked cheaply and exactly, V alone is insufficient.
+
+codex
+Step 0 is decisive: the native exact-decomposition witness clears generation and verification, but there is no defensible hardness track for the generated distribution. Theorem 2 is a worst-case gap result over randomized Label-Cover reductions, while Theorem 9’s certificate applies only after a satisfying labeling is already known; inverse-planting that labeling does not inherit the soundness theorem. I’m documenting the rejection instead of spending the oracle budget on a knowingly unsupported family.
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1108.4664/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..34193faaafc22000a1fc74b4ac59d2d53a0afefa
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,75 @@
++# Rejected at Step 0: inverse planting does not inherit the paper's hardness
++
++Paper: Ali Civril, [*Sparse Approximation is Hard*](https://arxiv.org/abs/1108.4664), arXiv:1108.4664. The last substantive text is [version 2](https://arxiv.org/pdf/1108.4664v2); version 3 was withdrawn with the note that its results were subsumed by another straightforward reduction.
++
++## Decision
++
++No generator is shipped. The proposed family—choose a sparse coefficient vector `x`, choose a dictionary `Phi`, and publish `y = Phi x`—passes **G (inverse generation)** and **V (exact matrix multiplication)** but fails **H**. The paper proves a worst-case inapproximability result for a very specific randomized reduction from Label Cover. It does not prove, or even claim, hardness for inverse-planted random dictionaries or for the completeness side of that reduction conditioned on a known labeling.
++
++This is exactly the distinction required by Step 0: a worst-case NP-hard problem class does not make an answer-first distribution hard. Running attacks and the LLM loop could provide useful negative evidence, but could not turn the missing distributional hardness argument into a Track A theorem. Track B also has no honest basis here: the proposed construction specifies no compact hidden route distinct from ordinary sparse recovery. I therefore stopped before writing `gen_1108_4664.py`, `selftest_report.json`, or any oracle transcript.
++
++## What the paper actually defines
++
++Section 1 defines `Sparse`. Given a real `M x N` dictionary matrix `Phi`, a target `y` in `R^M`, and a sparsity budget `k`, choose `k` columns (equivalently a `k`-sparse coefficient vector) minimizing `||y - Phi x||_2`. It then defines `Diff-Sparse`, which chooses the same optimal supports but maximizes the squared norm of the orthogonal projection of `y` onto their span.
++
++Theorem 2 states that `Diff-Sparse` cannot be approximated within
++
++`(3 + 1/e)/4 + epsilon`
++
++in polynomial time unless `ZPP = NP`. Corollary 3 translates that gap to the usual residual objective. These are worst-case gap statements, not average-case or planted-distribution statements.
++
++The hard instances in Section 3 are not arbitrary dictionaries. The reduction:
++
++1. starts from the parallel-repeated Label-Cover instance of Theorem 6;
++2. independently keeps each edge with probability `1 / 5^ell`;
++3. creates one column per vertex-label pair;
++4. fills edge blocks with binary vectors derived from a Sylvester Hadamard matrix; and
++5. fixes `k = |V'| + |W'|` and takes `y` to be the all-ones vector.
++
++Theorem 10's soundness depends on the Label-Cover instance having value at most `2^(-alpha ell)` and on the random edge sampling. Its probability statement is over that reduction. Replacing its input with an independently planted satisfiable instance discards the premise that creates the gap.
++
++## Certificate-production test
++
++There are two natural ways to obtain a witness, and neither supplies H.
++
++### The prior-triage inverse construction
++
++Sample `x` first and compute `y = Phi x`. Certificate production is one matrix-vector product, `O(MN)` arithmetic in a dense representation (or `O(Mk)` when only the selected columns are used). Verification repeats the multiplication, counts the nonzero coefficients, and compares with `y` exactly. A zero residual also certifies optimality because a squared norm cannot be negative.
++
++That establishes G and V only. Theorem 2 says nothing about this distribution. In the regimes normally chosen for inverse planting—random or incoherent columns and sufficiently small `k`—the paper itself points to Orthogonal Matching Pursuit and the incoherence/RIP literature as the tractable side of sparse recovery. In other parameter regimes, the generator would still need a distributional argument and measured resistance to the standard sparse-recovery algorithms; the paper provides neither.
++
++### The paper's completeness construction
++
++Theorem 9 says that if the Label-Cover instance has a labeling satisfying every edge, selecting the column for that label at every vertex gives `k` mutually orthogonal columns whose span contains the all-ones target. Its proof then says to choose the corresponding scaling coefficients. Thus, given the labeling, the sparse witness is produced directly in polynomial time by the proof.
++
++This is a valid theorem-backed certificate construction, but it still does not produce a hard distribution. Generating satisfiable Label-Cover instances by first planting the labeling only yields completeness instances. Theorems 2, 6, and 10 are reductions distinguishing worst-case completeness instances from worst-case low-value soundness instances; none asserts that recovering a labeling from the planted completeness distribution is hard. The module would have to make that unsupported leap to claim Track A.
++
++## Why neither track is supportable
++
++| Track | Result | Reason |
++|---|---|---|
++| A — structural hardness | **Fails** | The only hardness theorem concerns the worst-case Label-Cover reduction and its soundness regime. It does not cover the answer-first distribution, and the prompt expressly forbids substituting worst-case NP-hardness for distributional hardness. |
++| B — no-tool compression | **Fails for the proposed family** | No compact invariant, symmetry, or change of variables is supplied. The only known route is the same matrix/dictionary recovery task posed to the solver. Choosing an easy structured dictionary merely makes a standard algorithm the solution; choosing a generic planted dictionary supplies no paper-backed compact route. |
++
++A contrived Track B problem could be invented by replacing `Phi` with, for example, a Walsh-Hadamard dictionary and hiding a transform identity. That would be a new compressed-transform puzzle, not a consequence of this paper's hardness theorem, and it would need its own oracle and attack evidence. It is not a valid rescue of the prior triage.
++
++## Other candidate formulations
++
++| Candidate task | G | H | V | Outcome |
++|---|---:|---:|---:|---|
++| Find an exact `k`-sparse `x` with `Phi x = y` in an inverse-planted dictionary | pass | **fail / unsupported** | pass | The planted distribution is not covered by the theorem and commonly lies in recovery-friendly regimes. |
++| Recover the satisfying Label-Cover labeling from a Theorem 9 matrix | pass | **fail / unsupported** | pass | Planting a labeling does not inherit Theorem 10 soundness or establish average-case search hardness. |
++| Return a support achieving a stated `Diff-Sparse` approximation ratio | possible | unresolved | **fails in general** | Checking the ratio requires the unknown optimum projection unless an independently checkable optimality certificate is also supplied. |
++| Return the exact completeness witness from Theorem 9 when the labeling is public | pass | **fail** | pass | The proof writes the selected columns and scaling down directly. |
++
++## Gate status
++
++| Requirement | Status | Evidence |
++|---|---|---|
++| G — generatable | Would pass | Sample `x` first, or carry the satisfying Label-Cover labeling through Theorem 9. |
++| H — hard under Track A | **Fails** | No theorem for the generated distribution; Theorem 2 is worst-case and Theorem 10 requires low-value Label Cover on the soundness side. |
++| H — hard under Track B | **Fails for the proposed construction** | No separate compact route exists to create the required mechanical-versus-insight gap. |
++| V — exact verification | Would pass for exact decomposition | Count support and recompute `Phi x = y` over exact rationals. |
++| Steps 1–4 | Not run | The task requires stopping at Step 0 once G, H, or V fails. |
++
++The decisive gate is H. The paper's title and worst-case theorem cannot certify the inverse-planted distribution requested by the prior triage, so shipping it would make precisely the hardness error the task warns against.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..34193faaafc22000a1fc74b4ac59d2d53a0afefa
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,75 @@
++# Rejected at Step 0: inverse planting does not inherit the paper's hardness
++
++Paper: Ali Civril, [*Sparse Approximation is Hard*](https://arxiv.org/abs/1108.4664), arXiv:1108.4664. The last substantive text is [version 2](https://arxiv.org/pdf/1108.4664v2); version 3 was withdrawn with the note that its results were subsumed by another straightforward reduction.
++
++## Decision
++
++No generator is shipped. The proposed family—choose a sparse coefficient vector `x`, choose a dictionary `Phi`, and publish `y = Phi x`—passes **G (inverse generation)** and **V (exact matrix multiplication)** but fails **H**. The paper proves a worst-case inapproximability result for a very specific randomized reduction from Label Cover. It does not prove, or even claim, hardness for inverse-planted random dictionaries or for the completeness side of that reduction conditioned on a known labeling.
++
++This is exactly the distinction required by Step 0: a worst-case NP-hard problem class does not make an answer-first distribution hard. Running attacks and the LLM loop could provide useful negative evidence, but could not turn the missing distributional hardness argument into a Track A theorem. Track B also has no honest basis here: the proposed construction specifies no compact hidden route distinct from ordinary sparse recovery. I therefore stopped before writing `gen_1108_4664.py`, `selftest_report.json`, or any oracle transcript.
++
++## What the paper actually defines
++
++Section 1 defines `Sparse`. Given a real `M x N` dictionary matrix `Phi`, a target `y` in `R^M`, and a sparsity budget `k`, choose `k` columns (equivalently a `k`-sparse coefficient vector) minimizing `||y - Phi x||_2`. It then defines `Diff-Sparse`, which chooses the same optimal supports but maximizes the squared norm of the orthogonal projection of `y` onto their span.
++
++Theorem 2 states that `Diff-Sparse` cannot be approximated within
++
++`(3 + 1/e)/4 + epsilon`
++
++in polynomial time unless `ZPP = NP`. Corollary 3 translates that gap to the usual residual objective. These are worst-case gap statements, not average-case or planted-distribution statements.
++
++The hard instances in Section 3 are not arbitrary dictionaries. The reduction:
++
++1. starts from the parallel-repeated Label-Cover instance of Theorem 6;
++2. independently keeps each edge with probability `1 / 5^ell`;
++3. creates one column per vertex-label pair;
++4. fills edge blocks with binary vectors derived from a Sylvester Hadamard matrix; and
++5. fixes `k = |V'| + |W'|` and takes `y` to be the all-ones vector.
++
++Theorem 10's soundness depends on the Label-Cover instance having value at most `2^(-alpha ell)` and on the random edge sampling. Its probability statement is over that reduction. Replacing its input with an independently planted satisfiable instance discards the premise that creates the gap.
++
++## Certificate-production test
++
++There are two natural ways to obtain a witness, and neither supplies H.
++
++### The prior-triage inverse construction
++
++Sample `x` first and compute `y = Phi x`. Certificate production is one matrix-vector product, `O(MN)` arithmetic in a dense representation (or `O(Mk)` when only the selected columns are used). Verification repeats the multiplication, counts the nonzero coefficients, and compares with `y` exactly. A zero residual also certifies optimality because a squared norm cannot be negative.
++
++That establishes G and V only. Theorem 2 says nothing about this distribution. In the regimes normally chosen for inverse planting—random or incoherent columns and sufficiently small `k`—the paper itself points to Orthogonal Matching Pursuit and the incoherence/RIP literature as the tractable side of sparse recovery. In other parameter regimes, the generator would still need a distributional argument and measured resistance to the standard sparse-recovery algorithms; the paper provides neither.
++
++### The paper's completeness construction
++
++Theorem 9 says that if the Label-Cover instance has a labeling satisfying every edge, selecting the column for that label at every vertex gives `k` mutually orthogonal columns whose span contains the all-ones target. Its proof then says to choose the corresponding scaling coefficients. Thus, given the labeling, the sparse witness is produced directly in polynomial time by the proof.
++
++This is a valid theorem-backed certificate construction, but it still does not produce a hard distribution. Generating satisfiable Label-Cover instances by first planting the labeling only yields completeness instances. Theorems 2, 6, and 10 are reductions distinguishing worst-case completeness instances from worst-case low-value soundness instances; none asserts that recovering a labeling from the planted completeness distribution is hard. The module would have to make that unsupported leap to claim Track A.
++
++## Why neither track is supportable
++
++| Track | Result | Reason |
++|---|---|---|
++| A — structural hardness | **Fails** | The only hardness theorem concerns the worst-case Label-Cover reduction and its soundness regime. It does not cover the answer-first distribution, and the prompt expressly forbids substituting worst-case NP-hardness for distributional hardness. |
++| B — no-tool compression | **Fails for the proposed family** | No compact invariant, symmetry, or change of variables is supplied. The only known route is the same matrix/dictionary recovery task posed to the solver. Choosing an easy structured dictionary merely makes a standard algorithm the solution; choosing a generic planted dictionary supplies no paper-backed compact route. |
++
++A contrived Track B problem could be invented by replacing `Phi` with, for example, a Walsh-Hadamard dictionary and hiding a transform identity. That would be a new compressed-transform puzzle, not a consequence of this paper's hardness theorem, and it would need its own oracle and attack evidence. It is not a valid rescue of the prior triage.
++
++## Other candidate formulations
++
++| Candidate task | G | H | V | Outcome |
++|---|---:|---:|---:|---|
++| Find an exact `k`-sparse `x` with `Phi x = y` in an inverse-planted dictionary | pass | **fail / unsupported** | pass | The planted distribution is not covered by the theorem and commonly lies in recovery-friendly regimes. |
++| Recover the satisfying Label-Cover labeling from a Theorem 9 matrix | pass | **fail / unsupported** | pass | Planting a labeling does not inherit Theorem 10 soundness or establish average-case search hardness. |
++| Return a support achieving a stated `Diff-Sparse` approximation ratio | possible | unresolved | **fails in general** | Checking the ratio requires the unknown optimum projection unless an independently checkable optimality certificate is also supplied. |
++| Return the exact completeness witness from Theorem 9 when the labeling is public | pass | **fail** | pass | The proof writes the selected columns and scaling down directly. |
++
++## Gate status
++
++| Requirement | Status | Evidence |
++|---|---|---|
++| G — generatable | Would pass | Sample `x` first, or carry the satisfying Label-Cover labeling through Theorem 9. |
++| H — hard under Track A | **Fails** | No theorem for the generated distribution; Theorem 2 is worst-case and Theorem 10 requires low-value Label Cover on the soundness side. |
++| H — hard under Track B | **Fails for the proposed construction** | No separate compact route exists to create the required mechanical-versus-insight gap. |
++| V — exact verification | Would pass for exact decomposition | Count support and recompute `Phi x = y` over exact rationals. |
++| Steps 1–4 | Not run | The task requires stopping at Step 0 once G, H, or V fails. |
++
++The decisive gate is H. The paper's title and worst-case theorem cannot certify the inverse-planted distribution requested by the prior triage, so shipping it would make precisely the hardness error the task warns against.
+
+exec
+/bin/bash -lc "sed -n '1,280p' REJECTED.md; ls -la" in /home/gson/gvrepo/results/1108.4664
+ succeeded in 0ms:
+# Rejected at Step 0: inverse planting does not inherit the paper's hardness
+
+Paper: Ali Civril, [*Sparse Approximation is Hard*](https://arxiv.org/abs/1108.4664), arXiv:1108.4664. The last substantive text is [version 2](https://arxiv.org/pdf/1108.4664v2); version 3 was withdrawn with the note that its results were subsumed by another straightforward reduction.
+
+## Decision
+
+No generator is shipped. The proposed family—choose a sparse coefficient vector `x`, choose a dictionary `Phi`, and publish `y = Phi x`—passes **G (inverse generation)** and **V (exact matrix multiplication)** but fails **H**. The paper proves a worst-case inapproximability result for a very specific randomized reduction from Label Cover. It does not prove, or even claim, hardness for inverse-planted random dictionaries or for the completeness side of that reduction conditioned on a known labeling.
+
+This is exactly the distinction required by Step 0: a worst-case NP-hard problem class does not make an answer-first distribution hard. Running attacks and the LLM loop could provide useful negative evidence, but could not turn the missing distributional hardness argument into a Track A theorem. Track B also has no honest basis here: the proposed construction specifies no compact hidden route distinct from ordinary sparse recovery. I therefore stopped before writing `gen_1108_4664.py`, `selftest_report.json`, or any oracle transcript.
+
+## What the paper actually defines
+
+Section 1 defines `Sparse`. Given a real `M x N` dictionary matrix `Phi`, a target `y` in `R^M`, and a sparsity budget `k`, choose `k` columns (equivalently a `k`-sparse coefficient vector) minimizing `||y - Phi x||_2`. It then defines `Diff-Sparse`, which chooses the same optimal supports but maximizes the squared norm of the orthogonal projection of `y` onto their span.
+
+Theorem 2 states that `Diff-Sparse` cannot be approximated within
+
+`(3 + 1/e)/4 + epsilon`
+
+in polynomial time unless `ZPP = NP`. Corollary 3 translates that gap to the usual residual objective. These are worst-case gap statements, not average-case or planted-distribution statements.
+
+The hard instances in Section 3 are not arbitrary dictionaries. The reduction:
+
+1. starts from the parallel-repeated Label-Cover instance of Theorem 6;
+2. independently keeps each edge with probability `1 / 5^ell`;
+3. creates one column per vertex-label pair;
+4. fills edge blocks with binary vectors derived from a Sylvester Hadamard matrix; and
+5. fixes `k = |V'| + |W'|` and takes `y` to be the all-ones vector.
+
+Theorem 10's soundness depends on the Label-Cover instance having value at most `2^(-alpha ell)` and on the random edge sampling. Its probability statement is over that reduction. Replacing its input with an independently planted satisfiable instance discards the premise that creates the gap.
+
+## Certificate-production test
+
+There are two natural ways to obtain a witness, and neither supplies H.
+
+### The prior-triage inverse construction
+
+Sample `x` first and compute `y = Phi x`. Certificate production is one matrix-vector product, `O(MN)` arithmetic in a dense representation (or `O(Mk)` when only the selected columns are used). Verification repeats the multiplication, counts the nonzero coefficients, and compares with `y` exactly. A zero residual also certifies optimality because a squared norm cannot be negative.
+
+That establishes G and V only. Theorem 2 says nothing about this distribution. In the regimes normally chosen for inverse planting—random or incoherent columns and sufficiently small `k`—the paper itself points to Orthogonal Matching Pursuit and the incoherence/RIP literature as the tractable side of sparse recovery. In other parameter regimes, the generator would still need a distributional argument and measured resistance to the standard sparse-recovery algorithms; the paper provides neither.
+
+### The paper's completeness construction
+
+Theorem 9 says that if the Label-Cover instance has a labeling satisfying every edge, selecting the column for that label at every vertex gives `k` mutually orthogonal columns whose span contains the all-ones target. Its proof then says to choose the corresponding scaling coefficients. Thus, given the labeling, the sparse witness is produced directly in polynomial time by the proof.
+
+This is a valid theorem-backed certificate construction, but it still does not produce a hard distribution. Generating satisfiable Label-Cover instances by first planting the labeling only yields completeness instances. Theorems 2, 6, and 10 are reductions distinguishing worst-case completeness instances from worst-case low-value soundness instances; none asserts that recovering a labeling from the planted completeness distribution is hard. The module would have to make that unsupported leap to claim Track A.
+
+## Why neither track is supportable
+
+| Track | Result | Reason |
+|---|---|---|
+| A — structural hardness | **Fails** | The only hardness theorem concerns the worst-case Label-Cover reduction and its soundness regime. It does not cover the answer-first distribution, and the prompt expressly forbids substituting worst-case NP-hardness for distributional hardness. |
+| B — no-tool compression | **Fails for the proposed family** | No compact invariant, symmetry, or change of variables is supplied. The only known route is the same matrix/dictionary recovery task posed to the solver. Choosing an easy structured dictionary merely makes a standard algorithm the solution; choosing a generic planted dictionary supplies no paper-backed compact route. |
+
+A contrived Track B problem could be invented by replacing `Phi` with, for example, a Walsh-Hadamard dictionary and hiding a transform identity. That would be a new compressed-transform puzzle, not a consequence of this paper's hardness theorem, and it would need its own oracle and attack evidence. It is not a valid rescue of the prior triage.
+
+## Other candidate formulations
+
+| Candidate task | G | H | V | Outcome |
+|---|---:|---:|---:|---|
+| Find an exact `k`-sparse `x` with `Phi x = y` in an inverse-planted dictionary | pass | **fail / unsupported** | pass | The planted distribution is not covered by the theorem and commonly lies in recovery-friendly regimes. |
+| Recover the satisfying Label-Cover labeling from a Theorem 9 matrix | pass | **fail / unsupported** | pass | Planting a labeling does not inherit Theorem 10 soundness or establish average-case search hardness. |
+| Return a support achieving a stated `Diff-Sparse` approximation ratio | possible | unresolved | **fails in general** | Checking the ratio requires the unknown optimum projection unless an independently checkable optimality certificate is also supplied. |
+| Return the exact completeness witness from Theorem 9 when the labeling is public | pass | **fail** | pass | The proof writes the selected columns and scaling down directly. |
+
+## Gate status
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| G — generatable | Would pass | Sample `x` first, or carry the satisfying Label-Cover labeling through Theorem 9. |
+| H — hard under Track A | **Fails** | No theorem for the generated distribution; Theorem 2 is worst-case and Theorem 10 requires low-value Label Cover on the soundness side. |
+| H — hard under Track B | **Fails for the proposed construction** | No separate compact route exists to create the required mechanical-versus-insight gap. |
+| V — exact verification | Would pass for exact decomposition | Count support and recompute `Phi x = y` over exact rationals. |
+| Steps 1–4 | Not run | The task requires stopping at Step 0 once G, H, or V fails. |
+
+The decisive gate is H. The paper's title and worst-case theorem cannot certify the inverse-planted distribution requested by the prior triage, so shipping it would make precisely the hardness error the task warns against.
+total 244
+drwxrwxr-x   2 gson gson   4096 Sep  4 12:54 .
+drwxrwxr-x 116 gson gson   4096 Sep  4 12:54 ..
+-rw-rw-r--   1 gson gson    160 Sep  4 12:44 .meta.json
+-rw-rw-r--   1 gson gson    529 Sep  4 12:44 .runner.sh
+-rw-rw-r--   1 gson gson  56125 Sep  4 12:44 .task.md
+-rw-rw-r--   1 gson gson   7867 Sep  4 12:54 REJECTED.md
+-rw-rw-r--   1 gson gson 166019 Sep  4 12:54 codex_run.log
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..34193faaafc22000a1fc74b4ac59d2d53a0afefa
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,75 @@
++# Rejected at Step 0: inverse planting does not inherit the paper's hardness
++
++Paper: Ali Civril, [*Sparse Approximation is Hard*](https://arxiv.org/abs/1108.4664), arXiv:1108.4664. The last substantive text is [version 2](https://arxiv.org/pdf/1108.4664v2); version 3 was withdrawn with the note that its results were subsumed by another straightforward reduction.
++
++## Decision
++
++No generator is shipped. The proposed family—choose a sparse coefficient vector `x`, choose a dictionary `Phi`, and publish `y = Phi x`—passes **G (inverse generation)** and **V (exact matrix multiplication)** but fails **H**. The paper proves a worst-case inapproximability result for a very specific randomized reduction from Label Cover. It does not prove, or even claim, hardness for inverse-planted random dictionaries or for the completeness side of that reduction conditioned on a known labeling.
++
++This is exactly the distinction required by Step 0: a worst-case NP-hard problem class does not make an answer-first distribution hard. Running attacks and the LLM loop could provide useful negative evidence, but could not turn the missing distributional hardness argument into a Track A theorem. Track B also has no honest basis here: the proposed construction specifies no compact hidden route distinct from ordinary sparse recovery. I therefore stopped before writing `gen_1108_4664.py`, `selftest_report.json`, or any oracle transcript.
++
++## What the paper actually defines
++
++Section 1 defines `Sparse`. Given a real `M x N` dictionary matrix `Phi`, a target `y` in `R^M`, and a sparsity budget `k`, choose `k` columns (equivalently a `k`-sparse coefficient vector) minimizing `||y - Phi x||_2`. It then defines `Diff-Sparse`, which chooses the same optimal supports but maximizes the squared norm of the orthogonal projection of `y` onto their span.
++
++Theorem 2 states that `Diff-Sparse` cannot be approximated within
++
++`(3 + 1/e)/4 + epsilon`
++
++in polynomial time unless `ZPP = NP`. Corollary 3 translates that gap to the usual residual objective. These are worst-case gap statements, not average-case or planted-distribution statements.
++
++The hard instances in Section 3 are not arbitrary dictionaries. The reduction:
++
++1. starts from the parallel-repeated Label-Cover instance of Theorem 6;
++2. independently keeps each edge with probability `1 / 5^ell`;
++3. creates one column per vertex-label pair;
++4. fills edge blocks with binary vectors derived from a Sylvester Hadamard matrix; and
++5. fixes `k = |V'| + |W'|` and takes `y` to be the all-ones vector.
++
++Theorem 10's soundness depends on the Label-Cover instance having value at most `2^(-alpha ell)` and on the random edge sampling. Its probability statement is over that reduction. Replacing its input with an independently planted satisfiable instance discards the premise that creates the gap.
++
++## Certificate-production test
++
++There are two natural ways to obtain a witness, and neither supplies H.
++
++### The prior-triage inverse construction
++
++Sample `x` first and compute `y = Phi x`. Certificate production is one matrix-vector product, `O(MN)` arithmetic in a dense representation (or `O(Mk)` when only the selected columns are used). Verification repeats the multiplication, counts the nonzero coefficients, and compares with `y` exactly. A zero residual also certifies optimality because a squared norm cannot be negative.
++
++That establishes G and V only. Theorem 2 says nothing about this distribution. In the regimes normally chosen for inverse planting—random or incoherent columns and sufficiently small `k`—the paper itself points to Orthogonal Matching Pursuit and the incoherence/RIP literature as the tractable side of sparse recovery. In other parameter regimes, the generator would still need a distributional argument and measured resistance to the standard sparse-recovery algorithms; the paper provides neither.
++
++### The paper's completeness construction
++
++Theorem 9 says that if the Label-Cover instance has a labeling satisfying every edge, selecting the column for that label at every vertex gives `k` mutually orthogonal columns whose span contains the all-ones target. Its proof then says to choose the corresponding scaling coefficients. Thus, given the labeling, the sparse witness is produced directly in polynomial time by the proof.
++
++This is a valid theorem-backed certificate construction, but it still does not produce a hard distribution. Generating satisfiable Label-Cover instances by first planting the labeling only yields completeness instances. Theorems 2, 6, and 10 are reductions distinguishing worst-case completeness instances from worst-case low-value soundness instances; none asserts that recovering a labeling from the planted completeness distribution is hard. The module would have to make that unsupported leap to claim Track A.
++
++## Why neither track is supportable
++
++| Track | Result | Reason |
++|---|---|---|
++| A — structural hardness | **Fails** | The only hardness theorem concerns the worst-case Label-Cover reduction and its soundness regime. It does not cover the answer-first distribution, and the prompt expressly forbids substituting worst-case NP-hardness for distributional hardness. |
++| B — no-tool compression | **Fails for the proposed family** | No compact invariant, symmetry, or change of variables is supplied. The only known route is the same matrix/dictionary recovery task posed to the solver. Choosing an easy structured dictionary merely makes a standard algorithm the solution; choosing a generic planted dictionary supplies no paper-backed compact route. |
++
++A contrived Track B problem could be invented by replacing `Phi` with, for example, a Walsh-Hadamard dictionary and hiding a transform identity. That would be a new compressed-transform puzzle, not a consequence of this paper's hardness theorem, and it would need its own oracle and attack evidence. It is not a valid rescue of the prior triage.
++
++## Other candidate formulations
++
++| Candidate task | G | H | V | Outcome |
++|---|---:|---:|---:|---|
++| Find an exact `k`-sparse `x` with `Phi x = y` in an inverse-planted dictionary | pass | **fail / unsupported** | pass | The planted distribution is not covered by the theorem and commonly lies in recovery-friendly regimes. |
++| Recover the satisfying Label-Cover labeling from a Theorem 9 matrix | pass | **fail / unsupported** | pass | Planting a labeling does not inherit Theorem 10 soundness or establish average-case search hardness. |
++| Return a support achieving a stated `Diff-Sparse` approximation ratio | possible | unresolved | **fails in general** | Checking the ratio requires the unknown optimum projection unless an independently checkable optimality certificate is also supplied. |
++| Return the exact completeness witness from Theorem 9 when the labeling is public | pass | **fail** | pass | The proof writes the selected columns and scaling down directly. |
++
++## Gate status
++
++| Requirement | Status | Evidence |
++|---|---|---|
++| G — generatable | Would pass | Sample `x` first, or carry the satisfying Label-Cover labeling through Theorem 9. |
++| H — hard under Track A | **Fails** | No theorem for the generated distribution; Theorem 2 is worst-case and Theorem 10 requires low-value Label Cover on the soundness side. |
++| H — hard under Track B | **Fails for the proposed construction** | No separate compact route exists to create the required mechanical-versus-insight gap. |
++| V — exact verification | Would pass for exact decomposition | Count support and recompute `Phi x = y` over exact rationals. |
++| Steps 1–4 | Not run | The task requires stopping at Step 0 once G, H, or V fails. |
++
++The decisive gate is H. The paper's title and worst-case theorem cannot certify the inverse-planted distribution requested by the prior triage, so shipping it would make precisely the hardness error the task warns against.
+
+codex
+Rejected at Step 0. The inverse-planted sparse decomposition passes G and V but fails H: the paper proves worst-case Label-Cover inapproximability, not hardness for planted dictionaries. It also identifies incoherent/RIP regimes and OMP as tractable approaches. [Paper v2](https://arxiv.org/pdf/1108.4664v2)
+
+The full analysis is in [REJECTED.md](/home/gson/gvrepo/results/1108.4664/REJECTED.md). Per the instructions, no generator, self-test, or oracle transcripts were fabricated after the decisive hardness failure.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..34193faaafc22000a1fc74b4ac59d2d53a0afefa
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,75 @@
++# Rejected at Step 0: inverse planting does not inherit the paper's hardness
++
++Paper: Ali Civril, [*Sparse Approximation is Hard*](https://arxiv.org/abs/1108.4664), arXiv:1108.4664. The last substantive text is [version 2](https://arxiv.org/pdf/1108.4664v2); version 3 was withdrawn with the note that its results were subsumed by another straightforward reduction.
++
++## Decision
++
++No generator is shipped. The proposed family—choose a sparse coefficient vector `x`, choose a dictionary `Phi`, and publish `y = Phi x`—passes **G (inverse generation)** and **V (exact matrix multiplication)** but fails **H**. The paper proves a worst-case inapproximability result for a very specific randomized reduction from Label Cover. It does not prove, or even claim, hardness for inverse-planted random dictionaries or for the completeness side of that reduction conditioned on a known labeling.
++
++This is exactly the distinction required by Step 0: a worst-case NP-hard problem class does not make an answer-first distribution hard. Running attacks and the LLM loop could provide useful negative evidence, but could not turn the missing distributional hardness argument into a Track A theorem. Track B also has no honest basis here: the proposed construction specifies no compact hidden route distinct from ordinary sparse recovery. I therefore stopped before writing `gen_1108_4664.py`, `selftest_report.json`, or any oracle transcript.
++
++## What the paper actually defines
++
++Section 1 defines `Sparse`. Given a real `M x N` dictionary matrix `Phi`, a target `y` in `R^M`, and a sparsity budget `k`, choose `k` columns (equivalently a `k`-sparse coefficient vector) minimizing `||y - Phi x||_2`. It then defines `Diff-Sparse`, which chooses the same optimal supports but maximizes the squared norm of the orthogonal projection of `y` onto their span.
++
++Theorem 2 states that `Diff-Sparse` cannot be approximated within
++
++`(3 + 1/e)/4 + epsilon`
++
++in polynomial time unless `ZPP = NP`. Corollary 3 translates that gap to the usual residual objective. These are worst-case gap statements, not average-case or planted-distribution statements.
++
++The hard instances in Section 3 are not arbitrary dictionaries. The reduction:
++
++1. starts from the parallel-repeated Label-Cover instance of Theorem 6;
++2. independently keeps each edge with probability `1 / 5^ell`;
++3. creates one column per vertex-label pair;
++4. fills edge blocks with binary vectors derived from a Sylvester Hadamard matrix; and
++5. fixes `k = |V'| + |W'|` and takes `y` to be the all-ones vector.
++
++Theorem 10's soundness depends on the Label-Cover instance having value at most `2^(-alpha ell)` and on the random edge sampling. Its probability statement is over that reduction. Replacing its input with an independently planted satisfiable instance discards the premise that creates the gap.
++
++## Certificate-production test
++
++There are two natural ways to obtain a witness, and neither supplies H.
++
++### The prior-triage inverse construction
++
++Sample `x` first and compute `y = Phi x`. Certificate production is one matrix-vector product, `O(MN)` arithmetic in a dense representation (or `O(Mk)` when only the selected columns are used). Verification repeats the multiplication, counts the nonzero coefficients, and compares with `y` exactly. A zero residual also certifies optimality because a squared norm cannot be negative.
++
++That establishes G and V only. Theorem 2 says nothing about this distribution. In the regimes normally chosen for inverse planting—random or incoherent columns and sufficiently small `k`—the paper itself points to Orthogonal Matching Pursuit and the incoherence/RIP literature as the tractable side of sparse recovery. In other parameter regimes, the generator would still need a distributional argument and measured resistance to the standard sparse-recovery algorithms; the paper provides neither.
++
++### The paper's completeness construction
++
++Theorem 9 says that if the Label-Cover instance has a labeling satisfying every edge, selecting the column for that label at every vertex gives `k` mutually orthogonal columns whose span contains the all-ones target. Its proof then says to choose the corresponding scaling coefficients. Thus, given the labeling, the sparse witness is produced directly in polynomial time by the proof.
++
++This is a valid theorem-backed certificate construction, but it still does not produce a hard distribution. Generating satisfiable Label-Cover instances by first planting the labeling only yields completeness instances. Theorems 2, 6, and 10 are reductions distinguishing worst-case completeness instances from worst-case low-value soundness instances; none asserts that recovering a labeling from the planted completeness distribution is hard. The module would have to make that unsupported leap to claim Track A.
++
++## Why neither track is supportable
++
++| Track | Result | Reason |
++|---|---|---|
++| A — structural hardness | **Fails** | The only hardness theorem concerns the worst-case Label-Cover reduction and its soundness regime. It does not cover the answer-first distribution, and the prompt expressly forbids substituting worst-case NP-hardness for distributional hardness. |
++| B — no-tool compression | **Fails for the proposed family** | No compact invariant, symmetry, or change of variables is supplied. The only known route is the same matrix/dictionary recovery task posed to the solver. Choosing an easy structured dictionary merely makes a standard algorithm the solution; choosing a generic planted dictionary supplies no paper-backed compact route. |
++
++A contrived Track B problem could be invented by replacing `Phi` with, for example, a Walsh-Hadamard dictionary and hiding a transform identity. That would be a new compressed-transform puzzle, not a consequence of this paper's hardness theorem, and it would need its own oracle and attack evidence. It is not a valid rescue of the prior triage.
++
++## Other candidate formulations
++
++| Candidate task | G | H | V | Outcome |
++|---|---:|---:|---:|---|
++| Find an exact `k`-sparse `x` with `Phi x = y` in an inverse-planted dictionary | pass | **fail / unsupported** | pass | The planted distribution is not covered by the theorem and commonly lies in recovery-friendly regimes. |
++| Recover the satisfying Label-Cover labeling from a Theorem 9 matrix | pass | **fail / unsupported** | pass | Planting a labeling does not inherit Theorem 10 soundness or establish average-case search hardness. |
++| Return a support achieving a stated `Diff-Sparse` approximation ratio | possible | unresolved | **fails in general** | Checking the ratio requires the unknown optimum projection unless an independently checkable optimality certificate is also supplied. |
++| Return the exact completeness witness from Theorem 9 when the labeling is public | pass | **fail** | pass | The proof writes the selected columns and scaling down directly. |
++
++## Gate status
++
++| Requirement | Status | Evidence |
++|---|---|---|
++| G — generatable | Would pass | Sample `x` first, or carry the satisfying Label-Cover labeling through Theorem 9. |
++| H — hard under Track A | **Fails** | No theorem for the generated distribution; Theorem 2 is worst-case and Theorem 10 requires low-value Label Cover on the soundness side. |
++| H — hard under Track B | **Fails for the proposed construction** | No separate compact route exists to create the required mechanical-versus-insight gap. |
++| V — exact verification | Would pass for exact decomposition | Count support and recompute `Phi x = y` over exact rationals. |
++| Steps 1–4 | Not run | The task requires stopping at Step 0 once G, H, or V fails. |
++
++The decisive gate is H. The paper's title and worst-case theorem cannot certify the inverse-planted distribution requested by the prior triage, so shipping it would make precisely the hardness error the task warns against.
+
+tokens used
+113,859
+Rejected at Step 0. The inverse-planted sparse decomposition passes G and V but fails H: the paper proves worst-case Label-Cover inapproximability, not hardness for planted dictionaries. It also identifies incoherent/RIP regimes and OMP as tractable approaches. [Paper v2](https://arxiv.org/pdf/1108.4664v2)
+
+The full analysis is in [REJECTED.md](/home/gson/gvrepo/results/1108.4664/REJECTED.md). Per the instructions, no generator, self-test, or oracle transcripts were fabricated after the decisive hardness failure.
