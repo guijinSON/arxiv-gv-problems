@@ -361,6 +361,21 @@ def main():
                 params = ladder[rung]
             else:
                 nxt = mod.escalate(call)
+                # A module may say "I could go harder, but the answer would no
+                # longer fit under the cap" by returning the string "cap_bound".
+                # That is NOT the same verdict as "this family has no hardness
+                # left": the first is a property of our answer format, the second
+                # is a property of the paper. Ten rejections were papers whose
+                # escalate() stopped at the cap and were then discarded as
+                # too_easy -- judged un-writable, not unsuitable.
+                if nxt == "cap_bound":
+                    verdict = {"verdict": "cap_bound",
+                               "escalations_used": escalation_round,
+                               "reason": "the family can be made harder, but only by "
+                                         "lengthening the answer past the output cap. "
+                                         "This is a limit of the answer format, not of "
+                                         "the paper -- do not reject it as too_easy."}
+                    break
                 if nxt is None:
                     verdict = {"verdict": "too_easy", "escalations_used": escalation_round,
                                "reason": "escalate() returned None — the family cannot be "
@@ -374,7 +389,9 @@ def main():
 
     update_meta(harden_verdict=verdict)
     print(json.dumps(verdict, indent=1))
-    return 0 if verdict["verdict"] == "hardened" else 9
+    # 0 hardened / 9 too_easy (give the paper up) / 10 cap_bound (park it, do
+    # not reject: the paper is fine, our answer format is the binding constraint)
+    return {"hardened": 0, "cap_bound": 10}.get(verdict["verdict"], 9)
 
 
 if __name__ == "__main__":

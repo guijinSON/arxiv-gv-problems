@@ -305,6 +305,29 @@ if not isinstance(CL, dict) or not CL.get("description") or "bounds" not in CL:
           "       Bound the language instead -- see prompts/codex_task.md, STEP 1.")
     sys.exit(1)
 
+# escalate() decides whether a paper lives: when the oracle solves a level the
+# harness climbs the ladder, and a one-dial ladder that only raises n runs into the
+# output cap and returns None, which the harness reports as too_easy. 33 of 54
+# shipped modules moved exactly one axis. Require a second.
+import inspect as _inspect
+try:
+    _esc = _inspect.getsource(m.escalate)
+except Exception:
+    _esc = ""
+if _esc:
+    _axes = set(re.findall(r"[\"']([a-z_][a-z0-9_]*)[\"']\s*\]\s*=", _esc))
+    _axes |= set(re.findall(r"\bp(?:arams)?\[[\"']([a-z_][a-z0-9_]*)[\"']\]", _esc))
+    _axes.discard("_preset")
+    if _axes and _axes <= {"n"} and "cap_bound" not in _esc:
+        print("ERROR: escalate() moves only 'n'.  Raising n lengthens the ANSWER and\n"
+              "       runs into the output cap, at which point the harness reports\n"
+              "       too_easy and the paper is discarded -- 10 papers were lost that\n"
+              "       way.  Add an axis that raises difficulty at FIXED answer length\n"
+              "       (bigger ground set with the same witness size, larger modulus,\n"
+              "       denser decoys, tighter constraints), or return \"cap_bound\".\n"
+              "       See prompts/codex_task.md, escalate().")
+        sys.exit(1)
+
 NAT = getattr(m, "NATIVE", None)
 if not isinstance(NAT, dict):
     print("ERROR: module has no NATIVE dict.  Declare what this family really is\n"

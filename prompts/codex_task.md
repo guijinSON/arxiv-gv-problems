@@ -481,16 +481,40 @@ def canonical_key(inst) -> str
 
     Must be deterministic: same seed and params => same key. submit.sh checks this."""
 
-def escalate(params) -> dict | None
-    """Parameters strictly harder than `params`, or None if this family cannot be
-    made any harder. Called by the hardening harness once the named DIFFICULTY
-    ladder is exhausted and the oracle pool is still solving instances.
+def escalate(params) -> dict | str | None
+    """Parameters strictly harder than `params`.
 
-    Raising `n` is not automatically the right move — for many families the usable
-    window is narrow, and a larger n makes instances unsatisfiable or, worse,
-    easier. Escalate along whichever axis actually costs a solver: crowding,
-    density, the number of decoys, how close the plant sits to the feasibility
-    boundary. Returning None is a legitimate answer and ends the loop."""
+    GROW THE HAYSTACK, NOT THE NEEDLE.  This is the rule, and 61% of shipped
+    modules break it: they escalate by raising `n`, which lengthens the ANSWER,
+    which hits the output cap, at which point they return None and the harness
+    calls the family `too_easy` and the paper is thrown away.  Ten papers have
+    been discarded that way -- judged un-writable rather than unsuitable.
+
+    Difficulty should scale with the SPACE THE ANSWER IS DRAWN FROM, not with the
+    NUMBER OF THINGS IN THE ANSWER.  A planted clique is the model: n goes from
+    512 to 4096 while k stays 16, so the search explodes and the answer stays
+    sixteen numbers long.
+
+    Axes that raise difficulty at FIXED answer length -- reach for these first:
+      - enlarge the ground set / ambient space, keeping the witness size fixed
+      - raise the modulus, field size or coefficient range, so each answer
+        element carries more entropy without taking more characters
+      - raise decoy density or crowding: more near-misses per real element
+      - move the plant closer to the feasibility boundary
+      - delete redundant clues from the instance -- less given, same answer
+      - tighten the constraints, shrinking the solution set
+
+    Only after those are exhausted should you consider a longer answer.
+
+    RETURN VALUES, and the distinction matters:
+      dict          -- harder parameters. Preferred.
+      "cap_bound"   -- the family CAN be made harder, but only by pushing the
+                       answer past the output cap.  Say this instead of None.
+                       It parks the paper rather than condemning it: the limit
+                       is our answer format, not the paper's mathematics.
+      None          -- genuinely nothing left on ANY axis.  Rare.  If you are
+                       returning None because the answer got too long, you mean
+                       "cap_bound"."""
 ```
 
 ---
@@ -953,6 +977,16 @@ one screen of prose plus tables. Cover:
 
 `submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
 `llm_loop_transcript.jsonl` is missing.
+
+### `cap_bound` is not a rejection
+
+If the harness returns `cap_bound`, **do not write `REJECTED.md`.** The family is
+fine and the paper is fine; the answer simply cannot be written out at the size that
+would make it hard. Say so in your report and stop. The paper goes back to the pool
+for a future run under a larger cap, not into the reject pile.
+
+You should reach `cap_bound` only after trying the fixed-length axes in
+`escalate()`. If you reached it by raising `n` alone, you have not finished the job.
 
 ## Writing `REJECTED.md`
 
