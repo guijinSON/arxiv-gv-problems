@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **117 / 12,167** resolved (0.96%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **118 / 12,167** resolved (0.97%)
 
 | state | count |
 |---|---:|
 | ✅ done | 57 |
-| 🚫 rejected (documented) | 60 |
-| 🔄 in progress | 10 |
+| 🚫 rejected (documented) | 61 |
+| 🔄 in progress | 9 |
 | ⚪ free | 12,040 |
 | **total** | **12,167** |
 
@@ -18,7 +18,6 @@
 | `2306.10294` | GUIJIN SON | 2026-09-04T12:31 |
 | `1912.02640` | GUIJIN SON | 2026-09-04T13:12 |
 | `2605.28674` | GUIJIN SON | 2026-09-04T13:42 |
-| `2601.05272` | GUIJIN SON | 2026-09-04T13:42 |
 | `2602.19989` | GUIJIN SON | 2026-09-04T13:42 |
 | `1401.2436` | GUIJIN SON | 2026-09-04T15:26 |
 | `1605.04472` | GUIJIN SON | 2026-09-04T15:26 |
@@ -31,7 +30,7 @@
 |---|---:|---:|
 | graph structures | 17 | 5,559 |
 | designs and codes | 11 | 1,022 |
-| algebraic decomposition | 13 | 804 |
+| algebraic decomposition | 14 | 804 |
 | integer equations | 4 | 607 |
 | reconfiguration | 10 | 551 |
 | geometric configurations | 6 | 533 |
