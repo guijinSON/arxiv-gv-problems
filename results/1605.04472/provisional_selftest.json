@@ -1,0 +1,142 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop": {
+        "reason": "wrong length: expected 32 constants",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "basis constants must be pairwise distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer array is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "basis constant outside the inclusive range 1..1000000",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "input polynomial 17 has nonzero exact remainder -35793252",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response_parsed": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 999504117782165773729355092138129309150687591908068392668411288307176174540850969610599009204763376562111890366844284538782550978163391935514221945559745808121652658607592565637120000000000000,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform ordered sample without replacement from 1..B",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_exact_operations_mean": 90211,
+    "baseline_iterations": 32,
+    "baseline_wall_seconds_mean": 0.02266090377815999,
+    "known_solution_count": 1,
+    "pass": true,
+    "shipping_candidate_space": 999504117782165773729355092138129309150687591908068392668411288307176174540850969610599009204763376562111890366844284538782550978163391935514221945559745808121652658607592565637120000000000000,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_mean_sum_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_independent_medians": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "obvious_zero_shared_sum": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_minimum_mixing": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "O(n*k^2+k^3) exact rational operations",
+      "name": "exact Gauss-Jordan elimination on the expanded coefficient matrix",
+      "operations_max": 103252,
+      "operations_mean": 90211,
+      "solves": "8/8, as expected for Track B",
+      "successes": 8,
+      "wall_clock_sec_max": 0.0260277078486979,
+      "wall_clock_sec_mean": 0.02266090377815999
+    }
+  },
+  "G7_scales": {
+    "answer_elements_doubled": 32,
+    "answer_elements_shipping": 32,
+    "doubled_reference_operations": 178614,
+    "doubled_reference_wall_seconds": 0.04420378105714917,
+    "doubled_rows": 1024,
+    "pass": true,
+    "planted_verifies": true,
+    "shipping_rows": 512
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "invariance_checks": 60,
+    "pass": true,
+    "real_transformation_witness_checks": 60,
+    "transformations": [
+      "generator-row permutation",
+      "variable renaming",
+      "composed variable and row permutation"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 225,
+    "answer_elements": 32,
+    "answer_tokens": 57,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 192,
+    "pass": false,
+    "within_caps": true
+  },
+  "all_passed": false,
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
