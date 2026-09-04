@@ -44,13 +44,15 @@ polynomial-time attack. Section 6 attacks every square-distinguishable generic
 alternant code after combining with the cited filtration, with the paper's own
 restrictions for the Goppa subcase. Those are the easy regimes found at Step 0.
 
-This planted distribution is easier still. Since the hidden residual has trace
-zero, `trace(A)+n*t=0`, so the construction-aware reference solver returns
-`t=-trace(A)/n mod p` in `O(n)` exact field operations. At shipping `n=192`, it
-solved 8/8 instances in a median **0.00000828 s** using **193 counted
-operations**. This is explicitly not structural or average-case MinRank
-hardness. The Track B claim is only that a no-tool model must first notice the
-unstated trace invariant and then accurately accumulate 192 ten-digit residues.
+This planted distribution is easier still. The domain-standard reference attack
+forms two exact `4 x 4` determinant polynomials of the pencil and takes their
+polynomial gcd. At shipping `n=192`, it solved 8/8 instances in a median
+**0.00034355 s** using **975 counted field operations**. Since the hidden
+residual also has trace zero, recognizing `trace(A)+n*t=0` compresses this to
+`t=-trace(A)/n mod p`: **193 operations** and **0.00006244 s**, again 8/8.
+This is explicitly not structural or average-case MinRank hardness. The Track B
+claim is only that a no-tool model must discover the unstated trace invariant
+and then accurately accumulate 192 ten-digit residues.
 
 ## Worked demo
 
@@ -122,8 +124,8 @@ rejected easy hint transcript is retained as `g9_hinted_easy_transcript.jsonl`.
 | G2 | pass | 5/5 corruptions rejected with five distinct reasons |
 | G3 | pass | realistic fenced response round-trips; garbage returns `None` |
 | G4 | pass | 0/200,000 uniform field shifts; exact probability `1/2147483647` |
-| G5 | pass | shipping density 0/200,000; demo count 1; 4,096 restarts in 0.065469 s |
-| G6 | pass | four attacks each 0/8; disclosed reference algorithm 8/8 |
+| G5 | pass | shipping density 0/200,000; demo count 1; 4,096 restarts in 0.107353 s |
+| G6 | pass | four attacks each 0/8; determinant/gcd reference 8/8 at 975 operations; trace route 8/8 at 193 |
 | G7 | pass | doubled `n=384` builds and verifies; route cost grows 193 to 385 |
 | G8 | pass | 80/80 symmetry and carried-witness checks; 20/20 unrelated keys distinct |
 | G9 | pass | hinted oracle 0/3; 23 chars, 6 tokens, 2 elements; 193 operations |
@@ -136,9 +138,9 @@ in-context heuristic that extrapolates from only the first 12 diagonal entries.
 
 | Model | Seed | Solved | Exact outcome |
 |---|---:|---|---|
-| xAI Grok 4.6 | 726812181 | no | parsed `t=0`; nonzero leading `4 x 4` minor |
-| Anthropic Claude Sonnet 5 | 824108218 | no | parsed `t=0`; nonzero leading `4 x 4` minor |
-| OpenAI GPT-5.6 Terra | 953075 | no | parsed `t=0`; nonzero leading `4 x 4` minor |
+| xAI Grok 4.6 | 2081303857 | no | parsed `t=514218662`; nonzero leading `4 x 4` minor |
+| Google Gemini 3.1 Pro | 2063454169 | no | parsed `t=856006132`; nonzero leading `4 x 4` minor |
+| Anthropic Claude Sonnet 5 | 475989094 | no | length-limited empty reply; no witness |
 
 The script-owned verdict is **hardened** with zero escalations in the final
 shipping-only rerun. Full replies and timing are in `llm_loop_transcript.jsonl`.
@@ -147,7 +149,7 @@ shipping-only rerun. Full replies and timing are in `llm_loop_transcript.jsonl`.
 
 | Arm | Solved / attempts | Note |
 |---|---:|---|
-| bare | 0/3 | three parsed wrong shifts |
+| bare | 0/3 | two parsed wrong shifts; one length-limited empty reply |
 | structural hint | 0/3 | three parsed wrong trace computations; hardened |
 | placebo hint | 0/3 | two parsed wrong shifts; one length-limited empty reply |
 
@@ -194,9 +196,10 @@ modular rank routine.
   intended route touches only 192 diagonal entries, but model failures may partly
   measure locating and accumulating those entries. The 0/3 G9 arms are too small
   to separate recognition from exact-arithmetic reliability.
-- General determinant-polynomial, Support Minors, Gröbner, and CAS attacks were
-  not run in G6. The disclosed `O(n)` trace algorithm strictly dominates them on
-  this distribution and already establishes that tool-equipped solving is easy.
+- The exact `4 x 4` determinant-polynomial/gcd attack was run and is disclosed;
+  broader Support Minors, Gröbner, and CAS attacks were not. The measured trace
+  algorithm is still cheaper on this distribution and establishes that
+  tool-equipped solving is easy.
 - The canonical key uses `n`, `p`, `trace(A)`, and `trace(A^2)`. It is invariant
   under all tested coordinate permutations and sign changes but is not a complete
   canonical form for arbitrary finite-field orthogonal equivalence; rare invariant

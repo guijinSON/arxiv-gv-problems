@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import itertools
 import json
 import math
 import os
@@ -50,11 +51,12 @@ PROBLEM_PROFILE: dict = {
         "obvious route is a matrix-pencil rank computation."
     ),
     "hardness_basis": (
-        "Track B: the construction-aware trace solver is O(n) exact field "
-        "operations and is expected to solve every instance; at shipping n=192 "
-        "it uses 193 counted field operations and took a measured median "
-        "0.00000828 seconds over eight seeds, while a no-tool solver must discover the unstated "
-        "trace-zero invariant and exactly accumulate the 192-entry diagonal."
+        "Track B: the domain-standard exact pencil attack computes two 4-by-4 "
+        "determinant polynomials and their gcd, using a measured 975 field "
+        "operations and 0.00034 seconds at shipping n=192; recognizing the "
+        "trace-zero invariant compresses this to 193 exact operations, but a "
+        "no-tool solver must discover that invariant and accurately accumulate "
+        "the 192-entry diagonal."
     ),
     "max_answer_tokens": 6,
 }
@@ -102,7 +104,8 @@ NOTES: str = (
     "polynomial, so a Track A claim would be false for this generated pencil. The generator "
     "instead inverse-plants A+tI=U diag(c1,c2,c3) U^T with zero trace and rank "
     "three. A trace algorithm therefore solves it in O(n), disclosed as the "
-    "Track B reference. Diagonal outlier/mode, greedy leading-minor, random-shift, "
+    "Track B compact route; the domain-standard reference computes and gcds "
+    "4-by-4 determinant polynomials. Diagonal outlier/mode, greedy leading-minor, random-shift, "
     "and partial-trace attacks are measured separately and do not recover the "
     "shift on the shipping seeds."
 )
@@ -408,11 +411,11 @@ def canonical_key(inst) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def escalate(params) -> dict | None:
+def escalate(params) -> dict | str | None:
     n = int(params["n"])
     p = int(params.get("p", FIELD_PRIME))
     if n >= 288:
-        return None
+        return "cap_bound"
     return {"n": min(288, n + 32), "p": p}
 
 
@@ -427,6 +430,97 @@ def _reference_trace(inst):
         "field_multiplications": 1,
         "exact_operations": inst["n"] + 1,
     }
+
+
+def _poly_trim(poly):
+    while len(poly) > 1 and poly[-1] == 0:
+        poly.pop()
+    return poly
+
+
+def _poly_add(left, right, p, sign, counter):
+    out = [0] * max(len(left), len(right))
+    for i in range(len(out)):
+        a = left[i] if i < len(left) else 0
+        b = right[i] if i < len(right) else 0
+        out[i] = (a + sign * b) % p
+        counter["operations"] += 1
+    return _poly_trim(out)
+
+
+def _poly_mul(left, right, p, counter):
+    out = [0] * (len(left) + len(right) - 1)
+    for i, a in enumerate(left):
+        for j, b in enumerate(right):
+            out[i + j] = (out[i + j] + a * b) % p
+            counter["operations"] += 2
+    return _poly_trim(out)
+
+
+def _determinant_polynomial_4(matrix, indices, p, counter):
+    """det(A[indices,indices] + xI), low coefficient first."""
+    result = [0]
+    for permutation in itertools.permutations(range(4)):
+        inversions = sum(
+            permutation[i] > permutation[j]
+            for i in range(4)
+            for j in range(i + 1, 4)
+        )
+        term = [1]
+        for row, local_column in enumerate(permutation):
+            i = indices[row]
+            j = indices[local_column]
+            factor = [matrix[i][j] % p, 1] if row == local_column else [matrix[i][j] % p]
+            term = _poly_mul(term, factor, p, counter)
+        result = _poly_add(result, term, p, -1 if inversions % 2 else 1, counter)
+    return result
+
+
+def _poly_remainder(dividend, divisor, p, counter):
+    remainder = dividend[:]
+    inverse_lead = pow(divisor[-1], -1, p)
+    counter["operations"] += 1
+    while len(remainder) >= len(divisor) and remainder != [0]:
+        degree_gap = len(remainder) - len(divisor)
+        factor = remainder[-1] * inverse_lead % p
+        counter["operations"] += 1
+        for j, coefficient in enumerate(divisor):
+            remainder[j + degree_gap] = (
+                remainder[j + degree_gap] - factor * coefficient
+            ) % p
+            counter["operations"] += 2
+        _poly_trim(remainder)
+    return remainder
+
+
+def _poly_gcd(left, right, p, counter):
+    while right != [0]:
+        left, right = right, _poly_remainder(left, right, p, counter)
+    inverse_lead = pow(left[-1], -1, p)
+    counter["operations"] += 1
+    counter["operations"] += len(left)
+    return [(coefficient * inverse_lead) % p for coefficient in left]
+
+
+def _reference_pencil_gcd(inst):
+    """Domain-standard fixed-rank MinRank attack using exact minor polynomials."""
+    p = inst["p"]
+    counter = {"operations": 0, "minor_polynomials": 0}
+    common = None
+    # Every 4-by-4 minor vanishes at the promised shift. Independent principal
+    # blocks almost surely share no other root; add blocks until the gcd is linear.
+    for start in range(0, min(inst["n"] - 3, 64), 4):
+        polynomial = _determinant_polynomial_4(
+            inst["matrix"], [start, start + 1, start + 2, start + 3], p, counter
+        )
+        counter["minor_polynomials"] += 1
+        common = polynomial if common is None else _poly_gcd(common, polynomial, p, counter)
+        if len(common) == 2:
+            inverse = pow(common[1], -1, p)
+            counter["operations"] += 3
+            shift = (-common[0] * inverse) % p
+            return [p, shift], counter
+    return None, counter
 
 
 def _attack_outlier_diagonal(inst):
@@ -590,6 +684,10 @@ def selftest():
     reference_successes = 0
     reference_times = []
     reference_operations = []
+    reference_minors = []
+    compact_successes = 0
+    compact_times = []
+    compact_operations = []
     for seed in range(3100, 3108):
         attacked = make_instance(seed=seed, **ship_params)
         candidates = {
@@ -605,22 +703,39 @@ def selftest():
             if verify(attacked, candidate)[0]:
                 attack_results[name]["successes"] += 1
         start = time.perf_counter()
-        reference_answer, stats = _reference_trace(attacked)
+        reference_answer, stats = _reference_pencil_gcd(attacked)
         reference_times.append(time.perf_counter() - start)
-        reference_operations.append(stats["exact_operations"])
-        if verify(attacked, reference_answer)[0]:
+        reference_operations.append(stats["operations"])
+        reference_minors.append(stats["minor_polynomials"])
+        if reference_answer is not None and verify(attacked, reference_answer)[0]:
             reference_successes += 1
+        start = time.perf_counter()
+        compact_answer, compact_stats = _reference_trace(attacked)
+        compact_times.append(time.perf_counter() - start)
+        compact_operations.append(compact_stats["exact_operations"])
+        if verify(attacked, compact_answer)[0]:
+            compact_successes += 1
     all_failed = all(result["successes"] == 0 for result in attack_results.values())
     report["G6_adversary_panel"] = {
-        "pass": all_failed and reference_successes == 8,
+        "pass": all_failed and reference_successes == 8 and compact_successes == 8,
         "attacks": attack_results,
         "reference_algorithm": {
+            "name": "two 4x4 determinant polynomials plus polynomial gcd",
+            "complexity": "expected O(1) field operations for fixed rank 3; exact verification is O(n^3)",
+            "median_wall_clock_sec": round(statistics.median(reference_times), 8),
+            "operations": int(statistics.median(reference_operations)),
+            "median_operations": int(statistics.median(reference_operations)),
+            "median_minor_polynomials": int(statistics.median(reference_minors)),
+            "operation_definition": "modular adds, multiplies, and inversions in determinant-polynomial and gcd arithmetic",
+            "solves": f"{reference_successes}/8, as expected",
+        },
+        "compact_route": {
             "name": "trace-zero residual invariant",
             "complexity": "O(n) exact prime-field operations",
-            "median_wall_clock_sec": round(statistics.median(reference_times), 8),
-            "median_operations": int(statistics.median(reference_operations)),
+            "median_wall_clock_sec": round(statistics.median(compact_times), 8),
+            "operations": int(statistics.median(compact_operations)),
             "operation_definition": "n-1 additions, one field inverse, one multiplication",
-            "solves": f"{reference_successes}/8, as expected",
+            "solves": f"{compact_successes}/8, as expected",
         },
     }
 
