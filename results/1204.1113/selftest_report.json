@@ -1,0 +1,141 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "json_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "too few limbs",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "too many limbs",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "limb out of range",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "encoded root is outside F_p",
+        "rejected": true
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed": [
+      9361,
+      64659
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform decoded field element with both stated limb bounds enforced",
+    "structure_aware_space": 2147483646,
+    "total": 200000,
+    "wall_clock_sec": 19.42503
+  },
+  "G5_density_and_baseline": {
+    "baseline_iterations": 4096,
+    "baseline_wall_seconds": 0.396414,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "shipping_density_samples": 200000,
+    "shipping_exact_solution_count_by_construction": 1,
+    "shipping_observed_solution_fraction": 0.0,
+    "shipping_valid_hits": 0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_first_input_pair": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_small_root_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "largest_coefficients_pair": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_coefficient_magnitude": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n + log p) exact arithmetic operations",
+      "median_operations": 161,
+      "median_wall_clock_sec": 1.3355e-05,
+      "name": "coefficient-indexed exponent unmasking plus binary powering",
+      "operation_definition": "modular coefficient transforms, exponent-step recovery, Euclidean divisions, and modular multiplies",
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 96,
+    "doubled_reference_operations": 256,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 48,
+    "shipping_reference_operations": 161
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "invariance_checks": 100,
+    "pass": true,
+    "symmetries": [
+      "term reordering",
+      "nonzero global coefficient scaling",
+      "unit power-coordinate relabelling",
+      "cyclic exponent translation (nonzero-domain monomial scaling)",
+      "composition of all four"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 11,
+    "answer_elements": 2,
+    "answer_tokens": 3,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 161,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
