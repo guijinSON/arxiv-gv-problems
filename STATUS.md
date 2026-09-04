@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **104 / 12,167** resolved (0.85%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **105 / 12,167** resolved (0.86%)
 
 | state | count |
 |---|---:|
-| ✅ done | 55 |
+| ✅ done | 56 |
 | 🚫 rejected (documented) | 49 |
-| 🔄 in progress | 23 |
+| 🔄 in progress | 22 |
 | ⚪ free | 12,040 |
 | **total** | **12,167** |
 
@@ -15,7 +15,6 @@
 | paper | who | claimed |
 |---|---|---|
 | `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
-| `2506.09950` | GUIJIN SON | 2026-09-04T12:31 |
 | `2306.10294` | GUIJIN SON | 2026-09-04T12:31 |
 | `1011.6021` | GUIJIN SON | 2026-09-04T12:43 |
 | `1702.02885` | GUIJIN SON | 2026-09-04T13:12 |
@@ -50,7 +49,7 @@
 | geometric configurations | 5 | 533 |
 | constraint satisfaction | 8 | 508 |
 | algebraic identity solutions | 2 | 398 |
-| algebraic geometric structures | 2 | 299 |
+| algebraic geometric structures | 3 | 299 |
 | schedules and allocations | 5 | 259 |
 | words and permutations | 5 | 237 |
 | finite field constructions | 8 | 235 |

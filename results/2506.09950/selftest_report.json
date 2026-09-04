@@ -1,0 +1,95 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": {"rejected": true, "reason": "answer has 15 entries; expected 16"},
+      "swap": {"rejected": true, "reason": "equation 1 has nonzero residual 950815502"},
+      "duplicate": {"rejected": true, "reason": "answer has 17 entries; expected exactly 16"},
+      "empty": {"rejected": true, "reason": "answer is empty"},
+      "out_of_range": {"rejected": true, "reason": "entry 0 is outside 0..998244352"}
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed_equals_answer": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "fraction": 0.0,
+    "candidate_space_bits": 479,
+    "wall_clock_sec": 3.281049
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_smallest_rhs_rotation": {"successes": 0, "attempts": 8, "wall_clock_sec": 0.000011},
+      "greedy_diagonal_only": {"successes": 0, "attempts": 8, "wall_clock_sec": 0.000009},
+      "by_hand_reverse_and_scale": {"successes": 0, "attempts": 8, "wall_clock_sec": 0.000009},
+      "random_restart_256_field_vectors": {"successes": 0, "attempts": 8, "wall_clock_sec": 0.002243}
+    },
+    "reference_algorithm": {
+      "name": "exact Gauss-Jordan elimination over GF(p) (GBElimLin linear case)",
+      "complexity": "O(n^3) exact field operations",
+      "wall_clock_sec": 0.000202,
+      "operations": 4728,
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "radix-2 inverse finite-field Fourier transform",
+      "operations": 112,
+      "solves": "8/8"
+    }
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 0.0,
+    "shipping_unique_solution_count_by_invertibility": 1,
+    "demo_exact_solution_count": 1,
+    "baseline_attack_wall_clock_sec": 0.002243,
+    "baseline_attack_iterations": 256,
+    "reference_wall_clock_sec": 0.000202,
+    "reference_operation_count": 4728
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 16,
+    "doubled_n": 32,
+    "doubled_build_sec": 0.000064,
+    "doubled_verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks_passed": 2560,
+    "invariance_checks_total": 2560,
+    "carried_certificate_checks_passed": 2560,
+    "carried_certificate_checks_total": 2560,
+    "unrelated_distinct": 20,
+    "unrelated_total": 20
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {"solved": 0, "attempts": 3},
+      "hinted": {"solved": 0, "attempts": 3},
+      "placebo": {"solved": 0, "attempts": 3}
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "answer_chars": 160,
+    "answer_tokens": 40,
+    "answer_elements": 16,
+    "intended_route_operations": 112,
+    "within_caps": true
+  },
+  "all_passed": true
+}
