@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **135 / 12,167** resolved (1.11%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **136 / 12,167** resolved (1.12%)
 
 | state | count |
 |---|---:|
-| ✅ done | 65 |
+| ✅ done | 66 |
 | 🚫 rejected (documented) | 70 |
-| 🔄 in progress | 10 |
+| 🔄 in progress | 9 |
 | ⚪ free | 12,022 |
 | **total** | **12,167** |
 
@@ -17,7 +17,6 @@
 | `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
 | `2310.16463` | GUIJIN SON | 2026-09-04T17:45 |
 | `1512.08995` | GUIJIN SON | 2026-09-04T17:46 |
-| `2304.08749` | GUIJIN SON | 2026-09-04T19:05 |
 | `2306.09870` | GUIJIN SON | 2026-09-04T19:21 |
 | `2511.01556` | GUIJIN SON | 2026-09-04T19:21 |
 | `2110.12933` | GUIJIN SON | 2026-09-04T19:53 |
@@ -40,6 +39,6 @@
 | algebraic geometric structures | 4 | 299 |
 | schedules and allocations | 5 | 259 |
 | words and permutations | 6 | 237 |
-| finite field constructions | 10 | 235 |
+| finite field constructions | 11 | 235 |
 
-_regenerated 2026-09-04 20:43Z by `scripts/status.sh --write`_
+_regenerated 2026-09-04 20:58Z by `scripts/status.sh --write`_
