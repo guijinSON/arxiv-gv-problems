@@ -19,6 +19,13 @@ from collections import Counter
 
 
 DIFFICULTY = {
+    "demo": {
+        "n": 4,
+        "bits": 5,
+        "min_degree": 1,
+        "guard_restarts": 0,
+        "guard_nodes": 0,
+    },
     "easy": {
         "n": 8,
         "bits": 7,

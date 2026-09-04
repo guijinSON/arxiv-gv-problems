@@ -29,12 +29,12 @@ DIFFICULTY = {
     # A readable worked-example/calibration rung.  It is intentionally not a
     # shipping candidate and is expected to fall to both attacks and oracles.
     "demo": {"n": 6, "constraint_degree": 1},
-    "medium": {"n": 66, "constraint_degree": 8},
-    "hard": {"n": 90, "constraint_degree": 8},
-    "extreme": {"n": 114, "constraint_degree": 8},
+    "easy": {"n": 66, "constraint_degree": 8},
+    "medium": {"n": 90, "constraint_degree": 8},
+    "hard": {"n": 114, "constraint_degree": 8},
 }
 
-SHIPPING_DIFFICULTY = "medium"
+SHIPPING_DIFFICULTY = "easy"
 
 
 NOTES = r"""

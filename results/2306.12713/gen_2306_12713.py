@@ -22,6 +22,14 @@ from collections import Counter
 
 
 DIFFICULTY = {
+    "demo": {
+        "n": 10,
+        "min_cycles": 1,
+        "min_distinct_cycles": 1,
+        "path_min_ratio": 0.1,
+        "path_max_ratio": 0.65,
+        "build_attempts": 1400,
+    },
     "easy": {
         "n": 64,
         "min_cycles": 3,

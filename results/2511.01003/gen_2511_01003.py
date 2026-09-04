@@ -19,10 +19,10 @@ import re
 
 
 DIFFICULTY = {
+    "demo": {"n": 1},
     "easy": {"n": 2},
     "medium": {"n": 3},
     "hard": {"n": 4},
-    "extreme": {"n": 5},
 }
 
 SHIPPING_DIFFICULTY = "medium"

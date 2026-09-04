@@ -50,12 +50,12 @@ CERTIFICATE_LANGUAGE: dict = {
 }
 
 DIFFICULTY = {
-    "example": {"n": 4, "set_ratio": 5},
-    "standard": {"n": 80, "set_ratio": 6},
-    "hard": {"n": 104, "set_ratio": 6},
-    "extreme": {"n": 136, "set_ratio": 6},
+    "demo": {"n": 4, "set_ratio": 5},
+    "easy": {"n": 80, "set_ratio": 6},
+    "medium": {"n": 104, "set_ratio": 6},
+    "hard": {"n": 136, "set_ratio": 6},
 }
-SHIPPING_DIFFICULTY = "standard"
+SHIPPING_DIFFICULTY = "easy"
 
 NOTES = r"""
 Definition. Section 2 of Bai, Fomin, Golovach, More, and Wietheger,

@@ -23,6 +23,7 @@ from typing import Any
 
 # Dict insertion order is the hardening ladder order.
 DIFFICULTY = {
+    "demo": {"n": 8, "weight_bits": 8},
     "easy": {"n": 60, "weight_bits": 60},
     "medium": {"n": 72, "weight_bits": 72},
     "hard": {"n": 84, "weight_bits": 84},

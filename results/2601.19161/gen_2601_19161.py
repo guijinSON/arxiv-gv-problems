@@ -19,10 +19,10 @@ from fractions import Fraction
 
 
 DIFFICULTY = {
+    "demo": {"n": 9, "clause_ratio": 0.82},
     "easy": {"n": 36, "clause_ratio": 0.82},
     "medium": {"n": 72, "clause_ratio": 0.82},
     "hard": {"n": 120, "clause_ratio": 0.82},
-    "extreme": {"n": 180, "clause_ratio": 0.82},
 }
 
 SHIPPING_DIFFICULTY = "hard"

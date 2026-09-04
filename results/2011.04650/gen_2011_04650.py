@@ -17,6 +17,7 @@ from itertools import permutations
 
 
 DIFFICULTY = {
+    "demo": {"n": 4, "choices": 2},
     "easy": {"n": 10, "choices": 3},
     "medium": {"n": 32, "choices": 5},
     "hard": {"n": 56, "choices": 5},

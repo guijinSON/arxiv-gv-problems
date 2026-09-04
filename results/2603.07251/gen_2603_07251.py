@@ -15,6 +15,7 @@ import re
 
 
 DIFFICULTY = {
+    "demo": {"n": 8},
     "easy": {"n": 64},
     "medium": {"n": 80},
     "hard": {"n": 96},

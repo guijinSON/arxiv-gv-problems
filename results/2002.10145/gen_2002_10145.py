@@ -24,6 +24,13 @@ COLOURS = 4
 ENUMERATION_CAP = 1_500_000
 
 DIFFICULTY = {
+    "demo": {
+        "n": 10,
+        "avg_degree": 3.0,
+        "attack_restarts": 0,
+        "backtrack_floor": 0,
+        "filter_attacks": False,
+    },
     "easy": {
         "n": 140,
         "avg_degree": 9.0,

@@ -18,10 +18,10 @@ from collections import Counter
 
 
 DIFFICULTY = {
+    "demo": {"n": 8, "rounds": 3, "k": 3},
     "easy": {"n": 48, "rounds": 8, "k": 3},
     "medium": {"n": 64, "rounds": 10, "k": 3},
     "hard": {"n": 80, "rounds": 12, "k": 3},
-    "extreme": {"n": 96, "rounds": 14, "k": 3},
 }
 SHIPPING_DIFFICULTY = "easy"
 

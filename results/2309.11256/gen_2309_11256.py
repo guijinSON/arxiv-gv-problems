@@ -20,11 +20,15 @@ from typing import Any
 
 
 DIFFICULTY = {
+    "demo": {"n": 4, "coefficient_max": 7},
     "easy": {"n": 18, "coefficient_max": 127},
     "medium": {"n": 36, "coefficient_max": 127},
     "hard": {"n": 72, "coefficient_max": 127},
-    "paper": {"n": 150, "coefficient_max": 127},
 }
+
+# The paper's own parameter setting.  Kept for reference: the ladder is exactly
+# demo/easy/medium/hard, so this cannot live in DIFFICULTY.
+PAPER_PARAMS = {"n": 150, "coefficient_max": 127}
 
 # This is updated if harden.py selects a different named rung.
 SHIPPING_DIFFICULTY = "medium"

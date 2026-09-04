@@ -29,21 +29,21 @@ DIFFICULTY = {
         "marker_vertices": 5,
         "marker_edges": 6,
     },
-    "standard": {
+    "easy": {
         "n": 160,
         "rows": 92,
         "weight": 16,
         "marker_vertices": 12,
         "marker_edges": 18,
     },
-    "hard": {
+    "medium": {
         "n": 208,
         "rows": 120,
         "weight": 20,
         "marker_vertices": 14,
         "marker_edges": 22,
     },
-    "extreme": {
+    "hard": {
         "n": 256,
         "rows": 148,
         "weight": 24,
@@ -52,7 +52,7 @@ DIFFICULTY = {
     },
 }
 
-SHIPPING_DIFFICULTY = "standard"
+SHIPPING_DIFFICULTY = "easy"
 
 NOTES = r"""
 Paper: V. C. Guerrero Pantoja, J. H. Castillo, and C. A. Trujillo
