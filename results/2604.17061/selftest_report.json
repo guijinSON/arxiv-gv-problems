@@ -1,0 +1,150 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_coordinate": {
+        "reason": "x has wrong length: expected 16, got 15",
+        "rejected": true
+      },
+      "duplicate_one_in_z": {
+        "reason": "z must contain exactly one 1",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer object is empty",
+        "rejected": true
+      },
+      "normalization_flip": {
+        "reason": "y's first nonzero coordinate must be positive",
+        "rejected": true
+      },
+      "out_of_range_sign": {
+        "reason": "x[1] is outside the inclusive bound [-3,3]",
+        "rejected": true
+      },
+      "swap_vectors": {
+        "reason": "x has wrong length: expected 16, got 65",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 6,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 276105487994159556202086400,
+    "candidate_space_bits": 87.83535,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "total": 200000,
+    "wall_clock_sec": 6.433948
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_restarts": 64,
+    "baseline_attack_wall_clock_sec": 2.330103,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "reference_attempts": 8,
+    "reference_operations_average": 16700,
+    "reference_successes": 8,
+    "reference_wall_clock_sec_average": 0.000696,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_constant_alternating_diagonal_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000677
+      },
+      "greedy_single_slice_signs": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.0086
+      },
+      "outlier_lowest_l1_slice": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.003037
+      },
+      "random_restart_64_coordinate_descent": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 18.538914
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m*n^2) exact integer additions plus O(n) sign propagation",
+      "name": "aggregate every slice, then decode the signed path Laplacian",
+      "operations": 16700,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.000696
+    }
+  },
+  "G7_scales": {
+    "doubled_build_sec": 0.020892,
+    "doubled_n": 32,
+    "doubled_tensor_entries": 132096,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 16,
+    "shipping_tensor_entries": 16640
+  },
+  "G8_canonical_key": {
+    "invariance_attempts": 180,
+    "invariant_relabellings": 180,
+    "pass": true,
+    "real_transformation_attempts": 180,
+    "real_transformations_verified": 180,
+    "transformations": [
+      "slice permutation",
+      "row permutation",
+      "column permutation",
+      "row signs",
+      "column signs",
+      "mode transpose",
+      "global integer scaling",
+      "independent slice scaling",
+      "composition"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 243,
+    "answer_elements": 97,
+    "answer_tokens": 61,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps_pass": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 188,
+    "pass": true
+  },
+  "all_passed": true
+}
