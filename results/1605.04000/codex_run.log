@@ -1,0 +1,3060 @@
+Reading additional input from stdin...
+2026-09-04T12:44:53.093273Z ERROR codex_skills_extension::host_service: failed to install system skills: io error while remove existing system skills dir: Directory not empty (os error 39)
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/1605.04000
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a06c73-4269-7261-a8c4-eca7899370c8
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know a certificate for it by
+  construction*. Four routes count:
+  - **inverse generation** — sample the answer first and build the problem around it;
+  - **theorem-backed construction** — a theorem in the paper guarantees the object you
+    just assembled has the property, and the certificate is what its proof produces;
+  - **transformation of a known instance** — apply a structure-preserving map to an
+    instance whose certificate you hold, and carry the certificate through the map;
+  - **composition of identities** — build the instance from pieces whose certificates
+    compose: a product of telescoping terms, a sum of squares assembled from known
+    squares, a substitution chain with a known inverse.
+
+  What is forbidden is shipping a family whose answer you obtained by *solving* the
+  instance. If you had to search for it, so will your generator, and the family will
+  not scale.
+- **H — hard.** Hard in the sense your `TRACK` declares — see **TWO TRACKS** below.
+  Under either track the answer space must be far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+## The witness rule
+
+The answer must be a **witness**: a concrete object whose validity is decided by
+inspecting only the object and the instance. No search, no oracle, no appeal to a
+theorem the checker cannot execute.
+
+That is a statement about the *checker*, not about the answer's type. So certified
+negatives, certified optima and numeric answers **are admissible** — provided the
+certificate is itself such an object:
+
+| the claim | the certificate that makes it admissible |
+|---|---|
+| no solution exists | a Farkas certificate, a Nullstellensatz or Positivstellensatz certificate, a bounded-length refutation |
+| this is the optimum | a primal–dual pair with complementary slackness, or a feasible point plus a dual bound that meets it |
+| this real number | an algebraic number as (minimal polynomial, isolating interval with rational endpoints) |
+| this quantity lies here | a rigorous enclosure with **exact rational** endpoints |
+| this system is stable | a Lyapunov or barrier certificate with rational coefficients |
+
+**But — the discriminating test, and it is the one that matters:**
+
+> If the certificate is simply the output of a polynomial-time algorithm run on the
+> instance, you have not found a way past H. You have found the reason the family
+> fails it.
+
+An LP dual, a Gram matrix read off by coefficient matching, an SOS certificate that an
+SDP returns, a Lyapunov function that a linear solve produces, a root isolation — each
+is a perfectly good *witness* and a disqualifying *family*. The witness rule and the
+hardness rule are separate gates, and a certificate can clear the first while failing
+the second.
+
+Ask this at **STEP 0, before you write any code.** It is one question — *what algorithm
+produces this certificate, and what does it cost?* — and the paper's own theorem
+statements usually answer it in a line.
+
+The five algebraic papers rejected most recently were all rejected on exactly this
+point, and every one of them cost a full builder run first:
+
+| paper | what produces the certificate |
+|---|---|
+| `2605.28674` | disjunctive SOS: the paper reduces certificate search to an SDP, with SOCP and LP refinements |
+| `2504.18110` | the Gram matrix and the switching root are written out explicitly in Section 2 |
+| `2211.12582` | a necessary-and-sufficient spectral characterisation; the dimension is read off an eigenvalue multiplicity |
+| `1910.13133` | the witness is given by an explicit matrix formula |
+| `2512.19313` | the witness is a direct evaluation of a displayed trinomial construction — found after reading all 31 pages and the LaTeX source |
+
+One sentence applied at triage would have stopped all five. Instead each was claimed,
+read end to end, and rejected: five builder runs, roughly 90 minutes and 1.5M tokens, to
+rediscover a fact stated in each paper's own main theorem.
+
+---
+
+## TWO TRACKS — say which hardness you are claiming
+
+Declare `TRACK = "A"` or `TRACK = "B"` at module level. Required.
+
+**Track A — structural hardness.** No known efficient general method for the
+distribution you generate. Note *distribution*, not *worst case*: worst-case NP-hardness
+is a different claim and does not imply this one. `2503.01929` sat exactly inside the
+strongly NP-hard 3-PARTITION band and fell to Algorithm X in under five seconds, because
+random instances in that band are not hard. `PROBLEM_PROFILE["hardness_basis"]` must
+name the theorem *and* the parameter regime; G5's baseline cost is the evidence.
+
+**Track B — no-tool compression.** An efficient algorithm exists, and you say so. The
+claim is narrower and different: the evaluated model has no sandbox, no CAS and no
+solver, so it must find and execute a compact route unaided. The difficulty is the gap
+between the mechanical route (10⁶ operations — fine for a solver, impossible by hand)
+and the compact one (a change of variables, an invariant, a symmetry — a dozen
+operations, if you see it).
+
+**Track B families must be honest about the algorithm that exists.** In
+`hardness_basis`, name it, give its complexity, and give its measured cost at the
+shipping preset. A Track B family that hides the algorithm is a Track A claim, and a
+false one.
+
+The track also changes what G6 means:
+
+- **Track A** — every entry in `attacks` must have `successes == 0`, the domain-standard
+  algorithm included. Unchanged from today.
+- **Track B** — the domain-standard algorithm is *expected* to succeed. Report it under
+  a separate key `reference_algorithm` (name, complexity, wall-clock, operation count),
+  **not** inside `attacks`; that number is your `hardness_basis`, not a failure.
+  `attacks` still needs its ≥4 failing entries, and for Track B the fourth is an attack a
+  solver could actually run *in context, without tools* — the by-hand heuristic, the
+  greedy route, the obvious ansatz. If you cannot find a fourth in-context attack that
+  fails, the family is guessable by hand and you should reject it.
+
+Why the label is mandatory: without it the project drifts silently between
+complexity-theoretic hardness and practical model difficulty. Both are defensible
+benchmarks. They are not the same benchmark, and a corpus that mixes them unlabelled can
+support neither claim. Every family shipped so far is an unlabelled Track A claim, and
+`AUDIT.md` records five where that claim was simply false.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the four things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+4. **What produces the certificate.** Find the theorem that hands you the witness and
+   ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
+   characterisation", "an explicit formula" or "a classification table", then **the
+   family fails H on Track A** — not the witness rule. The certificate is a perfectly
+   good witness; what it is not is hard to obtain. Those are separate gates (see the
+   discriminating test above).
+
+   You then have exactly two honest options, and you must pick one **before** writing
+   code:
+
+   - **Reject**, if the compact route is no shorter than the mechanical one. This is
+     the cheapest rejection available and the one most often skipped: five recent
+     rejections each cost a full builder run to reach a conclusion stated in the
+     paper's own main theorem.
+   - **Declare `TRACK = "B"`**, if — and only if — running that algorithm by hand is
+     genuinely out of reach for a model with no sandbox, *and* a compact route exists
+     for someone who sees the structure. Name the algorithm and its measured cost in
+     `hardness_basis`, as **TWO TRACKS** requires. An SDP over a 40×40 Gram matrix is
+     not something a model executes in its head; a 2×2 linear solve is. Be honest
+     about which one you have.
+
+   What is never acceptable is declaring Track A while knowing the algorithm exists.
+
+### Build in the paper's own objects first
+
+Before you reduce anything, write down the problem **in the objects the theorem and
+proof actually use** — vectors, Gram matrices, polynomials over ℚ or ℚ(i),
+coordinates, functions, trajectories, group elements. Ask whether a finite exact
+certificate exists *for that* object: a Gram or Seidel matrix, a rational SOS
+decomposition, a minimal polynomial with an isolating interval, a telescoping
+certificate, an antiderivative, a coordinate/sign construction checked by exact
+inner products, a dual witness. Verification stays exact — the *object* may be
+continuous even when its *certificate* is a finite symbolic thing.
+
+Only after that may you consider a discrete reduction.
+
+**Do not replace a problem over ℝ, ℂ, manifolds, functions or trajectories with a
+graph, SAT/CSP, finite field or integer-coordinate surrogate unless that reduction
+is central to the source paper.** If you do reduce, name the theorem or section that
+licenses it. If you reduce for convenience, the result is a *discretised analogue*:
+declare `reduction_kind="convenience"` in `PROBLEM_PROFILE` (and mirror the citation
+text in `NATIVE["reduction"]`), and do not present it as coverage of the paper's native
+domain. Such a family is archived, never counted in the native release — see
+PROBLEM_PROFILE in STEP 1.
+
+This has gone wrong repeatedly and silently. Real examples from this corpus:
+
+- An equiangular-lines paper (Gram matrices, Seidel matrices, eigenvalue
+  interlacing) shipped as a 720-vertex adjacency matrix with `verify` documented as
+  *"check any size-k clique"*. **The instance contained no vectors at all.**
+- A quantum-satisfiability paper about complex polynomial systems shipped as an
+  assignment problem over 𝔽₁₁.
+- A kissing-number paper with explicit real coordinates and sign patterns shipped as
+  a conflict graph.
+
+In each case the paper's mathematics was discarded before the solver saw anything,
+every gate passed, and the row was counted as geometric or algebraic coverage.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, deterministic given `(n, seed)`. No file IO, no network, no printing at
+import. Use `random.Random(seed)`, never global `random`.
+
+**What you may import.** The standard library, and `gvlib/` from the repo root. `gvlib`
+is standard-library-only itself, so importing it keeps the module dependency-free: it
+carries exact rationals with JSON encoding (`gvlib.rationals`), multivariate polynomials
+over ℚ (`gvlib.sparse_poly`), rational matrices with Bareiss determinant, rank, solve,
+Gram and LDL/PSD (`gvlib.exact_matrices`), and Sturm sequences and real-root isolation
+(`gvlib.roots`). Use it — a certificate that is a polynomial identity, a Gram matrix or
+an isolating interval should not cost you a day of writing `Fraction` row reduction for
+the fifth time. Nothing else may be imported.
+
+`gvlib` sits at the repo root and your module sits in `results/<id>/`, so the import
+needs the root on `sys.path` — `emit.sh` and `submit.sh` run from the root and find it,
+but `harden.py` is invoked from your own directory and will not. Do it once, at the top,
+and degrade gracefully:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals
+except ImportError:                 # not present: stay standard-library-only
+    exact_matrices = rationals = None
+```
+
+If it does not import, stay standard-library-only and say so in the README rather than
+adding a dependency. Do not let a missing helper library become the reason a family
+ships as a graph.
+
+**`inst["answer"]` must be JSON-native.** `emit.sh` writes it straight into
+`artifacts/<id>.jsonl` with `json.dumps`, so a `Fraction`, a `complex` or a custom class
+does not fail your selftest — it fails the emit, after the expensive part is paid for.
+Serialise: **rationals as `[num, den]`**, **monomials as exponent lists**, polynomials as
+lists of `[[num, den], [e1, e2, ...]]`, matrices as lists of lists. `json.loads(
+json.dumps(a)) == a` must hold for every answer the family produces, and whatever
+`verify` accepts, `parse_answer` must be able to return.
+
+```python
+TRACK: str                  # "A" or "B" -- see TWO TRACKS.  Required.
+    # scripts/corpus_report.py reads this straight into its `track` column; anything
+    # that is not "A" or "B" is recorded as "unknown", which is what every family
+    # shipped before this prompt reads as today.
+
+PROBLEM_PROFILE: dict       # what this family really is, on a controlled vocabulary.
+    # PREFERRED.  NATIVE (below) is the LEGACY form and is still what submit.sh reads,
+    # so declare BOTH and keep them consistent.  Seven shipped modules declare only
+    # NATIVE; they stay valid and nothing here orphans them.
+    #
+    # The token spellings below are the ones scripts/corpus_report.py reads.  Inventing
+    # a synonym does not produce a warning -- it silently drops your row out of the
+    # coverage counts, which is the exact failure mode this schema exists to stop.
+    #
+    # {"native_domain":  combinatorics|algebra|geometry|analysis|dynamics|
+    #                    optimization|number_theory|logic
+    #                    -- what the SOLVER reasons about, NOT the arXiv category.
+    #
+    #  "object_regime":  what kind of object the solver actually manipulates:
+    #      finite_discrete     finite, exactly representable as ints and structures
+    #      finite_field        elements of GF(q)
+    #      integer_lattice     integer vectors / lattice points
+    #      rational_exact      rationals, polynomials, matrices over Q; exact
+    #                          arithmetic end to end, no approximation anywhere
+    #      real_algebraic      the object is a real number, but the certificate is a
+    #                          finite exact symbolic thing -- (minimal polynomial,
+    #                          isolating interval with rational endpoints)
+    #      continuous_analytic the object lives in R, C, a manifold, a function space
+    #                          or a trajectory.  Then the certificate MUST be exact:
+    #                          a rational SOS, a Lyapunov function over Q, or a
+    #                          rigorous enclosure with exact rational endpoints
+    #                          (declare certificate_form="interval" for that last one).
+    #                          A float anywhere in verify() is a bug, not a regime.
+    #
+    #  "computational_core":  what the solver actually searches, one of
+    #                    graph|csp_sat|exact_cover|subset_sum|permutation|
+    #                    linear_algebra|polynomial_identity|sos|telescoping|
+    #                    symbolic_integration|interval_bound|other
+    #
+    #  "certificate_form":  the shape of the answer, one of
+    #                    sos|telescoping|symbolic_integral|algebraic_number|
+    #                    matrix_certificate|interval|polynomial|rational|exact_symbolic
+    #                        -- these count toward the release quota on symbolic
+    #                           certificates
+    #                    integer_tuple
+    #                        -- this one does not, and it is what the corpus already
+    #                           has far too much of.  Do not reach for it by reflex:
+    #                           an answer that IS a tuple of small ints is one thing,
+    #                           an answer flattened into one to make G4 easy to report
+    #                           is the collapse this schema exists to measure.
+    #  "native_objects": the objects the solver is HANDED, e.g.
+    #                    ["Gram matrix over Q", "unit vectors"].  If the honest answer
+    #                    is ["adjacency matrix"], write that and take the consequence.
+    #  "verification_operations": the exact operations verify() performs, e.g.
+    #                    ["exact rational inner product", "PSD check via LDL",
+    #                     "sign comparison"].  If this list is nothing but set
+    #                    membership and integer comparison, your core is discrete
+    #                    whatever native_domain says.
+    #
+    #  "domain_essentiality":  how load-bearing the paper's mathematics is:
+    #      native               ESSENTIAL -- the paper's objects are handed to the
+    #                           solver AND verify() operates on them; delete the domain
+    #                           structure and the problem is gone
+    #      licensed_reduction   REPRESENTATIONAL -- a reduction the paper itself
+    #                           licenses; the native objects are visible but the search
+    #                           is carried by the surrogate
+    #      discretised_analogue ANALOGUE -- the paper's mathematics was compiled away
+    #                           before the solver saw anything
+    #
+    #  "reduction_kind":  none | paper_licensed | convenience
+    #  "reduction":       None when reduction_kind == "none" -- it MUST be falsy then,
+    #                     or the report labels a native family a discretised analogue.
+    #                     Otherwise the citation string: "Section 5, Lemma 5 (...)".
+    #  "reduction_source": paper_central | external_standard | benchmark_convenience
+    #                     -- the finer distinction reduction_kind cannot spell.
+    #                     paper_central     -> reduction_kind "paper_licensed"
+    #                     external_standard -> reduction_kind "convenience": a textbook
+    #                                          reduction is not this paper's
+    #                                          mathematics and must not buy coverage
+    #                     benchmark_convenience -> reduction_kind "convenience"
+    #
+    #  "intuition_type":  one of, and write it with SPACES, not underscores --
+    #                     "symmetry" | "invariant" | "duality" |
+    #                     "change of variables" | "ansatz" | "extremal bound" |
+    #                     "decomposition" | "constraint propagation" |
+    #                     "reduction recognition" | "search pruning".
+    #                     The reporter matches this as prose: "change_of_variables"
+    #                     with underscores does NOT match and lands as
+    #                     "unclassified".  All ten match when written with spaces.
+    #  "intuition_description": one sentence: the insight, and what a solver who does
+    #                     not have it must do instead.
+    #  "hardness_basis":  one sentence, and it must match TRACK.  Track A: the theorem
+    #                     and the parameter regime.  Track B: the algorithm that
+    #                     exists, its complexity, its measured cost at the shipping
+    #                     preset, and why the compact route is not mechanically
+    #                     executable in context.
+    #  "max_answer_tokens": your MEASURED worst-case serialised answer length at the
+    #                     shipping preset, in tokens.  See G9(c) for the cap.}
+    #
+    # **Only `domain_essentiality == "native"` together with `reduction_kind` in
+    # {none, paper_licensed} counts toward native-domain coverage.**  Everything else
+    # is recorded honestly and reported separately, and `benchmark_convenience` is
+    # archived and excluded from the native release entirely.  Declaring
+    # `discretised_analogue` costs you a coverage row.  Declaring `native` when the
+    # solver is handed an adjacency matrix costs the corpus its credibility, which is
+    # the failure this schema exists to prevent.
+
+NATIVE: dict                # LEGACY form.  Still REQUIRED: submit.sh reads this one.
+    # {"domain":    one of combinatorics|algebra|geometry|analysis|dynamics|
+    #                       optimization|number_theory|logic
+    #  "core":      what a solver actually searches, one of
+    #               graph|csp_sat|exact_cover|subset_sum|permutation|
+    #               linear_algebra|polynomial_identity|sos|telescoping|
+    #               symbolic_integration|interval_bound|other
+    #  "objects":   the mathematical objects the solver is handed, e.g.
+    #               ["adjacency matrix"] or ["Gram matrix over Q", "unit vectors"]
+    #  "intuition": the insight the problem is meant to test, e.g. "symmetry",
+    #               "invariant", "change of variables", "ansatz", "duality"
+    #  "reduction": None if the family is stated in the paper's own objects;
+    #               otherwise the section/theorem that licenses the surrogate.}
+    # Derive it from PROBLEM_PROFILE and keep the two consistent:
+    #   domain    <- native_domain        core      <- computational_core
+    #   objects   <- native_objects       reduction <- reduction  (same value)
+    #   intuition <- intuition_type + ": " + intuition_description
+    # `domain` is NOT the arXiv category -- it is what the solver reasons about.
+    # A geometry paper rendered as an adjacency matrix has domain="combinatorics"
+    # and core="graph".  Labelling it "geometry" is the failure this field exists
+    # to prevent.
+
+DIFFICULTY: dict            # exactly four presets, named "demo", "easy", "medium"
+                            # and "hard", in that order -- harden.py walks the dict
+                            # in insertion order, so it is the ladder, ascending.
+                            # Each maps to kwargs for make_instance.
+                            # "demo" is the smallest setting the family supports:
+                            # a person must be able to solve it and check the
+                            # answer on paper.  It is an illustration, not a
+                            # difficulty level -- harden.py skips it, and
+                            # SHIPPING_DIFFICULTY must never name it.
+
+def make_instance(n, seed=0, **params) -> dict
+    """Build an instance whose certificate you know BY CONSTRUCTION -- by inverse
+    generation, theorem-backed construction, transformation of a known instance, or
+    composition of identities (see G above). Never by solving the instance you just
+    built. Returns a dict containing key "answer" (the certificate, JSON-native)
+    plus all data the solver needs. `n` is the size parameter; larger n must mean
+    harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT.
+
+    Hint modes, for G9: when os.environ.get("GV_HINT_MODE") is "structural" append
+    STRUCTURAL_HINT, when it is "placebo" append PLACEBO_HINT, and otherwise append
+    NOTHING. The default MUST be no hint -- emit.sh, submit.sh and the STEP 4
+    hardening run all call render(), and a hint leaking into artifacts/ would
+    silently change what the dataset is."""
+
+STRUCTURAL_HINT: str        # ONE sentence naming the structural insight -- the thing
+                            # intuition_description says this family tests.  Required.
+                            # "The columns of the Gram matrix repeat with period 7."
+PLACEBO_HINT: str           # ONE sentence of the same length and register carrying no
+                            # structural information.  Required.  "This problem
+                            # rewards being careful with the indexing."  See G9(a).
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
+    # {"description": a human-readable grammar/bounds statement, e.g.
+    #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed
+    #                  monomial basis, rational coefficients with |num|,|den| < 2^32"
+    #  "bounds":      the numeric bounds that make it finite, e.g.
+    #                 {"n_squares": 6, "max_degree": 4, "basis": 45, "coeff_bits": 32}}
+    #
+    # This field exists because requiring an integer `search_space` silently forces
+    # every family to be a tuple of small integers.  Measured over the first 40
+    # shipped generators: search_space returned an int 40/40 and None 0/40, and not
+    # one answer was a rational, a polynomial or a symbolic expression -- because a
+    # symbolic answer has no uniformly-sampleable candidate set, so G4 could not be
+    # reported and the family was never built.
+    #
+    # Declaring bounds fixes that.  An antiderivative is infinite; an antiderivative
+    # over a fixed operator set with depth <= 4 and coefficients under 2^16 is a
+    # finite, countable, samplable space.  Bound the language and the continuous
+    # families become expressible without weakening exact verification at all.
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of CERTIFICATE_LANGUAGE at these parameters -- the space
+    `random_candidate` samples from, not a looser superset. Return None ONLY if
+    the declared language is genuinely uncountable; then G5 must carry a sampled
+    density estimate instead."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+- **Keep the answer writable.** The solver has to type it out, by hand, with no
+  scratchpad. An answer running to thousands of elements measures transcription
+  stamina, not intuition, and the failures it produces tell you nothing. G9(c) puts a
+  hard cap on this.
+- **Serialise rationals and polynomials the way `parse_answer` reads them back**, and
+  say so in the statement: rationals as `num/den`, monomials as exponent lists. The
+  rendered form and the JSON form must agree.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship** — except where a part is explicitly marked
+*recorded, not gated*, which is true of G9(a) and of nothing else.
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples drawn from `CERTIFICATE_LANGUAGE`, measured **structure-aware** (see below). Report hits/total. |
+| **G5 density + baseline cost** | A real number, never "not feasible": an exact solution count where enumeration works at any preset, otherwise a sampled density estimate — **plus** the measured cost of your strongest attack. See below. |
+| **G6 adversary panel** | ≥4 attacks in `attacks`, each FAILING across ≥8 seeds. Track A: three cheap probes **plus the standard algorithm for the problem class**. Track B: three cheap probes plus an in-context attack, with the standard algorithm reported separately under `reference_algorithm`. See TWO TRACKS and below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+| **G9 no-tool suitability** | Two gated parts — the family still defeats the oracle pool **with** its structural hint, and the answer and route fit the caps — plus a three-arm diagnostic (bare / hinted / placebo) that is **recorded, never gated**. See below. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G5: measure difficulty, do not infer it from cardinality
+
+Across the first 40 shipped generators, `enumerate_all` returned `None` at the
+**shipping** preset **40/40**. G5 was therefore measured on a reduced instance
+(n = 4–40, against shipping n up to 512) or carried no number at all (7/40). It
+never described the instance that actually ships — and a density at n=4 says
+nothing about n=32.
+
+Worse, a reduced-preset number can be passed while being alarming: `2104.04330`
+reported a solution fraction of **5.7e-4** at n=18 — roughly one candidate in 1768
+is valid — and passed G5 anyway.
+
+A large space is not difficulty. `2503.01929` reported a 1536-bit candidate space
+and fell to Algorithm X in under five seconds. Report both of these, as numbers,
+**at the shipping preset**:
+
+1. **Density at the shipping preset.** Exact count if `enumerate_all` terminates
+   there; otherwise sample `random_candidate` and report the observed fraction of
+   valid answers with the sample size. A count from a smaller preset may be given
+   in addition, labelled with its `n` — never instead. `None` is not an answer.
+2. **Baseline cost.** Run your strongest G6 attack at the *shipping* preset and
+   record what it actually cost: wall-clock seconds, and nodes/restarts/iterations.
+   A family whose best attack fails in 0.2 s is not obviously hard — it may simply
+   be unsatisfiable-looking to that attack. Cost is the honest difficulty signal.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+- **The standard algorithm for the problem class — REQUIRED, not optional.** The
+  three above are generic and they are *not sufficient*; they probe how you built
+  the instance, not what is known about the problem. Ask what a specialist would
+  reach for first and run *that*:
+
+  | the problem is about | run at least |
+  |---|---|
+  | satisfiability / CSP | a SAT or SMT solver, or DPLL with unit propagation |
+  | covering, packing, assignment, scheduling | an ILP/LP relaxation, or matching |
+  | a planted subgraph, colouring, partition, or community | **a spectral method** — top eigenvectors of the adjacency/Laplacian, and an SDP or nuclear-norm relaxation if the paper mentions one |
+  | subset sum, knapsack, lattice, or small-coefficient integer relations | LLL / lattice reduction |
+  | exact cover, tiling, set partition | Algorithm X / DLX, or a CP solver |
+  | paths, cycles, flows, connectivity | the classical polynomial algorithm for the relaxed version, then repair |
+  | permutations, words, group elements | normal forms and the natural rewriting/canonicalisation |
+
+  If no library is available, implement the cheap version — power iteration is a
+  dozen lines and breaks most planted-subgraph constructions. If you genuinely
+  cannot run the standard attack, say so explicitly in the README caveats and name
+  the attack you could not run. Never silently omit it.
+
+**Report G6 in this shape**, so the panel can be checked mechanically rather than
+read prose-by-prose:
+
+```python
+report["G6_adversary_panel"] = {
+    "pass": all_failed,
+    "attacks": {                      # one entry per attack, name -> result
+        "outlier_degree":     {"successes": 0, "attempts": 8},
+        "greedy_largest_first":{"successes": 0, "attempts": 8},
+        "random_restart_256": {"successes": 0, "attempts": 8},
+        "spectral_top_eigenvector": {"successes": 0, "attempts": 8},   # the domain attack
+    },
+}
+```
+
+Extra keys alongside `attacks` are fine. `submit.sh` requires `attacks` to be
+present with **at least 4 entries** — three generic probes plus the domain attack — and
+it **recomputes `pass` from the `successes` on disk**: a panel that records a solved
+attack is refused no matter what `pass` says. `2410.07666` logged walksat at 8/8 and
+honestly set `pass=false`; nothing else would have caught it.
+
+That recomputation is exactly why a **Track B** family must not put its
+domain-standard algorithm in `attacks`. On Track B that algorithm is *supposed* to
+succeed — it is the `hardness_basis`, not a failure — so it goes in a sibling key and
+`attacks` keeps its meaning:
+
+```python
+report["G6_adversary_panel"]["reference_algorithm"] = {   # Track B only
+    "name": "Bareiss elimination over Q",
+    "complexity": "O(n^3) exact",
+    "wall_clock_sec": 0.4,
+    "operations": 1_240_000,      # this number IS the Track B hardness claim
+    "solves": "8/8, as expected",
+}
+```
+
+Track B still needs four *failing* entries in `attacks`, and its fourth is an attack a
+solver could actually run in context without tools — the by-hand heuristic, the greedy
+route, the obvious ansatz. If you cannot find one that fails, the family is guessable by
+hand and you should reject it.
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+- **A bounded Token Jumping family (arXiv:2408.04743) passed every gate, and the
+  four-vendor oracle pool returned `hardened`.** A construction-aware spectral
+  attack then recovered a verified witness on **20/20 shipping instances in
+  polynomial time** — the planted colour classes formed an exact −3 eigenvector.
+  The generic outlier/greedy/restart panel saw nothing. This is why the domain
+  attack is mandatory: gates passing and the oracle failing to solve are jointly
+  *not* evidence of hardness, and this family would have shipped on that evidence.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+### G9: is the failure informative? — measured, mostly not gated
+
+Every family here is built so that a model fails it. That makes "the model failed"
+almost uninformative on its own: a model also fails a question whose answer is forty
+thousand tokens long, and one that needs ten thousand exact multiplications. Those
+failures say nothing about mathematical intuition, and a corpus full of them measures
+patience.
+
+G9 separates the two. **It is not a "the model must succeed" gate.** That would be the
+exact negation of STEP 4, which holds a level only when all three oracles fail, and it
+would delete every family that survives the hardening loop. Three parts, and only two of
+them are gates.
+
+#### (a) The three-arm diagnostic — recorded, never gated
+
+Run the shipping preset three times and record solved/attempts for each arm:
+
+| arm | prompt |
+|---|---|
+| bare | `render(inst)` as shipped |
+| hinted | `render(inst)` + `STRUCTURAL_HINT` |
+| placebo | `render(inst)` + `PLACEBO_HINT` |
+
+**Why the placebo arm exists.** Appending *any* sentence changes the prompt — its
+length, its register, and the signal that the asker thought a hint was warranted.
+Comparing hinted against bare confounds all of that with the hint's actual content. The
+placebo holds everything fixed except the structural information, so **hinted − placebo**
+is the estimate of real structural help; hinted − bare is contaminated by prompt leakage
+and is not.
+
+If hinted ≈ placebo, your hint carried no information: either it is badly written, or
+the family does not respond to the intuition you claimed in `intuition_type`. That is a
+finding, not a failure. Record the three numbers and say what you conclude in the
+README. **It does not block the ship** — this arm exists so the corpus knows what it is
+measuring, and gating on it would let a builder tune the hint instead of the family.
+
+#### (b) The polarity-flipped gate — this part IS gated
+
+> The family must still defeat the oracle pool **when it is given its one-sentence
+> structural hint.**
+
+This is strictly stronger than today's bar and it contradicts nothing: STEP 4 already
+requires the pool to fail on the bare statement; this requires it to fail on an easier
+version of the same statement. A family that survives bare but dissolves the moment you
+name the trick was never testing whether a model can *find* the structure — it was
+testing whether the model had already memorised it.
+
+Run it with the harness, not by hand:
+
+```bash
+mkdir -p g9_hinted && cp gen_<arxiv_id>.py g9_hinted/
+# in the COPY, cut DIFFICULTY down to the shipping preset alone, so the ladder
+# has one rung and the verdict is about that rung
+cd g9_hinted && GV_HINT_MODE=structural python3 ../../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+`harden.py` opens `llm_loop_transcript.jsonl` and `.meta.json` with mode `"w"` — it
+**overwrites**. Run every G9 arm in its own scratch directory, never in the result
+directory, or you will destroy the STEP 4 evidence you already paid for. Copy the
+finished transcripts back as `g9_<arm>_transcript.jsonl`.
+
+Read the verdict with the polarity flipped: `hardened` means the hint did not break the
+family and G9(b) passes. `too_easy` means the hint broke it, and the family fails G9(b).
+You may then move **one** rung up the `DIFFICULTY` ladder and re-run STEP 4 bare *and*
+this arm at the new level, **once**. If the hint still breaks it, write `REJECTED.md`
+citing G9(b) and stop. This is not hand-tuning past a verdict — the bare verdict was
+`hardened` and the whole loop is re-run at the new level — but the cap of one is there
+so that it cannot become hand-tuning.
+
+#### (c) The size and effort caps — gated
+
+| cap | limit at the shipping preset |
+|---|---|
+| serialised answer | ≤ **2,000 characters** (≈ **500 tokens**) and ≤ **256 atomic elements** |
+| intended route | ≤ **300 exact arithmetic operations** |
+
+Measure both, put the numbers in the gate dict, and put the token figure in
+`PROBLEM_PROFILE["max_answer_tokens"]`.
+
+"Intended route" means the operations left **after** the insight — the compact route the
+family claims to test, not the search it replaces. A family over the answer cap is a
+transcription test. A family whose intended method needs thousands of arithmetic
+operations is a calculator test, and the evaluated model has no calculator; that is a
+fact about the harness, not a property of the mathematics.
+
+If you are genuinely over a cap and believe the family should ship anyway, say so in the
+README caveats with the measured number and expect to be argued with. Do not quietly
+round it down.
+
+Report the gate like this:
+
+```python
+report["G9_no_tool_suitability"] = {
+    "pass": hinted_still_hardened and within_caps,     # (b) and (c) only
+    "arms": {                                          # (a): recorded, not gated
+        "bare":    {"solved": 0, "attempts": 3},
+        "hinted":  {"solved": 0, "attempts": 3},
+        "placebo": {"solved": 0, "attempts": 3},
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",                      # (b)
+    "answer_chars": 412, "answer_tokens": 104, "answer_elements": 32,   # (c)
+    "intended_route_operations": 47,                   # (c)
+}
+```
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- The ladder starts at `easy`. `demo` is skipped: it is built to be solvable, so
+  starting there would spend an escalation proving exactly that.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+- It opens both files with mode `"w"`. **A second run in the same directory overwrites
+  the evidence from the first.** This run — bare, no hint — is the one that ships, so
+  G9's extra arms run in their own scratch directories. See G9(b).
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, the four names are already taken, so
+  **slide the ladder up**: drop the rung the oracle solved, keep the survivors in
+  ascending order, and put the escalated level in as the new `hard`, leaving
+  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+  whichever name now carries the level that held, then re-run STEP 3's gates at it.
+  `demo` never moves: it stays the hand-solvable rung.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results,
+   G9's three arms and its measured answer size and operation count).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. `g9_hinted_transcript.jsonl` and `g9_placebo_transcript.jsonl` — the G9 arms,
+   produced by `harden.py` in scratch directories and copied back. See G9(b).
+5. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+6. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **The profile up front**: `TRACK`, native domain, object regime, computational core,
+  certificate form, intended intuition and `domain_essentiality` — copied from
+  `PROBLEM_PROFILE`. If `reduction_kind` is anything but `none` or `paper_licensed`,
+  say plainly that this is **not** native coverage of the paper's domain, and name what
+  was discarded.
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard**, in the sense your `TRACK` declares. Track A: the specific theorem
+  and parameter regime you are inside, and — just as important — the easy regimes you
+  had to avoid and the results that identify them. Track B: **name the algorithm that
+  solves it**, its complexity and its measured cost, then say why the compact route is
+  not something a model can execute in context. A Track B README that reads like a
+  Track A README is the failure mode here. Cite sections by number either way. This is
+  the part only you know.
+- **A worked example.** A rendered instance small enough to read in full — use the
+  `demo` preset, which exists for this — its answer, `verify` returning True on it,
+  and `verify` returning False with its reason on a corrupted variant. Say plainly
+  whether a person can actually solve it by hand, and if not, why the family's
+  smallest supported setting still is not hand-scale.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **The G9 arms**, as a table: bare / hinted / placebo solved-out-of-attempts, the
+  hinted − placebo difference, and what you conclude. If the structural hint bought the
+  oracle nothing, say so — that is evidence about your `intuition_type`, and this
+  README is the only place it will ever be written down. Give the measured answer size
+  and intended-route operation count here too.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 1605.04000
+url: https://arxiv.org/abs/1605.04000
+title: The nonnegative rank of a matrix: Hard problems, easy solutions
+categories: math.CO cs.CC
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: algebraic decomposition
+  method: inverse construction
+  candidate generator: multiply chosen nonnegative factors to produce a matrix with known factorization
+  candidate verifier: check factor entries are nonnegative and multiply to the matrix
+codex
+I’ll begin with the paper’s decisive question: what algorithm produces a nonnegative factorization certificate, in which parameter regimes, and at what cost. I’ll only build the inverse-factorization family if that supports an honest Track A or Track B claim; otherwise I’ll write a rejection and stop as requested.
+web search: 
+web search: https://arxiv.org/abs/1605.04000
+web search: 
+web search: 
+codex
+The paper’s Section 3 proves only worst-case NP-hardness, via clique cover → partial \(0\!-\!1\) matrix completion → ordinary nonnegative rank. It does not establish hardness for the proposed distribution \(M=UV\). I’m checking whether Sections 2 or 4 provide either a scalable compact witness family or an efficient reference algorithm that could support Track B; so far, Observation 1 and the field-separation example are explicit fixed-form constructions, not a scalable hard family.
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g 'REJECTED.md' -g 'gen_1605.04000.py' -g 'README.md' -g 'selftest_report.json' -g 'llm_loop_transcript.jsonl' . .. ../.. ../../.. | sed -n '1,160p' && env | rg '"'^(OPENROUTER_API_KEY|OPENAI_API_KEY)='"' | sed 's/=.*/=<set>/'" in /home/gson/gvrepo/results/1605.04000
+ succeeded in 0ms:
+/home/gson/gvrepo/results/1605.04000
+../../examples/1912.09051/llm_loop_transcript.jsonl
+../../triage/README.md
+../2105.10184/README.md
+../2105.10184/selftest_report.json
+../../gvlib/README.md
+../../README.md
+../2105.10184/llm_loop_transcript.jsonl
+../2504.12430/README.md
+../2504.12430/selftest_report.json
+../2504.12430/llm_loop_transcript.jsonl
+../2110.05917/README.md
+../2110.05917/selftest_report.json
+../2110.05917/llm_loop_transcript.jsonl
+../1303.2162/README.md
+../1303.2162/selftest_report.json
+../1303.2162/g9_placebo/llm_loop_transcript.jsonl
+../1303.2162/g9_hinted/llm_loop_transcript.jsonl
+../1303.2162/llm_loop_transcript.jsonl
+../1409.6092/REJECTED.md
+../../../repo_d/README.md
+../2403.03885/REJECTED.md
+../2509.10361/README.md
+../2509.10361/selftest_report.json
+../2509.10361/llm_loop_transcript.jsonl
+../1904.00563/REJECTED.md
+../2302.04718/REJECTED.md
+../2304.07157/REJECTED.md
+../2602.19989/REJECTED.md
+../1103.0203/README.md
+../1103.0203/selftest_report.json
+../1103.0203/llm_loop_transcript.jsonl
+../../results/2105.10184/README.md
+../../results/2105.10184/selftest_report.json
+../2601.05272/REJECTED.md
+../2008.09415/README.md
+../2008.09415/selftest_report.json
+../2008.09415/llm_loop_transcript.jsonl
+../../results/2105.10184/llm_loop_transcript.jsonl
+../../results/2504.12430/README.md
+../../results/2504.12430/selftest_report.json
+../../results/2504.12430/llm_loop_transcript.jsonl
+../2112.06333/README.md
+../2112.06333/selftest_report.json
+../2112.06333/llm_loop_transcript.jsonl
+../../results/2110.05917/README.md
+../../results/2110.05917/selftest_report.json
+../../results/2110.05917/llm_loop_transcript.jsonl
+../../results/1303.2162/README.md
+../../results/1303.2162/selftest_report.json
+../2511.01003/README.md
+../2511.01003/selftest_report.json
+../2511.01003/llm_loop_transcript.jsonl
+../2411.16149/README.md
+../2411.16149/selftest_report.json
+../2411.16149/llm_loop_transcript.jsonl
+../../results/1303.2162/g9_placebo/llm_loop_transcript.jsonl
+../2306.12713/README.md
+../2306.12713/selftest_report.json
+../2306.12713/llm_loop_transcript.jsonl
+../../results/1303.2162/g9_hinted/llm_loop_transcript.jsonl
+../../results/1303.2162/llm_loop_transcript.jsonl
+../2102.01986/README.md
+../2102.01986/selftest_report.json
+../2102.01986/llm_loop_transcript.jsonl
+../../results/1409.6092/REJECTED.md
+../2011.04650/README.md
+../2011.04650/selftest_report.json
+../2011.04650/llm_loop_transcript.jsonl
+../../results/2403.03885/REJECTED.md
+../1604.00052/README.md
+../1604.00052/selftest_report.json
+../1604.00052/llm_loop_transcript.jsonl
+../2504.18110/REJECTED.md
+../1212.3517/REJECTED.md
+../1709.02079/REJECTED.md
+../../results/2509.10361/README.md
+../../results/2509.10361/selftest_report.json
+../../results/2509.10361/llm_loop_transcript.jsonl
+../2502.14674/REJECTED.md
+../2310.01945/REJECTED.md
+../../results/1904.00563/REJECTED.md
+../2304.13478/REJECTED.md
+../../results/1601.07131/REJECTED.md
+../1008.2814/README.md
+../1008.2814/selftest_report.json
+../1008.2814/llm_loop_transcript.jsonl
+../1604.08603/README.md
+../1604.08603/selftest_report.json
+../1604.08603/llm_loop_transcript.jsonl
+../../results/0901.3348/README.md
+../../results/0901.3348/selftest_report.json
+../../results/0901.3348/llm_loop_transcript.jsonl
+../../results/2302.04718/REJECTED.md
+../../results/2304.07157/REJECTED.md
+../../results/2205.04710/README.md
+../../results/2205.04710/selftest_report.json
+../../results/2205.04710/llm_loop_transcript.jsonl
+../2604.13514/REJECTED.md
+../../results/2602.19989/REJECTED.md
+../2411.10209/REJECTED.md
+../../results/2310.02137/README.md
+../../results/2310.02137/selftest_report.json
+../../results/2310.02137/llm_loop_transcript.jsonl
+../2306.12848/REJECTED.md
+../../results/2211.12582/REJECTED.md
+../../results/1103.0203/README.md
+../../results/1103.0203/selftest_report.json
+../../results/1103.0203/llm_loop_transcript.jsonl
+../../results/2601.05272/REJECTED.md
+../../results/2501.06427/REJECTED.md
+../2410.07666/REJECTED.md
+../../results/2008.09415/README.md
+../../results/2008.09415/selftest_report.json
+../../results/2008.09415/llm_loop_transcript.jsonl
+../2605.03893/REJECTED.md
+../2605.28674/REJECTED.md
+../../results/2112.06333/README.md
+../../results/2112.06333/selftest_report.json
+../../results/2112.06333/llm_loop_transcript.jsonl
+../2411.14821/README.md
+../2411.14821/selftest_report.json
+../../results/2408.17266/README.md
+../2411.14821/llm_loop_transcript.jsonl
+../../results/2408.17266/selftest_report.json
+../../results/2408.17266/llm_loop_transcript.jsonl
+../../results/2511.01003/README.md
+../../results/2511.01003/selftest_report.json
+../2509.03064/README.md
+../../results/2511.01003/llm_loop_transcript.jsonl
+../2509.03064/selftest_report.json
+../2509.03064/llm_loop_transcript.jsonl
+../../results/2411.16149/README.md
+../../results/2411.16149/selftest_report.json
+../../results/2411.16149/llm_loop_transcript.jsonl
+../2002.10145/README.md
+../2002.10145/selftest_report.json
+../2002.10145/llm_loop_transcript.jsonl
+../../results/2404.18447/README.md
+../../results/2404.18447/selftest_report.json
+../../results/2404.18447/llm_loop_transcript.jsonl
+../1708.07419/REJECTED.md
+../../results/2306.12713/README.md
+../../results/2306.12713/selftest_report.json
+../../results/2306.12713/llm_loop_transcript.jsonl
+../../results/2604.24502/REJECTED.md
+../2405.20406/README.md
+../2405.20406/selftest_report.json
+../2405.20406/llm_loop_transcript.jsonl
+../../results/2102.01986/README.md
+../../results/2102.01986/selftest_report.json
+../2506.23363/README.md
+../../results/2102.01986/llm_loop_transcript.jsonl
+../2506.23363/selftest_report.json
+../2506.23363/llm_loop_transcript.jsonl
+../../results/2007.09736/README.md
+../../results/2007.09736/selftest_report.json
+../../results/2007.09736/llm_loop_transcript.jsonl
+../../results/2011.04650/README.md
+../../results/2011.04650/selftest_report.json
+../../results/2011.04650/llm_loop_transcript.jsonl
+OPENROUTER_API_KEY=<set>
+
+exec
+/bin/bash -lc "sed -n '1,240p' ../2211.12582/REJECTED.md && sed -n '1,240p' ../2504.18110/REJECTED.md && sed -n '1,240p' ../1409.6092/REJECTED.md && sed -n '1,240p' ../2605.28674/REJECTED.md" in /home/gson/gvrepo/results/1605.04000
+ succeeded in 0ms:
+# Rejected: arXiv 2211.12582
+
+Paper: Iliyas Noman and Yuan Yao, [*Spectral conditions for spherical two-distance sets*](https://arxiv.org/abs/2211.12582) (v2, 3 February 2026).
+
+## Decision
+
+This paper does not provide a problem family satisfying **G, H, and V** simultaneously. The suggested family—construct or recognize points on a sphere having exactly two pairwise distances—can be generated and checked, but it fails **H (hardness)** in the parameter regime studied by the paper. The paper's main contribution is a necessary-and-sufficient spectral characterization, and its other main result reads the minimum representation dimension directly from an eigenvalue multiplicity. I therefore stopped at Step 0, before creating a generator, claiming gate measurements, or running the LLM hardening loop.
+
+## What the paper actually studies
+
+Definition 2.1 calls a finite set in `R^d` a two-distance set when the distances between distinct points take exactly two values. Definition 2.2 encodes it by a graph: an edge represents the longer of the two distances. Definition 2.4 calls the set spherical when all points lie on a `(d-1)`-sphere in `R^d` (scaling can make this the unit sphere).
+
+The paper focuses on the "small" regime of a graph with exactly `d+2` vertices represented in `R^d`. It supplies progressively simpler exact characterizations:
+
+- Theorem 2.1 (Einhorn--Schoenberg) says that a graph on `d+2` vertices is not representable precisely in the complete-multipartite exception; otherwise it has a unique admissible distance ratio.
+- Lemma 2.2 (Schoenberg) reduces realization of a prescribed distance matrix to positive semidefiniteness and a rank bound, and states that the configuration is unique up to congruence.
+- Sections 3--5 rewrite spherical representability as positive-semidefinite, nullspace, and eigenvalue conditions.
+- Theorem 1.1, proved in Section 6, says that spherical representability is determined by the second eigenvalue of the adjacency matrix and the spectrum of its projection onto the all-ones vector's orthogonal complement.
+- Proposition 1.2, also proved in Section 6, gives the lowest representation dimension directly from the multiplicity of the second adjacency eigenvalue.
+- The final corollary makes an especially broad regime immediate: every regular graph on `d+2` vertices that is not complete multipartite has a spherical representation in `R^d`.
+
+These are finite-dimensional linear-algebra computations, not a hard witness-search regime. The paper contains no NP-hardness result, no planted average-case hardness claim, and no parameter range in which finding a representation is asserted to be hard.
+
+## Why the proposed generator fails
+
+### Recognize a spherical two-distance graph
+
+Given the adjacency matrix, Theorem 1.1 is an explicit decision procedure: compute the spectra of `A` and `P A P`, compare the relevant eigenvalue and multiplicities. Exact versions can use characteristic-polynomial and rational/algebraic linear algebra. This is polynomial-time linear algebra, so **H fails**. Asking for the minimum dimension is even more directly defeated by Proposition 1.2.
+
+### Construct a spherical two-distance realization
+
+Sampling a graph first would satisfy inverse generation, and a submitted exact Gram/distance matrix could be checked by substitution, rank, and positive-semidefiniteness. But Theorem 2.1, Lemma 2.2, and Section 4's formula
+
+```text
+k = sqrt(1/lambda_2 + 1)
+```
+
+give the distance ratio and a standard spectral/Gram-matrix reconstruction route. A solver need not recover a hidden plant. For regular non-complete-multipartite graphs the paper's final corollary even decides existence immediately. Thus **H fails** again.
+
+There is a second contract problem if ordinary coordinates are requested: the natural coordinates and distance ratio can be irrational algebraic numbers. A floating-point answer is not an exact witness, while an exact algebraic-number representation and checker would require machinery beyond the requested standard-library substitution-style interface. Restricting the generator to rational constructions would improve V but would not repair H.
+
+### Recover information from already supplied points
+
+If the points are supplied and the witness is their two distances, the associated graph, or confirmation that the points are spherical, the solver only computes norms and all pairwise distances. That costs polynomial time and is exactly the proposed verifier, so it also supplies the solving algorithm. Returning the two distances would additionally make the answer a real-valued object, which the witness contract forbids.
+
+### Nearby formulations do not rescue the family
+
+- A yes/no existence answer is not a witness, and Theorem 1.1 makes it a spectral lookup anyway.
+- An eigenvector, null vector, Gram factor, or multiplicity certificate is found by standard linear algebra; changing the output from a decision to a certificate does not create hardness.
+- Asking for an optimal or maximum-cardinality two-distance set would make optimality the claim and violate the witness requirement; the paper also does not give an answer-first generator for such optima.
+- Hiding a vertex permutation and asking the solver to recover it would append a graph-isomorphism puzzle not studied or shown hard in this paper. Its difficulty would come from the added encoding, not from the spherical two-distance results, so it would not be an honest use of the paper's regime.
+- Moving to arbitrary numbers of vertices abandons the paper's `d+2` characterization regime. The paper proves no computational-hardness theorem or inverse-generation distribution there.
+
+## Gate outcome
+
+| requirement | result |
+|---|---|
+| G -- sample the answer first | Possible for explicit point/Gram constructions |
+| H -- no known polynomial-time or closed-form method | **Fail: Theorem 1.1, Proposition 1.2, and Lemma 2.2 reduce the natural tasks to spectral and PSD/rank computations** |
+| V -- cheap exact witness checking | Possible for exact distance/Gram data; problematic for unrestricted irrational coordinates |
+
+No `gen_2211_12582.py`, `selftest_report.json`, `README.md`, or `llm_loop_transcript.jsonl` was created. Running `scripts/harden.py` after this analytical H rejection would contradict the instruction to stop as soon as a family fails G, H, or V.
+# Rejected: arXiv:2504.18110
+
+Paper: Hong-Jun Ge, Jack Koolen, and Akihiro Munemasa, [*A 2-distance set with 277 points in the Euclidean space of dimension 23*](https://arxiv.org/html/2504.18110v4) (v4).
+
+## Decision
+
+This paper does not supply a problem family satisfying **G (generatable), H (hard), and V (cheaply verifiable)**. No `gen_2504_18110.py` was produced, and the self-test and LLM hardening loop were intentionally not run. The task explicitly requires stopping when any of G/H/V fails.
+
+## What the paper actually proves
+
+[Section 2](https://arxiv.org/html/2504.18110v4#S2) defines one fixed construction. It takes
+
+- `X = F_3 x {1,...,11}` (33 vertices),
+- `Y = C^perp` for the ternary Golay code (243 vertices), and
+- an explicitly defined graph on `X union Y`.
+
+The matrix `A(Gamma) + 3I` is positive semidefinite of rank 24 and is used as a Gram matrix for 276 vectors. The switching root is given explicitly by
+
+```text
+r = x1 + x2 + x3 - (4/33) sum_{x in X} x + (1/81) sum_{y in Y} y,
+```
+
+and the extra point is then given explicitly by
+
+```text
+u = x1 + x2 + x3 - r.
+```
+
+Theorem 1 proves that the resulting 277 points lie in an affine copy of `R^23` and have squared pairwise distances exactly 4 and 6. Lemma 2 further proves that `u` is independent of which of the 11 three-point parts is used.
+
+[Section 3](https://arxiv.org/html/2504.18110v4#S3) proves maximality. In the 23-dimensional affine hyperplane there is no extension. In `R^24`, Proposition 3 says that the only additional points are the two explicitly displayed multiples
+
+```text
+((1 + sqrt(3))/2) r  and  ((1 - sqrt(3))/2) r.
+```
+
+The appendix supplies Magma code implementing the construction and the exhaustive maximality check. It reports 16,689,170 short nonzero dual-lattice vectors and a run time of 788.6 seconds with 4.58 GB of memory.
+
+## Why candidate problem formulations fail
+
+| Candidate witness task | G | H | V | Disqualifier |
+|---|---:|---:|---:|---|
+| Construct the 277-point two-distance set | only at one fixed size | **fail** | pass with an exact Gram representation | Section 2 is a direct, explicit construction; there is no growing parameter regime. |
+| Add the 277th point to the 276-point set | pass | **fail** | pass | Theorem 1 gives `u` by a short linear formula, and Lemma 2 gives 11 immediately recognizable ways to compute the same point. |
+| Extend `Z` inside its `R^23` affine hull | **fail** | not applicable | fail for the required witness model | Proposition 3 says no extension exists; an absence is expressly forbidden as an answer. |
+| Extend `Z` in `R^24` | pass | **fail** | pass | Proposition 3 completely classifies the answer as two explicit multiples of `r`; this is a lookup/closed-form task. |
+| Decide whether 325 points exist in `R^24` | **fail** | unknown | fail for the required witness model | The paper calls this an open existence question and supplies no witness from which an instance can be inversely generated. |
+| Recover coordinates from the supplied Gram matrix | pass | **fail** | pass | Positive-semidefinite Gram factorization is direct linear algebra, and the appendix performs it explicitly. |
+
+The paper contains no complexity-hardness theorem, NP-hard parameter regime, FPT boundary, or scalable parameterized construction. Its only nontrivial regime is the fixed pair `(dimension, size) = (23, 277)`. Permuting vertices, changing coordinates by an isometry, or changing the seed would merely relabel the same problem and therefore must collapse under `canonical_key`; those operations cannot provide an unlimited supply of structurally distinct instances.
+
+The standard general-dimensional construction mentioned in the introduction (midpoints of the edges of a regular simplex) also cannot rescue the family: it is itself a closed-form construction and therefore fails H.
+
+## Gate status
+
+| Gate | Status | Reason |
+|---|---|---|
+| G1--G8 | not run | No admissible family exists to implement or test. |
+| LLM hardening loop | not run | `scripts/harden.py` requires a qualifying generator; running it on a knowingly closed-form or fixed-instance task would not establish H. |
+
+The decisive failure is **H**, with additional **G/scaling** failures for the fixed construction and the open problem. Although pairwise distances or an integer Gram matrix could be checked cheaply and exactly, V alone is insufficient.
+# Rejected: ternary constant-composition code construction
+
+Paper: Hengjia Wei, Hui Zhang, Mingzhi Zhu, and Gennian Ge,
+[*Optimal Ternary Constant-Composition Codes with Weight Four and Distance
+Six*](https://arxiv.org/abs/1409.6092), arXiv:1409.6092.
+
+## Decision
+
+The paper does not supply a problem family satisfying **G, H, and V**. Its
+natural witness is a constant-composition code, which is cheap to check, but
+the paper's contribution is an almost complete classification of the target
+sizes together with explicit and recursive constructions attaining them. It
+contains no computational-hardness theorem or hard planted distribution.
+
+Consequently **H fails/is unsupported** in every regime where the paper lets a
+generator know a witness. The bare length-and-composition problem also fails
+the strict answer-first/diversity requirement: a sampled code does not affect
+the instance, and all seeds at a fixed length pose the same problem up to
+coordinate relabelling. I stopped at Step 0 rather than add completion or
+candidate-list constraints that the paper never studies.
+
+## Exact definition from the full paper
+
+Section II.1 defines a ternary code of length `n` as a set
+`C ⊆ Z_3^X`, where `|X| = n`. The support of a word is the set of nonzero
+coordinates, Hamming distance is the number of coordinates on which two words
+differ, and composition `[w1,w2]` means exactly `w1` coordinates contain `1`
+and exactly `w2` contain `2`. The paper studies sets in which every distinct
+pair has Hamming distance at least six, for the two compositions `[2,2]` and
+`[3,1]`. It writes `A_3(n,6,[w1,w2])` for the maximum possible number of
+codewords.
+
+The four-coordinate notation used throughout is exact: in
+`<a,b,c,d>` the first `w1` listed positions carry symbol `1`, the remaining
+listed positions carry symbol `2`, and every other position carries `0`.
+Thus, for `[2,2]`, `a,b` carry `1` and `c,d` carry `2`; for `[3,1]`, `a,b,c`
+carry `1` and `d` carries `2`.
+
+Section II.4 adds the group-divisible-code constraint: the coordinates are
+partitioned into groups and a codeword has at most one nonzero coordinate in
+each group. This is a construction tool, not a computational input regime.
+
+## What makes the usable regimes constructive rather than hard
+
+Section II.2 gives Johnson-type upper bounds. Sections III and IV match those
+bounds for nearly all lengths using four named operations from Section II.4:
+filling groups, adjoining points, the fundamental construction, and inflation.
+The many exceptional base cases are not hidden search instances: the paper
+prints their base codewords and develops them under stated cyclic
+automorphisms.
+
+Several especially tempting subfamilies already have direct existence and
+construction rules:
+
+- Section III.1, Lemma 3.1 states the existence range for the required skew
+  Room frames, and Proposition 3.2 converts any such frame directly into a
+  `[2,2]` group-divisible code.
+- Section III.2, Theorem 3.4 classifies the needed `(g,4;1)` difference
+  matrices (`g >= 4` and `g` not congruent to `2 mod 4`), and Proposition 3.5
+  gives an explicit formula converting the matrix into the code.
+- Section IV, Theorem 4.4 constructs `[3,1]` group-divisible codes of type
+  `9^t` for every `t >= 4`, first by printed cyclic base cases and then by the
+  paper's fundamental construction.
+- The two summary theorems in Section V give closed, residue-class formulas
+  for `A_3(n,6,[2,2])` and `A_3(n,6,[3,1])` outside explicitly listed
+  unresolved lengths. These are the known-witness regimes a generator would
+  have to use.
+
+The paper never proves NP-hardness, search hardness, an average-case lower
+bound, or even a complexity classification for finding a code. Nor does it
+identify a parameter regime in which its own constructions cease to be an
+effective way to produce one. A large combinatorial answer space is therefore
+not evidence for H.
+
+## Why the apparent generator variants do not qualify
+
+| Candidate task | Why it fails |
+|---|---|
+| Return the value `A_3(n,6,w)` | It is a number/optimum, not a witness, and Section V makes it a residue-class lookup in the resolved regimes. |
+| Return a code of the Section-V size | Verification is cheap, but the paper is devoted to constructions of exactly these witnesses. Shipping a subfamily implemented from those constructions would expose a known construction regime, not a supported hard one. |
+| Return one codeword | Any word with the stated composition works, so there is an immediate closed-form answer. |
+| Return a difference matrix, Room frame, PBD, GDD, or GDC | The paper uses classified existence ranges and direct transformations to obtain codes. It gives no hardness result for searching for the auxiliary design; several relevant families are explicitly constructed. |
+| Complete a partial code | Planting a full code and revealing part of it would give G and V, and might form an interesting CSP, but code completion is not defined or analysed in this paper. No theorem transfers hardness to that planted distribution. |
+| Choose `k` words from a supplied candidate list | This is a newly imposed clique/set-packing problem. The candidate list is not part of the paper's code definition, and the paper gives neither a reduction nor an answer-first hard distribution for it. |
+| Randomly permute coordinates/symbols of a printed construction | This changes only labels. G8 requires every such instance to have the same canonical key, so it supplies no structural diversity and does not hide the known construction. |
+
+For the natural task the rendered data would only be `(n, composition,
+distance=6, required_size)`. At fixed `n`, changing the seed can change the
+stored planted code but cannot change the solver's problem. Hence an honest
+`canonical_key` would be the same for every seed, and the corpus diversity
+check would reject the result.
+
+## Gate outcome
+
+| Requirement | Result |
+|---|---|
+| G -- sample a witness first and build the problem around it | **Fails for the unmodified paper problem:** sampling a code first does not alter the public instance. It can be forced only by adding partial-code/restricted-universe constraints absent from the paper. |
+| H -- no known polynomial-time or closed-form method | **Fails/unsupported:** all known-witness parameter regimes are supplied through explicit base codes and general design constructions; the paper contains no hardness regime. |
+| V -- cheap exact verification | Passes in principle: check every word's exact composition and all pairwise Hamming distances (and group intersections for a GDC). |
+| G7 -- scalable difficulty | Length scales, but the paper establishes scalable constructions/existence, not scalable search hardness. |
+| G8 -- structural diversity | Fails for a fixed length: different planted codes are not part of the problem data, and coordinate/symbol relabellings must collapse. |
+
+Because G/H already fail analytically, the 200,000-sample guess test,
+adversary panel, and LLM hardening loop were not run. No generator,
+`selftest_report.json`, `README.md`, or oracle transcript was fabricated; doing
+so would contradict the instruction to stop after a Step-0 rejection.
+# Rejected: arXiv 2605.28674
+
+Paper: Amir Ali Ahmadi, Sanjeeb Dash, Yixuan Hua, and Bartolomeo
+Stellato, [*Disjunctive Sum of Squares*](https://arxiv.org/abs/2605.28674)
+(2026).
+
+## Decision
+
+The prior-triage proposal—sample disjunctive sum-of-squares identities, expand
+them into a polynomial, and ask a solver to recover a certificate—fails
+requirement **H (hard)** in the paper's defined certificate regime. Once the
+algebraic disjunction and degree bound are part of the instance, the paper
+explicitly reduces certificate search to semidefinite programming. Its main
+results then provide complete constructive families of such disjunctions; one
+refinement is searchable by second-order cone programming, and another needs
+only coefficient checks or a linear program.
+
+I therefore stopped at Step 0. No generator, self-test report, README, or
+hardening transcript was created. Random-guess and LLM failures cannot turn a
+problem with a standard convex-optimization solution into a hard witness
+family.
+
+## Exact definition from the paper
+
+Section 2 defines an algebraic disjunction
+
+\[
+\mathcal D=\{\{q_{k,j}\}_{j=1}^{n_k}:k=1,\ldots,r\}
+\]
+
+by requiring the basic closed regions
+
+\[
+\Omega_k=\{x:q_{k,j}(x)\geq 0\text{ for every }j\}
+\]
+
+to cover all of \(\mathbb R^n\). A polynomial \(p\) of degree at most \(d\)
+is SOS of order \(\bar d\) with respect to \(\mathcal D\) precisely when, for
+every region \(k\), there are SOS polynomials \(s_{k,j}\) satisfying
+
+\[
+p=s_{k,0}+\sum_{j=1}^{n_k}s_{k,j}q_{k,j},\qquad
+\deg s_{k,0}\leq\bar d,\quad
+\deg(s_{k,j}q_{k,j})\leq\bar d.
+\]
+
+Thus a valid witness would have to include an SOS representation of every
+multiplier and make every displayed polynomial identity hold exactly. With
+explicit rational or integer summands, this is cheaply verifiable by expansion
+and coefficient comparison, so **V is possible**. Sampling those summands
+before expansion also makes **G possible**. Neither fact supplies H.
+
+## The fatal standard algorithm
+
+Immediately after Definition 2, the paper states that, for fixed \(\bar d\),
+linear optimization over this cone is carried out by an SDP of size polynomial
+in \(n\). In particular, when \(p\), \(\mathcal D\), and the degree bounds are
+given, the unknown Gram matrices of the SOS multipliers occur linearly, and
+coefficient matching gives linear equality constraints. Certificate recovery
+is therefore the standard SOS semidefinite-feasibility problem—not an
+exponential search through the planted coefficient lists. The SDP even splits
+into one independent problem per subregion.
+
+For fixed degree \(d\), the monomial vector used by a degree-\(d\) SOS Gram
+matrix has \(\binom{n+d/2}{d/2}\) entries, polynomial in \(n\). Increasing the
+number of variables while retaining the paper's fixed-degree regime therefore
+does not evade the algorithm. Letting the degree grow only makes the explicit
+polynomial/Gram representation itself grow and is not a hardness result for a
+new planted distribution.
+
+The later results make the obstruction stronger:
+
+- Theorem 1 in Section 3 gives, for every fixed dimension and even degree, an
+  **explicit** family \(\mathcal D^m\) such that every positive-definite form
+  eventually has an order-\(d\) certificate.
+- The local construction in Theorem 2 and Lemma 3 builds the certificate by
+  adding a sufficiently large diagonal Gram contribution. The remark after
+  Theorem 2 observes that the resulting certificate is scaled diagonally
+  dominant in a rotated basis, so it can be found by an SOCP.
+- Algorithm 1 searches the fixed spherical-cap disjunctions by independent
+  SDPs and is complete to any requested optimization tolerance; Theorem 7
+  supplies its convergence rate.
+- Section 4's Definition 4 and Theorem 8 give an optimization-free alternative:
+  after explicit linear changes of coordinates, certificate checking is just
+  nonnegativity of coefficients. Imposing the condition is a linear program.
+- Section 6 supplies adaptive spatial branch-and-bound algorithms rather than
+  a hard search regime. The numerical section reports that the tested
+  non-SOS polynomials need only a modest number of regions in nearly every
+  case.
+
+These are exactly the easy/search-direct results that an inverse generator
+would have to avoid, but the paper gives no separate hardness theorem for
+recovering a planted disjunctive SOS identity.
+
+## Why hiding the disjunction does not repair H
+
+Section 2 also considers jointly searching for the partitioning polynomials
+and SOS multipliers. That formulation is bilinear and the paper proposes an
+alternating SDP heuristic, but it proves no NP-hardness, average-case hardness,
+or hard parameter regime for this joint search. Manufacturing a bounded-
+integer decomposition puzzle by hiding \(\mathcal D\) would add constraints
+not present in the definition and would rest H entirely on an unsupported
+planted distribution. It would also change the standard domain attack from
+the paper's fixed-disjunction SDP to an invented nonlinear factorization
+problem.
+
+Conversely, rendering \(\mathcal D\) is necessary for a self-contained cheap
+checker to know that its regions really cover \(\mathbb R^n\). Checking that
+an arbitrary solver-supplied collection of polynomial inequalities covers all
+of \(\mathbb R^n\) is itself a quantified nonnegativity problem, not the
+required cheap substitution/expansion verification. Restricting the answer to
+syntactically covering sign disjunctions fixes V but still has no hardness
+support in the paper.
+
+The continuous non-unique Gram/square parameterization also makes a naive
+coefficient-box `search_space` and random-guess experiment artificial: the
+paper defines real SOS polynomials, not a finite coefficient alphabet. Adding
+such an alphabet solely to obtain G4 would create a different problem while
+leaving the SDP relaxation as the mandatory first attack.
+
+## Other paper-native candidates considered
+
+- **Certify polynomial nonnegativity or matrix copositivity.** Sections 3 and
+  5 note NP-hardness, but the positive statement is universal. The paper's
+  finite certificates are precisely the SDP/LP-generated objects above.
+  Asking for the optimum of a polynomial or quadratic program would also
+  violate the rule against answers whose optimality is the claim.
+- **Find a point disproving copositivity.** A rational nonnegative point with
+  \(x^TQx<0\) would be a cheap witness, but the paper supplies no answer-first
+  hard distribution of non-copositive matrices. Making one by placing a
+  negative direction in \(Q\) normally exposes that direction spectrally or
+  through continuous quadratic optimization.
+- **Find a clique.** Section 6.3.2 uses the Motzkin--Straus/copositive
+  formulation to *compute the clique number* of four \(G(75,0.5)\) graphs and
+  solves all four with few subregions. General CLIQUE is hard and a clique is
+  verifiable, but planting a hidden clique would introduce a planted-clique
+  distribution whose average-case hardness is neither proved nor studied in
+  this paper. Its required standard attacks would be spectral and SDP methods,
+  exactly the methods that commonly expose planted cliques.
+- **Return the paper's lower/upper bound or convergence rate.** These are
+  numeric/optimality claims, not structured witnesses allowed by the task.
+
+## Gate outcome
+
+| requirement | result | evidence |
+|---|---:|---|
+| G — answer-first generation | possible | sample square summands and expand the identities |
+| H — no polynomial-time or closed-form method | **fail** | fixed-disjunction recovery is an SDP; the paper also gives SOCP, LP, and explicit complete constructions |
+| V — cheap exact verification | possible | expand submitted squares/products and compare all coefficients |
+| Overall | **rejected** | all three requirements must hold simultaneously |
+
+No G1–G8 measurements or oracle calls were run after this analytical H
+failure. Doing so would manufacture evidence for a family the paper itself
+equips a solver to recover.
+
+exec
+/bin/bash -lc "rg -n 'TRACK =|hardness_basis|nonnegative|factorization|inverse generation' ../*/gen_*.py | sed -n '1,240p'" in /home/gson/gvrepo/results/1605.04000
+ succeeded in 0ms:
+../2506.09950/gen_2506_09950.py:22:TRACK = "B"
+../2506.09950/gen_2506_09950.py:48:    "hardness_basis": (
+../2412.14615/gen_2412_14615.py:61:nonnegative decomposition.  The paper calls finding the relevant smallest
+../2412.14615/gen_2412_14615.py:62:nonnegative solution a significant hard challenge and formulates it as an ILP.
+../2412.14615/gen_2412_14615.py:75:irregular set, keeps r growing with n, and asks for the actual nonnegative line
+../2601.08530/gen_2601_08530.py:426:Outcome table (hexadecimal bit masks): row i is a {width}-hex-digit nonnegative
+../2512.24037/gen_2512_24037.py:246:        raise ValueError("decoy_ratio must be finite and nonnegative")
+../2512.24037/gen_2512_24037.py:248:        raise ValueError("screen_nodes must be nonnegative")
+../2411.14821/gen_2411_14821.py:166:These entries are nonnegative and every row and column sums to 1.  Preferences
+../2309.11256/gen_2309_11256.py:1:"""Inverse generator for equal-degree tropical polynomial factorization.
+../2309.11256/gen_2309_11256.py:37:is the factorization problem.  Sections 4 and 4.1 supply the d=150, r=127
+../2309.11256/gen_2309_11256.py:43:gives polynomial-time factorization when the coefficient diagram is convex;
+../2309.11256/gen_2309_11256.py:137:        "family": "equal_degree_formal_tropical_factorization_v1",
+../2309.11256/gen_2309_11256.py:236:    """Check a candidate factorization without consulting ``inst['answer']``."""
+../2309.11256/gen_2309_11256.py:339:        ["equal_degree_formal_tropical_factorization_v1", n,
+../2411.04916/gen_2411_04916.py:226:        raise ValueError("mix_factor must be a nonnegative integer")
+../2509.03064/gen_2509_03064.py:39:For inverse generation, every attempted witness is sampled first as a uniformly
+../2302.11250/gen_2302_11250.py:385:and L.  A bank's total assets are its nonnegative integer external assets plus
+../1910.10364/gen_1910_10364.py:81:For inverse generation, the answer slots are sampled first.  They receive a
+../1910.10364/gen_1910_10364.py:153:    # times.  Reject loops, duplicate triples, and disconnected factorizations.
+../2207.14270/gen_2207_14270.py:21:TRACK = "B"
+../2207.14270/gen_2207_14270.py:23:# The measured figures in hardness_basis are refreshed after selftest().
+../2207.14270/gen_2207_14270.py:50:    "hardness_basis": (
+../2001.09362/gen_2001_09362.py:361:        raise ValueError("filter_nodes must be a nonnegative integer")
+../2408.17266/gen_2408_17266.py:3:The paper studies nonnegative solutions of one linear Diophantine equation
+../2408.17266/gen_2408_17266.py:10:Thus every nonnegative solution is automatically a binary exact cover.
+../2408.17266/gen_2408_17266.py:34:Definition: Section 2, equation (2.1), fixes the witness as nonnegative
+../2408.17266/gen_2408_17266.py:175:        "Find a nonnegative integer solution of one linear Diophantine equation.",
+../2408.17266/gen_2408_17266.py:186:        "You must find nonnegative integers satisfying sum(a_i*x_i for i=1,...,m)=b.",
+../1604.00052/gen_1604_00052.py:220:        f"- Encode a normalized term by a nonnegative integer from 0 through "
+../2002.10145/gen_2002_10145.py:357:        raise ValueError("attack_restarts must be a nonnegative integer")
+../2002.10145/gen_2002_10145.py:359:        raise ValueError("backtrack_floor must be a nonnegative integer")
+../1303.2162/gen_1303_2162.py:54:    "hardness_basis": (
+../2506.24001/gen_2506_24001.py:177:nonnegative integer weight and value.  An assignment is feasible when the sum
+
+exec
+/bin/bash -lc "sed -n '1,180p' ../2309.11256/gen_2309_11256.py && sed -n '1,120p' ../2506.09950/gen_2506_09950.py && sed -n '1,120p' ../2207.14270/gen_2207_14270.py" in /home/gson/gvrepo/results/1605.04000
+ succeeded in 0ms:
+"""Inverse generator for equal-degree tropical polynomial factorization.
+
+The semiring operations are min (addition) and ordinary integer addition
+(multiplication).  A coefficient vector ``a`` represents the formal polynomial
+min_i(a[i] + i*x).  Formal coefficient vectors matter here: equality merely as
+piecewise-linear functions is not enough.
+
+This module is standard-library only and performs no I/O at import time.
+"""
+
+from __future__ import annotations
+
+import ast
+import hashlib
+import itertools
+import json
+import random
+import re
+from typing import Any
+
+
+DIFFICULTY = {
+    "easy": {"n": 18, "coefficient_max": 127},
+    "medium": {"n": 36, "coefficient_max": 127},
+    "hard": {"n": 72, "coefficient_max": 127},
+    "paper": {"n": 150, "coefficient_max": 127},
+}
+
+# This is updated if harden.py selects a different named rung.
+SHIPPING_DIFFICULTY = "medium"
+
+NOTES = r"""
+Definition: Sections 2.1 and 4.3 of Chen--Grigoriev--Shpilrain,
+"Tropical cryptography III: digital signatures" (arXiv:2309.11256), define
+formal one-variable tropical polynomials and coefficientwise min-plus
+multiplication.  Section 5 says recovering equal-degree X,Y from M=X tensor Y
+is the factorization problem.  Sections 4 and 4.1 supply the d=150, r=127
+recommendation and the endpoint-zero safe-key rule.
+
+Hard/easy boundary: the paper cites Kim--Roush, whose Theorem 7 proves
+NP-completeness for growing degree in the equal-slope, equal-degree concave
+case, even with public coefficients in {0,1,2,3}.  Kim--Roush Proposition 3
+gives polynomial-time factorization when the coefficient diagram is convex;
+their Algorithms section says fixed degree reduces to finitely many linear
+programs and proposes exponential branch-and-bound.  Section 3.1 of the
+signature paper warns that safe-key generation is not fully resolved.  Brown
+and Monico's Section 3 gives exact division only when a divisor is already
+known; their Section 5.2 motivates endpoint zeros to defeat small-degree
+divisor enumeration.  Accordingly n grows here, both factor degrees are n,
+and both endpoints are fixed to zero.
+
+Generation and attacks: both hidden factors' non-endpoint coefficients are
+i.i.d. uniform on the same inclusive interval [1,r], then the public product
+is computed.  Conditioning the paper's [0,r] draw this way keeps the three
+required product vertices at degrees 0,n,2n as the only zero-height vertices;
+an interior zero would advertise extra convex-hull structure.  This also avoids
+planted/decoy distribution differences.  The
+outlier/lower-envelope attack, a deterministic left-to-right greedy repair,
+and structure-aware random restarts are exercised by selftest.  The canonical
+key sorts the input terms and quotients the genuine degree-reversal symmetry;
+it never uses the seed or rendered text.
+
+Caveat: Theorem 7 is a worst-case decision result for specially structured
+coefficients.  It does not prove average-case hardness of these random planted
+products.  The local attacks and required multi-vendor oracle loop are empirical
+checks of that gap, not a reduction-based average-case proof.
+""".strip()
+
+
+_ANSWER_RE = re.compile(r"<answer\b[^>]*>(.*?)</answer\s*>", re.I | re.S)
+_ENUMERATION_CAP = 250_000
+
+
+def _tropical_product(a: list[int] | tuple[int, ...],
+                      b: list[int] | tuple[int, ...]) -> list[int]:
+    """Formal min-plus convolution of two finite coefficient vectors."""
+    out = []
+    for k in range(len(a) + len(b) - 1):
+        lo = max(0, k - len(b) + 1)
+        hi = min(len(a) - 1, k)
+        out.append(min(a[i] + b[k - i] for i in range(lo, hi + 1)))
+    return out
+
+
+def _public_coefficients(inst: dict) -> list[int]:
+    n = inst["n"]
+    terms = inst["terms"]
+    by_degree = {int(degree): int(value) for degree, value in terms}
+    if len(by_degree) != 2 * n + 1 or set(by_degree) != set(range(2 * n + 1)):
+        raise ValueError("instance terms do not contain every degree exactly once")
+    return [by_degree[i] for i in range(2 * n + 1)]
+
+
+def _coefficient_bounds(inst: dict) -> list[int]:
+    """Obvious bounds implied by the two zero endpoints.
+
+    For 1 <= i < n, the product contains both a_i+0 and b_i+0 at
+    degrees i and n+i, so both hidden coefficients are at least the larger
+    public coefficient at those degrees.
+    """
+    n = inst["n"]
+    c = _public_coefficients(inst)
+    return [0] + [max(c[i], c[n + i]) for i in range(1, n)] + [0]
+
+
+def make_instance(n, seed=0, **params) -> dict:
+    """Plant two factors first, then expose their formal tropical product.
+
+    ``n`` is the degree of each hidden factor.  ``coefficient_max`` is the
+    inclusive upper bound on every hidden coefficient.  Both endpoint
+    coefficients are fixed to zero; all other coefficients are sampled i.i.d.
+    from the same uniform distribution.
+    """
+    coefficient_max = params.pop("coefficient_max", 127)
+    if params:
+        raise TypeError("unknown parameter(s): " + ", ".join(sorted(params)))
+    if isinstance(n, bool) or not isinstance(n, int) or n < 2:
+        raise ValueError("n must be an integer at least 2")
+    if (isinstance(coefficient_max, bool) or
+            not isinstance(coefficient_max, int) or coefficient_max < 1):
+        raise ValueError("coefficient_max must be a positive integer")
+
+    rng = random.Random(seed)
+    factor_a = [0]
+    factor_a.extend(rng.randint(1, coefficient_max) for _ in range(n - 1))
+    factor_a.append(0)
+    factor_b = [0]
+    factor_b.extend(rng.randint(1, coefficient_max) for _ in range(n - 1))
+    factor_b.append(0)
+    product = _tropical_product(factor_a, factor_b)
+
+    # Terms are deliberately not presented in degree order.  Their order is
+    # only input formatting, not mathematical structure; canonical_key sorts.
+    terms = [[degree, value] for degree, value in enumerate(product)]
+    rng.shuffle(terms)
+    return {
+        "family": "equal_degree_formal_tropical_factorization_v1",
+        "n": n,
+        "coefficient_max": coefficient_max,
+        "terms": terms,
+        "answer": {"factor_a": factor_a, "factor_b": factor_b},
+    }
+
+
+def render(inst) -> str:
+    """Render a complete standalone problem statement."""
+    n = inst["n"]
+    coefficient_max = inst["coefficient_max"]
+    terms = sorted(inst["terms"], key=lambda item: item[0])
+    term_lines = "\n".join(f"{degree}: {value}" for degree, value in terms)
+    example_a = [0] * (n + 1)
+    example_b = [0] * (n + 1)
+    return f"""FORMAL TROPICAL POLYNOMIAL FACTORIZATION
+
+A coefficient list A=[a_0,...,a_n] denotes a formal one-variable
+polynomial.  Tropical multiplication of A and B=[b_0,...,b_n] is the
+coefficient list C=[c_0,...,c_{{2n}}] defined exactly by
+
+    c_k = min(a_i + b_j over all integers i,j with 0<=i,j<=n and i+j=k).
+
+The plus sign inside that formula is ordinary integer addition.  Equality is
+equality of every formal coefficient, not merely equality of the functions
+obtained by evaluating the polynomials.
+
+Here n={n}.  Find two lists A and B, each containing exactly {n + 1} ordinary
+    integers.  Both lists must have endpoint coefficients zero,
+a_0=a_{n}=b_0=b_{n}=0.  Every non-endpoint entry must lie in the inclusive
+range [1,{coefficient_max}].  A and B may be equal; no entries may be omitted;
+repeated coefficient values are allowed.  The order of the two factors does
+not matter, but the position within each list is its degree and is 0-indexed.
+Their tropical product must equal the public C below at every degree.
+
+Public coefficients, one line as "degree: coefficient":
+{term_lines}
+
+Give your final answer inside <answer></answer> tags as one JSON object with
+exactly the keys "factor_a" and "factor_b", whose values are the two integer
+lists in increasing degree order.
+Example of the required shape (the values shown are only a format example):
+<answer>{{"factor_a":{json.dumps(example_a)},"factor_b":{json.dumps(example_b)}}}</answer>
+"""Verified generator for finite-field polynomial systems from arXiv:2506.09950.
+
+The generated systems are invertible finite-field Fourier systems.  A witness is
+sampled first and the right-hand sides are obtained by exact evaluation, so the
+generator never solves an instance it has just made.  The checker independently
+substitutes any submitted vector into every displayed polynomial equation.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import functools
+import itertools
+import json
+import math
+import os
+import random
+import re
+import time
+
+
+TRACK = "B"
+
+PROBLEM_PROFILE = {
+    "native_domain": "algebra",
+    "object_regime": "finite_field",
+    "computational_core": "linear_algebra",
+    "certificate_form": "integer_tuple",
+    "native_objects": [
+        "linear polynomial system over a prime finite field",
+        "finite-field Fourier coefficient matrix",
+        "assignment in GF(p)^n",
+    ],
+    "verification_operations": [
+        "exact modular exponentiation",
+        "exact finite-field multiplication and addition",
+        "substitution into every polynomial equation",
+    ],
+    "domain_essentiality": "native",
+    "reduction_kind": "none",
+    "reduction": None,
+    "reduction_source": "paper_central",
+    "intuition_type": "change of variables",
+    "intuition_description": (
+        "Recognize the power matrix as a finite-field Fourier transform and apply "
+        "a radix-2 inverse transform; otherwise carry out dense elimination."
+    ),
+    "hardness_basis": (
+        "Track B: Section 2's GBElimLin specializes here to exact Gaussian "
+        "elimination in O(n^3) field operations; at the hard shipping preset the "
+        "included reference implementation performs 65,568 counted field "
+        "operations (wall-clock refreshed by selftest), while the supplied-twiddle "
+        "inverse FFT takes 272 exact field operations."
+    ),
+    "max_answer_tokens": 96,
+}
+
+NATIVE = {
+    "domain": PROBLEM_PROFILE["native_domain"],
+    "core": PROBLEM_PROFILE["computational_core"],
+    "objects": list(PROBLEM_PROFILE["native_objects"]),
+    "intuition": (
+        PROBLEM_PROFILE["intuition_type"]
+        + ": "
+        + PROBLEM_PROFILE["intuition_description"]
+    ),
+    "reduction": PROBLEM_PROFILE["reduction"],
+}
+
+# All n are powers of two and divide prime-1.  The listed generator is a
+# primitive root of the full multiplicative group; selftest checks what the
+# construction actually needs, namely that omega has exact order n.
+DIFFICULTY = {
+    "demo": {"n": 2, "prime": 17, "generator": 3},
+    "easy": {"n": 8, "prime": 65537, "generator": 3},
+    "medium": {"n": 16, "prime": 998244353, "generator": 3},
+    "hard": {"n": 32, "prime": 2013265921, "generator": 31},
+}
+SHIPPING_DIFFICULTY = "hard"
+
+STRUCTURAL_HINT = (
+    "The coefficient rows form a radix-2 finite-field Fourier transform, so "
+    "invert them with the supplied inverse twiddles instead of eliminating variables."
+)
+PLACEBO_HINT = (
+    "The coefficient rows should be handled systematically, and the supplied "
+    "modular constants should be copied carefully throughout the calculation."
+)
+
+CERTIFICATE_LANGUAGE = {
+    "description": (
+        "An ordered JSON list of exactly n canonical residues in GF(p), one for "
+        "each 0-indexed variable; every entry is an integer in the inclusive "
+        "range 0 through p-1, repetitions are allowed."
+    ),
+    "bounds": {
+        "elements": "n",
+        "minimum": 0,
+        "maximum": "p-1",
+        "ordered": True,
+        "repetitions": True,
+    },
+}
+
+NOTES = (
+    "Section 2 fixes the native MP problem as solving polynomial equations over "
+    "GF(q), assumes at most one solution, and states that a one-solution reduced "
+    "Groebner basis is linear. Algorithm 2.1 (GBElimLin) is the easy-case "
+    "discriminator: for this linear family it is ordinary exact row reduction, "
+    "so the family is Track B, never Track A. Section 3 says the all-wild d1=0 "
+    "case is brute-force enumeration and the hybrid cost is q^k tau; those are "
+    "not used as false hardness evidence. The system is generated by sampling "
+    "its unique assignment and composing a finite-field Fourier transform. "
+    "Random witnesses and shuffled equation order remove positional planting "
+    "signatures. The adversary panel tests an RHS outlier rule, diagonal greedy "
+    "substitution, a one-term inverse ansatz, and 256 structure-aware random "
+    "restarts; the successful O(n^3) row-reduction algorithm is reported "
+    "separately as Track B requires."
+)
+
+"""Verified generator for a skew-polynomial locator problem from arXiv:2207.14270.
+
+The construction is Proposition 15 of the paper.  The checker does not trust that
+proposition: it verifies P-independence by an exact skew-Vandermonde rank computation
+and evaluates the submitted Ore polynomial at every supplied right root.
+"""
+
+from __future__ import annotations
+
+import functools
+import hashlib
+import itertools
+import json
+import math
+import os
+import random
+import re
+import time
+
+
+TRACK = "B"
+
+# The measured figures in hardness_basis are refreshed after selftest().
+PROBLEM_PROFILE = {
+    "native_domain": "algebra",
+    "object_regime": "finite_field",
+    "computational_core": "polynomial_identity",
+    "certificate_form": "polynomial",
+    "native_objects": [
+        "finite field quotient",
+        "Ore polynomial over a finite field",
+        "P-independent skew-conjugacy class",
+    ],
+    "verification_operations": [
+        "exact finite-field multiplication",
+        "Frobenius automorphism",
+        "right evaluation of an Ore polynomial",
+        "skew-Vandermonde rank over a finite field",
+    ],
+    "domain_essentiality": "native",
+    "reduction_kind": "none",
+    "reduction": None,
+    "reduction_source": "paper_central",
+    "intuition_type": "invariant",
+    "intuition_description": (
+        "Recognize that a full P-independent skew-conjugacy class collapses its "
+        "locator to a binomial governed by the common field norm; otherwise one "
+        "must carry out iterative Ore-polynomial LCLM arithmetic."
+    ),
+    "hardness_basis": (
+        "Track B: the iterative left-LCM algorithm implicit in Section 4 and "
+        "Proposition 15 runs in polynomial time; at the shipping preset our exact "
+        "implementation averages 0.221259 seconds and 1,393,359 low-level "
+        "multiply-loop steps, whereas the norm-invariant route uses 15 high-level "
+        "exact field operations."
+    ),
+    "max_answer_tokens": 36,
+}
+
+NATIVE = {
+    "domain": PROBLEM_PROFILE["native_domain"],
+    "core": PROBLEM_PROFILE["computational_core"],
+    "objects": list(PROBLEM_PROFILE["native_objects"]),
+    "intuition": (
+        PROBLEM_PROFILE["intuition_type"] + ": "
+        + PROBLEM_PROFILE["intuition_description"]
+    ),
+    "reduction": PROBLEM_PROFILE["reduction"],
+}
+
+DIFFICULTY = {
+    "demo": {"n": 2, "delta": 2},
+    "easy": {"n": 8, "delta": 32},
+    "medium": {"n": 12, "delta": 32},
+    "hard": {"n": 16, "delta": 32},
+}
+SHIPPING_DIFFICULTY = "easy"
+
+STRUCTURAL_HINT = (
+    "A full P-independent subset of one skew-conjugacy class has locator x^n "
+    "minus the class's common field norm."
+)
+PLACEBO_HINT = (
+    "A careful coefficient-by-coefficient computation helps prevent indexing "
+    "mistakes in the requested locator."
+)
+
+CERTIFICATE_LANGUAGE = {
+    "description": (
+        "The structure-aware binomial language x^n+c with nonzero c in the fixed "
+        "field K=GF(2^delta), represented by two [exponent, coefficient] terms; "
+        "each coefficient is an M/4-digit lowercase hexadecimal element of "
+        "GF(2^M). The verifier remains more permissive and checks any sparse monic "
+        "degree-n polynomial term by term."
+    ),
+    "bounds": {
+        "n_terms": 2,
+        "max_degree": "n",
+        "coefficient_bits": "M=n*delta",
+        "constant_choices": "2^delta-1",
+        "leading_coefficient": 1,
+    },
+}
+
+NOTES = (
+    "Section 2, Definition 3 fixes right roots and least common left multiples. "
+    "Section 4, Proposition 15 is the theorem-backed construction: a K-basis "
+    "c_i gives P-independent points sigma(c_i)*a/c_i, and a complete class has "
+    "locator x^mu-N(a). Proposition 16 explains how conjugacy classes combine. "
+    "The easy-result discriminator is explicit here: iterative Ore LCLM and the "
+    "displayed norm formula are polynomial-time algorithms, so this is Track B, "
+    "not Track A. Random basis changes and point shuffling remove positional "
+    "outliers; the norm is uniform in a 32-bit fixed field, defeating constant-one, "
+    "small-constant, ordinary-product, and truncated-norm guesses."
+)
+
+# Monic irreducible binary polynomials.  The integer's bit i is the coefficient
+# of z^i.  Each constant was independently checked by Rabin's exact criterion in
+# selftest().  The larger four are sparse pentanomials found once during building.
+_MODULI = {
+
+exec
+/bin/bash -lc 'ls -la && find .. -maxdepth 2 -name AGENTS.md -print' in /home/gson/gvrepo/results/1605.04000
+ succeeded in 0ms:
+total 184
+drwxrwxr-x   2 gson gson   4096 Sep  4 12:44 .
+drwxrwxr-x 110 gson gson   4096 Sep  4 12:44 ..
+-rw-rw-r--   1 gson gson    161 Sep  4 12:44 .meta.json
+-rw-rw-r--   1 gson gson    529 Sep  4 12:44 .runner.sh
+-rw-rw-r--   1 gson gson  56131 Sep  4 12:44 .task.md
+-rw-rw-r--   1 gson gson 110699 Sep  4 12:48 codex_run.log
+
+codex
+The remaining candidates do not rescue the paper. Section 2’s \(B(\alpha)\) gadget has its rank-four factorization by the displayed convex combination; Section 4 is one fixed \(21\times21\) matrix with the crucial algebraic parameters and rank-three decomposition written out. The Section 3 NP-hardness reduction could carry a planted clique cover, but the paper gives no hard planted graph distribution, and its full-matrix gadget adds four rank-one terms per completion variable—quickly violating the 256-element answer cap. I’m recording this as a Step-0 H rejection, with G and V noted as feasible for the naive inverse product.
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1605.04000/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..bc676eae7db1c7ce8696e69d75cb2a40dd4871e7
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,140 @@
++# Rejected: arXiv 1605.04000
++
++Paper: Yaroslav Shitov, [*The nonnegative rank of a matrix: Hard
++problems, easy solutions*](https://arxiv.org/abs/1605.04000), v2 (2017).
++
++## Decision
++
++This paper does not supply a problem distribution for which **G
++(generatable), H (hard in the declared track), and V (exactly verifiable)**
++can all be justified.  The prior-triage proposal--sample nonnegative factors
++`U,V`, publish `M=UV`, and ask for a factorization--does satisfy G and V, but
++it does not satisfy the distributional requirement in H.  The paper proves a
++worst-case reduction from CLIQUE COVER; it says nothing about the difficulty
++of recovering factors of a random inverse-generated product.
++
++I therefore stopped at Step 0.  No generator, gate report, README, or oracle
++transcript was manufactured for a family whose hardness claim is unsupported.
++
++## What the paper actually proves
++
++For a nonnegative matrix `A` over a subfield `F` of the reals, Section 2
++defines `rank_F^+(A)` as the least number of nonnegative rank-one matrices over
++`F` whose sum is `A`.
++
++The paper then has three relevant pieces.
++
++1. **An explicit rank-four gadget.**  Observation 1 states that the displayed
++   matrix `B(alpha_1,...,alpha_n)` has nonnegative rank four exactly when all
++   `alpha_i` are the same element of `[0,1] cap F`.  Its proof is the explicit
++   convex-combination identity for the rows of the fixed `4 x 4` matrix
++   `B_0`: the top row is assembled from the two alternative sums of rows of
++   `B_0`.
++2. **A worst-case reduction.**  Theorem 2 and Corollary 3 convert a matrix
++   completion problem into ordinary nonnegative rank by adjoining one copy of
++   the rank-four gadget.  Section 3 associates a partial `0/1` matrix `X(G)`
++   with an arbitrary graph `G` and proves that the minimum nonnegative rank of
++   a completion is exactly the clique-cover number of `G`.  Applying
++   Corollary 3 to the variables proves that computing ordinary nonnegative rank
++   is NP-hard.
++3. **One field-separating example.**  Section 4 gives a fixed integral
++   `21 x 21` matrix.  Three applications of Corollary 3 reduce its rank
++   calculation to the fixed `5 x 5` matrix `C(a,b,c,d)`.  The only possible
++   rank-three parameters are written down (`b=c=d=1 +/- sqrt(1/2)` and
++   `a=2-1/b`), and the paper explicitly displays the three nonnegative
++   rank-one summands for the real solution.  This proves that rational and real
++   nonnegative rank can differ; it is not a growing search family.
++
++The paper gives no average-case theorem, planted-distribution theorem, FPT
++boundary, or parameter regime asserting that random products of sampled
++nonnegative factors are hard to factor.
++
++## Step-0 discriminating test
++
++For the proposed inverse family, the certificate is produced by the generator
++itself:
++
++```text
++sample U >= 0 and V >= 0; compute M = U V; retain (U,V)
++```
++
++This costs `O(m r n)` exact arithmetic operations for an `m x r` factor and an
++`r x n` factor.  That is a valid answer-first construction, not a solver for
++recovering `(U,V)` from `M`.  The fatal issue is instead the separate H gate:
++the distribution of matrices produced this way is not the reduction-image
++distribution in Section 3, and the paper's worst-case NP-hardness theorem does
++not transfer to it.
++
++Random dense positive factorizations also have scaling and permutation
++symmetries and commonly have further nearby nonnegative factorizations.  A
++checker can correctly accept all of them, but non-uniqueness does not establish
++search hardness.  Restricting the answer to small integer factors merely to
++obtain a finite `CERTIFICATE_LANGUAGE` would define a new bounded integer
++factorization problem; the paper neither studies nor proves hardness for that
++planted distribution.
++
++Consequently neither track is honest:
++
++- **Track A cannot be declared.**  Section 3 proves worst-case NP-hardness for
++  matrices obtained from arbitrary clique-cover instances.  The task
++  explicitly forbids using worst-case NP-hardness as evidence that the chosen
++  random inverse-generated distribution is hard.
++- **Track B cannot be declared for general exact NMF.**  The paper supplies no
++  efficient exact factor-recovery algorithm whose measured mechanical cost
++  could be contrasted with a short structural route.  Calling a general
++  exponential search or a non-guaranteed numerical NMF heuristic the Track B
++  reference algorithm would violate the definition of that track.  For the
++  explicit Section 2 and Section 4 constructions, by contrast, the compact
++  factorization is already displayed in the paper, so there is no meaningful
++  mechanical-versus-compact gap.
++
++## Why the paper's reduction does not repair the family
++
++One could sample a graph together with a clique cover, form `X(G)`, and carry
++the cover through Section 3.  This still does not qualify.
++
++- Planting a clique cover (equivalently, a colouring of the complement) does
++  not inherit worst-case hardness.  The paper provides no hard planted graph
++  distribution, and does not analyze the spectral, greedy, or colouring
++  attacks required for such a distribution.
++- If the solver is asked only for the cover labels, the computational core is
++  graph colouring/clique cover.  This can be reported as a paper-licensed
++  reduction, but it is not an algebraic nonnegative-factorization family and
++  still lacks distributional hardness.
++- If the ordinary matrix and an actual nonnegative factorization are required,
++  every completion variable eliminated by Theorem 2 contributes four more
++  rank-one summands.  Even counting only one atom per summand, the G9 limit of
++  256 atomic answer elements permits fewer than 64 such variables; an honest
++  pair of factor matrices is much larger.  Thus the reduction's growing hard
++  regime is incompatible with the required writable certificate cap.
++- A factorization witnesses only an upper bound on nonnegative rank.  Asking
++  for the *minimum* rank would additionally require an executable optimality
++  certificate.  The paper's appeal to the optimum clique-cover number is not
++  such a locally checkable certificate.
++
++## Other native candidates considered
++
++| Candidate task | Outcome |
++|---|---|
++| Factor the explicit `B(alpha,...,alpha)` gadget | G and V pass, but Observation 1's proof gives the factorization directly from the visible `alpha`; H fails. |
++| Recover the common `alpha` in `B` | It is a displayed matrix entry, so the verifier's lookup is also a solver; H fails. |
++| Factor the Section 4 `21 x 21` matrix over the reals | The paper prints the algebraic parameters and three summands, so this is a fixed lookup task and does not scale. |
++| Prove that the same matrix has no rational factorization of the target size | The paper gives a mathematical impossibility proof, not a bounded concrete negative certificate that the requested checker can validate cheaply. |
++| Take permuted or diagonally scaled copies of the Section 4 example | These are structure-preserving relabellings/scalings of one fixed problem and must collapse under an honest canonical key; they do not provide unlimited structural diversity. |
++| Use block-diagonal sums of the explicit gadgets | The certificate grows with the number of blocks, while each block is recognized and factored by the same displayed identity; this scales transcription, not difficulty. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- answer-first generation | pass in principle | Sample rational nonnegative `U,V`, multiply them, and retain the JSON-encoded factor matrices. |
++| H -- Track A structural hardness | **fail / unsupported** | Section 3 is worst-case only and does not cover the sampled-product distribution. |
++| H -- Track B no-tool compression | **fail / unsupported** | No efficient exact general recovery algorithm plus distinct compact route is supplied; the paper's explicit special cases are immediate. |
++| V -- exact witness checking | pass in principle | Check dimensions and rational nonnegativity, multiply the submitted factors exactly, and compare every entry with `M`. |
++| G7/G8/G9 for Section 4 | **fail** | The construction is fixed up to symmetries; scaling it by repetition makes the answer longer rather than the reasoning harder. |
++| Overall | **rejected at Step 0** | G, H, and V do not hold simultaneously for a supported family. |
++
++The 200,000-sample guess test, adversary panel, and LLM hardening loop were not
++run.  Those are measurements of a qualifying family; they cannot supply the
++missing distributional theorem or turn worst-case NP-hardness into an honest
++Track A claim.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..bc676eae7db1c7ce8696e69d75cb2a40dd4871e7
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,140 @@
++# Rejected: arXiv 1605.04000
++
++Paper: Yaroslav Shitov, [*The nonnegative rank of a matrix: Hard
++problems, easy solutions*](https://arxiv.org/abs/1605.04000), v2 (2017).
++
++## Decision
++
++This paper does not supply a problem distribution for which **G
++(generatable), H (hard in the declared track), and V (exactly verifiable)**
++can all be justified.  The prior-triage proposal--sample nonnegative factors
++`U,V`, publish `M=UV`, and ask for a factorization--does satisfy G and V, but
++it does not satisfy the distributional requirement in H.  The paper proves a
++worst-case reduction from CLIQUE COVER; it says nothing about the difficulty
++of recovering factors of a random inverse-generated product.
++
++I therefore stopped at Step 0.  No generator, gate report, README, or oracle
++transcript was manufactured for a family whose hardness claim is unsupported.
++
++## What the paper actually proves
++
++For a nonnegative matrix `A` over a subfield `F` of the reals, Section 2
++defines `rank_F^+(A)` as the least number of nonnegative rank-one matrices over
++`F` whose sum is `A`.
++
++The paper then has three relevant pieces.
++
++1. **An explicit rank-four gadget.**  Observation 1 states that the displayed
++   matrix `B(alpha_1,...,alpha_n)` has nonnegative rank four exactly when all
++   `alpha_i` are the same element of `[0,1] cap F`.  Its proof is the explicit
++   convex-combination identity for the rows of the fixed `4 x 4` matrix
++   `B_0`: the top row is assembled from the two alternative sums of rows of
++   `B_0`.
++2. **A worst-case reduction.**  Theorem 2 and Corollary 3 convert a matrix
++   completion problem into ordinary nonnegative rank by adjoining one copy of
++   the rank-four gadget.  Section 3 associates a partial `0/1` matrix `X(G)`
++   with an arbitrary graph `G` and proves that the minimum nonnegative rank of
++   a completion is exactly the clique-cover number of `G`.  Applying
++   Corollary 3 to the variables proves that computing ordinary nonnegative rank
++   is NP-hard.
++3. **One field-separating example.**  Section 4 gives a fixed integral
++   `21 x 21` matrix.  Three applications of Corollary 3 reduce its rank
++   calculation to the fixed `5 x 5` matrix `C(a,b,c,d)`.  The only possible
++   rank-three parameters are written down (`b=c=d=1 +/- sqrt(1/2)` and
++   `a=2-1/b`), and the paper explicitly displays the three nonnegative
++   rank-one summands for the real solution.  This proves that rational and real
++   nonnegative rank can differ; it is not a growing search family.
++
++The paper gives no average-case theorem, planted-distribution theorem, FPT
++boundary, or parameter regime asserting that random products of sampled
++nonnegative factors are hard to factor.
++
++## Step-0 discriminating test
++
++For the proposed inverse family, the certificate is produced by the generator
++itself:
++
++```text
++sample U >= 0 and V >= 0; compute M = U V; retain (U,V)
++```
++
++This costs `O(m r n)` exact arithmetic operations for an `m x r` factor and an
++`r x n` factor.  That is a valid answer-first construction, not a solver for
++recovering `(U,V)` from `M`.  The fatal issue is instead the separate H gate:
++the distribution of matrices produced this way is not the reduction-image
++distribution in Section 3, and the paper's worst-case NP-hardness theorem does
++not transfer to it.
++
++Random dense positive factorizations also have scaling and permutation
++symmetries and commonly have further nearby nonnegative factorizations.  A
++checker can correctly accept all of them, but non-uniqueness does not establish
++search hardness.  Restricting the answer to small integer factors merely to
++obtain a finite `CERTIFICATE_LANGUAGE` would define a new bounded integer
++factorization problem; the paper neither studies nor proves hardness for that
++planted distribution.
++
++Consequently neither track is honest:
++
++- **Track A cannot be declared.**  Section 3 proves worst-case NP-hardness for
++  matrices obtained from arbitrary clique-cover instances.  The task
++  explicitly forbids using worst-case NP-hardness as evidence that the chosen
++  random inverse-generated distribution is hard.
++- **Track B cannot be declared for general exact NMF.**  The paper supplies no
++  efficient exact factor-recovery algorithm whose measured mechanical cost
++  could be contrasted with a short structural route.  Calling a general
++  exponential search or a non-guaranteed numerical NMF heuristic the Track B
++  reference algorithm would violate the definition of that track.  For the
++  explicit Section 2 and Section 4 constructions, by contrast, the compact
++  factorization is already displayed in the paper, so there is no meaningful
++  mechanical-versus-compact gap.
++
++## Why the paper's reduction does not repair the family
++
++One could sample a graph together with a clique cover, form `X(G)`, and carry
++the cover through Section 3.  This still does not qualify.
++
++- Planting a clique cover (equivalently, a colouring of the complement) does
++  not inherit worst-case hardness.  The paper provides no hard planted graph
++  distribution, and does not analyze the spectral, greedy, or colouring
++  attacks required for such a distribution.
++- If the solver is asked only for the cover labels, the computational core is
++  graph colouring/clique cover.  This can be reported as a paper-licensed
++  reduction, but it is not an algebraic nonnegative-factorization family and
++  still lacks distributional hardness.
++- If the ordinary matrix and an actual nonnegative factorization are required,
++  every completion variable eliminated by Theorem 2 contributes four more
++  rank-one summands.  Even counting only one atom per summand, the G9 limit of
++  256 atomic answer elements permits fewer than 64 such variables; an honest
++  pair of factor matrices is much larger.  Thus the reduction's growing hard
++  regime is incompatible with the required writable certificate cap.
++- A factorization witnesses only an upper bound on nonnegative rank.  Asking
++  for the *minimum* rank would additionally require an executable optimality
++  certificate.  The paper's appeal to the optimum clique-cover number is not
++  such a locally checkable certificate.
++
++## Other native candidates considered
++
++| Candidate task | Outcome |
++|---|---|
++| Factor the explicit `B(alpha,...,alpha)` gadget | G and V pass, but Observation 1's proof gives the factorization directly from the visible `alpha`; H fails. |
++| Recover the common `alpha` in `B` | It is a displayed matrix entry, so the verifier's lookup is also a solver; H fails. |
++| Factor the Section 4 `21 x 21` matrix over the reals | The paper prints the algebraic parameters and three summands, so this is a fixed lookup task and does not scale. |
++| Prove that the same matrix has no rational factorization of the target size | The paper gives a mathematical impossibility proof, not a bounded concrete negative certificate that the requested checker can validate cheaply. |
++| Take permuted or diagonally scaled copies of the Section 4 example | These are structure-preserving relabellings/scalings of one fixed problem and must collapse under an honest canonical key; they do not provide unlimited structural diversity. |
++| Use block-diagonal sums of the explicit gadgets | The certificate grows with the number of blocks, while each block is recognized and factored by the same displayed identity; this scales transcription, not difficulty. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- answer-first generation | pass in principle | Sample rational nonnegative `U,V`, multiply them, and retain the JSON-encoded factor matrices. |
++| H -- Track A structural hardness | **fail / unsupported** | Section 3 is worst-case only and does not cover the sampled-product distribution. |
++| H -- Track B no-tool compression | **fail / unsupported** | No efficient exact general recovery algorithm plus distinct compact route is supplied; the paper's explicit special cases are immediate. |
++| V -- exact witness checking | pass in principle | Check dimensions and rational nonnegativity, multiply the submitted factors exactly, and compare every entry with `M`. |
++| G7/G8/G9 for Section 4 | **fail** | The construction is fixed up to symmetries; scaling it by repetition makes the answer longer rather than the reasoning harder. |
++| Overall | **rejected at Step 0** | G, H, and V do not hold simultaneously for a supported family. |
++
++The 200,000-sample guess test, adversary panel, and LLM hardening loop were not
++run.  Those are measurements of a qualifying family; they cannot supply the
++missing distributional theorem or turn worst-case NP-hardness into an honest
++Track A claim.
+
+exec
+/bin/bash -lc "sed -n '1,280p' REJECTED.md && git status --short -- REJECTED.md gen_1605_04000.py selftest_report.json README.md llm_loop_transcript.jsonl" in /home/gson/gvrepo/results/1605.04000
+ exited 128 in 0ms:
+# Rejected: arXiv 1605.04000
+
+Paper: Yaroslav Shitov, [*The nonnegative rank of a matrix: Hard
+problems, easy solutions*](https://arxiv.org/abs/1605.04000), v2 (2017).
+
+## Decision
+
+This paper does not supply a problem distribution for which **G
+(generatable), H (hard in the declared track), and V (exactly verifiable)**
+can all be justified.  The prior-triage proposal--sample nonnegative factors
+`U,V`, publish `M=UV`, and ask for a factorization--does satisfy G and V, but
+it does not satisfy the distributional requirement in H.  The paper proves a
+worst-case reduction from CLIQUE COVER; it says nothing about the difficulty
+of recovering factors of a random inverse-generated product.
+
+I therefore stopped at Step 0.  No generator, gate report, README, or oracle
+transcript was manufactured for a family whose hardness claim is unsupported.
+
+## What the paper actually proves
+
+For a nonnegative matrix `A` over a subfield `F` of the reals, Section 2
+defines `rank_F^+(A)` as the least number of nonnegative rank-one matrices over
+`F` whose sum is `A`.
+
+The paper then has three relevant pieces.
+
+1. **An explicit rank-four gadget.**  Observation 1 states that the displayed
+   matrix `B(alpha_1,...,alpha_n)` has nonnegative rank four exactly when all
+   `alpha_i` are the same element of `[0,1] cap F`.  Its proof is the explicit
+   convex-combination identity for the rows of the fixed `4 x 4` matrix
+   `B_0`: the top row is assembled from the two alternative sums of rows of
+   `B_0`.
+2. **A worst-case reduction.**  Theorem 2 and Corollary 3 convert a matrix
+   completion problem into ordinary nonnegative rank by adjoining one copy of
+   the rank-four gadget.  Section 3 associates a partial `0/1` matrix `X(G)`
+   with an arbitrary graph `G` and proves that the minimum nonnegative rank of
+   a completion is exactly the clique-cover number of `G`.  Applying
+   Corollary 3 to the variables proves that computing ordinary nonnegative rank
+   is NP-hard.
+3. **One field-separating example.**  Section 4 gives a fixed integral
+   `21 x 21` matrix.  Three applications of Corollary 3 reduce its rank
+   calculation to the fixed `5 x 5` matrix `C(a,b,c,d)`.  The only possible
+   rank-three parameters are written down (`b=c=d=1 +/- sqrt(1/2)` and
+   `a=2-1/b`), and the paper explicitly displays the three nonnegative
+   rank-one summands for the real solution.  This proves that rational and real
+   nonnegative rank can differ; it is not a growing search family.
+
+The paper gives no average-case theorem, planted-distribution theorem, FPT
+boundary, or parameter regime asserting that random products of sampled
+nonnegative factors are hard to factor.
+
+## Step-0 discriminating test
+
+For the proposed inverse family, the certificate is produced by the generator
+itself:
+
+```text
+sample U >= 0 and V >= 0; compute M = U V; retain (U,V)
+```
+
+This costs `O(m r n)` exact arithmetic operations for an `m x r` factor and an
+`r x n` factor.  That is a valid answer-first construction, not a solver for
+recovering `(U,V)` from `M`.  The fatal issue is instead the separate H gate:
+the distribution of matrices produced this way is not the reduction-image
+distribution in Section 3, and the paper's worst-case NP-hardness theorem does
+not transfer to it.
+
+Random dense positive factorizations also have scaling and permutation
+symmetries and commonly have further nearby nonnegative factorizations.  A
+checker can correctly accept all of them, but non-uniqueness does not establish
+search hardness.  Restricting the answer to small integer factors merely to
+obtain a finite `CERTIFICATE_LANGUAGE` would define a new bounded integer
+factorization problem; the paper neither studies nor proves hardness for that
+planted distribution.
+
+Consequently neither track is honest:
+
+- **Track A cannot be declared.**  Section 3 proves worst-case NP-hardness for
+  matrices obtained from arbitrary clique-cover instances.  The task
+  explicitly forbids using worst-case NP-hardness as evidence that the chosen
+  random inverse-generated distribution is hard.
+- **Track B cannot be declared for general exact NMF.**  The paper supplies no
+  efficient exact factor-recovery algorithm whose measured mechanical cost
+  could be contrasted with a short structural route.  Calling a general
+  exponential search or a non-guaranteed numerical NMF heuristic the Track B
+  reference algorithm would violate the definition of that track.  For the
+  explicit Section 2 and Section 4 constructions, by contrast, the compact
+  factorization is already displayed in the paper, so there is no meaningful
+  mechanical-versus-compact gap.
+
+## Why the paper's reduction does not repair the family
+
+One could sample a graph together with a clique cover, form `X(G)`, and carry
+the cover through Section 3.  This still does not qualify.
+
+- Planting a clique cover (equivalently, a colouring of the complement) does
+  not inherit worst-case hardness.  The paper provides no hard planted graph
+  distribution, and does not analyze the spectral, greedy, or colouring
+  attacks required for such a distribution.
+- If the solver is asked only for the cover labels, the computational core is
+  graph colouring/clique cover.  This can be reported as a paper-licensed
+  reduction, but it is not an algebraic nonnegative-factorization family and
+  still lacks distributional hardness.
+- If the ordinary matrix and an actual nonnegative factorization are required,
+  every completion variable eliminated by Theorem 2 contributes four more
+  rank-one summands.  Even counting only one atom per summand, the G9 limit of
+  256 atomic answer elements permits fewer than 64 such variables; an honest
+  pair of factor matrices is much larger.  Thus the reduction's growing hard
+  regime is incompatible with the required writable certificate cap.
+- A factorization witnesses only an upper bound on nonnegative rank.  Asking
+  for the *minimum* rank would additionally require an executable optimality
+  certificate.  The paper's appeal to the optimum clique-cover number is not
+  such a locally checkable certificate.
+
+## Other native candidates considered
+
+| Candidate task | Outcome |
+|---|---|
+| Factor the explicit `B(alpha,...,alpha)` gadget | G and V pass, but Observation 1's proof gives the factorization directly from the visible `alpha`; H fails. |
+| Recover the common `alpha` in `B` | It is a displayed matrix entry, so the verifier's lookup is also a solver; H fails. |
+| Factor the Section 4 `21 x 21` matrix over the reals | The paper prints the algebraic parameters and three summands, so this is a fixed lookup task and does not scale. |
+| Prove that the same matrix has no rational factorization of the target size | The paper gives a mathematical impossibility proof, not a bounded concrete negative certificate that the requested checker can validate cheaply. |
+| Take permuted or diagonally scaled copies of the Section 4 example | These are structure-preserving relabellings/scalings of one fixed problem and must collapse under an honest canonical key; they do not provide unlimited structural diversity. |
+| Use block-diagonal sums of the explicit gadgets | The certificate grows with the number of blocks, while each block is recognized and factored by the same displayed identity; this scales transcription, not difficulty. |
+
+## Gate outcome
+
+| Requirement | Result | Evidence |
+|---|---:|---|
+| G -- answer-first generation | pass in principle | Sample rational nonnegative `U,V`, multiply them, and retain the JSON-encoded factor matrices. |
+| H -- Track A structural hardness | **fail / unsupported** | Section 3 is worst-case only and does not cover the sampled-product distribution. |
+| H -- Track B no-tool compression | **fail / unsupported** | No efficient exact general recovery algorithm plus distinct compact route is supplied; the paper's explicit special cases are immediate. |
+| V -- exact witness checking | pass in principle | Check dimensions and rational nonnegativity, multiply the submitted factors exactly, and compare every entry with `M`. |
+| G7/G8/G9 for Section 4 | **fail** | The construction is fixed up to symmetries; scaling it by repetition makes the answer longer rather than the reasoning harder. |
+| Overall | **rejected at Step 0** | G, H, and V do not hold simultaneously for a supported family. |
+
+The 200,000-sample guess test, adversary panel, and LLM hardening loop were not
+run.  Those are measurements of a qualifying family; they cannot supply the
+missing distributional theorem or turn worst-case NP-hardness into an honest
+Track A claim.
+fatal: not a git repository (or any of the parent directories): .git
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..bc676eae7db1c7ce8696e69d75cb2a40dd4871e7
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,140 @@
++# Rejected: arXiv 1605.04000
++
++Paper: Yaroslav Shitov, [*The nonnegative rank of a matrix: Hard
++problems, easy solutions*](https://arxiv.org/abs/1605.04000), v2 (2017).
++
++## Decision
++
++This paper does not supply a problem distribution for which **G
++(generatable), H (hard in the declared track), and V (exactly verifiable)**
++can all be justified.  The prior-triage proposal--sample nonnegative factors
++`U,V`, publish `M=UV`, and ask for a factorization--does satisfy G and V, but
++it does not satisfy the distributional requirement in H.  The paper proves a
++worst-case reduction from CLIQUE COVER; it says nothing about the difficulty
++of recovering factors of a random inverse-generated product.
++
++I therefore stopped at Step 0.  No generator, gate report, README, or oracle
++transcript was manufactured for a family whose hardness claim is unsupported.
++
++## What the paper actually proves
++
++For a nonnegative matrix `A` over a subfield `F` of the reals, Section 2
++defines `rank_F^+(A)` as the least number of nonnegative rank-one matrices over
++`F` whose sum is `A`.
++
++The paper then has three relevant pieces.
++
++1. **An explicit rank-four gadget.**  Observation 1 states that the displayed
++   matrix `B(alpha_1,...,alpha_n)` has nonnegative rank four exactly when all
++   `alpha_i` are the same element of `[0,1] cap F`.  Its proof is the explicit
++   convex-combination identity for the rows of the fixed `4 x 4` matrix
++   `B_0`: the top row is assembled from the two alternative sums of rows of
++   `B_0`.
++2. **A worst-case reduction.**  Theorem 2 and Corollary 3 convert a matrix
++   completion problem into ordinary nonnegative rank by adjoining one copy of
++   the rank-four gadget.  Section 3 associates a partial `0/1` matrix `X(G)`
++   with an arbitrary graph `G` and proves that the minimum nonnegative rank of
++   a completion is exactly the clique-cover number of `G`.  Applying
++   Corollary 3 to the variables proves that computing ordinary nonnegative rank
++   is NP-hard.
++3. **One field-separating example.**  Section 4 gives a fixed integral
++   `21 x 21` matrix.  Three applications of Corollary 3 reduce its rank
++   calculation to the fixed `5 x 5` matrix `C(a,b,c,d)`.  The only possible
++   rank-three parameters are written down (`b=c=d=1 +/- sqrt(1/2)` and
++   `a=2-1/b`), and the paper explicitly displays the three nonnegative
++   rank-one summands for the real solution.  This proves that rational and real
++   nonnegative rank can differ; it is not a growing search family.
++
++The paper gives no average-case theorem, planted-distribution theorem, FPT
++boundary, or parameter regime asserting that random products of sampled
++nonnegative factors are hard to factor.
++
++## Step-0 discriminating test
++
++For the proposed inverse family, the certificate is produced by the generator
++itself:
++
++```text
++sample U >= 0 and V >= 0; compute M = U V; retain (U,V)
++```
++
++This costs `O(m r n)` exact arithmetic operations for an `m x r` factor and an
++`r x n` factor.  That is a valid answer-first construction, not a solver for
++recovering `(U,V)` from `M`.  The fatal issue is instead the separate H gate:
++the distribution of matrices produced this way is not the reduction-image
++distribution in Section 3, and the paper's worst-case NP-hardness theorem does
++not transfer to it.
++
++Random dense positive factorizations also have scaling and permutation
++symmetries and commonly have further nearby nonnegative factorizations.  A
++checker can correctly accept all of them, but non-uniqueness does not establish
++search hardness.  Restricting the answer to small integer factors merely to
++obtain a finite `CERTIFICATE_LANGUAGE` would define a new bounded integer
++factorization problem; the paper neither studies nor proves hardness for that
++planted distribution.
++
++Consequently neither track is honest:
++
++- **Track A cannot be declared.**  Section 3 proves worst-case NP-hardness for
++  matrices obtained from arbitrary clique-cover instances.  The task
++  explicitly forbids using worst-case NP-hardness as evidence that the chosen
++  random inverse-generated distribution is hard.
++- **Track B cannot be declared for general exact NMF.**  The paper supplies no
++  efficient exact factor-recovery algorithm whose measured mechanical cost
++  could be contrasted with a short structural route.  Calling a general
++  exponential search or a non-guaranteed numerical NMF heuristic the Track B
++  reference algorithm would violate the definition of that track.  For the
++  explicit Section 2 and Section 4 constructions, by contrast, the compact
++  factorization is already displayed in the paper, so there is no meaningful
++  mechanical-versus-compact gap.
++
++## Why the paper's reduction does not repair the family
++
++One could sample a graph together with a clique cover, form `X(G)`, and carry
++the cover through Section 3.  This still does not qualify.
++
++- Planting a clique cover (equivalently, a colouring of the complement) does
++  not inherit worst-case hardness.  The paper provides no hard planted graph
++  distribution, and does not analyze the spectral, greedy, or colouring
++  attacks required for such a distribution.
++- If the solver is asked only for the cover labels, the computational core is
++  graph colouring/clique cover.  This can be reported as a paper-licensed
++  reduction, but it is not an algebraic nonnegative-factorization family and
++  still lacks distributional hardness.
++- If the ordinary matrix and an actual nonnegative factorization are required,
++  every completion variable eliminated by Theorem 2 contributes four more
++  rank-one summands.  Even counting only one atom per summand, the G9 limit of
++  256 atomic answer elements permits fewer than 64 such variables; an honest
++  pair of factor matrices is much larger.  Thus the reduction's growing hard
++  regime is incompatible with the required writable certificate cap.
++- A factorization witnesses only an upper bound on nonnegative rank.  Asking
++  for the *minimum* rank would additionally require an executable optimality
++  certificate.  The paper's appeal to the optimum clique-cover number is not
++  such a locally checkable certificate.
++
++## Other native candidates considered
++
++| Candidate task | Outcome |
++|---|---|
++| Factor the explicit `B(alpha,...,alpha)` gadget | G and V pass, but Observation 1's proof gives the factorization directly from the visible `alpha`; H fails. |
++| Recover the common `alpha` in `B` | It is a displayed matrix entry, so the verifier's lookup is also a solver; H fails. |
++| Factor the Section 4 `21 x 21` matrix over the reals | The paper prints the algebraic parameters and three summands, so this is a fixed lookup task and does not scale. |
++| Prove that the same matrix has no rational factorization of the target size | The paper gives a mathematical impossibility proof, not a bounded concrete negative certificate that the requested checker can validate cheaply. |
++| Take permuted or diagonally scaled copies of the Section 4 example | These are structure-preserving relabellings/scalings of one fixed problem and must collapse under an honest canonical key; they do not provide unlimited structural diversity. |
++| Use block-diagonal sums of the explicit gadgets | The certificate grows with the number of blocks, while each block is recognized and factored by the same displayed identity; this scales transcription, not difficulty. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- answer-first generation | pass in principle | Sample rational nonnegative `U,V`, multiply them, and retain the JSON-encoded factor matrices. |
++| H -- Track A structural hardness | **fail / unsupported** | Section 3 is worst-case only and does not cover the sampled-product distribution. |
++| H -- Track B no-tool compression | **fail / unsupported** | No efficient exact general recovery algorithm plus distinct compact route is supplied; the paper's explicit special cases are immediate. |
++| V -- exact witness checking | pass in principle | Check dimensions and rational nonnegativity, multiply the submitted factors exactly, and compare every entry with `M`. |
++| G7/G8/G9 for Section 4 | **fail** | The construction is fixed up to symmetries; scaling it by repetition makes the answer longer rather than the reasoning harder. |
++| Overall | **rejected at Step 0** | G, H, and V do not hold simultaneously for a supported family. |
++
++The 200,000-sample guess test, adversary panel, and LLM hardening loop were not
++run.  Those are measurements of a qualifying family; they cannot supply the
++missing distributional theorem or turn worst-case NP-hardness into an honest
++Track A claim.
+
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1605.04000/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..62aceaa46be9a37c34b29c02186a9ce28cbe2ad1
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,141 @@
++# Rejected: arXiv 1605.04000
++
++Paper: Yaroslav Shitov, [*The nonnegative rank of a matrix: Hard
++problems, easy solutions*](https://arxiv.org/abs/1605.04000), v2 (2017).
++
++## Decision
++
++This paper does not supply a problem distribution for which **G
++(generatable), H (hard in the declared track), and V (exactly verifiable)**
++can all be justified.  The prior-triage proposal--sample nonnegative factors
++`U,V`, publish `M=UV`, and ask for a factorization--does satisfy G and V, but
++it does not satisfy the distributional requirement in H.  The paper proves a
++worst-case reduction from CLIQUE COVER; it says nothing about the difficulty
++of recovering factors of a random inverse-generated product.
++
++I therefore stopped at Step 0.  No generator, gate report, README, or oracle
++transcript was manufactured for a family whose hardness claim is unsupported.
++
++## What the paper actually proves
++
++For a nonnegative matrix `A` over a subfield `F` of the reals, Section 2
++defines `rank_F^+(A)` as the least number of nonnegative rank-one matrices over
++`F` whose sum is `A`.
++
++The paper then has three relevant pieces.
++
++1. **An explicit rank-four gadget.**  Observation 1 states that the displayed
++   matrix `B(alpha_1,...,alpha_n)` has nonnegative rank four exactly when all
++   `alpha_i` are the same element of `[0,1] ∩ F`.  Its proof is the explicit
++   convex-combination identity for the rows of the fixed `4 x 4` matrix
++   `B_0`: the top row is assembled from the two alternative sums of rows of
++   `B_0`.
++2. **A worst-case reduction.**  Theorem 2 and Corollary 3 convert a matrix
++   completion problem into ordinary nonnegative rank by adjoining one copy of
++   the rank-four gadget.  Section 3 associates a partial `0/1` matrix `X(G)`
++   with an arbitrary graph `G` and proves that the minimum nonnegative rank of
++   a completion is exactly the clique-cover number of `G`.  Applying
++   Corollary 3 to the variables proves that computing ordinary nonnegative rank
++   is NP-hard.
++3. **One field-separating example.**  Section 4 gives a fixed integral
++   `21 x 21` matrix.  Three applications of Corollary 3 reduce its rank
++   calculation to the fixed `5 x 5` matrix `C(a,b,c,d)`.  The only possible
++   rank-three parameters are written down (`b=c=d=1 +/- sqrt(1/2)` and
++   `a=2-1/b`), and the paper explicitly displays the three nonnegative
++   rank-one summands for the real solution.  This proves that rational and real
++   nonnegative rank can differ; it is not a growing search family.
++
++The paper gives no average-case theorem, planted-distribution theorem, FPT
++boundary, or parameter regime asserting that random products of sampled
++nonnegative factors are hard to factor.
++
++## Step-0 discriminating test
++
++For the proposed inverse family, the certificate is produced by the generator
++itself:
++
++```text
++sample U >= 0 and V >= 0; compute M = U V; retain (U,V)
++```
++
++This costs `O(m r n)` exact arithmetic operations for an `m x r` factor and an
++`r x n` factor.  That is a valid answer-first construction, not a solver for
++recovering `(U,V)` from `M`.  The fatal issue is instead the separate H gate:
++the distribution of matrices produced this way is not the reduction-image
++distribution in Section 3, and the paper's worst-case NP-hardness theorem does
++not transfer to it.
++
++Random dense positive factorizations also have scaling and permutation
++symmetries and commonly have further nearby nonnegative factorizations.  A
++checker can correctly accept all of them, but non-uniqueness does not establish
++search hardness.  Restricting the answer to small integer factors merely to
++obtain a finite `CERTIFICATE_LANGUAGE` would define a new bounded integer
++factorization problem; the paper neither studies nor proves hardness for that
++planted distribution.
++
++Consequently neither track is honest:
++
++- **Track A cannot be declared.**  Section 3 proves worst-case NP-hardness for
++  matrices obtained from arbitrary clique-cover instances.  The task
++  explicitly forbids using worst-case NP-hardness as evidence that the chosen
++  random inverse-generated distribution is hard.
++- **Track B cannot be declared for general exact NMF.**  The paper supplies no
++  efficient exact factor-recovery algorithm whose measured mechanical cost
++  could be contrasted with a short structural route.  Calling a general
++  exponential search or a non-guaranteed numerical NMF heuristic the Track B
++  reference algorithm would violate the definition of that track.  For the
++  explicit Section 2 and Section 4 constructions, by contrast, the compact
++  factorization is already displayed in the paper, so there is no meaningful
++  mechanical-versus-compact gap.
++
++## Why the paper's reduction does not repair the family
++
++One could sample a graph together with a clique cover, form `X(G)`, and carry
++the cover through Section 3.  This still does not qualify.
++
++- Planting a clique cover (equivalently, a colouring of the complement) does
++  not inherit worst-case hardness.  The paper provides no hard planted graph
++  distribution, and does not analyze the spectral, greedy, or colouring
++  attacks required for such a distribution.
++- If the solver is asked only for the cover labels, the computational core is
++  graph colouring/clique cover.  This can be reported as a paper-licensed
++  reduction, but it is not an algebraic nonnegative-factorization family and
++  still lacks distributional hardness.
++- If the ordinary matrix and an actual explicit nonnegative factorization are
++  required, every completion variable eliminated by Theorem 2 contributes four
++  more rank-one summands.  Even counting only one atom per summand, the G9 limit
++  of 256 atomic answer elements permits fewer than 64 such variables; a pair of
++  factor matrices is much larger.  A custom macro that compresses all fixed
++  gadgets back to cover labels avoids that cap only by returning to the graph
++  certificate in the preceding bullet, whose distribution still lacks H.
++- A factorization witnesses only an upper bound on nonnegative rank.  Asking
++  for the *minimum* rank would additionally require an executable optimality
++  certificate.  The paper's appeal to the optimum clique-cover number is not
++  such a locally checkable certificate.
++
++## Other native candidates considered
++
++| Candidate task | Outcome |
++|---|---|
++| Factor the explicit `B(alpha,...,alpha)` gadget | G and V pass, but Observation 1's proof gives the factorization directly from the visible `alpha`; H fails. |
++| Recover the common `alpha` in `B` | It is a displayed matrix entry, so the verifier's lookup is also a solver; H fails. |
++| Factor the Section 4 `21 x 21` matrix over the reals | The paper prints the algebraic parameters and three summands, so this is a fixed lookup task and does not scale. |
++| Prove that the same matrix has no rational factorization of the target size | The paper gives a mathematical impossibility proof, not a bounded concrete negative certificate that the requested checker can validate cheaply. |
++| Take permuted or diagonally scaled copies of the Section 4 example | These are structure-preserving relabellings/scalings of one fixed problem and must collapse under an honest canonical key; they do not provide unlimited structural diversity. |
++| Use block-diagonal sums of the explicit gadgets | The certificate grows with the number of blocks, while each block is recognized and factored by the same displayed identity; this scales transcription, not difficulty. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- answer-first generation | pass in principle | Sample rational nonnegative `U,V`, multiply them, and retain the JSON-encoded factor matrices. |
++| H -- Track A structural hardness | **fail / unsupported** | Section 3 is worst-case only and does not cover the sampled-product distribution. |
++| H -- Track B no-tool compression | **fail / unsupported** | No efficient exact general recovery algorithm plus distinct compact route is supplied; the paper's explicit special cases are immediate. |
++| V -- exact witness checking | pass in principle | Check dimensions and rational nonnegativity, multiply the submitted factors exactly, and compare every entry with `M`. |
++| G7/G8/G9 for Section 4 | **fail** | The construction is fixed up to symmetries; scaling it by repetition makes the answer longer rather than the reasoning harder. |
++| Overall | **rejected at Step 0** | G, H, and V do not hold simultaneously for a supported family. |
++
++The 200,000-sample guess test, adversary panel, and LLM hardening loop were not
++run.  Those are measurements of a qualifying family; they cannot supply the
++missing distributional theorem or turn worst-case NP-hardness into an honest
++Track A claim.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..62aceaa46be9a37c34b29c02186a9ce28cbe2ad1
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,141 @@
++# Rejected: arXiv 1605.04000
++
++Paper: Yaroslav Shitov, [*The nonnegative rank of a matrix: Hard
++problems, easy solutions*](https://arxiv.org/abs/1605.04000), v2 (2017).
++
++## Decision
++
++This paper does not supply a problem distribution for which **G
++(generatable), H (hard in the declared track), and V (exactly verifiable)**
++can all be justified.  The prior-triage proposal--sample nonnegative factors
++`U,V`, publish `M=UV`, and ask for a factorization--does satisfy G and V, but
++it does not satisfy the distributional requirement in H.  The paper proves a
++worst-case reduction from CLIQUE COVER; it says nothing about the difficulty
++of recovering factors of a random inverse-generated product.
++
++I therefore stopped at Step 0.  No generator, gate report, README, or oracle
++transcript was manufactured for a family whose hardness claim is unsupported.
++
++## What the paper actually proves
++
++For a nonnegative matrix `A` over a subfield `F` of the reals, Section 2
++defines `rank_F^+(A)` as the least number of nonnegative rank-one matrices over
++`F` whose sum is `A`.
++
++The paper then has three relevant pieces.
++
++1. **An explicit rank-four gadget.**  Observation 1 states that the displayed
++   matrix `B(alpha_1,...,alpha_n)` has nonnegative rank four exactly when all
++   `alpha_i` are the same element of `[0,1] ∩ F`.  Its proof is the explicit
++   convex-combination identity for the rows of the fixed `4 x 4` matrix
++   `B_0`: the top row is assembled from the two alternative sums of rows of
++   `B_0`.
++2. **A worst-case reduction.**  Theorem 2 and Corollary 3 convert a matrix
++   completion problem into ordinary nonnegative rank by adjoining one copy of
++   the rank-four gadget.  Section 3 associates a partial `0/1` matrix `X(G)`
++   with an arbitrary graph `G` and proves that the minimum nonnegative rank of
++   a completion is exactly the clique-cover number of `G`.  Applying
++   Corollary 3 to the variables proves that computing ordinary nonnegative rank
++   is NP-hard.
++3. **One field-separating example.**  Section 4 gives a fixed integral
++   `21 x 21` matrix.  Three applications of Corollary 3 reduce its rank
++   calculation to the fixed `5 x 5` matrix `C(a,b,c,d)`.  The only possible
++   rank-three parameters are written down (`b=c=d=1 +/- sqrt(1/2)` and
++   `a=2-1/b`), and the paper explicitly displays the three nonnegative
++   rank-one summands for the real solution.  This proves that rational and real
++   nonnegative rank can differ; it is not a growing search family.
++
++The paper gives no average-case theorem, planted-distribution theorem, FPT
++boundary, or parameter regime asserting that random products of sampled
++nonnegative factors are hard to factor.
++
++## Step-0 discriminating test
++
++For the proposed inverse family, the certificate is produced by the generator
++itself:
++
++```text
++sample U >= 0 and V >= 0; compute M = U V; retain (U,V)
++```
++
++This costs `O(m r n)` exact arithmetic operations for an `m x r` factor and an
++`r x n` factor.  That is a valid answer-first construction, not a solver for
++recovering `(U,V)` from `M`.  The fatal issue is instead the separate H gate:
++the distribution of matrices produced this way is not the reduction-image
++distribution in Section 3, and the paper's worst-case NP-hardness theorem does
++not transfer to it.
++
++Random dense positive factorizations also have scaling and permutation
++symmetries and commonly have further nearby nonnegative factorizations.  A
++checker can correctly accept all of them, but non-uniqueness does not establish
++search hardness.  Restricting the answer to small integer factors merely to
++obtain a finite `CERTIFICATE_LANGUAGE` would define a new bounded integer
++factorization problem; the paper neither studies nor proves hardness for that
++planted distribution.
++
++Consequently neither track is honest:
++
++- **Track A cannot be declared.**  Section 3 proves worst-case NP-hardness for
++  matrices obtained from arbitrary clique-cover instances.  The task
++  explicitly forbids using worst-case NP-hardness as evidence that the chosen
++  random inverse-generated distribution is hard.
++- **Track B cannot be declared for general exact NMF.**  The paper supplies no
++  efficient exact factor-recovery algorithm whose measured mechanical cost
++  could be contrasted with a short structural route.  Calling a general
++  exponential search or a non-guaranteed numerical NMF heuristic the Track B
++  reference algorithm would violate the definition of that track.  For the
++  explicit Section 2 and Section 4 constructions, by contrast, the compact
++  factorization is already displayed in the paper, so there is no meaningful
++  mechanical-versus-compact gap.
++
++## Why the paper's reduction does not repair the family
++
++One could sample a graph together with a clique cover, form `X(G)`, and carry
++the cover through Section 3.  This still does not qualify.
++
++- Planting a clique cover (equivalently, a colouring of the complement) does
++  not inherit worst-case hardness.  The paper provides no hard planted graph
++  distribution, and does not analyze the spectral, greedy, or colouring
++  attacks required for such a distribution.
++- If the solver is asked only for the cover labels, the computational core is
++  graph colouring/clique cover.  This can be reported as a paper-licensed
++  reduction, but it is not an algebraic nonnegative-factorization family and
++  still lacks distributional hardness.
++- If the ordinary matrix and an actual explicit nonnegative factorization are
++  required, every completion variable eliminated by Theorem 2 contributes four
++  more rank-one summands.  Even counting only one atom per summand, the G9 limit
++  of 256 atomic answer elements permits fewer than 64 such variables; a pair of
++  factor matrices is much larger.  A custom macro that compresses all fixed
++  gadgets back to cover labels avoids that cap only by returning to the graph
++  certificate in the preceding bullet, whose distribution still lacks H.
++- A factorization witnesses only an upper bound on nonnegative rank.  Asking
++  for the *minimum* rank would additionally require an executable optimality
++  certificate.  The paper's appeal to the optimum clique-cover number is not
++  such a locally checkable certificate.
++
++## Other native candidates considered
++
++| Candidate task | Outcome |
++|---|---|
++| Factor the explicit `B(alpha,...,alpha)` gadget | G and V pass, but Observation 1's proof gives the factorization directly from the visible `alpha`; H fails. |
++| Recover the common `alpha` in `B` | It is a displayed matrix entry, so the verifier's lookup is also a solver; H fails. |
++| Factor the Section 4 `21 x 21` matrix over the reals | The paper prints the algebraic parameters and three summands, so this is a fixed lookup task and does not scale. |
++| Prove that the same matrix has no rational factorization of the target size | The paper gives a mathematical impossibility proof, not a bounded concrete negative certificate that the requested checker can validate cheaply. |
++| Take permuted or diagonally scaled copies of the Section 4 example | These are structure-preserving relabellings/scalings of one fixed problem and must collapse under an honest canonical key; they do not provide unlimited structural diversity. |
++| Use block-diagonal sums of the explicit gadgets | The certificate grows with the number of blocks, while each block is recognized and factored by the same displayed identity; this scales transcription, not difficulty. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- answer-first generation | pass in principle | Sample rational nonnegative `U,V`, multiply them, and retain the JSON-encoded factor matrices. |
++| H -- Track A structural hardness | **fail / unsupported** | Section 3 is worst-case only and does not cover the sampled-product distribution. |
++| H -- Track B no-tool compression | **fail / unsupported** | No efficient exact general recovery algorithm plus distinct compact route is supplied; the paper's explicit special cases are immediate. |
++| V -- exact witness checking | pass in principle | Check dimensions and rational nonnegativity, multiply the submitted factors exactly, and compare every entry with `M`. |
++| G7/G8/G9 for Section 4 | **fail** | The construction is fixed up to symmetries; scaling it by repetition makes the answer longer rather than the reasoning harder. |
++| Overall | **rejected at Step 0** | G, H, and V do not hold simultaneously for a supported family. |
++
++The 200,000-sample guess test, adversary panel, and LLM hardening loop were not
++run.  Those are measurements of a qualifying family; they cannot supply the
++missing distributional theorem or turn worst-case NP-hardness into an honest
++Track A claim.
+
+codex
+Rejected at Step 0. The proposed \(M=UV\) family is generatable and exactly verifiable, but fails the required hardness justification: [Section 3 of the paper](https://arxiv.org/pdf/1605.04000) proves only worst-case NP-hardness via clique cover, not hardness for randomly planted products. The paper’s other factorizations are explicit or fixed-size, so Track B and scaling also fail.
+
+Full analysis: [REJECTED.md](/home/gson/gvrepo/results/1605.04000/REJECTED.md)
+
+Per the task instructions, no generator, fabricated gate report, or hardening transcript was created.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..62aceaa46be9a37c34b29c02186a9ce28cbe2ad1
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,141 @@
++# Rejected: arXiv 1605.04000
++
++Paper: Yaroslav Shitov, [*The nonnegative rank of a matrix: Hard
++problems, easy solutions*](https://arxiv.org/abs/1605.04000), v2 (2017).
++
++## Decision
++
++This paper does not supply a problem distribution for which **G
++(generatable), H (hard in the declared track), and V (exactly verifiable)**
++can all be justified.  The prior-triage proposal--sample nonnegative factors
++`U,V`, publish `M=UV`, and ask for a factorization--does satisfy G and V, but
++it does not satisfy the distributional requirement in H.  The paper proves a
++worst-case reduction from CLIQUE COVER; it says nothing about the difficulty
++of recovering factors of a random inverse-generated product.
++
++I therefore stopped at Step 0.  No generator, gate report, README, or oracle
++transcript was manufactured for a family whose hardness claim is unsupported.
++
++## What the paper actually proves
++
++For a nonnegative matrix `A` over a subfield `F` of the reals, Section 2
++defines `rank_F^+(A)` as the least number of nonnegative rank-one matrices over
++`F` whose sum is `A`.
++
++The paper then has three relevant pieces.
++
++1. **An explicit rank-four gadget.**  Observation 1 states that the displayed
++   matrix `B(alpha_1,...,alpha_n)` has nonnegative rank four exactly when all
++   `alpha_i` are the same element of `[0,1] ∩ F`.  Its proof is the explicit
++   convex-combination identity for the rows of the fixed `4 x 4` matrix
++   `B_0`: the top row is assembled from the two alternative sums of rows of
++   `B_0`.
++2. **A worst-case reduction.**  Theorem 2 and Corollary 3 convert a matrix
++   completion problem into ordinary nonnegative rank by adjoining one copy of
++   the rank-four gadget.  Section 3 associates a partial `0/1` matrix `X(G)`
++   with an arbitrary graph `G` and proves that the minimum nonnegative rank of
++   a completion is exactly the clique-cover number of `G`.  Applying
++   Corollary 3 to the variables proves that computing ordinary nonnegative rank
++   is NP-hard.
++3. **One field-separating example.**  Section 4 gives a fixed integral
++   `21 x 21` matrix.  Three applications of Corollary 3 reduce its rank
++   calculation to the fixed `5 x 5` matrix `C(a,b,c,d)`.  The only possible
++   rank-three parameters are written down (`b=c=d=1 +/- sqrt(1/2)` and
++   `a=2-1/b`), and the paper explicitly displays the three nonnegative
++   rank-one summands for the real solution.  This proves that rational and real
++   nonnegative rank can differ; it is not a growing search family.
++
++The paper gives no average-case theorem, planted-distribution theorem, FPT
++boundary, or parameter regime asserting that random products of sampled
++nonnegative factors are hard to factor.
++
++## Step-0 discriminating test
++
++For the proposed inverse family, the certificate is produced by the generator
++itself:
++
++```text
++sample U >= 0 and V >= 0; compute M = U V; retain (U,V)
++```
++
++This costs `O(m r n)` exact arithmetic operations for an `m x r` factor and an
++`r x n` factor.  That is a valid answer-first construction, not a solver for
++recovering `(U,V)` from `M`.  The fatal issue is instead the separate H gate:
++the distribution of matrices produced this way is not the reduction-image
++distribution in Section 3, and the paper's worst-case NP-hardness theorem does
++not transfer to it.
++
++Random dense positive factorizations also have scaling and permutation
++symmetries and commonly have further nearby nonnegative factorizations.  A
++checker can correctly accept all of them, but non-uniqueness does not establish
++search hardness.  Restricting the answer to small integer factors merely to
++obtain a finite `CERTIFICATE_LANGUAGE` would define a new bounded integer
++factorization problem; the paper neither studies nor proves hardness for that
++planted distribution.
++
++Consequently neither track is honest:
++
++- **Track A cannot be declared.**  Section 3 proves worst-case NP-hardness for
++  matrices obtained from arbitrary clique-cover instances.  The task
++  explicitly forbids using worst-case NP-hardness as evidence that the chosen
++  random inverse-generated distribution is hard.
++- **Track B cannot be declared for general exact NMF.**  The paper supplies no
++  efficient exact factor-recovery algorithm whose measured mechanical cost
++  could be contrasted with a short structural route.  Calling a general
++  exponential search or a non-guaranteed numerical NMF heuristic the Track B
++  reference algorithm would violate the definition of that track.  For the
++  explicit Section 2 and Section 4 constructions, by contrast, the compact
++  factorization is already displayed in the paper, so there is no meaningful
++  mechanical-versus-compact gap.
++
++## Why the paper's reduction does not repair the family
++
++One could sample a graph together with a clique cover, form `X(G)`, and carry
++the cover through Section 3.  This still does not qualify.
++
++- Planting a clique cover (equivalently, a colouring of the complement) does
++  not inherit worst-case hardness.  The paper provides no hard planted graph
++  distribution, and does not analyze the spectral, greedy, or colouring
++  attacks required for such a distribution.
++- If the solver is asked only for the cover labels, the computational core is
++  graph colouring/clique cover.  This can be reported as a paper-licensed
++  reduction, but it is not an algebraic nonnegative-factorization family and
++  still lacks distributional hardness.
++- If the ordinary matrix and an actual explicit nonnegative factorization are
++  required, every completion variable eliminated by Theorem 2 contributes four
++  more rank-one summands.  Even counting only one atom per summand, the G9 limit
++  of 256 atomic answer elements permits fewer than 64 such variables; a pair of
++  factor matrices is much larger.  A custom macro that compresses all fixed
++  gadgets back to cover labels avoids that cap only by returning to the graph
++  certificate in the preceding bullet, whose distribution still lacks H.
++- A factorization witnesses only an upper bound on nonnegative rank.  Asking
++  for the *minimum* rank would additionally require an executable optimality
++  certificate.  The paper's appeal to the optimum clique-cover number is not
++  such a locally checkable certificate.
++
++## Other native candidates considered
++
++| Candidate task | Outcome |
++|---|---|
++| Factor the explicit `B(alpha,...,alpha)` gadget | G and V pass, but Observation 1's proof gives the factorization directly from the visible `alpha`; H fails. |
++| Recover the common `alpha` in `B` | It is a displayed matrix entry, so the verifier's lookup is also a solver; H fails. |
++| Factor the Section 4 `21 x 21` matrix over the reals | The paper prints the algebraic parameters and three summands, so this is a fixed lookup task and does not scale. |
++| Prove that the same matrix has no rational factorization of the target size | The paper gives a mathematical impossibility proof, not a bounded concrete negative certificate that the requested checker can validate cheaply. |
++| Take permuted or diagonally scaled copies of the Section 4 example | These are structure-preserving relabellings/scalings of one fixed problem and must collapse under an honest canonical key; they do not provide unlimited structural diversity. |
++| Use block-diagonal sums of the explicit gadgets | The certificate grows with the number of blocks, while each block is recognized and factored by the same displayed identity; this scales transcription, not difficulty. |
++
++## Gate outcome
++
++| Requirement | Result | Evidence |
++|---|---:|---|
++| G -- answer-first generation | pass in principle | Sample rational nonnegative `U,V`, multiply them, and retain the JSON-encoded factor matrices. |
++| H -- Track A structural hardness | **fail / unsupported** | Section 3 is worst-case only and does not cover the sampled-product distribution. |
++| H -- Track B no-tool compression | **fail / unsupported** | No efficient exact general recovery algorithm plus distinct compact route is supplied; the paper's explicit special cases are immediate. |
++| V -- exact witness checking | pass in principle | Check dimensions and rational nonnegativity, multiply the submitted factors exactly, and compare every entry with `M`. |
++| G7/G8/G9 for Section 4 | **fail** | The construction is fixed up to symmetries; scaling it by repetition makes the answer longer rather than the reasoning harder. |
++| Overall | **rejected at Step 0** | G, H, and V do not hold simultaneously for a supported family. |
++
++The 200,000-sample guess test, adversary panel, and LLM hardening loop were not
++run.  Those are measurements of a qualifying family; they cannot supply the
++missing distributional theorem or turn worst-case NP-hardness into an honest
++Track A claim.
+
+tokens used
+73,499
+Rejected at Step 0. The proposed \(M=UV\) family is generatable and exactly verifiable, but fails the required hardness justification: [Section 3 of the paper](https://arxiv.org/pdf/1605.04000) proves only worst-case NP-hardness via clique cover, not hardness for randomly planted products. The paper’s other factorizations are explicit or fixed-size, so Track B and scaling also fail.
+
+Full analysis: [REJECTED.md](/home/gson/gvrepo/results/1605.04000/REJECTED.md)
+
+Per the task instructions, no generator, fabricated gate report, or hardening transcript was created.
