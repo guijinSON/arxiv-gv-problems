@@ -16,11 +16,12 @@ from collections import Counter, defaultdict
 
 
 DIFFICULTY = {
-    "medium": {"n": 21, "layers": 5},
-    "hard": {"n": 27, "layers": 6},
-    "extreme": {"n": 33, "layers": 7},
+    "demo": {"n": 9, "layers": 3},
+    "easy": {"n": 21, "layers": 5},
+    "medium": {"n": 27, "layers": 6},
+    "hard": {"n": 33, "layers": 7},
 }
-SHIPPING_DIFFICULTY = "medium"
+SHIPPING_DIFFICULTY = "easy"
 
 NOTES = r"""
 Paper basis. Section 1 defines an integral Steiner triple system as exactly

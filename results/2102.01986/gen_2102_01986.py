@@ -18,11 +18,12 @@ from typing import Any
 
 
 DIFFICULTY = {
-    "standard": {"n": 96, "bits_num": 1, "bits_den": 1, "min_bits": 24},
-    "hard": {"n": 128, "bits_num": 1, "bits_den": 1, "min_bits": 24},
-    "extreme": {"n": 160, "bits_num": 1, "bits_den": 1, "min_bits": 24},
+    "demo": {"n": 4, "bits_num": 1, "bits_den": 1, "min_bits": 8},
+    "easy": {"n": 96, "bits_num": 1, "bits_den": 1, "min_bits": 24},
+    "medium": {"n": 128, "bits_num": 1, "bits_den": 1, "min_bits": 24},
+    "hard": {"n": 160, "bits_num": 1, "bits_den": 1, "min_bits": 24},
 }
-SHIPPING_DIFFICULTY = "standard"
+SHIPPING_DIFFICULTY = "easy"
 
 NOTES = r"""
 Paper grounding.  Section 2.4 of Gollin--Hendrey--Kawarabayashi--Kwon--Oum,

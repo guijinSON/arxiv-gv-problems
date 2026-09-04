@@ -17,7 +17,8 @@ from collections import Counter
 
 
 DIFFICULTY = {
-    "tiny": {"n": 4, "matchings": 2, "triangle_free": False},
+    "demo": {"n": 4, "matchings": 2, "triangle_free": False},
+    "easy": {"n": 36, "matchings": 4, "triangle_free": True},
     "medium": {"n": 72, "matchings": 4, "triangle_free": True},
     "hard": {"n": 108, "matchings": 4, "triangle_free": True},
 }
@@ -585,13 +586,13 @@ def selftest():
     }
 
     # G5: exact enumeration on the only feasible preset.
-    tiny = make_instance(seed=73, **DIFFICULTY["tiny"])
+    tiny = make_instance(seed=73, **DIFFICULTY["demo"])
     exact = enumerate_all(tiny)
     tiny_space = search_space(tiny)
     fraction = exact / tiny_space if exact is not None else None
     report["G5_sparse"] = {
         "pass": exact is not None and fraction < 0.01,
-        "preset": "tiny", "valid_answers": exact,
+        "preset": "demo", "valid_answers": exact,
         "naive_search_space": tiny_space, "solution_fraction": fraction,
         "shipping_enumeration": enumerate_all(inst),
     }

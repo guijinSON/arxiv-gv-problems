@@ -21,7 +21,8 @@ from typing import Any
 
 
 DIFFICULTY = {
-    "small": {"n": 8, "degree": 6},
+    "demo": {"n": 8, "degree": 6},
+    "easy": {"n": 16, "degree": 6},
     "medium": {"n": 32, "degree": 6},
     "hard": {"n": 64, "degree": 6},
 }
@@ -666,7 +667,7 @@ def selftest() -> dict:
         "naive_space": search_space(shipping),
     }
 
-    small_params = DIFFICULTY["small"]
+    small_params = DIFFICULTY["demo"]
     sparse_rows = []
     sparse_pass = True
     for seed in range(3):

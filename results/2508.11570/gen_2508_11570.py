@@ -17,11 +17,12 @@ from typing import Iterable
 
 
 DIFFICULTY = {
-    "standard": {"n": 11},
-    "hard": {"n": 15},
-    "extreme": {"n": 20},
+    "demo": {"n": 3},
+    "easy": {"n": 11},
+    "medium": {"n": 15},
+    "hard": {"n": 20},
 }
-SHIPPING_DIFFICULTY = "standard"
+SHIPPING_DIFFICULTY = "easy"
 
 NOTES = r"""
 Family and definition.  Section 2.1 of Kiatchaipipat and Ruangwises,

@@ -22,11 +22,12 @@ from functools import lru_cache
 
 DIFFICULTY = {
     "demo": {"n": 3, "m": 2, "p": 3},
-    "standard": {"n": 6, "m": 4, "p": 3},
+    "easy": {"n": 5, "m": 4, "p": 3},
+    "medium": {"n": 6, "m": 4, "p": 3},
     "hard": {"n": 8, "m": 4, "p": 3},
 }
 
-SHIPPING_DIFFICULTY = "standard"
+SHIPPING_DIFFICULTY = "medium"
 
 NOTES = r"""
 Definition 2.2 fixes the witness: an isomorphism f must be a bijection satisfying

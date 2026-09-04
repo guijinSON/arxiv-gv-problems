@@ -22,12 +22,13 @@ from collections import deque
 
 
 DIFFICULTY = {
-    "standard": {"n": 128},
-    "hard": {"n": 160},
-    "extreme": {"n": 192},
+    "demo": {"n": 4},
+    "easy": {"n": 128},
+    "medium": {"n": 160},
+    "hard": {"n": 192},
 }
 
-SHIPPING_DIFFICULTY = "standard"
+SHIPPING_DIFFICULTY = "easy"
 
 NOTES = r"""
 Paper reading notes.  Section 1 of Ohsugi--Tsuchiya fixes the exact move: choose

@@ -15,11 +15,12 @@ from typing import Any
 
 
 DIFFICULTY = {
-    "hard": {"n": 24},
-    "harder": {"n": 28},
-    "extreme": {"n": 32},
+    "demo": {"n": 3},
+    "easy": {"n": 24},
+    "medium": {"n": 28},
+    "hard": {"n": 32},
 }
-SHIPPING_DIFFICULTY = "hard"
+SHIPPING_DIFFICULTY = "easy"
 
 
 NOTES = r"""

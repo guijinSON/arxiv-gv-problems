@@ -16,7 +16,7 @@ import re
 
 
 DIFFICULTY = {
-    "tiny": {
+    "demo": {
         "n": 4,
         "layer_ratio": 0.75,
         "max_width": 1,
@@ -24,7 +24,8 @@ DIFFICULTY = {
         "plant_span_factor": 2,
         "plant_trials": 64,
     },
-    "standard": {
+    "easy": {"n": 9, "layer_ratio": 1.0, "max_width": 3, "canvas_factor": 14, "plant_span_factor": 4, "plant_trials": 32},
+    "medium": {
         "n": 14,
         "layer_ratio": 1.0,
         "max_width": 3,
@@ -42,7 +43,7 @@ DIFFICULTY = {
     },
 }
 
-SHIPPING_DIFFICULTY = "standard"
+SHIPPING_DIFFICULTY = "medium"
 
 NOTES = r"""
 The exact definition comes from Section 1, paragraph “Problem statement”:
@@ -740,7 +741,7 @@ def selftest() -> dict:
         "naive_space": search_space(inst),
     }
 
-    tiny = make_instance(seed=17, **DIFFICULTY["tiny"])
+    tiny = make_instance(seed=17, **DIFFICULTY["demo"])
     exact = enumerate_all(tiny)
     tiny_space = search_space(tiny)
     fraction = None if exact is None else exact / tiny_space

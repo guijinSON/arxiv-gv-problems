@@ -19,12 +19,13 @@ import re
 
 
 DIFFICULTY = {
-    "small": {"n": 12, "p": 11},
-    "standard": {"n": 20, "p": 17},
+    "demo": {"n": 5, "p": 7},
+    "easy": {"n": 12, "p": 11},
+    "medium": {"n": 20, "p": 17},
     "hard": {"n": 30, "p": 29},
 }
 
-SHIPPING_DIFFICULTY = "small"
+SHIPPING_DIFFICULTY = "easy"
 
 NOTES = r"""
 Section 2.2, especially Eq. (10), fixes the witness and the exact constraint:

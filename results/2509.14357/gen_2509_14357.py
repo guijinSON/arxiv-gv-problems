@@ -16,11 +16,12 @@ import re
 
 
 DIFFICULTY = {
-    "standard": {"n": 125, "band": 2},
-    "hard": {"n": 170, "band": 2},
-    "extreme": {"n": 225, "band": 2},
+    "demo": {"n": 4, "band": 2},
+    "easy": {"n": 125, "band": 2},
+    "medium": {"n": 170, "band": 2},
+    "hard": {"n": 225, "band": 2},
 }
-SHIPPING_DIFFICULTY = "standard"
+SHIPPING_DIFFICULTY = "easy"
 
 NOTES = r"""
 Definition.  Section 2 of de Oliveira Silva and Pedrosa, "Freeze-Tag is

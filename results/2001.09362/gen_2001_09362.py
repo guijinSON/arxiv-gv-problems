@@ -28,6 +28,12 @@ DIFFICULTY = {
         "filter_nodes": 0,
         "attack_filter": False,
     },
+    "easy": {
+        "n": 20,
+        "clue_density": 0.4,
+        "filter_nodes": 100000,
+        "attack_filter": True,
+    },
     "medium": {
         "n": 22,
         "clue_density": 0.40,
