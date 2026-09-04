@@ -1045,6 +1045,23 @@ So `REJECTED.md` must answer the question that was skipped:
 Do not reject on the abstract. Do not reject because the paper "gives a construction" —
 that describes almost every paper in this pool.
 
+### If you built a module, KEEP it
+
+If you got as far as writing a generator and are now rejecting, **rename it to
+`rejected_gen_<id>.py` and leave it in place. Do not delete it.** `REJECTED.md` is
+what `submit.sh` reads, so a retained module cannot be mistaken for a shipped one —
+deleting it does not protect anything, and it destroys the only evidence that can
+re-open the decision later.
+
+This is not hypothetical. `harden.py` used to take `escalate() -> None` at face value
+and record `too_easy` when the real obstacle was the 256-atom answer cap. Replaying
+the fixed detector over past rejections recovered five papers that should have been
+parked, not rejected — and it could only do that for rejections that still had a
+module. `2411.12911` and `2601.05272` deleted theirs, so their rejections cannot be
+re-checked at all: both had to be parked on suspicion instead of measurement.
+
+Keep the module, and keep `.meta.json` and `llm_loop_transcript.jsonl` with it.
+
 ## Report honestly
 
 If the family fails, say which gate and why. A rejected family costs nothing; a
