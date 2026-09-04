@@ -1,0 +1,3746 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/1810.08983
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a06c7b-a780-7830-a4f2-e214b3363801
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know a certificate for it by
+  construction*. Four routes count:
+  - **inverse generation** — sample the answer first and build the problem around it;
+  - **theorem-backed construction** — a theorem in the paper guarantees the object you
+    just assembled has the property, and the certificate is what its proof produces;
+  - **transformation of a known instance** — apply a structure-preserving map to an
+    instance whose certificate you hold, and carry the certificate through the map;
+  - **composition of identities** — build the instance from pieces whose certificates
+    compose: a product of telescoping terms, a sum of squares assembled from known
+    squares, a substitution chain with a known inverse.
+
+  What is forbidden is shipping a family whose answer you obtained by *solving* the
+  instance. If you had to search for it, so will your generator, and the family will
+  not scale.
+- **H — hard.** Hard in the sense your `TRACK` declares — see **TWO TRACKS** below.
+  Under either track the answer space must be far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+## The witness rule
+
+The answer must be a **witness**: a concrete object whose validity is decided by
+inspecting only the object and the instance. No search, no oracle, no appeal to a
+theorem the checker cannot execute.
+
+That is a statement about the *checker*, not about the answer's type. So certified
+negatives, certified optima and numeric answers **are admissible** — provided the
+certificate is itself such an object:
+
+| the claim | the certificate that makes it admissible |
+|---|---|
+| no solution exists | a Farkas certificate, a Nullstellensatz or Positivstellensatz certificate, a bounded-length refutation |
+| this is the optimum | a primal–dual pair with complementary slackness, or a feasible point plus a dual bound that meets it |
+| this real number | an algebraic number as (minimal polynomial, isolating interval with rational endpoints) |
+| this quantity lies here | a rigorous enclosure with **exact rational** endpoints |
+| this system is stable | a Lyapunov or barrier certificate with rational coefficients |
+
+**But — the discriminating test, and it is the one that matters:**
+
+> If the certificate is simply the output of a polynomial-time algorithm run on the
+> instance, you have not found a way past H. You have found the reason the family
+> fails it.
+
+An LP dual, a Gram matrix read off by coefficient matching, an SOS certificate that an
+SDP returns, a Lyapunov function that a linear solve produces, a root isolation — each
+is a perfectly good *witness* and a disqualifying *family*. The witness rule and the
+hardness rule are separate gates, and a certificate can clear the first while failing
+the second.
+
+Ask this at **STEP 0, before you write any code.** It is one question — *what algorithm
+produces this certificate, and what does it cost?* — and the paper's own theorem
+statements usually answer it in a line.
+
+The five algebraic papers rejected most recently were all rejected on exactly this
+point, and every one of them cost a full builder run first:
+
+| paper | what produces the certificate |
+|---|---|
+| `2605.28674` | disjunctive SOS: the paper reduces certificate search to an SDP, with SOCP and LP refinements |
+| `2504.18110` | the Gram matrix and the switching root are written out explicitly in Section 2 |
+| `2211.12582` | a necessary-and-sufficient spectral characterisation; the dimension is read off an eigenvalue multiplicity |
+| `1910.13133` | the witness is given by an explicit matrix formula |
+| `2512.19313` | the witness is a direct evaluation of a displayed trinomial construction — found after reading all 31 pages and the LaTeX source |
+
+One sentence applied at triage would have stopped all five. Instead each was claimed,
+read end to end, and rejected: five builder runs, roughly 90 minutes and 1.5M tokens, to
+rediscover a fact stated in each paper's own main theorem.
+
+---
+
+## TWO TRACKS — say which hardness you are claiming
+
+Declare `TRACK = "A"` or `TRACK = "B"` at module level. Required.
+
+**Track A — structural hardness.** No known efficient general method for the
+distribution you generate. Note *distribution*, not *worst case*: worst-case NP-hardness
+is a different claim and does not imply this one. `2503.01929` sat exactly inside the
+strongly NP-hard 3-PARTITION band and fell to Algorithm X in under five seconds, because
+random instances in that band are not hard. `PROBLEM_PROFILE["hardness_basis"]` must
+name the theorem *and* the parameter regime; G5's baseline cost is the evidence.
+
+**Track B — no-tool compression.** An efficient algorithm exists, and you say so. The
+claim is narrower and different: the evaluated model has no sandbox, no CAS and no
+solver, so it must find and execute a compact route unaided. The difficulty is the gap
+between the mechanical route (10⁶ operations — fine for a solver, impossible by hand)
+and the compact one (a change of variables, an invariant, a symmetry — a dozen
+operations, if you see it).
+
+**Track B families must be honest about the algorithm that exists.** In
+`hardness_basis`, name it, give its complexity, and give its measured cost at the
+shipping preset. A Track B family that hides the algorithm is a Track A claim, and a
+false one.
+
+The track also changes what G6 means:
+
+- **Track A** — every entry in `attacks` must have `successes == 0`, the domain-standard
+  algorithm included. Unchanged from today.
+- **Track B** — the domain-standard algorithm is *expected* to succeed. Report it under
+  a separate key `reference_algorithm` (name, complexity, wall-clock, operation count),
+  **not** inside `attacks`; that number is your `hardness_basis`, not a failure.
+  `attacks` still needs its ≥4 failing entries, and for Track B the fourth is an attack a
+  solver could actually run *in context, without tools* — the by-hand heuristic, the
+  greedy route, the obvious ansatz. If you cannot find a fourth in-context attack that
+  fails, the family is guessable by hand and you should reject it.
+
+Why the label is mandatory: without it the project drifts silently between
+complexity-theoretic hardness and practical model difficulty. Both are defensible
+benchmarks. They are not the same benchmark, and a corpus that mixes them unlabelled can
+support neither claim. Every family shipped so far is an unlabelled Track A claim, and
+`AUDIT.md` records five where that claim was simply false.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the four things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+4. **What produces the certificate.** Find the theorem that hands you the witness and
+   ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
+   characterisation", "an explicit formula" or "a classification table", then **the
+   family fails H on Track A** — not the witness rule. The certificate is a perfectly
+   good witness; what it is not is hard to obtain. Those are separate gates (see the
+   discriminating test above).
+
+   You then have exactly two honest options, and you must pick one **before** writing
+   code:
+
+   - **Reject**, if the compact route is no shorter than the mechanical one. This is
+     the cheapest rejection available and the one most often skipped: five recent
+     rejections each cost a full builder run to reach a conclusion stated in the
+     paper's own main theorem.
+   - **Declare `TRACK = "B"`**, if — and only if — running that algorithm by hand is
+     genuinely out of reach for a model with no sandbox, *and* a compact route exists
+     for someone who sees the structure. Name the algorithm and its measured cost in
+     `hardness_basis`, as **TWO TRACKS** requires. An SDP over a 40×40 Gram matrix is
+     not something a model executes in its head; a 2×2 linear solve is. Be honest
+     about which one you have.
+
+   What is never acceptable is declaring Track A while knowing the algorithm exists.
+
+### Build in the paper's own objects first
+
+Before you reduce anything, write down the problem **in the objects the theorem and
+proof actually use** — vectors, Gram matrices, polynomials over ℚ or ℚ(i),
+coordinates, functions, trajectories, group elements. Ask whether a finite exact
+certificate exists *for that* object: a Gram or Seidel matrix, a rational SOS
+decomposition, a minimal polynomial with an isolating interval, a telescoping
+certificate, an antiderivative, a coordinate/sign construction checked by exact
+inner products, a dual witness. Verification stays exact — the *object* may be
+continuous even when its *certificate* is a finite symbolic thing.
+
+Only after that may you consider a discrete reduction.
+
+**Do not replace a problem over ℝ, ℂ, manifolds, functions or trajectories with a
+graph, SAT/CSP, finite field or integer-coordinate surrogate unless that reduction
+is central to the source paper.** If you do reduce, name the theorem or section that
+licenses it. If you reduce for convenience, the result is a *discretised analogue*:
+declare `reduction_kind="convenience"` in `PROBLEM_PROFILE` (and mirror the citation
+text in `NATIVE["reduction"]`), and do not present it as coverage of the paper's native
+domain. Such a family is archived, never counted in the native release — see
+PROBLEM_PROFILE in STEP 1.
+
+This has gone wrong repeatedly and silently. Real examples from this corpus:
+
+- An equiangular-lines paper (Gram matrices, Seidel matrices, eigenvalue
+  interlacing) shipped as a 720-vertex adjacency matrix with `verify` documented as
+  *"check any size-k clique"*. **The instance contained no vectors at all.**
+- A quantum-satisfiability paper about complex polynomial systems shipped as an
+  assignment problem over 𝔽₁₁.
+- A kissing-number paper with explicit real coordinates and sign patterns shipped as
+  a conflict graph.
+
+In each case the paper's mathematics was discarded before the solver saw anything,
+every gate passed, and the row was counted as geometric or algebraic coverage.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, deterministic given `(n, seed)`. No file IO, no network, no printing at
+import. Use `random.Random(seed)`, never global `random`.
+
+**What you may import.** The standard library, and `gvlib/` from the repo root. `gvlib`
+is standard-library-only itself, so importing it keeps the module dependency-free: it
+carries exact rationals with JSON encoding (`gvlib.rationals`), multivariate polynomials
+over ℚ (`gvlib.sparse_poly`), rational matrices with Bareiss determinant, rank, solve,
+Gram and LDL/PSD (`gvlib.exact_matrices`), and Sturm sequences and real-root isolation
+(`gvlib.roots`). Use it — a certificate that is a polynomial identity, a Gram matrix or
+an isolating interval should not cost you a day of writing `Fraction` row reduction for
+the fifth time. Nothing else may be imported.
+
+`gvlib` sits at the repo root and your module sits in `results/<id>/`, so the import
+needs the root on `sys.path` — `emit.sh` and `submit.sh` run from the root and find it,
+but `harden.py` is invoked from your own directory and will not. Do it once, at the top,
+and degrade gracefully:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals
+except ImportError:                 # not present: stay standard-library-only
+    exact_matrices = rationals = None
+```
+
+If it does not import, stay standard-library-only and say so in the README rather than
+adding a dependency. Do not let a missing helper library become the reason a family
+ships as a graph.
+
+**`inst["answer"]` must be JSON-native.** `emit.sh` writes it straight into
+`artifacts/<id>.jsonl` with `json.dumps`, so a `Fraction`, a `complex` or a custom class
+does not fail your selftest — it fails the emit, after the expensive part is paid for.
+Serialise: **rationals as `[num, den]`**, **monomials as exponent lists**, polynomials as
+lists of `[[num, den], [e1, e2, ...]]`, matrices as lists of lists. `json.loads(
+json.dumps(a)) == a` must hold for every answer the family produces, and whatever
+`verify` accepts, `parse_answer` must be able to return.
+
+```python
+TRACK: str                  # "A" or "B" -- see TWO TRACKS.  Required.
+    # scripts/corpus_report.py reads this straight into its `track` column; anything
+    # that is not "A" or "B" is recorded as "unknown", which is what every family
+    # shipped before this prompt reads as today.
+
+PROBLEM_PROFILE: dict       # what this family really is, on a controlled vocabulary.
+    # PREFERRED.  NATIVE (below) is the LEGACY form and is still what submit.sh reads,
+    # so declare BOTH and keep them consistent.  Seven shipped modules declare only
+    # NATIVE; they stay valid and nothing here orphans them.
+    #
+    # The token spellings below are the ones scripts/corpus_report.py reads.  Inventing
+    # a synonym does not produce a warning -- it silently drops your row out of the
+    # coverage counts, which is the exact failure mode this schema exists to stop.
+    #
+    # {"native_domain":  combinatorics|algebra|geometry|analysis|dynamics|
+    #                    optimization|number_theory|logic
+    #                    -- what the SOLVER reasons about, NOT the arXiv category.
+    #
+    #  "object_regime":  what kind of object the solver actually manipulates:
+    #      finite_discrete     finite, exactly representable as ints and structures
+    #      finite_field        elements of GF(q)
+    #      integer_lattice     integer vectors / lattice points
+    #      rational_exact      rationals, polynomials, matrices over Q; exact
+    #                          arithmetic end to end, no approximation anywhere
+    #      real_algebraic      the object is a real number, but the certificate is a
+    #                          finite exact symbolic thing -- (minimal polynomial,
+    #                          isolating interval with rational endpoints)
+    #      continuous_analytic the object lives in R, C, a manifold, a function space
+    #                          or a trajectory.  Then the certificate MUST be exact:
+    #                          a rational SOS, a Lyapunov function over Q, or a
+    #                          rigorous enclosure with exact rational endpoints
+    #                          (declare certificate_form="interval" for that last one).
+    #                          A float anywhere in verify() is a bug, not a regime.
+    #
+    #  "computational_core":  what the solver actually searches, one of
+    #                    graph|csp_sat|exact_cover|subset_sum|permutation|
+    #                    linear_algebra|polynomial_identity|sos|telescoping|
+    #                    symbolic_integration|interval_bound|other
+    #
+    #  "certificate_form":  the shape of the answer, one of
+    #                    sos|telescoping|symbolic_integral|algebraic_number|
+    #                    matrix_certificate|interval|polynomial|rational|exact_symbolic
+    #                        -- these count toward the release quota on symbolic
+    #                           certificates
+    #                    integer_tuple
+    #                        -- this one does not, and it is what the corpus already
+    #                           has far too much of.  Do not reach for it by reflex:
+    #                           an answer that IS a tuple of small ints is one thing,
+    #                           an answer flattened into one to make G4 easy to report
+    #                           is the collapse this schema exists to measure.
+    #  "native_objects": the objects the solver is HANDED, e.g.
+    #                    ["Gram matrix over Q", "unit vectors"].  If the honest answer
+    #                    is ["adjacency matrix"], write that and take the consequence.
+    #  "verification_operations": the exact operations verify() performs, e.g.
+    #                    ["exact rational inner product", "PSD check via LDL",
+    #                     "sign comparison"].  If this list is nothing but set
+    #                    membership and integer comparison, your core is discrete
+    #                    whatever native_domain says.
+    #
+    #  "domain_essentiality":  how load-bearing the paper's mathematics is:
+    #      native               ESSENTIAL -- the paper's objects are handed to the
+    #                           solver AND verify() operates on them; delete the domain
+    #                           structure and the problem is gone
+    #      licensed_reduction   REPRESENTATIONAL -- a reduction the paper itself
+    #                           licenses; the native objects are visible but the search
+    #                           is carried by the surrogate
+    #      discretised_analogue ANALOGUE -- the paper's mathematics was compiled away
+    #                           before the solver saw anything
+    #
+    #  "reduction_kind":  none | paper_licensed | convenience
+    #  "reduction":       None when reduction_kind == "none" -- it MUST be falsy then,
+    #                     or the report labels a native family a discretised analogue.
+    #                     Otherwise the citation string: "Section 5, Lemma 5 (...)".
+    #  "reduction_source": paper_central | external_standard | benchmark_convenience
+    #                     -- the finer distinction reduction_kind cannot spell.
+    #                     paper_central     -> reduction_kind "paper_licensed"
+    #                     external_standard -> reduction_kind "convenience": a textbook
+    #                                          reduction is not this paper's
+    #                                          mathematics and must not buy coverage
+    #                     benchmark_convenience -> reduction_kind "convenience"
+    #
+    #  "intuition_type":  one of, and write it with SPACES, not underscores --
+    #                     "symmetry" | "invariant" | "duality" |
+    #                     "change of variables" | "ansatz" | "extremal bound" |
+    #                     "decomposition" | "constraint propagation" |
+    #                     "reduction recognition" | "search pruning".
+    #                     The reporter matches this as prose: "change_of_variables"
+    #                     with underscores does NOT match and lands as
+    #                     "unclassified".  All ten match when written with spaces.
+    #  "intuition_description": one sentence: the insight, and what a solver who does
+    #                     not have it must do instead.
+    #  "hardness_basis":  one sentence, and it must match TRACK.  Track A: the theorem
+    #                     and the parameter regime.  Track B: the algorithm that
+    #                     exists, its complexity, its measured cost at the shipping
+    #                     preset, and why the compact route is not mechanically
+    #                     executable in context.
+    #  "max_answer_tokens": your MEASURED worst-case serialised answer length at the
+    #                     shipping preset, in tokens.  See G9(c) for the cap.}
+    #
+    # **Only `domain_essentiality == "native"` together with `reduction_kind` in
+    # {none, paper_licensed} counts toward native-domain coverage.**  Everything else
+    # is recorded honestly and reported separately, and `benchmark_convenience` is
+    # archived and excluded from the native release entirely.  Declaring
+    # `discretised_analogue` costs you a coverage row.  Declaring `native` when the
+    # solver is handed an adjacency matrix costs the corpus its credibility, which is
+    # the failure this schema exists to prevent.
+
+NATIVE: dict                # LEGACY form.  Still REQUIRED: submit.sh reads this one.
+    # {"domain":    one of combinatorics|algebra|geometry|analysis|dynamics|
+    #                       optimization|number_theory|logic
+    #  "core":      what a solver actually searches, one of
+    #               graph|csp_sat|exact_cover|subset_sum|permutation|
+    #               linear_algebra|polynomial_identity|sos|telescoping|
+    #               symbolic_integration|interval_bound|other
+    #  "objects":   the mathematical objects the solver is handed, e.g.
+    #               ["adjacency matrix"] or ["Gram matrix over Q", "unit vectors"]
+    #  "intuition": the insight the problem is meant to test, e.g. "symmetry",
+    #               "invariant", "change of variables", "ansatz", "duality"
+    #  "reduction": None if the family is stated in the paper's own objects;
+    #               otherwise the section/theorem that licenses the surrogate.}
+    # Derive it from PROBLEM_PROFILE and keep the two consistent:
+    #   domain    <- native_domain        core      <- computational_core
+    #   objects   <- native_objects       reduction <- reduction  (same value)
+    #   intuition <- intuition_type + ": " + intuition_description
+    # `domain` is NOT the arXiv category -- it is what the solver reasons about.
+    # A geometry paper rendered as an adjacency matrix has domain="combinatorics"
+    # and core="graph".  Labelling it "geometry" is the failure this field exists
+    # to prevent.
+
+DIFFICULTY: dict            # exactly four presets, named "demo", "easy", "medium"
+                            # and "hard", in that order -- harden.py walks the dict
+                            # in insertion order, so it is the ladder, ascending.
+                            # Each maps to kwargs for make_instance.
+                            # "demo" is the smallest setting the family supports:
+                            # a person must be able to solve it and check the
+                            # answer on paper.  It is an illustration, not a
+                            # difficulty level -- harden.py skips it, and
+                            # SHIPPING_DIFFICULTY must never name it.
+
+def make_instance(n, seed=0, **params) -> dict
+    """Build an instance whose certificate you know BY CONSTRUCTION -- by inverse
+    generation, theorem-backed construction, transformation of a known instance, or
+    composition of identities (see G above). Never by solving the instance you just
+    built. Returns a dict containing key "answer" (the certificate, JSON-native)
+    plus all data the solver needs. `n` is the size parameter; larger n must mean
+    harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT.
+
+    Hint modes, for G9: when os.environ.get("GV_HINT_MODE") is "structural" append
+    STRUCTURAL_HINT, when it is "placebo" append PLACEBO_HINT, and otherwise append
+    NOTHING. The default MUST be no hint -- emit.sh, submit.sh and the STEP 4
+    hardening run all call render(), and a hint leaking into artifacts/ would
+    silently change what the dataset is."""
+
+STRUCTURAL_HINT: str        # ONE sentence naming the structural insight -- the thing
+                            # intuition_description says this family tests.  Required.
+                            # "The columns of the Gram matrix repeat with period 7."
+PLACEBO_HINT: str           # ONE sentence of the same length and register carrying no
+                            # structural information.  Required.  "This problem
+                            # rewards being careful with the indexing."  See G9(a).
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
+    # {"description": a human-readable grammar/bounds statement, e.g.
+    #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed
+    #                  monomial basis, rational coefficients with |num|,|den| < 2^32"
+    #  "bounds":      the numeric bounds that make it finite, e.g.
+    #                 {"n_squares": 6, "max_degree": 4, "basis": 45, "coeff_bits": 32}}
+    #
+    # This field exists because requiring an integer `search_space` silently forces
+    # every family to be a tuple of small integers.  Measured over the first 40
+    # shipped generators: search_space returned an int 40/40 and None 0/40, and not
+    # one answer was a rational, a polynomial or a symbolic expression -- because a
+    # symbolic answer has no uniformly-sampleable candidate set, so G4 could not be
+    # reported and the family was never built.
+    #
+    # Declaring bounds fixes that.  An antiderivative is infinite; an antiderivative
+    # over a fixed operator set with depth <= 4 and coefficients under 2^16 is a
+    # finite, countable, samplable space.  Bound the language and the continuous
+    # families become expressible without weakening exact verification at all.
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of CERTIFICATE_LANGUAGE at these parameters -- the space
+    `random_candidate` samples from, not a looser superset. Return None ONLY if
+    the declared language is genuinely uncountable; then G5 must carry a sampled
+    density estimate instead."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | None
+    """Parameters strictly harder than `params`, or None if this family cannot be
+    made any harder. Called by the hardening harness once the named DIFFICULTY
+    ladder is exhausted and the oracle pool is still solving instances.
+
+    Raising `n` is not automatically the right move — for many families the usable
+    window is narrow, and a larger n makes instances unsatisfiable or, worse,
+    easier. Escalate along whichever axis actually costs a solver: crowding,
+    density, the number of decoys, how close the plant sits to the feasibility
+    boundary. Returning None is a legitimate answer and ends the loop."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+- **Keep the answer writable.** The solver has to type it out, by hand, with no
+  scratchpad. An answer running to thousands of elements measures transcription
+  stamina, not intuition, and the failures it produces tell you nothing. G9(c) puts a
+  hard cap on this.
+- **Serialise rationals and polynomials the way `parse_answer` reads them back**, and
+  say so in the statement: rationals as `num/den`, monomials as exponent lists. The
+  rendered form and the JSON form must agree.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship** — except where a part is explicitly marked
+*recorded, not gated*, which is true of G9(a) and of nothing else.
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples drawn from `CERTIFICATE_LANGUAGE`, measured **structure-aware** (see below). Report hits/total. |
+| **G5 density + baseline cost** | A real number, never "not feasible": an exact solution count where enumeration works at any preset, otherwise a sampled density estimate — **plus** the measured cost of your strongest attack. See below. |
+| **G6 adversary panel** | ≥4 attacks in `attacks`, each FAILING across ≥8 seeds. Track A: three cheap probes **plus the standard algorithm for the problem class**. Track B: three cheap probes plus an in-context attack, with the standard algorithm reported separately under `reference_algorithm`. See TWO TRACKS and below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+| **G9 no-tool suitability** | Two gated parts — the family still defeats the oracle pool **with** its structural hint, and the answer and route fit the caps — plus a three-arm diagnostic (bare / hinted / placebo) that is **recorded, never gated**. See below. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G5: measure difficulty, do not infer it from cardinality
+
+Across the first 40 shipped generators, `enumerate_all` returned `None` at the
+**shipping** preset **40/40**. G5 was therefore measured on a reduced instance
+(n = 4–40, against shipping n up to 512) or carried no number at all (7/40). It
+never described the instance that actually ships — and a density at n=4 says
+nothing about n=32.
+
+Worse, a reduced-preset number can be passed while being alarming: `2104.04330`
+reported a solution fraction of **5.7e-4** at n=18 — roughly one candidate in 1768
+is valid — and passed G5 anyway.
+
+A large space is not difficulty. `2503.01929` reported a 1536-bit candidate space
+and fell to Algorithm X in under five seconds. Report both of these, as numbers,
+**at the shipping preset**:
+
+1. **Density at the shipping preset.** Exact count if `enumerate_all` terminates
+   there; otherwise sample `random_candidate` and report the observed fraction of
+   valid answers with the sample size. A count from a smaller preset may be given
+   in addition, labelled with its `n` — never instead. `None` is not an answer.
+2. **Baseline cost.** Run your strongest G6 attack at the *shipping* preset and
+   record what it actually cost: wall-clock seconds, and nodes/restarts/iterations.
+   A family whose best attack fails in 0.2 s is not obviously hard — it may simply
+   be unsatisfiable-looking to that attack. Cost is the honest difficulty signal.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+- **The standard algorithm for the problem class — REQUIRED, not optional.** The
+  three above are generic and they are *not sufficient*; they probe how you built
+  the instance, not what is known about the problem. Ask what a specialist would
+  reach for first and run *that*:
+
+  | the problem is about | run at least |
+  |---|---|
+  | satisfiability / CSP | a SAT or SMT solver, or DPLL with unit propagation |
+  | covering, packing, assignment, scheduling | an ILP/LP relaxation, or matching |
+  | a planted subgraph, colouring, partition, or community | **a spectral method** — top eigenvectors of the adjacency/Laplacian, and an SDP or nuclear-norm relaxation if the paper mentions one |
+  | subset sum, knapsack, lattice, or small-coefficient integer relations | LLL / lattice reduction |
+  | exact cover, tiling, set partition | Algorithm X / DLX, or a CP solver |
+  | paths, cycles, flows, connectivity | the classical polynomial algorithm for the relaxed version, then repair |
+  | permutations, words, group elements | normal forms and the natural rewriting/canonicalisation |
+
+  If no library is available, implement the cheap version — power iteration is a
+  dozen lines and breaks most planted-subgraph constructions. If you genuinely
+  cannot run the standard attack, say so explicitly in the README caveats and name
+  the attack you could not run. Never silently omit it.
+
+**Report G6 in this shape**, so the panel can be checked mechanically rather than
+read prose-by-prose:
+
+```python
+report["G6_adversary_panel"] = {
+    "pass": all_failed,
+    "attacks": {                      # one entry per attack, name -> result
+        "outlier_degree":     {"successes": 0, "attempts": 8},
+        "greedy_largest_first":{"successes": 0, "attempts": 8},
+        "random_restart_256": {"successes": 0, "attempts": 8},
+        "spectral_top_eigenvector": {"successes": 0, "attempts": 8},   # the domain attack
+    },
+}
+```
+
+Extra keys alongside `attacks` are fine. `submit.sh` requires `attacks` to be
+present with **at least 4 entries** — three generic probes plus the domain attack — and
+it **recomputes `pass` from the `successes` on disk**: a panel that records a solved
+attack is refused no matter what `pass` says. `2410.07666` logged walksat at 8/8 and
+honestly set `pass=false`; nothing else would have caught it.
+
+That recomputation is exactly why a **Track B** family must not put its
+domain-standard algorithm in `attacks`. On Track B that algorithm is *supposed* to
+succeed — it is the `hardness_basis`, not a failure — so it goes in a sibling key and
+`attacks` keeps its meaning:
+
+```python
+report["G6_adversary_panel"]["reference_algorithm"] = {   # Track B only
+    "name": "Bareiss elimination over Q",
+    "complexity": "O(n^3) exact",
+    "wall_clock_sec": 0.4,
+    "operations": 1_240_000,      # this number IS the Track B hardness claim
+    "solves": "8/8, as expected",
+}
+```
+
+Track B still needs four *failing* entries in `attacks`, and its fourth is an attack a
+solver could actually run in context without tools — the by-hand heuristic, the greedy
+route, the obvious ansatz. If you cannot find one that fails, the family is guessable by
+hand and you should reject it.
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+- **A bounded Token Jumping family (arXiv:2408.04743) passed every gate, and the
+  four-vendor oracle pool returned `hardened`.** A construction-aware spectral
+  attack then recovered a verified witness on **20/20 shipping instances in
+  polynomial time** — the planted colour classes formed an exact −3 eigenvector.
+  The generic outlier/greedy/restart panel saw nothing. This is why the domain
+  attack is mandatory: gates passing and the oracle failing to solve are jointly
+  *not* evidence of hardness, and this family would have shipped on that evidence.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+### G9: is the failure informative? — measured, mostly not gated
+
+Every family here is built so that a model fails it. That makes "the model failed"
+almost uninformative on its own: a model also fails a question whose answer is forty
+thousand tokens long, and one that needs ten thousand exact multiplications. Those
+failures say nothing about mathematical intuition, and a corpus full of them measures
+patience.
+
+G9 separates the two. **It is not a "the model must succeed" gate.** That would be the
+exact negation of STEP 4, which holds a level only when all three oracles fail, and it
+would delete every family that survives the hardening loop. Three parts, and only two of
+them are gates.
+
+#### (a) The three-arm diagnostic — recorded, never gated
+
+Run the shipping preset three times and record solved/attempts for each arm:
+
+| arm | prompt |
+|---|---|
+| bare | `render(inst)` as shipped |
+| hinted | `render(inst)` + `STRUCTURAL_HINT` |
+| placebo | `render(inst)` + `PLACEBO_HINT` |
+
+**Why the placebo arm exists.** Appending *any* sentence changes the prompt — its
+length, its register, and the signal that the asker thought a hint was warranted.
+Comparing hinted against bare confounds all of that with the hint's actual content. The
+placebo holds everything fixed except the structural information, so **hinted − placebo**
+is the estimate of real structural help; hinted − bare is contaminated by prompt leakage
+and is not.
+
+If hinted ≈ placebo, your hint carried no information: either it is badly written, or
+the family does not respond to the intuition you claimed in `intuition_type`. That is a
+finding, not a failure. Record the three numbers and say what you conclude in the
+README. **It does not block the ship** — this arm exists so the corpus knows what it is
+measuring, and gating on it would let a builder tune the hint instead of the family.
+
+#### (b) The polarity-flipped gate — this part IS gated
+
+> The family must still defeat the oracle pool **when it is given its one-sentence
+> structural hint.**
+
+This is strictly stronger than today's bar and it contradicts nothing: STEP 4 already
+requires the pool to fail on the bare statement; this requires it to fail on an easier
+version of the same statement. A family that survives bare but dissolves the moment you
+name the trick was never testing whether a model can *find* the structure — it was
+testing whether the model had already memorised it.
+
+Run it with the harness, not by hand:
+
+```bash
+mkdir -p g9_hinted && cp gen_<arxiv_id>.py g9_hinted/
+# in the COPY, cut DIFFICULTY down to the shipping preset alone, so the ladder
+# has one rung and the verdict is about that rung
+cd g9_hinted && GV_HINT_MODE=structural python3 ../../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+`harden.py` opens `llm_loop_transcript.jsonl` and `.meta.json` with mode `"w"` — it
+**overwrites**. Run every G9 arm in its own scratch directory, never in the result
+directory, or you will destroy the STEP 4 evidence you already paid for. Copy the
+finished transcripts back as `g9_<arm>_transcript.jsonl`.
+
+Read the verdict with the polarity flipped: `hardened` means the hint did not break the
+family and G9(b) passes. `too_easy` means the hint broke it, and the family fails G9(b).
+You may then move **one** rung up the `DIFFICULTY` ladder and re-run STEP 4 bare *and*
+this arm at the new level, **once**. If the hint still breaks it, write `REJECTED.md`
+citing G9(b) and stop. This is not hand-tuning past a verdict — the bare verdict was
+`hardened` and the whole loop is re-run at the new level — but the cap of one is there
+so that it cannot become hand-tuning.
+
+#### (c) The size and effort caps — gated
+
+| cap | limit at the shipping preset |
+|---|---|
+| serialised answer | ≤ **2,000 characters** (≈ **500 tokens**) and ≤ **256 atomic elements** |
+| intended route | ≤ **300 exact arithmetic operations** |
+
+Measure both, put the numbers in the gate dict, and put the token figure in
+`PROBLEM_PROFILE["max_answer_tokens"]`.
+
+"Intended route" means the operations left **after** the insight — the compact route the
+family claims to test, not the search it replaces. A family over the answer cap is a
+transcription test. A family whose intended method needs thousands of arithmetic
+operations is a calculator test, and the evaluated model has no calculator; that is a
+fact about the harness, not a property of the mathematics.
+
+If you are genuinely over a cap and believe the family should ship anyway, say so in the
+README caveats with the measured number and expect to be argued with. Do not quietly
+round it down.
+
+Report the gate like this:
+
+```python
+report["G9_no_tool_suitability"] = {
+    "pass": hinted_still_hardened and within_caps,     # (b) and (c) only
+    "arms": {                                          # (a): recorded, not gated
+        "bare":    {"solved": 0, "attempts": 3},
+        "hinted":  {"solved": 0, "attempts": 3},
+        "placebo": {"solved": 0, "attempts": 3},
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",                      # (b)
+    "answer_chars": 412, "answer_tokens": 104, "answer_elements": 32,   # (c)
+    "intended_route_operations": 47,                   # (c)
+}
+```
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- The ladder starts at `easy`. `demo` is skipped: it is built to be solvable, so
+  starting there would spend an escalation proving exactly that.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+- It opens both files with mode `"w"`. **A second run in the same directory overwrites
+  the evidence from the first.** This run — bare, no hint — is the one that ships, so
+  G9's extra arms run in their own scratch directories. See G9(b).
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, the four names are already taken, so
+  **slide the ladder up**: drop the rung the oracle solved, keep the survivors in
+  ascending order, and put the escalated level in as the new `hard`, leaving
+  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+  whichever name now carries the level that held, then re-run STEP 3's gates at it.
+  `demo` never moves: it stays the hand-solvable rung.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results,
+   G9's three arms and its measured answer size and operation count).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. `g9_hinted_transcript.jsonl` and `g9_placebo_transcript.jsonl` — the G9 arms,
+   produced by `harden.py` in scratch directories and copied back. See G9(b).
+5. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+6. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **The profile up front**: `TRACK`, native domain, object regime, computational core,
+  certificate form, intended intuition and `domain_essentiality` — copied from
+  `PROBLEM_PROFILE`. If `reduction_kind` is anything but `none` or `paper_licensed`,
+  say plainly that this is **not** native coverage of the paper's domain, and name what
+  was discarded.
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard**, in the sense your `TRACK` declares. Track A: the specific theorem
+  and parameter regime you are inside, and — just as important — the easy regimes you
+  had to avoid and the results that identify them. Track B: **name the algorithm that
+  solves it**, its complexity and its measured cost, then say why the compact route is
+  not something a model can execute in context. A Track B README that reads like a
+  Track A README is the failure mode here. Cite sections by number either way. This is
+  the part only you know.
+- **A worked example.** A rendered instance small enough to read in full — use the
+  `demo` preset, which exists for this — its answer, `verify` returning True on it,
+  and `verify` returning False with its reason on a corrupted variant. Say plainly
+  whether a person can actually solve it by hand, and if not, why the family's
+  smallest supported setting still is not hand-scale.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **The G9 arms**, as a table: bare / hinted / placebo solved-out-of-attempts, the
+  hinted − placebo difference, and what you conclude. If the structural hint bought the
+  oracle nothing, say so — that is evidence about your `intuition_type`, and this
+  README is the only place it will ever be written down. Give the measured answer size
+  and intended-route operation count here too.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 1810.08983
+url: https://arxiv.org/abs/1810.08983
+title: PQC: Triple Decomposition Problem Applied To GL(d, Fp) - A Secure   Framework For Canonical Non-Commutative Cryptography
+categories: cs.CR
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: algebraic decomposition
+  method: inverse construction
+  candidate generator: choose secret matrix factors and publish their product
+  candidate verifier: multiply proposed factors and compare with public matrix
+codex
+I’ll start with the paper’s full text and its own TDP definitions, parameter claims, and known attacks. The key triage question is whether a planted factor tuple is merely a valid witness or whether the published instance leaks a polynomial-time reconstruction—if so, Track A is unavailable and I’ll either justify Track B honestly or reject before building.
+web search: 
+web search: https://arxiv.org/abs/1810.08983
+web search: 
+web search: 
+codex
+The native task is not “factor one matrix into any three matrices”: that would accept the trivial witness \((I,I,M)\). Section 3 instead publishes three masked products and constrains the private and masking matrices to specific commuting subgroups. I’m extracting the complete protocol and security section now, because those membership constraints determine both verification and whether linear algebra reconstructs a witness.
+exec
+/bin/bash -lc "python3 - <<'PY'
+import urllib.request
+urllib.request.urlretrieve('https://arxiv.org/pdf/1810.08983', '/tmp/1810.08983.pdf')
+PY
+pdftotext -layout /tmp/1810.08983.pdf /tmp/1810.08983.txt
+sed -n '1,260p' /tmp/1810.08983.txt" in /home/gson/gvrepo/results/1810.08983
+ exited 2 in 0ms:
+/bin/bash: line 5: pdftotext: command not found
+sed: can't read /tmp/1810.08983.txt: No such file or directory
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+mods=['pypdf','PyPDF2','fitz','pdfplumber']
+for m in mods:
+ try:
+  x=__import__(m); print(m, getattr(x,'__version__','yes'))
+ except Exception as e: print(m, 'NO')
+PY
+rg -n \"1810\\.08983|Triple Decomposition|SHIPPING_DIFFICULTY\" -S . ../../.. --glob '"'!artifacts/**'"' --glob '"'!results/1810.08983/**'"' | head -100" in /home/gson/gvrepo/results/1810.08983
+ succeeded in 8880ms:
+./codex_run.log:4:workdir: /home/gson/gvrepo/results/1810.08983
+./codex_run.log:400:                            # SHIPPING_DIFFICULTY must never name it.
+./codex_run.log:868:  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+./codex_run.log:890:1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+./codex_run.log:965:arXiv id: 1810.08983
+./codex_run.log:966:url: https://arxiv.org/abs/1810.08983
+./codex_run.log:967:title: PQC: Triple Decomposition Problem Applied To GL(d, Fp) - A Secure   Framework For Canonical Non-Commutative Cryptography
+./codex_run.log:978:web search: https://arxiv.org/abs/1810.08983
+./codex_run.log:986:urllib.request.urlretrieve('https://arxiv.org/pdf/1810.08983', '/tmp/1810.08983.pdf')
+./codex_run.log:988:pdftotext -layout /tmp/1810.08983.pdf /tmp/1810.08983.txt
+./codex_run.log:989:sed -n '1,260p' /tmp/1810.08983.txt" in /home/gson/gvrepo/results/1810.08983
+./codex_run.log:992:sed: can't read /tmp/1810.08983.txt: No such file or directory
+../../../gvjob/1912.09051/codex_run.log:1750:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:2115:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:2187:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:2552:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:2632:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:2997:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:3271:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:3636:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:3710:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:4075:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:4149:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:4514:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:4588:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:4953:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:5027:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:5392:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:5466:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:5831:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:5905:+SHIPPING_DIFFICULTY = "hard"
+../../../gvjob/1912.09051/codex_run.log:6270:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:6356:+SHIPPING_DIFFICULTY = "medium"
+../../../gvjob/1912.09051/codex_run.log:6721:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:6792:+SHIPPING_DIFFICULTY = "medium"
+../../../gvjob/1912.09051/codex_run.log:7157:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:7236:+SHIPPING_DIFFICULTY = "medium"
+../../../gvjob/1912.09051/codex_run.log:7601:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:7850:+SHIPPING_DIFFICULTY = "medium"
+../../../gvjob/1912.09051/codex_run.log:8215:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:8313:+SHIPPING_DIFFICULTY = "medium"
+../../../gvjob/1912.09051/codex_run.log:8678:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/codex_run.log:8836:+SHIPPING_DIFFICULTY = "medium"
+../../../gvjob/1912.09051/codex_run.log:9201:+    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvjob/1912.09051/gen_1912_09051.py:24:SHIPPING_DIFFICULTY = "medium"
+../../../gvjob/1912.09051/gen_1912_09051.py:389:    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/examples/1912.09051/gen_1912_09051.py:24:SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/examples/1912.09051/gen_1912_09051.py:389:    ship = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/README.md:92:SHIPPING_DIFFICULTY                          # one of the last three; demo never ships
+../../../gvrepo/results/1602.08620/codex_run.log:400:                            # SHIPPING_DIFFICULTY must never name it.
+../../../gvrepo/results/1602.08620/codex_run.log:868:  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+../../../gvrepo/results/1602.08620/codex_run.log:890:1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+../../../gvrepo/results/2105.10184/codex_run.log:287:  and point `SHIPPING_DIFFICULTY` at it, then re-run STEP 3's gates at that level.
+../../../gvrepo/results/2105.10184/codex_run.log:307:1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+../../../gvrepo/results/2105.10184/codex_run.log:978:i=m.make_instance(**(getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})), seed=0)
+../../../gvrepo/results/2105.10184/codex_run.log:1009:params = getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})
+../../../gvrepo/results/2105.10184/codex_run.log:1082:SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:1440:from gen_2411_07981 import (DIFFICULTY, SHIPPING_DIFFICULTY,
+../../../gvrepo/results/2105.10184/codex_run.log:1443:params = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:4702:name = diff or getattr(m, "SHIPPING_DIFFICULTY", next(iter(D), "medium"))
+../../../gvrepo/results/2105.10184/codex_run.log:4828:i=m.make_instance(**(getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})), seed=0)
+../../../gvrepo/results/2105.10184/codex_run.log:4859:params = getattr(m,"DIFFICULTY",{}).get(getattr(m,"SHIPPING_DIFFICULTY","medium"),{"n":12})
+../../../gvrepo/results/2105.10184/codex_run.log:5536:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:6249:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:6476:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:7189:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:7432:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:8145:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:8466:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:9179:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:9531:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:10244:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:10456:p=g.DIFFICULTY[g.SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:10493:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:11206:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:11437:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:12150:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:12377:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:13090:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:13317:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:14030:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:14259:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:14972:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:15199:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:15912:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:16141:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:16854:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:17081:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:17794:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:18023:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:18736:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:18963:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:19676:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:19905:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:20618:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:20845:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:21558:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:21787:+SHIPPING_DIFFICULTY = "medium"
+../../../gvrepo/results/2105.10184/codex_run.log:22500:+    shipping = DIFFICULTY[SHIPPING_DIFFICULTY]
+../../../gvrepo/results/2105.10184/codex_run.log:22727:+SHIPPING_DIFFICULTY = "medium"
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+from pypdf import PdfReader
+r=PdfReader('/tmp/1810.08983.pdf')
+for i,p in enumerate(r.pages):
+ print(f'\\n===== PAGE {i+1} =====\\n')
+ print(p.extract_text())
+PY" in /home/gson/gvrepo/results/1810.08983
+ succeeded in 183ms:
+
+
+===== PAGE 3 =====
+
+ 
+ 
+ 
+ 
+TABLE II 
+SYMBOLS AND DEFINITIONS . 
+ 
+ 
+ 
+TABLE III 
+PUBLIC SETUP STEPS  
+ 
+ 
+ 
+T
+ABLE IV 
+PRIVATE PROCEDURES  
+ 
+ 
+ 
+TABLE V  
+PRIVATE KEYS  
+ 
+ 
+ 
+TABLE VI   
+PUBLIC KEYS  
+ 
+ 
+ 
+ 
+ 
+TABLE VII   
+COMMON D-H SESSION KEY  
+ 
+ 
+ 
+T
+ABLE VIII   
+ADDITIONAL ENCRYPTION STEP (BCSP  PROTECTED ) 
+ 
+ 
+ 
+It is easy to apply the same framework to other asymmetric 
+protocols. For example, defining power-sets of matr ices, a 
+straightforward ElGamal solution is at hand. Also, extending 
+the GL() to a polynomial ring,  a Maze et al.  protocol could be 
+implemented [8]. Changing of purpose, a ZKP authent ication 
+protocol, a Baumslag et al. KEM (key encapsulation 
+mechanism) or a Digital Signature is almost trivial to design [9]. 
+When powers of matrices are used new kind of weakness could 
+appear, the multiplicative order of the elements sh ould be 
+sufficiently high to foil brute-force attacks. One could use 
+companion matrices of primitive polynomials as generators of 
+high order subgroups. Comparing different canonical  
+approaches, the BCSP application of this framework offer a 
+reasonable compromise solution between cryptographi c 
+security and fast computation. 
+At APPENDIX I we present a standard Mathematica source 
+code and the running results (on a Core i5 PC/2.20G Hz). No 
+attempt was made to optimize that code and computat ions are 
+only included as a proof of concept. All symbols included there, 
+follow here explained conventions.  
+ 
+6.  FRAMEWORK SECURITY  
+ 
+Some required properties that the algebraic platfor m ( G) 
+should have in order to have an efficient and secure framework 
+[8,17], could be resumed here: 
+ 
+9 ≡ 	 (8,(6   – selected parameters are d=8 and prime=251   
+P8  ⊂ 9  – any commutative subgroup 
+⊂   – strictly included into 
+∈  – belongs to 
+∈= – uniform distribution, randomly selected element in 
+∀≠  -  strictly positive elements in the list.  
+
+@ ,
+A,… – diagonal matrices of eigenvalues with ∀≠ property 
+(C …C9 – eigenvalues set, each one mentioned independent from others 
+[a,b] – commutator (=a -1b-1ab) 
+I – Identity matrix order 8 
+Sel – selects or reserves for her/him with agreemen t of the other party. 
+⟹    send publicly to the other entity 
+validation – greyed field means a consistency proof  
+Public parameters 
+(any entity 
+defines)  
+ 
+Subgroups {A 1,A 2,A 3,X 1,X 2} ⊂ 9 
+Subgroups {B 1,B 2,B 3,Y 1,Y 2} ⊂  9 
+Eigenvectors P assigned to A 2, Y 1 ;  [A 2,Y 1]=I 
+Eigenvectors Q assigned to A 3, Y 2 ;  [A 3,Y 2]=I 
+Eigenvectors R assigned to B 1, X1 ;  [B1,X1]=I 
+Eigenvectors S assigned to B 2, X2 ;  [B2,X2]=I 
+Eigenvectors matrices  EF,G,H,IJ ∈= 9 ⟹ 
+ 
+  ALICE BOB 
+Generating private 
+elements 
+Sel {A1,A 2,A 3,X 1,X 2} 
+∀≠ C…C 9 ∈= ℤ(6 
+∗  
+
+@( = (C…C9 
+
+@7 = (C…C9 
+
+M = (C…C 9 
+
+M( = (C…C 9 
+N = H
+OH ∈ F9 
+N( = I
+O(I ∈ F9 
+ 
+Sel {B 1,B 2,B 3,Y 1,Y 2} 
+∀≠ C…C 9 ∈= ℤ(6 
+∗  
+
+A = (C…C9 
+
+A( = (C…C9 
+
+P = (C…C 9 
+
+P( = (C…C 9 
+Q = F
+RF ∈ F9 
+Q( = G
+R(G ∈ F9 
+ 
+  ALICE BOB 
+Private keys  
+S ∈= 9 
+S( = F
+@(F 
+S7 = G
+@7G 
+T = H
+AH 
+T( = I
+A(I 
+T7 ∈= 9 
+  ALICE BOB 
+Public keys 
+(tokens)  
+U = SN 
+V = N
+S(N( 
+W = N(
+S7 
+(u, v, w)  ⟹ 
+ = TQ 
+X = Q
+T(Q( 
+Y = Q(
+T7 
+(p, q, r) ⟹ 
+  ALICE BOB 
+Private session 
+key ( K) 
+obtained  
+Z@[\]^ =
+= S  S( X S7 Y  
+ZA_A =
+= U T V T( W T7 
+Z@[\]^ = S  S( X S7 Y =
+= S (TQS((Q
+T(Q(S7 (Q(
+T7 = 
+= S  T S( T( S7 T7 
+ZA_A =  U T  V T( W T7
+= (S NT(N
+S(N( T((N(
+S7T7 = 
+= S T S( T( S7 T7 
+Z@[\]^ = ZA_A ≡   Z   
+  ALICE BOB 
+BOB 
+ciphers a message 
+for ALICE  
+ ‘ab ∈ 9 
+cde =
+= ZA_A 
+‘ab  ZA_A  
+cde ⟹ 
+  ALICE BOB 
+ALICE recovers 
+the message  
+ 
+‘ab =
+= Z@[\]^  cde  Z@[\]^ 
+
+ 
+ 
+ 
+‘ab = Z@[\]^  cde  Z@[\]^ 
+ =
+= Z@[\]^ ZA_A 
+‘ab  ZA_A Z@[\]^ 
+ = ‘ab  
+ 
+
+===== PAGE 4 =====
+
+ 
+ 
+ 
+I.  G should be non-abelian and of exponential growth as  
+function of the length of its elements. In our framework, 
+G is the general linear group and the  A, B   subgroups 
+cardinality growth exponentially as the d-dimension  
+parameter increases linearly. 
+II.  The word problem (determining if an element is or n ot 
+an identity) should be efficiently solved. That achieves 
+trivially the matrix framework. 
+III.  Elements of G should be efficiently represented on a 
+computer. This is also trivial in our case. 
+IV.  Multiplication and inversion of elements should be 
+computationally easy within the representation. Again, 
+the proposed framework complies it. 
+V.  If centralizers of generator sets are used, it shou ld be 
+hard to solve a decomposition problem presented in 
+[17]. In our case, we do not require them.    
+ 
+As shown, our framework fits well into the required settings. 
+ 
+A way to attack the present protocol would be to fi nd a 
+probabilistic polynomial time algorithm to solve th e algebraic 
+triple decomposition problem and the blind conjugac y search 
+problem. 
+To guarantee that TDP truly rely on non-linear trip le 
+decomposition, the framework should avoid some pitfalls.  One 
+way to attack TDP is to find a pseudo-key that work s as a 
+private one of any entity [17], which requires solving: 
+ 
+S
+N = U                                  (4) 
+N
+S(N( = V                                  (5) 
+N(
+S7 = W                                  (6) 
+ 
+Specifically, equation (5) is quadratic in terms of  three 
+unknowns and this foils linear algebraic attacks. T here should 
+be paid attention to some cases to be avoided. We resume them 
+here. 
+ 
+(a)  If [X 
+1,Y 1]=I, [X 2,Y 1]=I and [X 2,Y 2]=I, then the shared 
+key could be computed from the public key. 
+(b)  If [A 2,B 1]=I, [A 3,B 2]=I and [A 3,B 1]=I, then the shared 
+key could be computed from the public key. 
+(c)  If ([A 2,B 1]=I and [X 2,B 1]=I) or ([A 3,B 2]=I and 
+[A 3,Y 1]=I), then the security of the system relies on the 
+difficulty of decomposing an element into two 
+unknowns. 
+(d)  To assure that eq. (5) cannot be linearly reduced, eq. (6) 
+should have many solutions. 
+(e)  In case of the use of generators to define the subgroups 
+in the setting, they should be short to foil a length-based 
+attack.  
+ 
+More details of these considerations could be found at Kurt’s 
+paper [17] and Myasnikov et al. book [8]. In our framework:  
+ 
+(a)  Large cardinality of involved sets could be obtaine d 
+selecting appropriate dimensional parameters.  
+(b)  Commutativity restrictions are accurately followed as 
+each eigenvector matrix are independent of others. 
+(c)  Equation (6) has a very big number of solutions (se e 
+eq. (7)). 
+(d)  No generators are used to define the subgroups sets.  
+ 
+Supposing no other weakness at hand, full cracking a private 
+key depends on four d-dimensional diagonal eigenvalues 
+matrices, so a brute force search of the commutativ e P
+8 
+subgroups of M8 involves the cardinal 
+ 
+|P 8 |4 =249 32 =4.77 x 10 76  ≈ 2 255                  (7) 
+ 
+For a real-life application, we suggest to use at l east P
+8  or 
+perhaps expanding the commutative subgroup to P16 , who 
+implies a 510 -bit level classical security. The corresponding 
+quantum security level is the respective square roots of the key 
+space cardinals [7]. The obvious drawback is the corresponding 
+increase in space, each matrix in {P8, P16 } occupies respectively 
+{512, 2048 } bits. A corresponding computational session time 
+should be expected.  
+Against quantum-based attacks, the dimensional incr ease 
+foils Grover like attacks and no multiplicative (or  additive) 
+cyclic order finding adaptation of Shor’s algorithm  is known 
+and accessible against the present protocol.   
+As a final consequence, we infer that our proposed 
+framework could be gotten immune against brute-force attacks, 
+linear representation attacks, length-based attacks and currently 
+known quantum attacks.  
+7.  SEMANTIC SECURITY  
+ 
+The key point to assure semantic security is the 
+indistinguishability of encrypted information from random one 
+of same length [5,18,19,20]. 
+The presented framework is easily translatable to o ther 
+asymmetric protocols. For this reason, the followin g security 
+analysis is not limited to the present example and can be 
+extended in new contexts. To proceed with this anal ysis, two 
+conjectures are exposed. 
+ 
+DEFINITION (D1):  interactive challenge-response game by 
+a verifier against an active adversary. 
+In this three-phase protocol, two entities, an adversary and a 
+verifier (or challenger) are involved. The verifier  has a secret 
+key that he tries to hide from the adversary and al lows the 
+adversary to pose questions to him that answers truthfully like 
+an Oracle. In a first phase, the adversary can rais e all the 
+questions that he wants to try to obtain informatio n about the 
+secret key. In a second phase, the verifier presents the secret key 
+(k) to the adversary next to another of equal length and format 
+(* k ) randomly generated. Even during the second phase,  the 
+adversary may continue to consult the verifier, exc ept for 
+questions linked to the disclosure of the secret itself. In the third 
+phase, the adversary has a polynomial time stochastic algorithm 
+and must distinguish whether the secret is k or * k , with 
+probability negligibly greater than ½. If the opponent achieves 
+the distinction with that probability, he wins the game and loses 
+it in the opposite case. 
+
+===== PAGE 5 =====
+
+ 
+ 
+ 
+CONJECTURE (C1): Indistinguishability of product 
+transformed random matrices. 
+The elements of 	(
+,
+)  are uniformly random integers of 
+prime modulus and d-dimension. It is a known fact that sum or 
+multiplication between random field integers, does not 
+introduce statistical bias into results [21].  Ther efore, linear 
+transformed matrices are statistically distributed as any random 
+generated ones. The consequence is that in an inter active 
+challenge-response protocol (Definition D1), an adversary does 
+not achieve the distinction raised with the required probability. 
+ 
+CONJECTURE (C2): the present framework adheres to 
+semantic security under IND-CCA2. 
+The TDP one-way trapdoor function with which the private 
+key is protected is, as previous exposed, not weake ned by 
+attacks of probabilistically polynomial time, wheth er classical 
+or quantum that are in the public domain until today, forcing the 
+potential attacker to perform a systematic explorat ion of the 
+private key space (the diagonal matrices). Under th is 
+assumption and considering the indistinguishability  of 
+randomly generated matrices and enciphered ones, it  is 
+reasonable to assign to the framework a security ma rk 
+equivalent to IND-CCA2 (semantic security under IND-CCA2) 
+[19,20]. 
+8.  PREVIOUS WORK  
+Some previous work over the same issue was conducted by 
+the author along last year’s [22,23,24]. Recently we contributed 
+to NIST standardization Program with a Maze et al. protocol 
+where the selected platform was based in octonions algebra 
+[25]. Unfortunately, it was a bad choice because an  algebraic 
+attack of Bernstein [26] exposed the octonion’s weakness. This 
+shows that even a viable OWTF does not cover against a weak 
+platform. Statements like the exposed in 6. Framework Security 
+(I. to V.) should be faithfully pursued to achieve an efficient 
+asymmetric cryptographic system.  
+ 
+9.  CONCLUSIONS  
+ 
+We developed a non-arbitrated algebraic post-quantu m 
+framework of canonical non-commutative cryptography, which 
+could easily be adapted to any other asymmetric purpose.  
+Security and computational efficiency were the main  
+concerns at developing time. Therefore, TDP was selected as an 
+appropriate OWTF for D-H Key Exchange between two 
+entities. Once obtained, the common key is used to cipher 
+messages between both using a simple transformation protected 
+by BCSP, a blind conjugacy problem OWTF. 
+Classical and quantum attacks are discussed, and th e 
+framework seems to be resilient to both. Also, evid ence to 
+assign semantic security (IND-CCA2) to the framewor k is 
+provided.  Nevertheless, it must be kept attention to any 
+appearing cryptanalytic tools against non-commutati ve 
+platforms [27].   
+No big number library is required here. This featur e would 
+enable the use at low computational resources envir onments 
+like smartcards or cryptographic keys. 
+10.  R
+EFERENCES  
+[1]  NIST, “Post-Quantum Cryptography Standardization Pr ogram”, 
+https://csrc.nist.gov/Projects/Post-Quantum-Cryptog raphy 
+[2]  L. Chen et al, NISTIR 8105, “Report on Post-Quantum  
+Cryptography”,NIST,2006. 
+http://nvlpubs.nist.gov/nistpubs/ir/2016/NIST.IR.81 05.pdf (consulted 
+February10, 2017) 
+[3]  P. Shor, “Polynomial-time algorithms for prime fact orization and 
+discrete logarithms on a quantum computer”, SIAM J. Comput., no. 5, 
+pp. 1484-1509, 1997. 
+[4]  L. K. Grover, “A fast quantum mechanical algorithm for database 
+search”, In Proc. 28th Ann. ACM Symp. on Theory of Computing (ed. 
+Miller, G. L.) 212–219, ACM, 1996. 
+[5]  J. Katz, Y. Lindell, “Introduction to Modern Cryptography”, Chapman 
+& Hall/CRC, 2008. 
+[6]  L. Fortnow, J. Rogers, “Complexity Limitations on Q uantum 
+Computation”, arXiv:cs/9811023 [cs.CC], 1998 
+[7]  D. J. Bernstein, J. Buchmann, E. Dahmen, “Post-Quan tum 
+Cryptography”, Springer Verlag, ISBN: 978-3-540-887 01-0 , 2009.  
+[8]  A. Myasnikov, V. Shpilrain, A. Ushakov, “Non-commut ative 
+Cryptography and Complexity of Group-theoretic Prob lems”, 
+Mathematical Surveys and Monographs, AMS Volume 177 , 2011 
+[9]  L. Gerritzen et al (Editors), “Algebraic Methods in  Cryptography”, 
+Contemporary Mathematics, AMS, Vol. 418, 2006  
+[10]  B. Tsaban, “Polynomial time solutions of computatio nal problems in 
+non-commutative algebraic crypto”, 2012. 
+http://arxiv.org/abs/1210.8114v2, (consulted Februa ry10, 2017) 
+[11]  M. I. González Vasco, R. Steinwandt, “Group Theoret ic 
+Cryptography” , CRC Press, 2015 
+[12]  A. Kalka, “Non-associative public-key cryptography” , 2012. 
+arXiv:1210.8270 [cs.CR] (consulted February10, 2017 ) 
+[13]  V.A. Shcherbacov, “Quasigroups in cryptology”, Comp uter Science 
+Journal of Moldova, 17:2, 50, 2009. 
+[14]  R. Lidl and H. Niederreiter, “Finite Fields”, Cambr idge University 
+Press, Cambridge, 1997. 
+[15]  A. Menezes, P. van Oorschot and S.Vanstone, “Handbo ok of Applied 
+Cryptography”, CRC Press, 1997. 
+[16]  T. Beth et al,, “Encyclopedia of Mathematics and it s Applications”, 
+Vol 69: “Design Theory”, 2 nd . Ed, Cambridge University Press, 1999 
+[17]  Y. Kurt, “A new key exchange primitive based on the  triple 
+decomposition problem”, preprint, Available at 
+http://eprint.iacr.org/2006/378  
+[18]   M. Bellare, A. Dessai, D. Pointcheval, P. Rogaway,  “Relations 
+Among Notions of Security for Public-Key Encryption  Schemes”, 
+Advances in Cryptology (CRYPTO '98), Lecture Notes in Computer 
+Science Vol. 1462, H. Krawczyk ed., Springer-Verlag , 1998. 
+[19]  E. Kiltz, J. Malone-Lee, “A General Construction of  IND-CCA2 
+Secure Public Key Encryption”, available at homepag e.ruhr-uni-
+bochum.de/Eike.Kiltz/papers/general_cca2.ps  
+[20]   S. Goldwasser, S. Micali, “Probabilistic Encryptio n”, Journal of 
+Computer and System Sciences, 28: 270-299, 1984. 
+[21]  M. D. Springer, “The algebra of random variables”, Wiley series in 
+probability and mathematical statistics, 1979  
+[22]  P. Hecht, “Post-Quantum Cryptography(PQC): Generali zed ElGamal 
+Cipher over GF(251^8)”, ArXiv Cryptography and Secu rity (cs.CR) 
+http://arxiv.org/abs/1702.03587  6pp (2017) & Journal of Theoretical 
+and Applied Informatics (TAAI), 28:4, pp 1-14 (2016 ), 
+http://dx.doi.org/10.20904/284001   
+[23]  P. Hecht, “Post-Quantum Cryptography: A Zero-Knowle dge 
+Authentication Protocol”, ArXiv Cryptography and Se curity (cs.CR) 
+https://arxiv.org/abs/1703.08630 , 3pp (2017) 
+[24]  P. Hecht, “Post-Quantum Cryptography: S381 Cyclic S ubgroup of 
+High Order”, ArXiv Cryptography and Security (cs.CR ) 
+http://arxiv.org/abs/1704.07238  (preprint) & International Journal of 
+Advanced Engineering Research and Science (IJAERS) 4:6, pp 78-86 
+(2017), https://dx.doi.org/10.22161/ijaers.4.6.10 
+[25]  P. Hecht, J. Kamlofsky,  “HK17:  Post Quantum Key E xchange 
+Protocol Based on Hypercomplex Numbers”, 
+https://csrc.nist.gov/CSRC/media/Projects/Post-Quan tum-
+Cryptography/documents/round-1/submissions/HK17.zip  
+[26]  Bernstein D., Lange T., “HK17 Official Comment”, 
+https://csrc.nist.gov/CSRC/media/Projects/Post-Quan tum-
+Cryptography/documents/round-1/official-comments/HK 17-official-
+comment.pdf , 2017 
+[27]  V. Roman’kov,”Cryptanalysis of a combinatorial publ ic key crypto-
+system”, De Gruyter, Groups Complex. Cryptology. 20 17.
+
+===== PAGE 6 =====
+
+ 
+ 
+ 
+APPENDIX I: Mathematica source code and a step-by-step session 
+ 
+ 
+NEWLY DEFINED FUNCTIONS 
+ 
+RandomMatrix[dim_,prime_] := Module[{x}, 
+     Label[1]; 
+     x=Table[Random[Integer,{0,prime-
+1}],{i,1,dim},{j,1,dim}]; 
+     If[Det[x,Modulus 
+prime]==0,Goto[1],Break];x]; 
+RandomDiagonalMatrix[dim_, prime_] :=  
+     DiagonalMatrix[Table[Random[Integer,{1,prime-
+1}],{i,1,dim}]]; 
+InverseMatrix[M_,prime_]:=Inverse[M, 
+Modulus 
+prime]; 
+ConjugateMatrix[M_,conj_,prime_]:= 
+Mod[InverseMatrix[conj,prime].M.conj,prime]; 
+M[X_]:=MatrixForm[X]; 
+ 
+COMBINED D-H AND CIPHER SESSION 
+ 
+RandomSeed; 
+TimesToRepeat=1000; 
+dim=8; 
+prime=251; 
+trials=0; 
+{T0=TimeUsed[],Do[ 
+   { 
+    Module[{}, 
+      Label[begin]; 
+      trials +=1; 
+      P=RandomMatrix[dim,prime]; 
+      Q=RandomMatrix[dim,prime]; 
+      R=RandomMatrix[dim,prime]; 
+      S=RandomMatrix[dim,prime]; 
+      d
+A2 =RandomDiagonalMatrix[dim,prime]; 
+      dA3 =RandomDiagonalMatrix[dim,prime]; 
+      dX1 =RandomDiagonalMatrix[dim,prime]; 
+      dX2 =RandomDiagonalMatrix[dim,prime]; 
+      x1=ConjugateMatrix[d X1 ,R,prime]; 
+      x2=ConjugateMatrix[d X2 ,S,prime]; 
+      If[Det[x 1.x 2, 
+Modulus prime]==0,Goto[begin],nil;]; 
+      a1=RandomMatrix[dim,prime]; 
+      a2=ConjugateMatrix[d A2 ,P,prime]; 
+      a3=ConjugateMatrix[d A3 ,Q,prime]; 
+      If[Det[a 1.a 2.a 3, 
+Modulus prime]==0,Goto[begin],nil;]; 
+      u=Mod[a 1.x 1 ,prime]; 
+      v=Mod[InverseMatrix[x 1,prime].a 2.x 2,prime]; 
+      w=Mod[InverseMatrix[x 2,prime].a 3,prime]; 
+      dB1 =RandomDiagonalMatrix[dim,prime]; 
+      dB2 =RandomDiagonalMatrix[dim,prime]; 
+      dY1 =RandomDiagonalMatrix[dim,prime]; 
+      dY2 =RandomDiagonalMatrix[dim,prime]; 
+      y1=ConjugateMatrix[d Y1 ,P,prime]; 
+      y2=ConjugateMatrix[d Y2 ,Q,prime]; 
+      If[Det[y 1.y 2, 
+Modulus prime]==0,Goto[begin],nil;]; 
+      b1=ConjugateMatrix[d B1 ,R,prime]; 
+      b2=ConjugateMatrix[d B2 ,S,prime]; 
+      b3=RandomMatrix[dim,prime]; 
+      If[Det[b 1.b 2.b 3, 
+Modulus prime]==0,Goto[begin],nil;]; 
+      p=Mod[b 1.y 1 ,prime]; 
+      q=Mod[InverseMatrix[y 1,prime].b 2.y 2,prime]; 
+      r=Mod[InverseMatrix[y 2,prime].b 3,prime]; 
+      Kalice= Mod[a 1.p.a 2.q.a 3.r,prime]; 
+      Kbob= Mod[u.b 1.v.b 2.w.b 3,prime]; 
+(* From here on the encryption routine *) 
+      msg=RandomMatrix[dim,prime]; 
+      cif=ConjugateMatrix[msg,Kbob,prime];  
+rec=ConjugateMatrix[cif,InverseMatrix[Kalice,prime]  
+ ,prime]; 
+     ]; 
+    },{TimesToRepeat}],T1=TimeUsed[]}; 
+ 
+LAST SESSION PRINTING SOURCE 
+ 
+Print[" ------------------------------------------- - 
+-------"]; 
+Print[" Matrix dimension (dim)   = ",dim]; 
+Print[" Prime modulus (prime)    = ",prime]; 
+Print[" Number of Sessions       = ",TimesToRepeat] ; 
+Print[" Mean session time (sec)  = ",TimesPerCycle] ;    
+Print[" Sessions singularity corrections needed = " ,  
+  (trials/TimesToRepeat).100," percent"];  
+Print[" "]; 
+Print[" Ongoing, the last computed session is 
+presented."]; 
+Print[" "]; 
+Print[" Random public eigenvectors ---------------- - 
+--------"]; 
+{Print[" P (for A2,Y1) = ",M[P]],Print[" Q (for 
+A3,Y2) = ",M[Q]]}; 
+{Print[" R (for B1,X1) = ",M[R]],Print[" S (for 
+B2,X2) = ",M[S]]}; 
+Print[" Random ALICE private eigenvalues ---------- - 
+--------"]; 
+{Print[" dA2 = ",M[d 
+A2 ]],Print[" dA3 = ",M[d A3 ]]}; 
+{Print[" dX1 = ",M[d X1 ]],Print[" dX2 = ",M[d X2 ]]}; 
+Print[" ALICE private auxiliary-------------------- - 
+-------"]; 
+{Print[" x1 = ",M[x 
+1]],Print[" x2 = ",M[x 2]]}; 
+Print[" ALICE private keys ------------------------ - 
+-------"]; 
+{Print[" a1 = ",M[a 
+1]],Print[" a2 = ",M[a 2]],Print[" 
+a3 = ",M[a 3]]}; 
+Print[" ALICE public keys (=token for BOB:{u,v,w}-- - 
+-------"]; 
+{Print[" u = ",M[u]],Print[" v = ",M[v]],Print[" w = 
+",M[w]]}; 
+Print[" Random BOB private eigenvalues ------------ - 
+--------"]; 
+{Print[" dB1 = ",M[d 
+B1 ]],Print[" dB2 = ",M[d B2 ]]}; 
+{Print[" dY1 = ",M[d Y1 ]],Print[" dY2 = ",M[d Y2 ]]}; 
+Print[" BOB private auxiliary---------------------- - 
+-------"]; 
+{Print[" Y1 = ",M[y 
+1]],Print[" Y2 = ",M[y 2]]}; 
+Print[" BOB private keys -------------------------- - 
+-------"]; 
+{Print[" b1 = ",M[b 
+1]],Print[" b2 = ",M[b 2]],Print[" 
+b3 = ",M[b 3]]}; 
+Print[" BOB public keys (=token for ALICE:{p,q,r}-- - 
+------"]; 
+{Print[" p = ",M[p]],Print[" q = ",M[q]],Print[" r = 
+",M[r]]}; 
+Print[" ALICE & BOB (identical) session 
+keys/conjugators--"]; 
+{Print[" Kalice = ",M[Kalice]],Print[" Kbob   = 
+",M[Kbob]]}; 
+Print[" PKE (BCSP) session------------------------- - 
+------"]; 
+Print[" BOB selected msg = "M[msg]]; 
+Print[" Encrypted msg = "M[cif]]; 
+Print[" ALICE recovered msg = "M[rec]]; 
+Print[" ------------------------------------------- - 
+------"]; 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== PAGE 7 =====
+
+ 
+ 
+ 
+LAST SESSION OUTPUT  
+ 
+------------------------------------------- 
+Matrix dimension (dim) = 8 
+Prime modulus (prime)  = 251 
+Number of Sessions     = 1000 
+Mean session time (sec)= 0.001968` 
+Sessions singularity repair needed = 0.1% 
+------------------------------------------- 
+ 
+Random public eigenvectors ---------------- 
+P (for A2,Y1) =  
+   {{118, 87, 80, 104, 185, 139, 159, 46}, 
+   {154, 244, 21, 132, 150, 119, 37, 202}, 
+   {209, 129, 161, 232, 12, 95, 13, 117}, 
+   {146, 223, 33, 122, 12, 173, 170, 205}, 
+   {27, 229, 5, 186, 217, 136, 13, 9}, 
+   {25, 179, 38, 239, 172, 50, 125, 108}, 
+   {176, 112, 200, 108, 145, 171, 76, 100}, 
+   {2, 45, 164, 12, 201, 73, 154, 199}} 
+Q (for A3,Y2) =  
+   {{249, 119, 144, 39, 171, 239, 154, 249}, 
+   {205, 165, 39, 7, 76, 121, 22, 44}, 
+   {235, 42, 74, 189, 25, 123, 58, 42}, 
+   {162, 108, 52, 101, 126, 69, 10, 217}, 
+   {226, 225, 56, 178, 206, 145, 217, 113}, 
+   {10, 191, 141, 66, 5, 30, 94, 91}, 
+   {90, 129, 91, 230, 47, 156, 35, 148}, 
+   {73, 63, 127, 91, 40, 201, 139, 133}} 
+R (for B1,X1) =  
+   {{35, 46, 161, 77, 163, 16, 49, 12}, 
+   {244, 187, 177, 46, 169, 186, 198, 164}, 
+   {105, 78, 198, 72, 188, 30, 14, 241}, 
+   {195, 69, 14, 241, 52, 18, 114, 130}, 
+   {186, 129, 205, 26, 229, 232, 207, 205}, 
+   {186, 83, 244, 163, 215, 29, 12, 237}, 
+   {238, 99, 79, 37, 32, 91, 248, 96}, 
+   {13, 169, 7, 195, 25, 228, 50, 127}} 
+S (for B2,X2) =  
+   {{39, 8, 145, 170, 38, 159, 197, 118}, 
+   {41, 66, 220, 106, 243, 52, 50, 114}, 
+   {9, 7, 128, 145, 113, 137, 184, 228}, 
+   {214, 126, 35, 170, 49, 38, 249, 230}, 
+   {170, 81, 136, 8, 98, 92, 175, 7}, 
+   {119, 71, 173, 142, 247, 91, 146, 168}, 
+   {191, 214, 36, 44, 82, 211, 199, 2}, 
+   {105, 32, 206, 102, 27, 76, 139, 198}} 
+Random ALICE private eigenvalues -------- 
+dA2 =  
+   {{39, 0, 0, 0, 0, 0, 0, 0}, 
+   {0, 56, 0, 0, 0, 0, 0, 0}, 
+   {0, 0, 214, 0, 0, 0, 0, 0}, 
+   {0, 0, 0, 120, 0, 0, 0, 0}, 
+   {0, 0, 0, 0, 97, 0, 0, 0}, 
+   {0, 0, 0, 0, 0, 56, 0, 0}, 
+   {0, 0, 0, 0, 0, 0, 110, 0}, 
+   {0, 0, 0, 0, 0, 0, 0, 87}}} 
+dA3 = 
+   {{250, 0, 0, 0, 0, 0, 0, 0}, 
+   {0, 214, 0, 0, 0, 0, 0, 0}, 
+   {0, 0, 226, 0, 0, 0, 0, 0}, 
+   {0, 0, 0, 16, 0, 0, 0, 0}, 
+   {0, 0, 0, 0, 26, 0, 0, 0}, 
+   {0, 0, 0, 0, 0, 186, 0, 0}, 
+   {0, 0, 0, 0, 0, 0, 22, 0}, 
+   {0, 0, 0, 0, 0, 0, 0, 248}} 
+dX1 =  
+   {{62, 0, 0, 0, 0, 0, 0, 0}, 
+   {0, 46, 0, 0, 0, 0, 0, 0}, 
+   {0, 0, 10, 0, 0, 0, 0, 0}, 
+   {0, 0, 0, 80, 0, 0, 0, 0}, 
+   {0, 0, 0, 0, 88, 0, 0, 0}, 
+   {0, 0, 0, 0, 0, 175, 0, 0}, 
+   {0, 0, 0, 0, 0, 0, 195, 0}, 
+   {0, 0, 0, 0, 0, 0, 0, 28}} 
+ 
+ 
+dX2 =  
+   {{230, 0, 0, 0, 0, 0, 0, 0}, 
+   {0, 209, 0, 0, 0, 0, 0, 0}, 
+   {0, 0, 186, 0, 0, 0, 0, 0}, 
+   {0, 0, 0, 31, 0, 0, 0, 0}, 
+   {0, 0, 0, 0, 236, 0, 0, 0}, 
+   {0, 0, 0, 0, 0, 31, 0, 0}, 
+   {0, 0, 0, 0, 0, 0, 241, 0}, 
+   {0, 0, 0, 0, 0, 0, 0, 117}} 
+ 
+ALICE private auxiliary------------------ 
+x1 =  
+   {{185, 177, 6, 133, 82, 219, 154, 65}, 
+   {160, 161, 244, 214, 15, 99, 58, 81}, 
+   {63, 24, 105, 6, 116, 131, 213, 28}, 
+   {185, 23, 148, 104, 148, 95, 40, 109}, 
+   {182, 144, 0, 191, 5, 230, 179, 206}, 
+   {216, 235, 144, 109, 170, 177, 234, 159}, 
+   {13, 214, 202, 190, 209, 100, 229, 78}, 
+   {39, 135, 206, 239, 29, 145, 5, 220}} 
+x2 =  
+   {130, 56, 107, 168, 26, 102, 76, 27}, 
+   {140, 71, 189, 9, 211, 248, 64, 199}, 
+   {197, 207, 146, 173, 121, 54, 49, 165}, 
+   {159, 139, 163, 40, 76, 232, 15, 242}, 
+   {50, 91, 127, 81, 154, 242, 80, 228}, 
+   {28, 75, 51, 213, 126, 145, 166, 212}, 
+   {146, 26, 53, 16, 11, 32, 24, 32}, 
+   {44, 236, 139, 214, 53, 100, 164, 69}} 
+ALICE private keys ----------------------- 
+a1 = 
+   {82, 187, 30, 241, 138, 17, 139, 234}, 
+   {138, 221, 8, 88, 14, 226, 200, 110}, 
+   {5, 151, 124, 207, 119, 38, 86, 96}, 
+   {5, 248, 171, 240, 43, 10, 147, 164}, 
+   {100, 123, 237, 224, 53, 57, 185, 143}, 
+   {107, 13, 45, 90, 45, 191, 17, 188}, 
+   {42, 147, 60, 95, 75, 157, 235, 157}, 
+   {82, 58, 89, 222, 86, 205, 20, 38}} 
+a2 =  
+   {{221, 163, 237, 236, 25, 117, 236, 30}, 
+   {53, 50, 223, 72, 124, 31, 45, 136}, 
+   {151, 82, 154, 14, 120, 110, 69, 16}, 
+   {115, 65, 61, 114, 16, 26, 203, 70}, 
+   {236, 93, 237, 33, 175, 113, 237, 46}, 
+   {185, 192, 24, 203, 58, 132, 59, 8}, 
+   {169, 199, 85, 126, 229, 210, 45, 191}, 
+   {141, 134, 123, 0, 229, 227, 72, 139}} 
+  a3 =  
+   {{63, 41, 113, 40, 99, 102, 22, 156}, 
+   {1, 128, 57, 143, 48, 49, 157, 100}, 
+   {43, 68, 23, 245, 109, 22, 158, 217}, 
+   {5, 223, 161, 138, 0, 67, 218, 33}, 
+   {113, 211, 77, 96, 165, 181, 209, 148}, 
+   {136, 156, 168, 192, 100, 60, 205, 88}, 
+   {81, 174, 184, 104, 209, 164, 16, 25}, 
+   {74, 68, 154, 209, 131, 184, 225, 93}} 
+ 
+ALICE public keys (=token for BOB:{u,v,w}--- 
+u =  
+   {{13, 45, 16, 222, 244, 44, 32, 228}, 
+   {137, 52, 66, 33, 117, 121, 223, 96}, 
+   {249, 3, 160, 173, 208, 137, 211, 89}, 
+   {117, 129, 223, 30, 245, 6, 26, 170}, 
+   {246, 4, 33, 156, 215, 79, 41, 185}, 
+   {218, 149, 161, 54, 184, 85, 149, 250}, 
+   {200, 43, 17, 4, 225, 165, 44, 228}, 
+   {22, 161, 92, 201, 223, 46, 17, 63}} 
+v =  
+   {{151, 241, 216, 80, 197, 30, 29, 56}, 
+   {57, 32, 151, 200, 39, 9, 196, 90}, 
+   {0, 16, 104, 112, 88, 184, 128, 126}, 
+   {32, 167, 46, 6, 211, 248, 67, 61}, 
+   {2, 136, 41, 207, 181, 241, 210, 112}, 
+   {157, 167, 14, 226, 34, 131, 13, 202}, 
+   {165, 225, 89, 144, 70, 143, 104, 199}, 
+   {43, 54, 47, 76, 58, 76, 218, 217}} 
+ 
+
+===== PAGE 8 =====
+
+ 
+ 
+ 
+w =  
+   {{112, 5, 86, 148, 45, 217, 142, 68}, 
+   {0, 203, 179, 25, 32, 185, 160, 98}, 
+   {10, 97, 83, 114, 6, 145, 118, 156}, 
+   {96, 41, 30, 93, 184, 109, 115, 59}, 
+   {0, 224, 44, 104, 128, 191, 142, 91}, 
+   {157, 49, 41, 196, 73, 58, 191, 72}, 
+   {200, 231, 240, 0, 96, 209, 45, 124}, 
+   {22, 4, 201, 127, 151, 31, 108, 68}} 
+Random BOB private eigenvalues ---------- 
+dB1 =  
+   {{125, 0, 0, 0, 0, 0, 0, 0}, 
+   {0, 103, 0, 0, 0, 0, 0, 0}, 
+   {0, 0, 197, 0, 0, 0, 0, 0}, 
+   {0, 0, 0, 99, 0, 0, 0, 0}, 
+   {0, 0, 0, 0, 29, 0, 0, 0}, 
+   {0, 0, 0, 0, 0, 178, 0, 0}, 
+   {0, 0, 0, 0, 0, 0, 45, 0}, 
+   {0, 0, 0, 0, 0, 0, 0, 56}} 
+dB2 =  
+   {{117, 0, 0, 0, 0, 0, 0, 0}, 
+   {0, 6, 0, 0, 0, 0, 0, 0}, 
+   {0, 0, 191, 0, 0, 0, 0, 0}, 
+   {0, 0, 0, 82, 0, 0, 0, 0}, 
+   {0, 0, 0, 0, 148, 0, 0, 0}, 
+   {0, 0, 0, 0, 0, 78, 0, 0}, 
+   {0, 0, 0, 0, 0, 0, 244, 0}, 
+   {0, 0, 0, 0, 0, 0, 0, 247}} 
+dY1 =  
+   {{215, 0, 0, 0, 0, 0, 0, 0}, 
+   {0, 142, 0, 0, 0, 0, 0, 0}, 
+   {0, 0, 12, 0, 0, 0, 0, 0}, 
+   {0, 0, 0, 123, 0, 0, 0, 0}, 
+   {0, 0, 0, 0, 241, 0, 0, 0}, 
+   {0, 0, 0, 0, 0, 234, 0, 0}, 
+   {0, 0, 0, 0, 0, 0, 84, 0}, 
+   {0, 0, 0, 0, 0, 0, 0, 13}} 
+dY2 =  
+   {{11, 0, 0, 0, 0, 0, 0, 0}, 
+   {0, 77, 0, 0, 0, 0, 0, 0}, 
+   {0, 0, 95, 0, 0, 0, 0, 0}, 
+   {0, 0, 0, 145, 0, 0, 0, 0}, 
+   {0, 0, 0, 0, 172, 0, 0, 0}, 
+   {0, 0, 0, 0, 0, 162, 0, 0}, 
+   {0, 0, 0, 0, 0, 0, 235, 0}, 
+   {0, 0, 0, 0, 0, 0, 0, 40}} 
+BOB private auxiliary------------------- 
+Y1 =  
+   {{103, 68, 213, 144, 111, 124, 138, 81}, 
+   {195, 112, 28, 130, 186, 165, 11, 108}, 
+   {57, 207, 123, 113, 41, 250, 110, 162}, 
+   {154, 5, 58, 163, 104, 127, 80, 14}, 
+   {80, 238, 220, 173, 122, 216, 155, 159}, 
+   {88, 23, 149, 110, 197, 226, 119, 202}, 
+   {135, 109, 47, 28, 23, 91, 134, 154}, 
+   {163, 19, 71, 107, 235, 187, 187, 81}} 
+Y2 =  
+   {{143, 44, 16, 226, 219, 211, 247, 34}, 
+   {119, 246, 212, 130, 139, 29, 128, 226}, 
+   {115, 231, 80, 30, 164, 204, 17, 167}, 
+   {6, 5, 7, 169, 80, 246, 232, 246}, 
+   {7, 240, 220, 162, 32, 93, 213, 9}, 
+   {176, 146, 74, 187, 141, 229, 155, 181}, 
+   {152, 108, 10, 77, 11, 249, 195, 227}, 
+   {237, 145, 67, 33, 124, 130, 14, 94}} 
+BOB private keys -------------------------- 
+b1 =  
+   {{110, 36, 153, 231, 129, 169, 61, 132}, 
+   {169, 199, 2, 96, 180, 10, 242, 194}, 
+   {113, 138, 30, 161, 50, 42, 16, 48}, 
+   {229, 80, 105, 44, 10, 146, 213, 63}, 
+   {80, 168, 216, 230, 36, 151, 180, 94}, 
+   {166, 2, 111, 250, 81, 182, 46, 13}, 
+   {45, 194, 235, 16, 202, 126, 106, 31}, 
+   {106, 110, 205, 91, 190, 54, 218, 125}} 
+ 
+ 
+ 
+b2 =  
+   {{115, 14, 121, 94, 8, 143, 86, 207}, 
+   {15, 144, 96, 91, 111, 24, 190, 201}, 
+   {83, 218, 53, 165, 205, 60, 223, 72}, 
+   {42, 46, 72, 4, 69, 79, 56, 10}, 
+   {68, 15, 59, 113, 96, 48, 137, 114}, 
+   {65, 10, 51, 38, 14, 172, 190, 4}, 
+   {20, 144, 218, 18, 27, 20, 9, 52}, 
+   {175, 226, 234, 20, 245, 32, 201, 18}} 
+b3 =  
+   {{52, 14, 114, 160, 182, 49, 74, 113}, 
+   {228, 167, 208, 164, 46, 86, 205, 219}, 
+   {18, 51, 40, 202, 18, 174, 96, 191}, 
+   {38, 17, 40, 22, 188, 65, 174, 185}, 
+   {47, 70, 17, 49, 12, 4, 134, 236}, 
+   {57, 180, 82, 103, 250, 29, 148, 148}, 
+   {176, 32, 31, 7, 97, 66, 79, 39}, 
+   {67, 161, 100, 125, 24, 237, 218, 42}} 
+BOB public keys (=token for ALICE:{p,q,r}--- 
+p =  
+   {{120, 234, 218, 175, 137, 230, 107, 93}, 
+   {82, 129, 169, 103, 114, 12, 185, 242}, 
+   {154, 246, 131, 120, 130, 73, 183, 243}, 
+   {204, 84, 4, 38, 223, 198, 124, 99}, 
+   {197, 153, 28, 164, 243, 177, 66, 111}, 
+   {19, 208, 146, 215, 53, 79, 58, 54}, 
+   {17, 86, 38, 243, 123, 183, 124, 242}, 
+   {65, 230, 120, 100, 81, 49, 97, 209}} 
+ 
+q =  
+   {{43, 149, 88, 213, 211, 66, 168, 142}, 
+   {56, 47, 70, 201, 94, 154, 65, 138}, 
+   {134, 151, 195, 64, 108, 99, 199, 208}, 
+   {0, 239, 107, 125, 206, 213, 28, 90}, 
+   {90, 44, 202, 98, 184, 24, 78, 108}, 
+   {64, 199, 60, 218, 248, 109, 84, 44}, 
+   {85, 106, 117, 36, 50, 238, 166, 66}, 
+   {202, 187, 161, 50, 41, 246, 242, 6} 
+r =  
+   {{237, 165, 140, 101, 132, 233, 82, 227}, 
+   {25, 92, 181, 209, 180, 26, 41, 235}, 
+   {32, 24, 123, 58, 178, 237, 136, 190}, 
+   {47, 39, 123, 86, 54, 69, 197, 168}, 
+   {57, 144, 210, 177, 123, 19, 74, 153}, 
+   {2, 111, 18, 81, 185, 218, 191, 128}, 
+   {159, 100, 142, 53, 13, 154, 69, 171}, 
+   {233, 88, 194, 241, 143, 98, 54, 53}} 
+ALICE & BOB (identical) keys or conjugators-- 
+Kalice =  
+   {{142, 192, 38, 42, 56, 123, 248, 215}, 
+   {86, 89, 216, 109, 223, 54, 66, 135}, 
+   {88, 206, 63, 134, 249, 39, 87, 2}, 
+   {217, 202, 79, 240, 131, 61, 13, 213}, 
+   {62, 67, 72, 46, 219, 51, 113, 100}, 
+   {17, 234, 189, 210, 242, 230, 86, 193}, 
+   {246, 157, 234, 27, 124, 138, 23, 127}, 
+   {131, 35, 240, 116, 190, 144, 174, 90}} 
+Kbob   =  
+   {{142, 192, 38, 42, 56, 123, 248, 215}, 
+   {86, 89, 216, 109, 223, 54, 66, 135}, 
+   {88, 206, 63, 134, 249, 39, 87, 2}, 
+   {217, 202, 79, 240, 131, 61, 13, 213}, 
+   {62, 67, 72, 46, 219, 51, 113, 100}, 
+   {17, 234, 189, 210, 242, 230, 86, 193}, 
+   {246, 157, 234, 27, 124, 138, 23, 127}, 
+   {131, 35, 240, 116, 190, 144, 174, 90}} 
+------------------------------------------- 
+UNTIL HERE IT WORKS AS A D-H KE. 
+FOLLOWING IS A BCSP BASED ENCRYPTION. 
+------------------------------------------- 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+===== PAGE 9 =====
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+PKE (BCSP) session------------------------- 
+BOB selected msg =  
+   {{38, 50, 241, 209, 242, 186, 128, 113}, 
+   {200, 43, 145, 57, 52, 145, 76, 229}, 
+   {78, 58, 70, 144, 45, 161, 100, 101}, 
+   {223, 117, 213, 2, 184, 236, 91, 245}, 
+   {136, 160, 210, 11, 197, 44, 239, 54}, 
+   {233, 226, 126, 139, 7, 246, 165, 48}, 
+   {140, 135, 172, 34, 37, 183, 21, 202}, 
+   {176, 130, 203, 141, 49, 0, 161, 5}} 
+Encrypted msg =  
+   {{7, 41, 3, 224, 146, 175, 243, 114}, 
+   {168, 22, 11, 103, 83, 91, 24, 179}, 
+   {113, 16, 19, 249, 128, 231, 87, 176}, 
+   {122, 183, 20, 2, 219, 96, 229, 144}, 
+   {46, 30, 198, 139, 4, 240, 27, 56}, 
+   {146, 5, 221, 58, 234, 184, 77, 191}, 
+   {212, 241, 48, 5, 23, 40, 150, 21}, 
+   {144, 12, 79, 177, 154, 45, 115, 234}} 
+ALICE recovered msg =  
+   {{38, 50, 241, 209, 242, 186, 128, 113}, 
+   {200, 43, 145, 57, 52, 145, 76, 229}, 
+   {78, 58, 70, 144, 45, 161, 100, 101}, 
+   {223, 117, 213, 2, 184, 236, 91, 245}, 
+   {136, 160, 210, 11, 197, 44, 239, 54}, 
+   {233, 226, 126, 139, 7, 246, 165, 48}, 
+   {140, 135, 172, 34, 37, 183, 21, 202}, 
+   {176, 130, 203, 141, 49, 0, 161, 5}} 
+------------------------------------------ - 
+ 
+
+web search: 
+web search: "PQC: Triple Decomposition Problem Applied" cryptanalysis ...
+web search: 
+web search: 
+codex
+Step 0 has produced a decisive result: Track A is untenable. The paper’s own equation (6), together with the published conjugating bases, turns recovery of \(a_3\) into a homogeneous finite-field linear system. More strongly, the author’s follow-up paper explicitly says an algebraic-span attack “seems to break” this work. I’m validating the reduction and documenting the rejection; I will not spend a builder/hardening run on a family whose witness is produced by Gaussian elimination.
+exec
+/bin/bash -lc "ls -la
+find ../.. -name AGENTS.md -print
+python3 - <<'PY'
+from random import Random
+
+def inv(a,p): return pow(a,p-2,p)
+def mm(a,b,p):
+ n=len(a); m=len(b); q=len(b[0])
+ return [[sum(a[i][k]*b[k][j] for k in range(m))%p for j in range(q)] for i in range(n)]
+def eye(n): return [[int(i==j) for j in range(n)] for i in range(n)]
+def mi(a,p):
+ n=len(a); z=[row[:] + e for row,e in zip(a,eye(n))]
+ for c in range(n):
+  r=next(r for r in range(c,n) if z[r][c]%p)
+  z[c],z[r]=z[r],z[c]
+  t=inv(z[c][c]%p,p); z[c]=[(v*t)%p for v in z[c]]
+  for r in range(n):
+   if r"'!=c:
+    t=z[r][c]%p
+    z[r]=[(x-t*y)%p for x,y in zip(z[r],z[c])]
+ return [r[n:] for r in z]
+def rand_gl(n,p,rng):
+ while True:
+  a=[[rng.randrange(p) for _ in range(n)] for _ in range(n)]
+  try: mi(a,p); return a
+  except StopIteration: pass
+
+def diag(v): return [[v[i] if i==j else 0 for j in range(len(v))] for i in range(len(v))]
+
+p=251; n=8; rng=Random(181008983)
+Q=rand_gl(n,p,rng); S=rand_gl(n,p,rng)
+dx=[rng.randrange(1,p) for _ in range(n)]; da=[rng.randrange(1,p) for _ in range(n)]
+x2=mm(mm(mi(S,p),diag(dx),p),S,p)
+a3=mm(mm(mi(Q,p),diag(da),p),Q,p)
+w=mm(mi(x2,p),a3,p)
+M=mm(mm(S,w,p),mi(Q,p),p); N=mm(S,mi(Q,p),p)
+assert all(dx[i]*M[i][j]%p == N[i][j]*da[j]%p for i in range(n) for j in range(n))
+# In the generic all-nonzero case, normalize da[0]=1 and recover both vectors by ratios.
+assert all(M[i][0] and N[i][0] and M[0][i] and N[0][i] for i in range(n))
+rda0=1
+rdx=[N[i][0]*rda0*inv(M[i][0],p)%p for i in range(n)]
+rda=[rdx[0]*M[0][j]*inv(N[0][j],p)%p for j in range(n)]
+assert all(rdx[i]*M[i][j]%p == N[i][j]*rda[j]%p for i in range(n) for j in range(n))
+rx2=mm(mm(mi(S,p),diag(rdx),p),S,p)
+ra3=mm(mm(mi(Q,p),diag(rda),p),Q,p)
+assert mm(rx2,w,p)==ra3
+print({'"'dimension':n,'prime':p,'linear_equations':n*n,'unknowns':2*n,'verified_recovered_component':True})
+PY" in /home/gson/gvrepo/results/1810.08983
+ succeeded in 0ms:
+total 172
+drwxrwxr-x   2 gson gson   4096 Sep  4 12:53 .
+drwxrwxr-x 116 gson gson   4096 Sep  4 12:54 ..
+-rw-rw-r--   1 gson gson    161 Sep  4 12:53 .meta.json
+-rw-rw-r--   1 gson gson    529 Sep  4 12:53 .runner.sh
+-rw-rw-r--   1 gson gson  56147 Sep  4 12:53 .task.md
+-rw-rw-r--   1 gson gson 102099 Sep  4 12:58 codex_run.log
+{'dimension': 8, 'prime': 251, 'linear_equations': 64, 'unknowns': 16, 'verified_recovered_component': True}
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+from random import Random
+from time import perf_counter
+P=251
+
+def invs(a): return pow(a,P-2,P)
+def eye(n): return [[int(i==j) for j in range(n)] for i in range(n)]
+def mul(a,b):
+ n=len(a); k=len(b); m=len(b[0])
+ return [[sum(a[i][t]*b[t][j] for t in range(k))%P for j in range(m)] for i in range(n)]
+def minv(a):
+ n=len(a); z=[row[:] + e for row,e in zip(a,eye(n))]
+ for c in range(n):
+  pivot=next((r for r in range(c,n) if z[r][c]%P),None)
+  if pivot is None: raise ValueError
+  z[c],z[pivot]=z[pivot],z[c]
+  q=invs(z[c][c]); z[c]=[q*x%P for x in z[c]]
+  for r in range(n):
+   if r"'!=c and z[r][c]:
+    q=z[r][c]; z[r]=[(x-q*y)%P for x,y in zip(z[r],z[c])]
+ return [row[n:] for row in z]
+def gl(n,rng):
+ while True:
+  a=[[rng.randrange(P) for _ in range(n)] for _ in range(n)]
+  try:return a,minv(a)
+  except ValueError:pass
+def diag(v): return [[v[i] if i==j else 0 for j in range(len(v))] for i in range(len(v))]
+def attack(Q,S,w):
+ qi=minv(Q); M=mul(mul(S,w),qi); N=mul(S,qi); n=len(Q)
+ # Propagate x_i M_ij=N_ij a_j on its bipartite support graph.
+ x=[None]*n; a=[None]*n
+ for start in range(n):
+  if x[start] is not None: continue
+  x[start]=1; todo=[(0,start)]
+  while todo:
+   side,k=todo.pop()
+   if side==0:
+    for j in range(n):
+     if N[k][j] and a[j] is None:
+      a[j]=x[k]*M[k][j]*invs(N[k][j])%P; todo.append((1,j))
+   else:
+    for i in range(n):
+     if M[i][k] and x[i] is None:
+      x[i]=N[i][k]*a[k]*invs(M[i][k])%P; todo.append((0,i))
+ if any(v is None or v==0 for v in x+a): raise ValueError('"'degenerate support')
+ a3=mul(mul(qi,diag(a)),Q)
+ x2=mul(mul(minv(S),diag(x)),S)
+ assert mul(x2,w)==a3
+ return a3
+
+def case(seed,n=8):
+ rng=Random(seed); Q,qi=gl(n,rng); S,si=gl(n,rng)
+ dx=[rng.randrange(1,P) for _ in range(n)]; da=[rng.randrange(1,P) for _ in range(n)]
+ x2=mul(mul(si,diag(dx)),S); a3=mul(mul(qi,diag(da)),Q); w=mul(minv(x2),a3)
+ return Q,S,w
+cases=[case(i) for i in range(100)]
+t0=perf_counter()
+for Q,S,w in cases: attack(Q,S,w)
+dt=perf_counter()-t0
+print({'attacks':len(cases),'successes':len(cases),'total_sec':round(dt,6),'mean_ms':round(1000*dt/len(cases),4),'complexity':'O(d"'^3) field operations'"'})
+PY" in /home/gson/gvrepo/results/1810.08983
+ succeeded in 0ms:
+{'attacks': 100, 'successes': 100, 'total_sec': 0.027595, 'mean_ms': 0.2759, 'complexity': 'O(d^3) field operations'}
+
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1810.08983/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..91edc75156a4136f80622abc694b6ccaf763c32c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,121 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  Equivalently, a checker given
++only the candidate `a3` can compute `x2 = a3 w^-1` and test membership in the
++two public diagonal-conjugate subgroups.  Thus the attack outputs precisely the
++finite witness the benchmark would request; it does not merely distinguish
++instances or recover an unrelated session value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified `a3` on **100/100** independently generated
++`d=8` instances in **0.027595 s total**, or **0.2759 ms/instance** on this
++runner.  Its cost is `O(d^3)` field operations when exploiting diagonal
++equivalence (matrix inversion and multiplication), or polynomial time by
++ordinary elimination on the displayed `d^2`-by-`2d` system.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), calls (4)
++  and (6) linear, and bases its security conclusion on the claim that equation
++  (5) is quadratic plus a `249^32` brute-force count.  A large candidate space
++  does not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..91edc75156a4136f80622abc694b6ccaf763c32c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,121 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  Equivalently, a checker given
++only the candidate `a3` can compute `x2 = a3 w^-1` and test membership in the
++two public diagonal-conjugate subgroups.  Thus the attack outputs precisely the
++finite witness the benchmark would request; it does not merely distinguish
++instances or recover an unrelated session value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified `a3` on **100/100** independently generated
++`d=8` instances in **0.027595 s total**, or **0.2759 ms/instance** on this
++runner.  Its cost is `O(d^3)` field operations when exploiting diagonal
++equivalence (matrix inversion and multiplication), or polynomial time by
++ordinary elimination on the displayed `d^2`-by-`2d` system.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), calls (4)
++  and (6) linear, and bases its security conclusion on the claim that equation
++  (5) is quadratic plus a `249^32` brute-force count.  A large candidate space
++  does not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+exec
+/bin/bash -lc "sed -n '1,260p' REJECTED.md
+git status --short -- REJECTED.md gen_1810_08983.py selftest_report.json llm_loop_transcript.jsonl g9_hinted_transcript.jsonl g9_placebo_transcript.jsonl" in /home/gson/gvrepo/results/1810.08983
+ exited 128 in 0ms:
+# Rejected at Step 0
+
+Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
+GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
+Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
+
+## Decision
+
+No generator is shipped.  The paper's native computational TDP family fails
+hardness gate **H**.  A private-key component is recovered by finite-field
+linear algebra from the public matrices, so inverse-generating secret factors
+would plant a witness for a polynomial-time-solvable distribution.  This is
+exactly the disqualifying case in the Step 0 certificate-cost test.
+
+`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
+distribution, only a brute-force cardinality argument in Section 6, and the
+linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
+would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
+the attack is tiny (measured below), while executing the native dense change of
+basis needed to obtain the purported compact route already exceeds the
+300-operation no-tool cap.  Publishing the already-transformed matrices would
+instead create a simpler augmented problem not posed by the paper, and its
+row/column-scaling formula would be the obvious solution rather than a hidden
+structural shortcut.
+
+## Exact definition checked
+
+Section 3 defines Alice's public matrices as
+
+```text
+u = a1 x1
+v = x1^-1 a2 x2
+w = x2^-1 a3
+```
+
+Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
+
+```text
+x2 = S^-1 diag(x) S
+a3 = Q^-1 diag(a) Q,
+```
+
+where the bases `Q` and `S` are public and every diagonal entry is nonzero.
+The paper's Computational TDP asks for *any component* of the private key, so
+recovering `a3` is sufficient.  Merely asking for three unrestricted factors
+of one product would be even less suitable: `(I, I, product)` is always a
+trivial answer and does not encode the paper's subgroup constraints.
+
+## Polynomial-time certificate-producing attack
+
+From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
+
+```text
+M = S w Q^-1
+N = S Q^-1.
+```
+
+Then the unknown diagonal entries obey
+
+```text
+diag(x) M = N diag(a),
+```
+
+or, entry by entry,
+
+```text
+x_i M_ij = N_ij a_j                 for all i,j.
+```
+
+These are `d^2` homogeneous **linear** equations in only `2d` unknown field
+elements.  Gaussian elimination recovers the solution space.  On the generic
+instances produced by Appendix I, the common nonzero support of `M` and `N`
+is connected, so one may instead normalize one coordinate and propagate the
+remaining row and column scalings directly.  The planted solution guarantees
+an all-nonzero solution.  Reconstruct
+
+```text
+x2 = S^-1 diag(x) S
+a3 = Q^-1 diag(a) Q;
+```
+
+then exact multiplication verifies `x2 w = a3`.  Equivalently, a checker given
+only the candidate `a3` can compute `x2 = a3 w^-1` and test membership in the
+two public diagonal-conjugate subgroups.  Thus the attack outputs precisely the
+finite witness the benchmark would request; it does not merely distinguish
+instances or recover an unrelated session value.
+
+With straightforward standard-library Python over `F_251`, this attack
+recovered and exactly verified `a3` on **100/100** independently generated
+`d=8` instances in **0.027595 s total**, or **0.2759 ms/instance** on this
+runner.  Its cost is `O(d^3)` field operations when exploiting diagonal
+equivalence (matrix inversion and multiplication), or polynomial time by
+ordinary elimination on the displayed `d^2`-by-`2d` system.
+
+## Paper-level corroboration
+
+- Section 6 of the source paper itself displays equations (4)--(6), calls (4)
+  and (6) linear, and bases its security conclusion on the claim that equation
+  (5) is quadratic plus a `249^32` brute-force count.  A large candidate space
+  does not survive the linear attack above.
+- The same author's follow-up paper,
+  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
+  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
+  Algebraic Span Attack focuses on the original protocol's linear equations
+  and that this appears to break the previous work; XTDP is presented as a
+  countermeasure.
+- Ben-Zvi, Kalka, and Tsaban,
+  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
+  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
+  Triple Decomposition key exchange protocol, with a stated upper bound
+  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
+  specialization in arXiv:1810.08983 permits the simpler attack above.
+
+## Gates not run
+
+G1--G9 and the oracle hardening loop were intentionally not run.  The task
+requires stopping at Step 0 when G, H, or V fails, and H already fails by a
+standard exact algorithm.  Consequently there is no
+`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
+those artifacts would misrepresent a rejected Track A family and waste the
+builder run the Step 0 rule is designed to avoid.
+fatal: not a git repository (or any of the parent directories): .git
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..91edc75156a4136f80622abc694b6ccaf763c32c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,121 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  Equivalently, a checker given
++only the candidate `a3` can compute `x2 = a3 w^-1` and test membership in the
++two public diagonal-conjugate subgroups.  Thus the attack outputs precisely the
++finite witness the benchmark would request; it does not merely distinguish
++instances or recover an unrelated session value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified `a3` on **100/100** independently generated
++`d=8` instances in **0.027595 s total**, or **0.2759 ms/instance** on this
++runner.  Its cost is `O(d^3)` field operations when exploiting diagonal
++equivalence (matrix inversion and multiplication), or polynomial time by
++ordinary elimination on the displayed `d^2`-by-`2d` system.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), calls (4)
++  and (6) linear, and bases its security conclusion on the claim that equation
++  (5) is quadratic plus a `249^32` brute-force count.  A large candidate space
++  does not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+from random import Random
+from time import perf_counter
+P0=251
+
+def invs(a): return pow(a,P0-2,P0)
+def eye(n): return [[int(i==j) for j in range(n)] for i in range(n)]
+def mul(a,b):
+ return [[sum(x*y for x,y in zip(row,col))%P0 for col in zip(*b)] for row in a]
+def minv(a):
+ n=len(a); z=[row[:] + e for row,e in zip(a,eye(n))]
+ for c in range(n):
+  pivot=next((r for r in range(c,n) if z[r][c]%P0),None)
+  if pivot is None: raise ValueError
+  z[c],z[pivot]=z[pivot],z[c]
+  q=invs(z[c][c]); z[c]=[q*x%P0 for x in z[c]]
+  for r in range(n):
+   if r"'!=c and z[r][c]:
+    q=z[r][c]; z[r]=[(x-q*y)%P0 for x,y in zip(z[r],z[c])]
+ return [row[n:] for row in z]
+def gl(n,rng):
+ while True:
+  a=[[rng.randrange(P0) for _ in range(n)] for _ in range(n)]
+  try:return a,minv(a)
+  except ValueError:pass
+def diag(v): return [[v[i] if i==j else 0 for j in range(len(v))] for i in range(len(v))]
+def scales(M,N):
+ n=len(M); x=[None]*n; a=[None]*n
+ for start in range(n):
+  if x[start] is not None: continue
+  x[start]=1; todo=[(0,start)]
+  while todo:
+   side,k=todo.pop()
+   if side==0:
+    for j in range(n):
+     if N[k][j] and a[j] is None:
+      a[j]=x[k]*M[k][j]*invs(N[k][j])%P0; todo.append((1,j))
+   else:
+    for i in range(n):
+     if M[i][k] and x[i] is None:
+      x[i]=N[i][k]*a[k]*invs(M[i][k])%P0; todo.append((0,i))
+ if any(v is None or v==0 for v in x+a): raise ValueError
+ assert all(x[i]*M[i][j]%P0==N[i][j]*a[j]%P0 for i in range(n) for j in range(n))
+ return x,a
+def attack(pub):
+ P,Q,R,S,u,v,w=pub; pi,qi,ri,si=map(minv,(P,Q,R,S))
+ M=mul(mul(S,w),qi); N=mul(S,qi); dx2,da3=scales(M,N)
+ x2=mul(mul(si,diag(dx2)),S); a3=mul(mul(qi,diag(da3)),Q)
+ c=mul(v,minv(x2)); M=mul(mul(R,c),pi); N=mul(R,pi); dx1,da2=scales(M,N)
+ x1=mul(mul(ri,diag(dx1)),R); a2=mul(mul(pi,diag(da2)),P)
+ a1=mul(u,minv(x1))
+ assert mul(a1,x1)==u and mul(mul(minv(x1),a2),x2)==v and mul(minv(x2),a3)==w
+ return a1,a2,a3,x1,x2
+
+def case(seed,n=8):
+ rng=Random(seed)
+ P,pi=gl(n,rng); Q,qi=gl(n,rng); R,ri=gl(n,rng); S,si=gl(n,rng)
+ ds=[[rng.randrange(1,P0) for _ in range(n)] for _ in range(4)]
+ a1,_=gl(n,rng)
+ a2=mul(mul(pi,diag(ds[0])),P); a3=mul(mul(qi,diag(ds[1])),Q)
+ x1=mul(mul(ri,diag(ds[2])),R); x2=mul(mul(si,diag(ds[3])),S)
+ u=mul(a1,x1); v=mul(mul(minv(x1),a2),x2); w=mul(minv(x2),a3)
+ return P,Q,R,S,u,v,w
+cases=[case(i) for i in range(100)]
+t0=perf_counter()
+for pub in cases: attack(pub)
+dt=perf_counter()-t0
+print({'"'attacks':len(cases),'full_witness_successes':len(cases),'total_sec':round(dt,6),'mean_ms':round(1000*dt/len(cases),4),'complexity':'O(d"'^3) field operations'"'})
+PY" in /home/gson/gvrepo/results/1810.08983
+ succeeded in 13ms:
+{'attacks': 100, 'full_witness_successes': 100, 'total_sec': 0.086532, 'mean_ms': 0.8653, 'complexity': 'O(d^3) field operations'}
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..91edc75156a4136f80622abc694b6ccaf763c32c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,121 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  Equivalently, a checker given
++only the candidate `a3` can compute `x2 = a3 w^-1` and test membership in the
++two public diagonal-conjugate subgroups.  Thus the attack outputs precisely the
++finite witness the benchmark would request; it does not merely distinguish
++instances or recover an unrelated session value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified `a3` on **100/100** independently generated
++`d=8` instances in **0.027595 s total**, or **0.2759 ms/instance** on this
++runner.  Its cost is `O(d^3)` field operations when exploiting diagonal
++equivalence (matrix inversion and multiplication), or polynomial time by
++ordinary elimination on the displayed `d^2`-by-`2d` system.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), calls (4)
++  and (6) linear, and bases its security conclusion on the claim that equation
++  (5) is quadratic plus a `249^32` brute-force count.  A large candidate space
++  does not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+2026-09-04T13:03:28.354076Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /home/gson/gvrepo/results/1810.08983/REJECTED.md:
+recover the solution space.  On the generic
+instances produced by Appendix I, the common nonzero support of `M` and `N`
+is connected, so one may instead normalize one coordinate and propagate the
+remaining row and column scalings directly.  The planted solution guarantees
+an all-nonzero solution.  Reconstruct
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..91edc75156a4136f80622abc694b6ccaf763c32c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,121 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  Equivalently, a checker given
++only the candidate `a3` can compute `x2 = a3 w^-1` and test membership in the
++two public diagonal-conjugate subgroups.  Thus the attack outputs precisely the
++finite witness the benchmark would request; it does not merely distinguish
++instances or recover an unrelated session value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified `a3` on **100/100** independently generated
++`d=8` instances in **0.027595 s total**, or **0.2759 ms/instance** on this
++runner.  Its cost is `O(d^3)` field operations when exploiting diagonal
++equivalence (matrix inversion and multiplication), or polynomial time by
++ordinary elimination on the displayed `d^2`-by-`2d` system.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), calls (4)
++  and (6) linear, and bases its security conclusion on the claim that equation
++  (5) is quadratic plus a `249^32` brute-force count.  A large candidate space
++  does not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+exec
+/bin/bash -lc "nl -ba REJECTED.md | sed -n '48,125p'" in /home/gson/gvrepo/results/1810.08983
+ succeeded in 0ms:
+    48	
+    49	## Polynomial-time certificate-producing attack
+    50	
+    51	From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
+    52	
+    53	```text
+    54	M = S w Q^-1
+    55	N = S Q^-1.
+    56	```
+    57	
+    58	Then the unknown diagonal entries obey
+    59	
+    60	```text
+    61	diag(x) M = N diag(a),
+    62	```
+    63	
+    64	or, entry by entry,
+    65	
+    66	```text
+    67	x_i M_ij = N_ij a_j                 for all i,j.
+    68	```
+    69	
+    70	These are `d^2` homogeneous **linear** equations in only `2d` unknown field
+    71	elements.  Gaussian elimination recovers the solution space.  On the generic
+    72	instances produced by Appendix I, the common nonzero support of `M` and `N`
+    73	is connected, so one may instead normalize one coordinate and propagate the
+    74	remaining row and column scalings directly.  The planted solution guarantees
+    75	an all-nonzero solution.  Reconstruct
+    76	
+    77	```text
+    78	x2 = S^-1 diag(x) S
+    79	a3 = Q^-1 diag(a) Q;
+    80	```
+    81	
+    82	then exact multiplication verifies `x2 w = a3`.  Equivalently, a checker given
+    83	only the candidate `a3` can compute `x2 = a3 w^-1` and test membership in the
+    84	two public diagonal-conjugate subgroups.  Thus the attack outputs precisely the
+    85	finite witness the benchmark would request; it does not merely distinguish
+    86	instances or recover an unrelated session value.
+    87	
+    88	With straightforward standard-library Python over `F_251`, this attack
+    89	recovered and exactly verified `a3` on **100/100** independently generated
+    90	`d=8` instances in **0.027595 s total**, or **0.2759 ms/instance** on this
+    91	runner.  Its cost is `O(d^3)` field operations when exploiting diagonal
+    92	equivalence (matrix inversion and multiplication), or polynomial time by
+    93	ordinary elimination on the displayed `d^2`-by-`2d` system.
+    94	
+    95	## Paper-level corroboration
+    96	
+    97	- Section 6 of the source paper itself displays equations (4)--(6), calls (4)
+    98	  and (6) linear, and bases its security conclusion on the claim that equation
+    99	  (5) is quadratic plus a `249^32` brute-force count.  A large candidate space
+   100	  does not survive the linear attack above.
+   101	- The same author's follow-up paper,
+   102	  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
+   103	  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
+   104	  Algebraic Span Attack focuses on the original protocol's linear equations
+   105	  and that this appears to break the previous work; XTDP is presented as a
+   106	  countermeasure.
+   107	- Ben-Zvi, Kalka, and Tsaban,
+   108	  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
+   109	  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
+   110	  Triple Decomposition key exchange protocol, with a stated upper bound
+   111	  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
+   112	  specialization in arXiv:1810.08983 permits the simpler attack above.
+   113	
+   114	## Gates not run
+   115	
+   116	G1--G9 and the oracle hardening loop were intentionally not run.  The task
+   117	requires stopping at Step 0 when G, H, or V fails, and H already fails by a
+   118	standard exact algorithm.  Consequently there is no
+   119	`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
+   120	those artifacts would misrepresent a rejected Track A family and waste the
+   121	builder run the Step 0 rule is designed to avoid.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..91edc75156a4136f80622abc694b6ccaf763c32c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,121 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  Equivalently, a checker given
++only the candidate `a3` can compute `x2 = a3 w^-1` and test membership in the
++two public diagonal-conjugate subgroups.  Thus the attack outputs precisely the
++finite witness the benchmark would request; it does not merely distinguish
++instances or recover an unrelated session value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified `a3` on **100/100** independently generated
++`d=8` instances in **0.027595 s total**, or **0.2759 ms/instance** on this
++runner.  Its cost is `O(d^3)` field operations when exploiting diagonal
++equivalence (matrix inversion and multiplication), or polynomial time by
++ordinary elimination on the displayed `d^2`-by-`2d` system.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), calls (4)
++  and (6) linear, and bases its security conclusion on the claim that equation
++  (5) is quadratic plus a `249^32` brute-force count.  A large candidate space
++  does not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1810.08983/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..4f876fe4836689a2aa4780897ae56ea026ba74f2
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,131 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  This already recovers the
++private component requested by Computational TDP.  It also extends to a full,
++directly checkable decomposition: form `c = v x2^-1` and apply the same
++row/column-scaling calculation to
++
++```text
++R c P^-1 = diag(x1)^-1 (R P^-1) diag(a2).
++```
++
++This recovers `x1` and `a2`, after which `a1 = u x1^-1`.  A checker only has
++to test subgroup membership and the three displayed public equations.  Thus
++the attack outputs precisely the finite witness the benchmark would request;
++it does not merely distinguish instances or recover an unrelated session
++value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified the **full five-matrix witness** on **100/100**
++independently generated `d=8` instances in **0.086532 s total**, or **0.8653
++ms/instance** on this runner.  Its cost is `O(d^3)` field operations when
++exploiting diagonal equivalence (matrix inversion and multiplication), or
++polynomial time by ordinary elimination on the displayed
++`d^2`-by-`2d` systems.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), singles
++  out equation (5) as quadratic, and bases its security conclusion on that
++  observation plus a `249^32` brute-force count.  A large candidate space does
++  not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..4f876fe4836689a2aa4780897ae56ea026ba74f2
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,131 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  This already recovers the
++private component requested by Computational TDP.  It also extends to a full,
++directly checkable decomposition: form `c = v x2^-1` and apply the same
++row/column-scaling calculation to
++
++```text
++R c P^-1 = diag(x1)^-1 (R P^-1) diag(a2).
++```
++
++This recovers `x1` and `a2`, after which `a1 = u x1^-1`.  A checker only has
++to test subgroup membership and the three displayed public equations.  Thus
++the attack outputs precisely the finite witness the benchmark would request;
++it does not merely distinguish instances or recover an unrelated session
++value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified the **full five-matrix witness** on **100/100**
++independently generated `d=8` instances in **0.086532 s total**, or **0.8653
++ms/instance** on this runner.  Its cost is `O(d^3)` field operations when
++exploiting diagonal equivalence (matrix inversion and multiplication), or
++polynomial time by ordinary elimination on the displayed
++`d^2`-by-`2d` systems.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), singles
++  out equation (5) as quadratic, and bases its security conclusion on that
++  observation plus a `249^32` brute-force count.  A large candidate space does
++  not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+codex
+Rejected at Step 0; no generator was created.
+
+The paper’s public equation \(w=x_2^{-1}a_3\), with public bases \(Q,S\), becomes
+
+\[
+x_i(SwQ^{-1})_{ij}=(SQ^{-1})_{ij}a_j,
+\]
+
+a homogeneous linear system with \(d^2\) equations and \(2d\) unknowns. A second identical scaling recovery handles \(v\), then \(a_1=ux_1^{-1}\). The resulting full witness was recovered and exactly verified on 100/100 faithful \(d=8,p=251\) instances in 0.8653 ms per instance.
+
+Thus Track A is false. Track B is also unsuitable because the native dense change-of-basis route exceeds the no-tool operation cap, while exposing transformed matrices would make the shortcut immediate and change the paper’s problem. The author’s [follow-up paper](https://arxiv.org/abs/1812.05454) also acknowledges that algebraic-span attacks appear to break the original construction; the general attack is detailed in [Cryptanalysis via Algebraic Spans](https://eprint.iacr.org/2014/041).
+
+Full derivation and evidence: [REJECTED.md](/home/gson/gvrepo/results/1810.08983/REJECTED.md).
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..4f876fe4836689a2aa4780897ae56ea026ba74f2
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,131 @@
++# Rejected at Step 0
++
++Paper: Pedro Hecht, [*PQC: Triple Decomposition Problem Applied To
++GL(d, Fp) - A Secure Framework For Canonical Non-Commutative
++Cryptography*](https://arxiv.org/abs/1810.08983), arXiv:1810.08983v2.
++
++## Decision
++
++No generator is shipped.  The paper's native computational TDP family fails
++hardness gate **H**.  A private-key component is recovered by finite-field
++linear algebra from the public matrices, so inverse-generating secret factors
++would plant a witness for a polynomial-time-solvable distribution.  This is
++exactly the disqualifying case in the Step 0 certificate-cost test.
++
++`TRACK = "A"` would be false: the paper supplies no hardness theorem for this
++distribution, only a brute-force cardinality argument in Section 6, and the
++linear public equations admit a direct polynomial-time attack.  `TRACK = "B"`
++would also be inappropriate: at the paper's proposed parameters `d=8, p=251`,
++the attack is tiny (measured below), while executing the native dense change of
++basis needed to obtain the purported compact route already exceeds the
++300-operation no-tool cap.  Publishing the already-transformed matrices would
++instead create a simpler augmented problem not posed by the paper, and its
++row/column-scaling formula would be the obvious solution rather than a hidden
++structural shortcut.
++
++## Exact definition checked
++
++Section 3 defines Alice's public matrices as
++
++```text
++u = a1 x1
++v = x1^-1 a2 x2
++w = x2^-1 a3
++```
++
++Appendix I specializes the relevant subgroups of `GL(d,F_p)` to
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q,
++```
++
++where the bases `Q` and `S` are public and every diagonal entry is nonzero.
++The paper's Computational TDP asks for *any component* of the private key, so
++recovering `a3` is sufficient.  Merely asking for three unrestricted factors
++of one product would be even less suitable: `(I, I, product)` is always a
++trivial answer and does not encode the paper's subgroup constraints.
++
++## Polynomial-time certificate-producing attack
++
++From `w = x2^-1 a3`, multiply by `x2` and change to the two public bases.  Set
++
++```text
++M = S w Q^-1
++N = S Q^-1.
++```
++
++Then the unknown diagonal entries obey
++
++```text
++diag(x) M = N diag(a),
++```
++
++or, entry by entry,
++
++```text
++x_i M_ij = N_ij a_j                 for all i,j.
++```
++
++These are `d^2` homogeneous **linear** equations in only `2d` unknown field
++elements.  Gaussian elimination recovers the solution space.  On the generic
++instances produced by Appendix I, the common nonzero support of `M` and `N`
++is connected, so one may instead normalize one coordinate and propagate the
++remaining row and column scalings directly.  The planted solution guarantees
++an all-nonzero solution.  Reconstruct
++
++```text
++x2 = S^-1 diag(x) S
++a3 = Q^-1 diag(a) Q;
++```
++
++then exact multiplication verifies `x2 w = a3`.  This already recovers the
++private component requested by Computational TDP.  It also extends to a full,
++directly checkable decomposition: form `c = v x2^-1` and apply the same
++row/column-scaling calculation to
++
++```text
++R c P^-1 = diag(x1)^-1 (R P^-1) diag(a2).
++```
++
++This recovers `x1` and `a2`, after which `a1 = u x1^-1`.  A checker only has
++to test subgroup membership and the three displayed public equations.  Thus
++the attack outputs precisely the finite witness the benchmark would request;
++it does not merely distinguish instances or recover an unrelated session
++value.
++
++With straightforward standard-library Python over `F_251`, this attack
++recovered and exactly verified the **full five-matrix witness** on **100/100**
++independently generated `d=8` instances in **0.086532 s total**, or **0.8653
++ms/instance** on this runner.  Its cost is `O(d^3)` field operations when
++exploiting diagonal equivalence (matrix inversion and multiplication), or
++polynomial time by ordinary elimination on the displayed
++`d^2`-by-`2d` systems.
++
++## Paper-level corroboration
++
++- Section 6 of the source paper itself displays equations (4)--(6), singles
++  out equation (5) as quadratic, and bases its security conclusion on that
++  observation plus a `249^32` brute-force count.  A large candidate space does
++  not survive the linear attack above.
++- The same author's follow-up paper,
++  [*PQC: Extended Triple Decomposition Problem (XTDP) Applied To GL(d,
++  Fp)*](https://arxiv.org/abs/1812.05454), states in its abstract that the
++  Algebraic Span Attack focuses on the original protocol's linear equations
++  and that this appears to break the previous work; XTDP is presented as a
++  countermeasure.
++- Ben-Zvi, Kalka, and Tsaban,
++  [*Cryptanalysis via Algebraic Spans*](https://eprint.iacr.org/2014/041),
++  Sections 4--5, give a polynomial-time algebraic-span cryptanalysis of the
++  Triple Decomposition key exchange protocol, with a stated upper bound
++  `O(k n^6)` for the general matrix representation.  The diagonal-conjugate
++  specialization in arXiv:1810.08983 permits the simpler attack above.
++
++## Gates not run
++
++G1--G9 and the oracle hardening loop were intentionally not run.  The task
++requires stopping at Step 0 when G, H, or V fails, and H already fails by a
++standard exact algorithm.  Consequently there is no
++`gen_1810_08983.py`, `selftest_report.json`, or oracle transcript: creating
++those artifacts would misrepresent a rejected Track A family and waste the
++builder run the Step 0 rule is designed to avoid.
+
+tokens used
+159,545
+Rejected at Step 0; no generator was created.
+
+The paper’s public equation \(w=x_2^{-1}a_3\), with public bases \(Q,S\), becomes
+
+\[
+x_i(SwQ^{-1})_{ij}=(SQ^{-1})_{ij}a_j,
+\]
+
+a homogeneous linear system with \(d^2\) equations and \(2d\) unknowns. A second identical scaling recovery handles \(v\), then \(a_1=ux_1^{-1}\). The resulting full witness was recovered and exactly verified on 100/100 faithful \(d=8,p=251\) instances in 0.8653 ms per instance.
+
+Thus Track A is false. Track B is also unsuitable because the native dense change-of-basis route exceeds the no-tool operation cap, while exposing transformed matrices would make the shortcut immediate and change the paper’s problem. The author’s [follow-up paper](https://arxiv.org/abs/1812.05454) also acknowledges that algebraic-span attacks appear to break the original construction; the general attack is detailed in [Cryptanalysis via Algebraic Spans](https://eprint.iacr.org/2014/041).
+
+Full derivation and evidence: [REJECTED.md](/home/gson/gvrepo/results/1810.08983/REJECTED.md).
