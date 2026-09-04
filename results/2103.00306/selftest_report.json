@@ -1,0 +1,172 @@
+{
+  "G1_planted_verifies": {
+    "instances_checked": 12,
+    "json_native_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": true,
+    "pass": true,
+    "reasons": {
+      "drop_one": "answer must contain exactly 24 variables",
+      "duplicate": "variable indices must be distinct",
+      "empty": "answer is empty",
+      "out_of_range": "variable indices must lie in 1..48",
+      "same_shape_wrong_assignment": "cut inequality fails: d_G(X)-d_F(X)=427078 is not below R_G(X)=427058",
+      "swap_order": "variable indices must be in strictly increasing order"
+    }
+  },
+  "G3_round_trip": {
+    "parsed_elements": 24,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 32247603683100,
+    "exact_probability": 3.101005612159858e-14,
+    "exact_valid_answers_in_language": 1,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over fixed-weight assignments required by the statement",
+    "total": 200000,
+    "wall_clock_sec": 20.520468
+  },
+  "G5_density_and_baseline_cost": {
+    "exact_demo_valid_answer_count": 1,
+    "pass": true,
+    "reference_operation_count_median": 42635,
+    "reference_wall_clock_sec_median": 0.00029864,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "shipping_exact_valid_answer_count": 1,
+    "shipping_valid_fraction": 0.0,
+    "strongest_failing_attack_nodes_median": 1383424,
+    "strongest_failing_attack_wall_clock_sec_median": 0.06176766
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "alternating_index_ansatz": {
+        "attempts": 8,
+        "nodes": 384,
+        "nodes_median_per_instance": 48,
+        "successes": 0,
+        "wall_clock_sec": 5e-06,
+        "wall_clock_sec_median_per_instance": 4.7e-07
+      },
+      "greedy_left_to_right_propagation": {
+        "attempts": 8,
+        "nodes": 43008,
+        "nodes_median_per_instance": 5376,
+        "successes": 0,
+        "wall_clock_sec": 0.001341,
+        "wall_clock_sec_median_per_instance": 0.00016629
+      },
+      "outlier_smallest_numeric_tags": {
+        "attempts": 8,
+        "nodes": 384,
+        "nodes_median_per_instance": 48,
+        "successes": 0,
+        "wall_clock_sec": 7.1e-05,
+        "wall_clock_sec_median_per_instance": 7.96e-06
+      },
+      "random_restart_pair_swap_64": {
+        "attempts": 8,
+        "nodes": 11067392,
+        "nodes_median_per_instance": 1383424,
+        "successes": 0,
+        "wall_clock_sec": 0.49382,
+        "wall_clock_sec_median_per_instance": 0.06176766
+      },
+      "raw_hamming_parity_ansatz": {
+        "attempts": 8,
+        "nodes": 384,
+        "nodes_median_per_instance": 48,
+        "successes": 0,
+        "wall_clock_sec": 6e-05,
+        "wall_clock_sec_median_per_instance": 7.29e-06
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(r*n^2) bit operations",
+      "name": "exact GF(2) Gaussian elimination on repeated 3-XOR rows",
+      "operations_median": 42635,
+      "operations_range": [
+        34115,
+        46097
+      ],
+      "solves": "8/8, as expected",
+      "wall_clock_sec_median": 0.00029864
+    }
+  },
+  "G7_scales": {
+    "doubled_graph_vertices": 3421031,
+    "doubled_n": 96,
+    "doubled_planted_verifies": true,
+    "escalated_params": {
+      "base_equations": 56,
+      "n": 48,
+      "tag_bits": 320
+    },
+    "escalated_planted_verifies": true,
+    "fixed_answer_elements_on_escalation": true,
+    "pass": true,
+    "shipping_n": 48
+  },
+  "G8_canonical_key": {
+    "certificate_preservation_checks": 40,
+    "distinct_unrelated_instances": 20,
+    "invariance_checks": 40,
+    "pass": true,
+    "transformations": [
+      "variable renumbering with tags/certificate carried",
+      "equation reordering",
+      "within-equation reordering",
+      "composition of relabellings"
+    ],
+    "unrelated_instances_tested": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 71,
+    "answer_elements": 24,
+    "answer_size_instances_measured": 64,
+    "answer_tokens": 18,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 96,
+    "one_step_up": {
+      "attempts": 3,
+      "params": {
+        "base_equations": 56,
+        "n": 48,
+        "tag_bits": 320
+      },
+      "solved": 1,
+      "verdict": "too_easy"
+    },
+    "operation_model": "one exact word AND and one exact parity operation per variable tag",
+    "pass": false
+  },
+  "all_passed": false,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "base_equations": 56,
+    "n": 48,
+    "tag_bits": 256
+  },
+  "track": "B"
+}
