@@ -54,6 +54,34 @@ is UNSATISFIABLE formulas, so there is no assignment to plant), `2306.09948` (th
 paper's construction IS the compact route — one pass over the output array, no gap)
 and `2211.12582` are correct rejections.
 
+## Rejected because the ESCALATION BUDGET ran out, not the family
+
+`harden.py` allowed 3 escalations and then reported `too_easy` without ever asking
+whether `escalate()` had anywhere left to go. **7 of the 13 `too_easy` verdicts on
+disk came from that branch**, and replaying `escalate()` past the budget shows 6 of
+them had levels remaining:
+
+| paper | levels still available past the budget | what escalate() said after those |
+|---|---|---|
+| 1708.07419 | 12+ | still climbing |
+| 1612.03280 | 5 (n=149 -> 237) | then `cap_bound` |
+| 2007.05020 | 5 | then None |
+| 2506.17521 | 5 | then None |
+| 1011.6021  | 3 | then None |
+| 2507.21656 | 2 | then None |
+| 2402.17528 | unmeasurable | module deleted |
+
+None of these was a family that ran out of hardness. `1612.03280` (*Coloring Problem
+of Signed Interval Graphs*) stopped at n=149 with the ladder willing to reach 237
+before it would have reported `cap_bound` at all. Its rejection note is correct on
+its own terms -- "the rules therefore prohibit further hand tuning" -- the builder
+followed the protocol; the harness told it the wrong thing.
+
+Fixed: the budget is now 6 by default (`ORACLE_MAX_ESCALATIONS`), and hitting it
+while `escalate()` is still willing to climb is reported as `budget_bound`, which
+`submit.sh --reject` refuses. `1011.6021` appears in both this table and the
+cap_bound one; it is one paper with two independent reasons its rejection is void.
+
 ## Rejected on reviewer-disputed grounds
 
 | paper | rejection | why it is disputed |

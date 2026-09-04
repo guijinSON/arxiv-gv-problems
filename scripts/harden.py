@@ -41,7 +41,14 @@ ORACLE_POOL = [m.strip() for m in os.environ.get(
 
 ORACLE_EFFORT = os.environ.get("ORACLE_EFFORT", "medium")
 ATTEMPTS_PER_PRESET = 3      # distinct models per difficulty level
-MAX_ESCALATIONS = 3          # raises of difficulty before the family is given up on
+# Raises of difficulty before the family is given up on.  This was 3, and 7 of the
+# 13 too_easy verdicts on disk came from EXHAUSTING IT rather than from the family
+# running out of hardness: 1612.03280 stopped at n=149 with escalate() still willing
+# to climb to 237 before it would have said cap_bound.  A budget is not a property of
+# the paper, so hitting it is now reported as `budget_bound`, not `too_easy` -- see
+# the end of main().  The budget still exists because each level costs a full pool
+# sweep; it is env-overridable so a park can be re-run with a bigger one.
+MAX_ESCALATIONS = int(os.environ.get("ORACLE_MAX_ESCALATIONS", "6"))
 MAX_ERROR_RETRIES = 3        # per attempt; API errors do not count as attempts
 MAX_TOKENS = int(os.environ.get("ORACLE_MAX_TOKENS", "32000"))
 # Reasoning tokens are billed against max_tokens on some vendors, so a budget
@@ -468,18 +475,43 @@ def main():
                     break
                 params = dict(nxt, _preset="escalated")
         else:
+            # The loop ran out of ESCALATIONS, which says nothing about the family
+            # until we ask whether it had anywhere left to go.  Ask.
             _atoms, _chars = _answer_size(mod, prev_call or {})
-            verdict = {"verdict": "too_easy", "escalations_used": MAX_ESCALATIONS,
-                       "axes_moved": sorted(axes_moved),
-                       "answer_atoms": _atoms, "answer_chars": _chars,
-                       "reason": f"the oracle pool solved every level through "
-                                 f"{MAX_ESCALATIONS} escalations"}
+            try:
+                _more = mod.escalate(dict(prev_call or {}))
+            except Exception:                               # noqa: BLE001
+                _more = None
+            if _more is not None:
+                verdict = {
+                    "verdict": "budget_bound",
+                    "escalations_used": MAX_ESCALATIONS,
+                    "axes_moved": sorted(axes_moved),
+                    "answer_atoms": _atoms, "answer_chars": _chars,
+                    "next_level": None if _more == "cap_bound" else _more,
+                    "escalate_says": "cap_bound" if _more == "cap_bound" else "more levels",
+                    "reason": (
+                        f"the oracle pool solved every level through {MAX_ESCALATIONS} "
+                        f"escalations, but escalate() was STILL WILLING TO CLIMB "
+                        f"({'it would next report cap_bound' if _more == 'cap_bound' else _more}). "
+                        "The binding constraint was this harness's escalation budget, not "
+                        "the paper.  PARK it -- do not write REJECTED.md.  Re-run with "
+                        "ORACLE_MAX_ESCALATIONS raised, or ship at a higher preset."),
+                }
+            else:
+                verdict = {"verdict": "too_easy", "escalations_used": MAX_ESCALATIONS,
+                           "axes_moved": sorted(axes_moved),
+                           "answer_atoms": _atoms, "answer_chars": _chars,
+                           "reason": f"the oracle pool solved every level through "
+                                     f"{MAX_ESCALATIONS} escalations, and escalate() "
+                                     f"has nothing further to offer"}
 
     update_meta(harden_verdict=verdict)
     print(json.dumps(verdict, indent=1))
-    # 0 hardened / 9 too_easy (give the paper up) / 10 cap_bound (park it, do
-    # not reject: the paper is fine, our answer format is the binding constraint)
-    return {"hardened": 0, "cap_bound": 10}.get(verdict["verdict"], 9)
+    # 0 hardened / 9 too_easy (give the paper up) / 10 park it -- the paper is fine
+    # and the binding constraint is ours: the answer format (cap_bound) or the
+    # escalation budget (budget_bound).
+    return {"hardened": 0, "cap_bound": 10, "budget_bound": 10}.get(verdict["verdict"], 9)
 
 
 if __name__ == "__main__":

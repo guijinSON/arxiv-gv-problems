@@ -22,8 +22,17 @@ try:
     v = (json.load(open(sys.argv[1])) or {}).get("harden_verdict") or {}
 except Exception:
     sys.exit(0)                       # no verdict recorded; nothing to contradict
-if v.get("verdict") != "cap_bound":
+if v.get("verdict") not in ("cap_bound", "budget_bound"):
     sys.exit(0)
+if v.get("verdict") == "budget_bound":
+    print("ERROR: the oracle harness recorded verdict=budget_bound for this paper.")
+    print("       The ladder ran out of ESCALATIONS while escalate() was still willing")
+    print(f"       to climb ({v.get('escalate_says')}); the binding constraint was this")
+    print("       harness's budget, not the paper.  7 of 13 too_easy verdicts on disk")
+    print("       were this, including 1612.03280, which stopped at n=149 with five")
+    print("       more levels available.  PARK it -- delete REJECTED.md and re-run with")
+    print("       ORACLE_MAX_ESCALATIONS raised, or ship at a higher preset.")
+    sys.exit(1)
 print("ERROR: the oracle harness recorded verdict=cap_bound for this paper, which")
 print("       means the ANSWER CAP stopped the ladder, not the mathematics.")
 a, c = v.get("answer_atoms"), v.get("answer_chars")
