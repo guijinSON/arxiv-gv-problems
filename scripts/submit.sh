@@ -375,16 +375,27 @@ if missing:
 CONTINUOUS = {"geometry", "analysis", "dynamics", "optimization"}
 DISCRETE_CORE = {"graph", "csp_sat", "exact_cover", "subset_sum", "permutation"}
 # Read what the SOLVER is actually shown, not the dict key names -- renaming
-# "edges" to "pairs" was enough to evade this entirely.  GRAPH_WORDS is mirrored in
+# "edges" to "pairs" was enough to evade this entirely.  Mirrored in
 # scripts/corpus_report.py; the gate and the report must never disagree.
-GRAPH_WORDS = ("adjac", "edges", "neighb", "vertex", "vertic", "conflict",
-               "clique", "graph", "incident", "degree of")
+#
+# These are WORD-BOUNDED regexes, not substrings.  Plain substring "graph" matched
+# "crypto-graph-ic" and blocked 1912.02640, a finite-field polynomial_identity
+# module, on the word "cryptographic" in its own problem statement -- and would
+# have blocked every crypto paper that ever says so, which is exactly the
+# under-represented family this corpus needs.  "degree of" matched "degree of the
+# polynomial" for the same reason and is now pinned to a graph noun.
+GRAPH_PATTERNS = (
+    r"\badjacen(?:t|cy)\b", r"\bedges?\b", r"\bneighbou?r",
+    r"\bvert(?:ex|ices)\b", r"\bconflict", r"\bcliques?\b",
+    r"\b(?:sub|multi|di|hyper)?graphs?\b", r"\binciden(?:t|ce)\b",
+    r"\bdegree of (?:a |the )?(?:vertex|vertices|node|nodes)\b",
+)
 try:
     _shown = m.render(i).lower()
 except Exception:
     _shown = ""
 keys = (" ".join(k for k in i if k != "answer") + " " + _shown).lower()
-graphy = any(w in keys for w in GRAPH_WORDS)
+graphy = any(re.search(w, keys) for w in GRAPH_PATTERNS)
 
 if graphy and NAT["core"] not in DISCRETE_CORE:
     print(f"ERROR: the solver is handed {sorted(k for k in i if k != 'answer')},\n"

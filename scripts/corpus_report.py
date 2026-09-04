@@ -30,11 +30,11 @@ Three things this file gets right that the first version did not.
 
 Two sibling contracts this file is bound by:
 
-* ``scripts/submit.sh`` states that ``GRAPH_WORDS`` is mirrored here and that "the
-  gate and the report must never disagree".  ``GRAPH_WORDS`` below is that list
-  verbatim, and like submit.sh the graph test reads ``render(inst)`` as well as the
-  instance keys -- renaming ``edges`` to ``pairs`` was enough to evade a keys-only
-  test.  Change one, change both.
+* ``scripts/submit.sh`` states that its graph word list is mirrored here and that
+  "the gate and the report must never disagree".  ``GRAPH_PATTERNS`` below is that
+  list verbatim, and like submit.sh the graph test reads ``render(inst)`` as well as
+  the instance keys -- renaming ``edges`` to ``pairs`` was enough to evade a
+  keys-only test.  Change one, change both.
 * ``scripts/pick_paper.py`` no longer steers at all -- it draws UNIFORMLY AT
   RANDOM from the free pool, so that acceptance rate and family share become
   unbiased estimates of what these 12,167 papers actually yield.  That makes this
@@ -137,11 +137,19 @@ NATIVE_ESSENTIALITY = "native"
 # measure.
 # ---------------------------------------------------------------------------
 # MIRRORED from scripts/submit.sh -- see the module docstring.  Read what the SOLVER
-# is shown, not the dict key names.  The cost of reading render() is false positives
-# from prose ("degree of the polynomial"); that is the same trade submit.sh makes,
-# and disagreeing with the gate would be worse.
-GRAPH_WORDS = ("adjac", "edges", "neighb", "vertex", "vertic", "conflict",
-               "clique", "graph", "incident", "degree of")
+# is shown, not the dict key names.
+#
+# WORD-BOUNDED regexes, not substrings.  Reading render() costs false positives from
+# prose, and plain substrings made that far worse than necessary: "graph" matched
+# "cryptographic" and "degree of" matched "degree of the polynomial", both of which
+# fired on 1912.02640, a finite-field module with no graph in it.  Bounding the words
+# keeps the render() signal and drops that whole class.
+GRAPH_PATTERNS = (
+    r"\badjacen(?:t|cy)\b", r"\bedges?\b", r"\bneighbou?r",
+    r"\bvert(?:ex|ices)\b", r"\bconflict", r"\bcliques?\b",
+    r"\b(?:sub|multi|di|hyper)?graphs?\b", r"\binciden(?:t|ce)\b",
+    r"\bdegree of (?:a |the )?(?:vertex|vertices|node|nodes)\b",
+)
 ASSIGN = ("clause", "assign", "variab", "literal", "colour", "color", "constraint")
 COVER = ("lengths", "items", "weights", "subset", "blocks", "target", "capacit")
 PERM = ("permutation", "ordering", "ranking", "bracket", "seeding")
@@ -161,24 +169,29 @@ def derive_core(inst, shown=""):
     keys = " ".join(k for k in inst if k != "answer").lower()
     both = keys + " " + (shown or "").lower()
     # Do NOT resolve by priority order.  Testing graph first pushed graph from 17 to
-    # 25 of 42 (GRAPH_WORDS now also reads render(), and nearly every combinatorial
+    # 25 of 42 (the graph test now also reads render(), and nearly every combinatorial
     # statement says "vertex" somewhere); testing the specific cores first pushed
     # csp_sat from 4 to 10.  Both are artefacts of the tie-break, not measurements.
     # Require an UNAMBIGUOUS structural match on the instance keys instead, and admit
     # ambiguity as ambiguity -- an over-attributed histogram is worse than a wide one,
     # because a quota is computed on top of it.
-    hits = [name for name, words in (("csp_sat", ASSIGN),
-                                     ("exact_cover", COVER),
-                                     ("permutation", PERM),
-                                     ("graph", GRAPH_WORDS))
-            if any(w in keys for w in words)]
+    # ASSIGN/COVER/PERM stay plain substrings -- they are stems ("variab", "capacit")
+    # chosen to match key names, and key names are short and controlled.  The graph
+    # test is regex because it also reads prose, where substrings misfire.
+    def _hit(words, text, rx):
+        return any(re.search(w, text) for w in words) if rx else any(w in text for w in words)
+    hits = [name for name, words, rx in (("csp_sat", ASSIGN, False),
+                                         ("exact_cover", COVER, False),
+                                         ("permutation", PERM, False),
+                                         ("graph", GRAPH_PATTERNS, True))
+            if _hit(words, keys, rx)]
     if len(hits) == 1:
         return hits[0]
     if len(hits) > 1:
         return UNKNOWN            # ambiguous: several cores match the same instance
     # Nothing in the instance keys.  The rendered statement is weaker evidence -- use
     # it only for graph, and only when the keys said nothing at all.
-    if any(w in both for w in GRAPH_WORDS):
+    if any(re.search(w, both) for w in GRAPH_PATTERNS):
         return "graph"
     return UNKNOWN
 
