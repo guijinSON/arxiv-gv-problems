@@ -1,0 +1,163 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "answer must have exactly the fields x and signs_hex"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "x must contain exactly 6 bits"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer must be one JSON object"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "x contains a symbol outside the binary alphabet"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "certificate does not give coefficient +1 to M(x)"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_matches": true,
+    "pass": true,
+    "realistic_wrapper": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1180591620717411303424,
+    "exact_solution_fraction": 8.470329472543003e-22,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform binary word and uniform n-bit sign certificate",
+    "total": 200000,
+    "wall_clock_sec": 8.112601
+  },
+  "G5_density_and_baseline": {
+    "demo_bruteforce_solution_count": 1,
+    "demo_candidate_space": 64,
+    "pass": true,
+    "reference_algorithm_operations": 66048,
+    "reference_algorithm_wall_clock_sec": 0.003291,
+    "reference_average_operations_per_instance": 8256,
+    "shipping_certified_solution_count": 1,
+    "shipping_exact_solution_fraction": 8.470329472543003e-22,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "outlier_normalized_column_sum",
+    "strongest_failing_attack_steps": 32768,
+    "strongest_failing_attack_wall_clock_sec": 0.002561
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_lexicographic_word": {
+        "attempts": 8,
+        "steps": 512,
+        "successes": 0,
+        "wall_clock_sec": 0.000304
+      },
+      "obvious_identity_affine_ansatz": {
+        "attempts": 8,
+        "steps": 448,
+        "successes": 0,
+        "wall_clock_sec": 0.000857
+      },
+      "outlier_normalized_column_sum": {
+        "attempts": 8,
+        "steps": 32768,
+        "successes": 0,
+        "wall_clock_sec": 0.002561
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "steps": 2048,
+        "successes": 0,
+        "wall_clock_sec": 0.08089
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations_per_instance": 8256,
+      "complexity": "O(n^2) exact sign operations; generic homogeneous coefficient elimination is O(n^3)",
+      "name": "antipodal coefficient-column scan (stronger than generic exact elimination here)",
+      "operations": 66048,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.003291
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 128,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "fixed_length_escalation": {
+      "coefficient_bits": 28,
+      "n": 64,
+      "padding": 6
+    },
+    "pass": true,
+    "preset_candidate_spaces": {
+      "demo": 64,
+      "easy": 137438953472,
+      "hard": 43556142965880123323311949751266331066368,
+      "medium": 1180591620717411303424
+    }
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_failures": [],
+    "pass": true,
+    "transformations": [
+      "arbitrary generator reordering and monomial-column reordering",
+      "every tested free-variable renaming",
+      "composition of input reorderings with a free-variable renaming"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 45,
+    "answer_elements": 70,
+    "answer_tokens": 12,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 2,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.5,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 120,
+    "pass": false,
+    "within_caps": true
+  },
+  "all_passed": false,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "coefficient_bits": 16,
+    "n": 64,
+    "padding": 2
+  },
+  "track": "B"
+}
