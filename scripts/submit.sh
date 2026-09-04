@@ -237,7 +237,7 @@ PY
 
 echo "== interface check =="
 python3 - "$MOD" <<'PY'
-import importlib.util, json, os, sys
+import importlib.util, json, os, re, sys
 p=sys.argv[1]
 s=importlib.util.spec_from_file_location("m",p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
 need=["make_instance","render","parse_answer","verify","random_candidate","search_space",

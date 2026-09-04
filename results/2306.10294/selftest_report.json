@@ -1,0 +1,135 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "json_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "answer is missing the shift",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "answer has extra fields",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "shift is outside the canonical field range",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "first integer does not equal the field modulus",
+        "rejected": true
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed": [
+      2147483647,
+      1229201284
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 4.656612875245797e-10,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform field shift with the required modulus field already fixed",
+    "structure_aware_space": 2147483647,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_random_restart_iterations": 4096,
+    "baseline_wall_seconds": 0.065469,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "shipping_density_samples": 200000,
+    "shipping_exact_solution_fraction": 4.656612875245797e-10,
+    "shipping_observed_solution_fraction": 0.0,
+    "shipping_valid_hits": 0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_leading_minor_from_diagonal": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_partial_trace_12": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_diagonal_mode": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_4096_shifts": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n) exact prime-field operations",
+      "median_operations": 193,
+      "median_wall_clock_sec": 8.28e-06,
+      "name": "trace-zero residual invariant",
+      "operation_definition": "n-1 additions, one field inverse, one multiplication",
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 384,
+    "doubled_reference_operations": 385,
+    "doubled_upper_triangle_entries": 73920,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 192,
+    "shipping_reference_operations": 193,
+    "shipping_upper_triangle_entries": 18528
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "key_basis": "SHA-256 of n,p,trace(A),trace(A^2), not of the seed or rendering",
+    "pass": true,
+    "symmetries": "coordinate permutations, sign changes, and their compositions",
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 23,
+    "answer_elements": 2,
+    "answer_tokens": 6,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 193,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "track": "B"
+}

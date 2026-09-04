@@ -1,0 +1,121 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "rejections": {
+      "drop_one": "answer must contain exactly two field elements",
+      "swap_order": "the normalized identity phi2=t*phi4 fails",
+      "duplicate": "the two coefficients must be distinct",
+      "empty": "answer is empty",
+      "out_of_range": "a field-element encoding is out of range"
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed_matches": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "prior": "uniform over all distinct nonzero [alpha,beta] with alpha != 1, exactly the explicitly bounded certificate language",
+    "candidate_space": 4611686009837453316,
+    "sampling_wall_seconds": 4.030607353895903
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "shipping_candidate_space": 4611686009837453316,
+    "known_valid_answers_from_two_Artin_Schreier_roots": 2,
+    "baseline_wall_seconds": 0.08248210698366165,
+    "baseline_iterations": 4096,
+    "baseline_successes": 0,
+    "demo_exact_solution_count": 2,
+    "enumerate_all_shipping": null
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_extreme_hamming_weight": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_lexicographically_small_coefficients": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_512_structure_aware": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "obvious_t_tplus1_tsquare_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "Artin-Schreier half-trace plus direct coefficient formulas",
+      "complexity": "O(n^3) bit operations with schoolbook GF(2^n) arithmetic",
+      "wall_clock_sec": 0.002310805022716522,
+      "mean_wall_clock_sec": 0.0002888506278395653,
+      "operations": 34282,
+      "mean_bit_operations": 4285,
+      "mean_field_operations": 111,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 31,
+    "doubled_valid_n": 63,
+    "doubled_verify": "ok",
+    "candidate_space_bit_growth_lower_bound": 62
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "invariance_attempts": 80,
+    "transformed_witness_checks": 80,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "Frobenius automorphisms x->x^(2^k), including powers 1, 2, -1 and the composition of powers 1 and 2"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "answer_chars": 23,
+    "answer_tokens": 23,
+    "answer_elements": 2,
+    "intended_route_operations": 111
+  },
+  "track": "B",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 31
+  },
+  "all_passed": true
+}
