@@ -1,0 +1,135 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop_one": {
+        "rejected": true,
+        "reason": "w has wrong length: expected 84, got 83"
+      },
+      "swap_one": {
+        "rejected": true,
+        "reason": "normalization failed: w[column_anchor] must equal 1"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "expected exactly three vectors [u,v,w], got 4"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "v has a coefficient outside inclusive [-B,B]"
+      }
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "surrounding_prose_and_fence": true,
+    "json_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "prior": "uniform over every free bounded integer coordinate after fixing all three stated normalization anchors",
+    "candidate_space_bits": 13359,
+    "sampling_wall_seconds": 11.189447697950527
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "baseline_wall_seconds": 0.6521439880598336,
+    "baseline_operation_count": 774638,
+    "baseline_success_count": 1,
+    "demo_exact_solution_count": 1,
+    "shipping_candidate_space_bits": 13359,
+    "enumerate_all_shipping": null
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_lowest_column_norm": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_small_coefficient_cancellation": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256_bounded": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "obvious_constant_alternating_geometric_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "exact Gauss-Jordan left and right nullspaces over Q",
+      "complexity": "O(n^3) exact rational arithmetic",
+      "wall_clock_sec": 6.274115939391777,
+      "mean_wall_clock_sec": 0.7842644924239721,
+      "operations": 6536162,
+      "mean_operations": 817020,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 84,
+    "doubled_n": 168,
+    "doubled_verify": "ok",
+    "reference_complexity_ratio": 8
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 100,
+    "transformed_witness_checks": 100,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "arbitrary row relabelling, arbitrary column relabelling, their composition, tensor-mode transposition, and transposition composed with relabelling"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "answer_chars": 1947,
+    "answer_tokens": 487,
+    "answer_elements": 169,
+    "answer_size_sample_count": 1000,
+    "intended_route_operations": 250
+  },
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 84,
+    "coefficient_span": 9
+  },
+  "all_passed": true
+}
