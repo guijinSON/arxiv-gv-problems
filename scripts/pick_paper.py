@@ -153,9 +153,18 @@ def pick(root: str, exclude: set, rng: random.Random, explain: bool = False):
     taken |= exclude
     prio, committed = priorities(accepted, inprog)
 
+    # 533 of the 12,167 ids are legacy arXiv ("math/0611582").  Every path in this
+    # repo is claims/<id>.json and results/<id>/, so a slashed id needs a directory
+    # that nothing creates: the claim write fails and claim.sh used to report CLAIMED
+    # anyway.  The old first-free rule never reached them; a random stratified draw
+    # does, so they must be excluded explicitly until the on-disk layout is changed.
+    skipped_legacy = 0
     free_by_bucket: dict[str, list] = {}
     for pid in order:
         if pid in taken:
+            continue
+        if "/" in pid:
+            skipped_legacy += 1
             continue
         free_by_bucket.setdefault(bucket_of(recs[pid].get("all_cats", "")), []).append(pid)
 
@@ -169,6 +178,9 @@ def pick(root: str, exclude: set, rng: random.Random, explain: bool = False):
                   f"{inprog.get(b,0):>4} {accepted.get(b,0)+inprog.get(b,0):>5} "
                   f"{prio[b]:>9.2f} {len(fr):>6} {nh:>7}", file=sys.stderr)
         print(f"committed (accepted+in_progress) = {committed}", file=sys.stderr)
+        if skipped_legacy:
+            print(f"skipped {skipped_legacy} legacy slashed ids (unrepresentable as paths)",
+                  file=sys.stderr)
 
     # Walk buckets by descending deficit and take the first that can actually
     # supply a paper.  This is the anti-deadlock property: an exhausted or

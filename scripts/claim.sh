@@ -38,8 +38,12 @@ for attempt in $(seq 1 200); do
       echo "ERROR: scripts/pick_paper.py failed (rc=$rc). Not claiming."; exit 4
     fi
   fi
+  # An id containing "/" needs a directory nothing creates; the redirect then fails
+  # and we used to print CLAIMED regardless.  Verify the file exists before claiming.
+  case "$pick" in */*) echo "ERROR: $pick is a legacy slashed id and cannot be a claim path."; exit 4;; esac
   printf '{"paper":"%s","who":"%s","status":"in_progress","claimed_at":"%s"}\n' \
     "$pick" "$WHO" "$(now)" > "claims/$pick.json"
+  [ -s "claims/$pick.json" ] || { echo "ERROR: could not write claims/$pick.json"; exit 4; }
   git add "claims/$pick.json" && git commit -q -m "claim $pick by $WHO"
   if git push -q origin main 2>/dev/null; then
     echo "CLAIMED $pick"
