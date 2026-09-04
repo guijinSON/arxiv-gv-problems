@@ -1,0 +1,131 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "expected exactly 8 summands, got 7"
+      },
+      "swap_frequency_only": {
+        "accepted": false,
+        "reason": "coefficient mismatch at x_0000000 z^-2 x_0000010: expected -287659522920, got 287659522920"
+      },
+      "duplicate_frequency": {
+        "accepted": false,
+        "reason": "the eight frequencies must be distinct"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer must be one JSON object"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "summand 2 scale is outside 1..1000000"
+      }
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "model_style_round_trip": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "observed_probability": 0.0,
+    "structure_aware_space": 15203206329744241947211473953125242623145227059200,
+    "elapsed_sec": 10.672352653928101
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "shipping_density_fraction": 0.0,
+    "demo_exact_solution_count": 1,
+    "demo_candidate_count": 128,
+    "strongest_failing_attack_wall_clock_sec": 0.4921329498756677,
+    "strongest_failing_attack_iterations": 2048,
+    "reference_wall_clock_sec_mean": 0.00006898166611790657,
+    "reference_operations_mean": 1160.0
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_largest_magnitude_count": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_low_integer_frequencies": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_low_hamming_weight": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "obvious_nearest_frequency_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "magnitude_support_as_frequencies": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "exact signed Walsh-Hadamard coefficient recovery",
+      "complexity": "O(N log N) exact integer operations after one canonical row extraction",
+      "wall_clock_sec_mean": 0.00006898166611790657,
+      "operations_mean": 1160.0,
+      "solves": "8/8, as expected on Track B"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 128,
+    "doubled_n": 256,
+    "doubled_verification": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "carried_witness_checks": 80,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "failures": []
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 1,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "answer_chars": 428,
+    "answer_tokens": 107,
+    "answer_elements": 192,
+    "intended_route_operations": 179
+  },
+  "all_passed": true
+}
