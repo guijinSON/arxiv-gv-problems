@@ -676,6 +676,52 @@ def print_gate(rows, advisory, out):
 
 
 # ---------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# MEASURED SOLVER FAMILY.  audit/attack_families.json records what actually
+# cracked each family, which is a more honest label than anything the builder
+# declares: 2411.04916 calls itself geometric (kissing numbers in 17-21
+# dimensions) and is solved by constraint search.  Under a tools-free eval a
+# cheap mechanical route is not a defect -- it is aging risk plus a statement
+# about which SKILL the question exercises.
+def load_measured(root="."):
+    try:
+        with open(os.path.join(root, "audit", "attack_families.json")) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def report_solver_families(out, root="."):
+    data = load_measured(root)
+    meas = data.get("measured", {})
+    if not meas:
+        return
+    counts, secs = {}, {}
+    for pid, m in meas.items():
+        f = m.get("family", "?")
+        counts[f] = counts.get(f, 0) + 1
+        if isinstance(m.get("seconds"), (int, float)):
+            secs.setdefault(f, []).append(m["seconds"])
+    tot = sum(counts.values()) or 1
+    out.append("")
+    out.append("=== MEASURED SOLVER FAMILY (what actually cracks it) ===")
+    out.append(f"  {tot} shipped families have been attacked; the rest are UNMEASURED,")
+    out.append("  which is absence of evidence, not evidence of hardness.")
+    out.append("")
+    for f, n in sorted(counts.items(), key=lambda x: -x[1]):
+        bar = "#" * int(40 * n / tot)
+        med = ""
+        if secs.get(f):
+            v = sorted(secs[f]); med = f"  median {v[len(v)//2]:.3f}s"
+        out.append(f"   {n:3} ({100*n/tot:5.1f}%)  {f:28} {bar}{med}")
+    top = max(counts.values()) / tot
+    two = sum(sorted(counts.values(), reverse=True)[:2]) / tot
+    out.append("")
+    out.append(f"  largest single skill: {100*top:.0f}%   top two combined: {100*two:.0f}%")
+    out.append("  A benchmark whose questions share one solver family is one question")
+    out.append("  restated N times, however varied the source papers look.")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Report the corpus by native domain and computational core.")
@@ -728,6 +774,8 @@ def main(argv=None):
     out.append(f"                        {disc}/{det} = "
                + (f"{100*disc/det:.1f}%" if det else "n/a")
                + " of modules whose core is DETERMINED (upper bound)")
+
+    report_solver_families(out)
     out.append("")
 
     _hist(rows, "native_domain", "native domain", out)

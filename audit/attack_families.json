@@ -1,0 +1,58 @@
+{
+  "_README": [
+    "MEASURED solver family per shipped family -- what actually cracked it, not what",
+    "the builder declared. This is the honest label for what a question IS.",
+    "",
+    "A family here is NOT a defect. The eval is tools-free, and every one of these held",
+    "against a multi-vendor oracle pool with no tools at its shipping preset. What these",
+    "numbers say is: (a) how cheap the MECHANICAL route is, which is aging risk -- a",
+    "family a library cracks in 0.001s on a tiny instance will fall first as models get",
+    "better at simulating solvers in-head; and (b) which SKILL the question exercises,",
+    "which is the diversity metric that matters.",
+    "",
+    "self-declared NATIVE['core'] and this field disagree often, and this one wins:",
+    "2411.04916 declares itself geometric (kissing numbers in 17-21 dimensions) and is",
+    "solved by constraint search.",
+    "",
+    "seconds = median over 8 seeds at the shipping preset, graded by the module's own",
+    "verify(). Measured 2026-09-04. 'solved' of 8 unless noted."
+  ],
+  "families": {
+    "constraint_search": "propagation + backtracking: SAT/CDCL, CSP/GAC, exact cover/DLX, graph colouring",
+    "subset_sum_knapsack": "meet-in-the-middle, dynamic programming over sums, lattice/integer-relation",
+    "linear_algebra_finite_field": "Gaussian elimination, information-set decoding",
+    "dense_subgraph_spectral": "top eigenvectors + randomized greedy/local search",
+    "brute_force_structure": "exhaustive or near-exhaustive search over a small structured space",
+    "paper_constructive": "the paper's own constructive procedure, implemented directly"
+  },
+  "measured": {
+    "2110.05917": {"family": "constraint_search",           "attack": "CDCL SAT on the shipped CNF",                    "solved": 8, "seconds": 0.017},
+    "2506.23363": {"family": "constraint_search",           "attack": "gadget recovery then CDCL on decoded 3-SAT",     "solved": 8, "seconds": 0.014},
+    "2112.06333": {"family": "constraint_search",           "attack": "DSATUR + branch and bound",                      "solved": 8, "seconds": 0.088},
+    "2404.18447": {"family": "constraint_search",           "attack": "GAC-3 / MAC backtracking",                       "solved": 8, "seconds": 0.204},
+    "2509.03064": {"family": "constraint_search",           "attack": "CP interleaving-order model (SMT)",              "solved": 8, "seconds": 2.306},
+    "2302.11250": {"family": "constraint_search",           "attack": "Algorithm X exact cover with MRV",               "solved": 8, "seconds": 0.003},
+    "2411.14821": {"family": "constraint_search",           "attack": "Algorithm X / DLX",                              "solved": 8, "seconds": 0.542},
+    "2306.12713": {"family": "constraint_search",           "attack": "difference-constraint search + union-find",      "solved": 8, "seconds": 0.015},
+    "2401.06027": {"family": "constraint_search",           "attack": "branch and propagate, Hamiltonian cycle",        "solved": 8, "seconds": 0.001},
+    "2411.04916": {"family": "constraint_search",           "attack": "spectral probe then clique search",              "solved": 8, "seconds": null},
+    "2503.01929": {"family": "constraint_search",           "attack": "Algorithm X / DLX with MRV",                     "solved": 8, "seconds": 0.8},
+    "1512.03127": {"family": "constraint_search",           "attack": "exactly-1-in-3 propagation + DPLL",              "solved": 8, "seconds": 0.02},
+    "2507.17878": {"family": "constraint_search",           "attack": "exactly-1-in-3 propagation + DPLL",              "solved": 8, "seconds": 0.5},
+    "2506.24001": {"family": "subset_sum_knapsack",         "attack": "meet-in-the-middle, Schroeppel-Shamir style",    "solved": 8, "seconds": 1.096},
+    "2310.02137": {"family": "subset_sum_knapsack",         "attack": "lattice / integer-relation search",              "solved": 8, "seconds": null},
+    "2311.00090": {"family": "subset_sum_knapsack",         "attack": "subset-sum DP / meet-in-the-middle",             "solved": 8, "seconds": null},
+    "2502.08624": {"family": "subset_sum_knapsack",         "attack": "subset-sum DP / meet-in-the-middle",             "solved": 8, "seconds": null},
+    "2603.07251": {"family": "subset_sum_knapsack",         "attack": "subset-sum DP / meet-in-the-middle",             "solved": 8, "seconds": null},
+    "2411.19413": {"family": "linear_algebra_finite_field", "attack": "Lee-Brickell information-set decoding",          "solved": 8, "seconds": 0.05},
+    "1008.2814":  {"family": "dense_subgraph_spectral",     "attack": "spectral seeding + randomized greedy",           "solved": 8, "seconds": null},
+    "0901.3348":  {"family": "dense_subgraph_spectral",     "attack": "spectral seeding + randomized greedy",           "solved": 5, "seconds": null},
+    "2511.01003": {"family": "brute_force_structure",       "attack": "exhaustive search over coefficient space",       "solved": 8, "seconds": null},
+    "2205.04710": {"family": "paper_constructive",          "attack": "canonical-form / blockwise construction",        "solved": 8, "seconds": null}
+  },
+  "not_yet_attacked": [
+    "Every shipped family NOT listed above has never had a domain-standard attack run",
+    "against it. Absence from `measured` is absence of evidence, not evidence of",
+    "hardness. 23 of 23 families attacked so far have a cheap mechanical route."
+  ]
+}

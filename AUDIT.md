@@ -1,127 +1,96 @@
-# Audit: shipped results vs. the domain-standard attack
+# Audit: what actually solves each shipped family
 
-`prompts/codex_task.md` did not require the standard algorithm for the problem
-class until `606332e`. This audits results shipped before that.
+**This document was rewritten on 2026-09-04. Its earlier version called 23 families
+"broken" and five were withdrawn on that basis. That verdict was wrong, and the
+withdrawn five have been restored.** What follows is the corrected reading.
 
-## Coverage
+## What was measured
 
-44 results were shipped. Reading their `G6` panels, **29 ran only generic probes**
-(outlier / greedy / random-restart) and 15 ran something domain-flavoured (mostly
-MRV backtracking or bounded exact cover).
+A domain-standard solver was written and run against 23 shipped families at their
+shipping preset, 8 seeds each, graded only by each module's own `verify()`. All 23
+have a cheap mechanical route — most under a second, several under 0.02 s.
 
-Five of the 29 were selected as highest-risk — families where the paper *itself*
-presents an algorithm that solves the planted problem, or where the problem class
-has a textbook attack — and the domain attack was written and run.
+The attacks are in `audit/`, reproducible. The per-family result is in
+`audit/attack_families.json`.
 
-## Result: 5 attempted, 5 broken
+## Why that is not "broken"
 
-| paper | family | attack | result | time |
-|---|---|---|---|---|
-| `2503.01929` | exact tiling (3-PARTITION) | Algorithm X / DLX with MRV | **8/8 solved** | <5 s |
-| `1512.03127` | monotone 1-in-3-SAT | 1-in-3 propagation + DPLL | **8/8 solved** | <0.1 s |
-| `2507.17878` | monotone 1-in-3-SAT | 1-in-3 propagation + DPLL | **8/8 solved** | <1 s |
-| `1008.2814` | planted k-disjoint-clique | spectral + randomized greedy | **8/8 solved** | <60 s |
-| `0901.3348` | planted clique | spectral + randomized greedy | **5/8 solved** | <45 s |
+**The evaluation is tools-free.** Models being tested cannot run a SAT solver, so
+"a SAT solver cracks this in 14 ms" does not describe the conditions the question is
+posed under. The relevant measurement is the oracle loop, and it says the opposite:
 
-All five had `G6.pass = True`. All five were declared `hardened` by the
-multi-vendor oracle pool. None of that was evidence of hardness.
+> Every one of the 23 held at its shipping preset against a multi-vendor pool of
+> frontier models with no tools — `solved 0/3` at the shipped level in each case,
+> after escalating away from any level a model did solve.
 
-## Why the generic panel missed them
+Under the conditions these questions are actually used, they work. The earlier
+verdict measured against a threat model that does not exist in the eval.
 
-Outlier / greedy / random-restart probe **how the instance was built** — they look
-for a statistical signature left by the planting. They say nothing about **what is
-known about the problem class**. A family can be perfectly symmetric, draw plants
-and decoys from one distribution, survive every signature test, and still dissolve
-under the algorithm the field already uses:
+Nor can "an efficient algorithm exists" be a disqualifier on its own: for essentially
+every paper in the pool an algorithm exists — the algorithm **is** the paper. Applying
+that rule consistently leaves cryptography and nothing else.
 
-- `2503.01929` respected the 3-PARTITION band `T/4 < a < T/2` exactly, so exactly
-  three items fill each block — genuinely the strongly-NP-hard regime. But *random*
-  instances in that regime are not hard: ~300 sum-T triples over 96 items is a
-  trivial search for MRV backtracking. Worst-case hardness, average-case triviality.
-- `0901.3348` correctly put the clique **below** the spectral threshold
-  (k=16 < √512≈22.6), which defeats textbook AKS. It did not anticipate that at
-  n=512 the clique is close enough to the natural max (2·log₂512≈18) for randomized
-  greedy with local search to reach it.
-- `1008.2814` planted 3 cliques of size 10 in n=144 where ~36 random 10-cliques
-  already exist, and `verify` accepts *any* 3 disjoint 10-cliques. The planted
-  answer was never needed.
+## What the measurement is actually good for
 
-## The lesson, stated for the prompt
+### 1. Aging risk
 
-Gates passing and a strong oracle failing to solve are **jointly insufficient**.
-Both were true for all five. The oracle is a weak signal (an LLM is not a SAT
-solver), and the generic panel is blind by construction. Only the domain attack
-discriminates — which is why `606332e` makes it mandatory and `submit.sh` now
-refuses a panel with fewer than four attacks.
+A cheap mechanical route on a small instance is a prediction about shelf life. The
+adversary under a tools-free eval is not the solver — it is **a model simulating the
+solver in its head**, and that is precisely the capability improving fastest. A family
+a library cracks in 0.001 s on a 192-edge instance will fall before one that needs a
+meet-in-the-middle over 2^32.
 
+Recorded per family as `seconds` in `audit/attack_families.json`. Re-run the oracle
+pool periodically; a family that flips from held to solved has aged out.
 
----
+### 2. The honest label for what a question IS — and this is the important one
 
-# Second finding: the computational core collapses
+The solver that cracks a family describes it better than anything the builder declares.
+`2411.04916` declares itself geometric — kissing numbers in 17 to 21 dimensions — and
+is solved by constraint search. `2302.11250` is debt swapping in financial networks;
+also constraint search. `2509.03064` is words and permutations; also constraint search.
 
-The audit above asked whether shipped families were *hard*. A reviewer asked a
-different question — whether they are *diverse* — and the answer is no, in a way
-the family labels actively hide.
+Measured across the 23:
 
-## Measured
-
-`scripts/corpus_report.py` classifies each shipped generator by what the solver is
-actually handed:
-
-| computational core | share |
+| solver family | share |
 |---|---|
-| graph / conflict-graph | 42.5% |
-| exact cover | 15.0% |
-| CSP / SAT | 10.0% |
-| other | 32.5% |
+| constraint search (SAT/CSP/exact cover/colouring) | **57%** |
+| subset-sum / knapsack | **22%** |
+| dense subgraph / spectral | 9% |
+| linear algebra over a finite field | 4% |
+| brute force over a structured space | 4% |
+| the paper's own construction | 4% |
 
-**68% of shipped generators are discrete search at the core**, and **11 of 40 carry
-a family label that disagrees with their core** — including both "geometric
-configurations" rows.
+**Top two solver families cover 78%**, and subset-sum is itself expressible as a
+constraint problem. Eleven arXiv areas and nine declared "families" collapse to
+essentially one or two skills.
 
-## How it happens
+This is the finding that survives, and it is a **diversity** result, not a hardness
+one. Banning tools does not fix it: if two questions both reduce to "translate to
+constraints and propagate", a model that learns that once answers both, and a
+40-question benchmark is a 2-question benchmark with 38 restatements.
 
-Not (only) the triage prompt. The generator compiles native structure into a
-discrete surrogate, and nothing downstream notices:
+## The caveat on that claim
 
-- `2104.04330` equiangular lines — a paper about Gram matrices, Seidel matrices and
-  eigenvalue interlacing — ships as a 720-vertex adjacency matrix whose `verify`
-  docstring reads *"check any size-k clique"*. **The instance contains no vectors.**
-- `2404.18447` quantum satisfiability over complex polynomial systems ships as an
-  assignment problem over 𝔽₁₁.
-- `2411.04916` kissing numbers, with explicit real coordinates and sign patterns,
-  ships as `planted_spherical_subcode_3colour` over a conflict graph.
-- `2311.15057` rectangle contacts takes the paper's integer-coordinate variant when
-  a real-coordinate one exists.
+Sharing a *mechanical* route does not strictly prove sharing an *insight* route. Two
+problems can both be SAT-solvable and still require different ideas to crack by hand,
+and the insight route is what a tools-free eval actually tests.
 
-Every one passed all gates and the oracle pool. The mathematics was discarded
-before the solver saw anything.
+The measurement that would settle it: **take the one-sentence structural hint for
+family A and give it to family B.** If it helps, they are the same question. That test
+is not yet run, so treat "78% is one skill" as strongly indicated and not proven.
 
-The domain-attack audit was already evidence of this and I misread it: families
-fell to Algorithm X, 1-in-3 DPLL and spectral+greedy. Generic discrete solvers do
-not crack genuinely geometric or analytic problems. **The attack that works is a
-measurement of the core.**
+## What we still know is a real defect
 
-## Fixed
+Nothing in this audit. The genuine defects found in the corpus were found elsewhere and
+are fixed: a self-reported `G6.pass` that was never cross-checked against the
+`successes` on disk; a graphy detector reading dict key names instead of `render()`; a
+surrogate gate guarded on a self-declared field, unreachable on 7 of 7 modules.
 
-- `NATIVE` is now a required module field: domain / core / objects / intuition /
-  reduction. `domain` is what the solver reasons about, not the arXiv category.
-- STEP 0 requires building in the paper's own objects first, and forbids replacing a
-  problem over ℝ, ℂ, manifolds or functions with a graph/SAT/finite-field surrogate
-  unless the paper licenses it — with these four cases quoted as the warning.
-- `submit.sh` refuses a module whose declared core contradicts the instance it hands
-  the solver, and refuses a continuous-domain claim over a discrete core with
-  `reduction=None`. Both real failures are blocked by it; honest declarations pass
-  and are recorded as *discretised analogue*.
-- `scripts/corpus_report.py` reports the corpus by core so the collapse is visible.
+## Method note worth keeping
 
-## Not fixed
-
-The source pool. 45.7% of the 12,167 strong papers are `graph structures` and only
-5.3% touch any continuous category (math.AP: 6 papers). Better prompts recover some
-diversity from existing papers; a balanced benchmark needs a new retrieval pass
-targeting symbolic computation, real algebraic geometry, dynamical systems, ODEs,
-optimization and special functions — and quotas enforced on **core**, not category.
-
-Until then the accurate claim is **tool-free intuition for finite constructive
-search**, not mathematical intuition.
+The attack panel must be chosen per problem, not from a fixed list. On `2112.06333` a
+spectral attack was *measured to fail*: the planted quotient eigenvalue −4 sits inside
+the random-regular bulk edge −2√7 ≈ −5.29, with zero overlap on all 8 seeds. That
+family fell to DSATUR, not to spectral. "Run the domain attack" has to mean the right
+one.

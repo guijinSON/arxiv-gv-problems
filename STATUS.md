@@ -4,8 +4,8 @@
 
 | state | count |
 |---|---:|
-| ✅ done | 42 |
-| 🚫 rejected (documented) | 51 |
+| ✅ done | 47 |
+| 🚫 rejected (documented) | 46 |
 | 🔄 in progress | 6 |
 | ⚪ free | 12,068 |
 | **total** | **12,167** |
@@ -38,4 +38,4 @@
 | words and permutations | 6 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-04 12:13Z by `scripts/status.sh --write`_
+_regenerated 2026-09-04 12:19Z by `scripts/status.sh --write`_
