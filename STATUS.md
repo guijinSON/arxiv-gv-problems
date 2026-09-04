@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **102 / 12,167** resolved (0.84%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **96 / 12,167** resolved (0.79%)
 
 | state | count |
 |---|---:|
 | ✅ done | 50 |
-| 🚫 rejected (documented) | 52 |
-| 🔄 in progress | 25 |
+| 🚫 rejected (documented) | 46 |
+| 🔄 in progress | 31 |
 | ⚪ free | 12,040 |
 | **total** | **12,167** |
 
@@ -22,7 +22,6 @@
 | `1011.6021` | GUIJIN SON | 2026-09-04T12:43 |
 | `1204.1113` | GUIJIN SON | 2026-09-04T12:43 |
 | `2107.02554` | GUIJIN SON | 2026-09-04T12:53 |
-| `1602.08620` | GUIJIN SON | 2026-09-04T12:53 |
 | `1702.02885` | GUIJIN SON | 2026-09-04T13:12 |
 | `2604.17061` | GUIJIN SON | 2026-09-04T13:12 |
 | `1912.02640` | GUIJIN SON | 2026-09-04T13:12 |
@@ -30,15 +29,22 @@
 | `1304.2254` | GUIJIN SON | 2026-09-04T13:38 |
 | `2201.13153` | GUIJIN SON | 2026-09-04T13:38 |
 | `2605.28674` | GUIJIN SON | 2026-09-04T13:42 |
-| `1904.00563` | GUIJIN SON | 2026-09-04T13:42 |
 | `2411.12911` | GUIJIN SON | 2026-09-04T13:42 |
 | `2302.04718` | GUIJIN SON | 2026-09-04T13:42 |
-| `2306.09948` | GUIJIN SON | 2026-09-04T13:42 |
 | `2402.17528` | GUIJIN SON | 2026-09-04T13:42 |
-| `2211.12582` | GUIJIN SON | 2026-09-04T13:42 |
 | `2504.18110` | GUIJIN SON | 2026-09-04T13:42 |
 | `2601.05272` | GUIJIN SON | 2026-09-04T13:42 |
 | `2602.19989` | GUIJIN SON | 2026-09-04T13:42 |
+| `1401.2436` | GUIJIN SON | 2026-09-04T15:26 |
+| `1301.4723` | GUIJIN SON | 2026-09-04T15:26 |
+| `1708.07419` | GUIJIN SON | 2026-09-04T15:26 |
+| `1602.08620` | GUIJIN SON | 2026-09-04T15:26 |
+| `1605.04472` | GUIJIN SON | 2026-09-04T15:26 |
+| `1904.00563` | GUIJIN SON | 2026-09-04T15:26 |
+| `1606.05457` | GUIJIN SON | 2026-09-04T15:26 |
+| `2306.09948` | GUIJIN SON | 2026-09-04T15:26 |
+| `2211.12582` | GUIJIN SON | 2026-09-04T15:26 |
+| `1608.00931` | GUIJIN SON | 2026-09-04T15:26 |
 
 ## By family
 
@@ -46,15 +52,15 @@
 |---|---:|---:|
 | graph structures | 16 | 5,559 |
 | designs and codes | 8 | 1,022 |
-| algebraic decomposition | 10 | 804 |
+| algebraic decomposition | 9 | 804 |
 | integer equations | 4 | 607 |
 | reconfiguration | 10 | 551 |
 | geometric configurations | 4 | 533 |
 | constraint satisfaction | 8 | 508 |
-| algebraic identity solutions | 4 | 398 |
+| algebraic identity solutions | 2 | 398 |
 | algebraic geometric structures | 0 | 299 |
 | schedules and allocations | 5 | 259 |
 | words and permutations | 5 | 237 |
-| finite field constructions | 7 | 235 |
+| finite field constructions | 6 | 235 |
 
-_regenerated 2026-09-04 13:42Z by `scripts/status.sh --write`_
+_regenerated 2026-09-04 15:26Z by `scripts/status.sh --write`_
