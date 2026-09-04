@@ -55,6 +55,35 @@ REQUEST_TIMEOUT = 900
 # request therefore runs on a worker thread under a hard wall-clock deadline.
 TOTAL_DEADLINE = int(os.environ.get("ORACLE_TOTAL_DEADLINE", str(REQUEST_TIMEOUT)))
 
+# The published answer cap (prompts/codex_task.md): <= 2000 chars and <= 256 atoms.
+ANSWER_CHAR_CAP  = 2000
+ANSWER_ATOM_CAP  = 256
+# How close to the cap counts as "the cap is what stopped you". A ladder that has
+# already consumed most of the budget had nowhere left to go along the axis it was
+# using, whatever escalate() says about the mathematics.
+CAP_NEAR_FRACTION = 0.6
+
+
+def _answer_size(mod, params):
+    """(atoms, chars) of the serialised planted answer at these parameters.
+
+    Returns (None, None) if it cannot be measured -- never raises, because this is
+    diagnostic and must not be able to fail a run.
+    """
+    try:
+        inst = mod.make_instance(seed=98765, **{k: v for k, v in params.items()
+                                                if k != "_preset"})
+        ans = inst["answer"]
+        blob = json.dumps(ans, default=str)
+
+        def atoms(a):
+            if isinstance(a, dict):  return sum(atoms(v) for v in a.values())
+            if isinstance(a, (list, tuple)): return sum(atoms(v) for v in a)
+            return 1
+        return atoms(ans), len(blob)
+    except Exception:                                   # noqa: BLE001
+        return None, None
+
 ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
 
@@ -345,10 +374,21 @@ def main():
     verdict = None
 
     with open(TRANSCRIPT, "w") as out:
+        axes_moved = set()          # every param key any level transition changed
+        prev_call = None
         for escalation_round in range(MAX_ESCALATIONS + 1):
             shown = {k: v for k, v in params.items() if k != "_preset"}
             print(f"[round {escalation_round}] {params.get('_preset')} {shown}", file=sys.stderr)
             call = {k: v for k, v in params.items() if k != "_preset"}
+            # Record which dials moved since the previous level. This has to cover
+            # the fixed ladder as well as escalate(): 2601.05272 climbed
+            # n=64,72,80,84 through its LADDER and only then called escalate(), so
+            # counting escalate()'s moves alone would have seen no axis at all.
+            if prev_call is not None:
+                for _k, _v in call.items():
+                    if prev_call.get(_k) != _v:
+                        axes_moved.add(_k)
+            prev_call = dict(call)
             preset = params.get("_preset", "escalated")
             if not run_level(mod, call, preset, escalation_round, rng, key, out):
                 verdict = {"verdict": "hardened", "escalations_used": escalation_round,
@@ -377,13 +417,61 @@ def main():
                                          "the paper -- do not reject it as too_easy."}
                     break
                 if nxt is None:
+                    # Do not take "None" at face value. cap_bound has been documented
+                    # in the escalate() contract and in STEP 0, and builders still
+                    # return None when what they mean is "the answer would not fit":
+                    # 2601.05272 climbed n=64,72,80,84 and stopped at 249 atoms
+                    # against a 256 cap, then reported "the family cannot be made
+                    # harder", which was false. Measure it here instead of asking.
+                    _atoms, _chars = _answer_size(mod, call)
+                    _near = False
+                    if _atoms is not None:
+                        _near = (_atoms >= CAP_NEAR_FRACTION * ANSWER_ATOM_CAP
+                                 or _chars >= CAP_NEAR_FRACTION * ANSWER_CHAR_CAP)
+                    _one_dial = len(axes_moved) <= 1
+                    if _near or _one_dial:
+                        verdict = {
+                            "verdict": "cap_bound",
+                            "escalations_used": escalation_round,
+                            "answer_atoms": _atoms, "answer_chars": _chars,
+                            "atom_cap": ANSWER_ATOM_CAP, "char_cap": ANSWER_CHAR_CAP,
+                            "axes_moved": sorted(axes_moved),
+                            # Two different diagnoses share this verdict, and the
+                            # cure differs. "answer_cap": the format genuinely
+                            # blocked the ladder -- needs a fixed-length witness.
+                            # "single_axis": the ladder only ever turned one dial,
+                            # so the family was never actually explored -- often
+                            # with a tiny answer and enormous headroom left.
+                            "signal": "+".join(
+                                x for x in (("answer_cap" if _near else ""),
+                                            ("single_axis" if _one_dial else "")) if x),
+                            "reason": (
+                                "escalate() returned None, but this looks like the ANSWER "
+                                "CAP rather than a hardness ceiling"
+                                + (f": the answer is already {_atoms} atoms / {_chars} chars "
+                                   f"against a {ANSWER_ATOM_CAP}-atom, {ANSWER_CHAR_CAP}-char cap"
+                                   if _atoms is not None else "")
+                                + (f"; the ladder only ever moved {sorted(axes_moved) or ['nothing']}, "
+                                   "so no fixed-answer-length axis was tried"
+                                   if _one_dial else "")
+                                + ".  PARK this paper -- do not write REJECTED.md.  Harden at "
+                                  "fixed answer length instead (bigger ground set with the same "
+                                  "witness size, larger modulus, denser decoys, tighter "
+                                  "constraints) and re-run."),
+                        }
+                        break
                     verdict = {"verdict": "too_easy", "escalations_used": escalation_round,
+                               "axes_moved": sorted(axes_moved),
+                               "answer_atoms": _atoms,
                                "reason": "escalate() returned None — the family cannot be "
                                          "made harder, and the oracle pool still solves it"}
                     break
                 params = dict(nxt, _preset="escalated")
         else:
+            _atoms, _chars = _answer_size(mod, prev_call or {})
             verdict = {"verdict": "too_easy", "escalations_used": MAX_ESCALATIONS,
+                       "axes_moved": sorted(axes_moved),
+                       "answer_atoms": _atoms, "answer_chars": _chars,
                        "reason": f"the oracle pool solved every level through "
                                  f"{MAX_ESCALATIONS} escalations"}
 

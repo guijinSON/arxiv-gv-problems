@@ -10,6 +10,38 @@ D="results/$ID"
 if [ -n "$REJECT" ]; then
   [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
 
+  # A cap_bound paper must not be rejected.  scripts/harden.py now DETECTS this
+  # rather than waiting for escalate() to declare it: if the ladder stopped with the
+  # answer near the output cap, or never moved more than one dial, the binding
+  # constraint was our answer FORMAT, not the paper.  2601.05272 climbed n=64..84,
+  # stopped at 249 atoms against a 256 cap, reported "cannot be made harder", and was
+  # rejected.  Instruction alone did not prevent that; this guard does.
+  python3 - "$D/.meta.json" <<'PYCAP' || exit 6
+import json, sys
+try:
+    v = (json.load(open(sys.argv[1])) or {}).get("harden_verdict") or {}
+except Exception:
+    sys.exit(0)                       # no verdict recorded; nothing to contradict
+if v.get("verdict") != "cap_bound":
+    sys.exit(0)
+print("ERROR: the oracle harness recorded verdict=cap_bound for this paper, which")
+print("       means the ANSWER CAP stopped the ladder, not the mathematics.")
+a, c = v.get("answer_atoms"), v.get("answer_chars")
+if a is not None:
+    print(f"       answer at the last level: {a} atoms / {c} chars "
+          f"(cap {v.get('atom_cap')} atoms / {v.get('char_cap')} chars)")
+print(f"       dials the ladder ever moved: {v.get('axes_moved') or 'none'}")
+sig = v.get("signal", "")
+if "single_axis" in sig and "answer_cap" not in sig:
+    print("       signal=single_axis: the answer is still small -- this family was never")
+    print("       explored, not exhausted. Turn a SECOND dial before giving it up.")
+print("       PARK it -- delete REJECTED.md and leave the claim in_progress.  Harden")
+print("       at FIXED ANSWER LENGTH instead: grow the haystack, not the needle.")
+print("       Bigger ground set with the same witness size, larger modulus, denser")
+print("       decoys, tighter constraints.  See prompts/codex_task.md, escalate().")
+sys.exit(1)
+PYCAP
+
   # A rejection that says only "an efficient method exists" is not reviewable, and an
   # independent audit found 7 of 12 such rejections were WRONG -- the papers were
   # buildable on Track B. One was dismissed for having "a short linear formula" while
