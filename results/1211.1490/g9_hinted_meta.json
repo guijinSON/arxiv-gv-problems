@@ -1,0 +1,23 @@
+{
+ "schema_version": 2,
+ "harden_master_seed": 9006201715107043743,
+ "oracle_pool": [
+  "openai/gpt-5.6-terra",
+  "anthropic/claude-sonnet-5",
+  "google/gemini-3.1-pro-preview",
+  "x-ai/grok-4.6"
+ ],
+ "oracle_effort": "medium",
+ "max_escalations": 6,
+ "harden_verdict": {
+  "verdict": "cap_bound",
+  "escalations_used": 0,
+  "answer_atoms": 89,
+  "answer_chars": 417,
+  "atom_cap": 256,
+  "char_cap": 2000,
+  "axes_moved": [],
+  "signal": "single_axis",
+  "reason": "escalate() returned None, but this looks like the ANSWER CAP rather than a hardness ceiling: the answer is already 89 atoms / 417 chars against a 256-atom, 2000-char cap; the ladder only ever moved ['nothing'], so no fixed-answer-length axis was tried.  PARK this paper -- do not write REJECTED.md.  Harden at fixed answer length instead (bigger ground set with the same witness size, larger modulus, denser decoys, tighter constraints) and re-run."
+ }
+}
