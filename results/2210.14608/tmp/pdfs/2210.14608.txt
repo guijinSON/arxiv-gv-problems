@@ -1,0 +1,732 @@
+                                                Inapproximability of shortest paths on perfect matching
+                                                                       polytopes?
+
+                                                       Jean Cardinal1[0000−0002−2312−0967] and Raphael Steiner2[0000−0002−4234−6136]
+                                                                     1
+                                                                         Université libre de Bruxelles (ULB), Brussels, Belgium
+                                                                                         jean.cardinal@ulb.be
+                                                                                  2
+                                                                                     ETH Zurich, Zürich, Switzerland
+
+
+
+
+arXiv:2210.14608v1 [math.OC] 26 Oct 2022
+                                                                                raphaelmario.steiner@inf.ethz.ch
+
+
+
+                                                   Abstract. We consider the computational problem of finding short paths in the skeleton of
+                                                   the perfect matching polytope of a bipartite graph. We prove that unless P = NP, there is no
+                                                   polynomial-time algorithm that computes a path of constant length between two vertices at
+                                                   distance two of the perfect matching polytope of a bipartite graph. Conditioned on P 6= NP,
+                                                   this disproves a conjecture by Ito, Kakimura, Kamiyama, Kobayashi and Okamoto [SIAM
+                                                   Journal on Discrete Mathematics, 36(2), pp. 1102-1123 (2022)]. Assuming the Exponential
+                                                   Time Hypothesis we prove the stronger result    that there exists no polynomial-time algorithm
+                                                   computing a path of length at most 14 − o(1) logloglogNN between two vertices at distance two
+                                                   of the perfect matching polytope of an N -vertex bipartite graph. These results remain true
+                                                   if the bipartite graph is restricted to be of maximum degree three.
+                                                   The above has the following interesting implication for the performance of pivot rules for the
+                                                   simplex algorithm on simply-structured combinatorial polytopes: If P 6= NP, then for every
+                                                   simplex pivot rule executable in polynomial time and every constant k ∈ N there exists a
+                                                   linear program on a perfect matching polytope and a starting vertex of the polytope such
+                                                   that the optimal solution can be reached in two monotone steps from the starting vertex, yet
+                                                   the pivot rule will require at least k steps to reach the optimal solution. This result remains
+                                                   true in the more general setting of pivot rules for so-called circuit-augmentation algorithms.
+
+                                                   Keywords: Polytopes · Perfect matchings · Linear programming · Simplex method ·
+                                                   Pivot rules · Circuit-augmentation · Inapproximability · Combinatorial reconfiguration
+
+
+                                           1     Introduction
+
+                                           The history of linear programming is intimately intertwined with that of Dantzig’s simplex algo-
+                                           rithm. While the simplex and its many variants are among the most studied algorithms ever, a
+                                           number of fundamental questions remain open. It is not known, for instance, whether there exists a
+                                           pivot rule that makes the simplex method run in strongly polynomial time. Since the publication of
+                                           the first examples of linear programs that make the original simplex algorithm run in exponential
+                                           time, many alternative pivot rules have been proposed, fostering a tremendous amount of work in
+                                           the past 75 years, both from the combinatorial and complexity-theoretic point of views.
+                                               The simplex algorithm follows a monotone path on the skeleton of the polytope defining the lin-
+                                           ear program. The following natural question was recently raised by De Loera, Kafer, and Sanità [14]:
+
+                                           ?
+                                               The second author was supported by an ETH Postodctoral Fellowship.
+2       J. Cardinal and R. Steiner
+
+“Can one hope to find a pivot rule that makes the simplex method use a shortest monotone path?”.
+
+    As an answer, they proved that given an initial solution to a linear program, it is NP-hard to
+find a 2-approximate shortest monotone path to an optimal solution. It implies that unless P = NP,
+no polynomial-time pivot rule for the simplex can be guaranteed to reach an optimal solution in a
+minimum number of steps.
+    A similar result can also be deduced from two independent contributions, by Aichholzer, Car-
+dinal, Huynh, Knauer, Mütze, Steiner, and Vogtenhuber [2] on one hand, and by Ito, Kakimura,
+Kamiyama, Kobayashi, and Okamoto [26] on the other hand. They proved that the above result
+holds for perfect matching polytopes of planar and bipartite graphs, albeit with a slightly weaker
+inapproximability factor of 3/2 instead of 2. Ito et al. [26] conjecture that there exists a constant-
+factor approximation algorithm for the problem of finding a shortest path between two perfect
+matchings on the perfect matching polytope.
+    Our main result is a disproof of this conjecture under the P 6= NP assumption: Strength-
+ening the previous inapproximability results mentioned above, we show that unless P = NP no
+k-approximation for a shortest path between two vertices at distance 2 of a bipartite perfect match-
+ing polytope can be found in polynomial time, for any (arbitrarily large) choice of k ∈ N. We
+also give an even stronger inapproximability result under the Exponential Time Hypothesis (ETH).
+The latter states that the 3-SAT problem cannot be solved in worst-case subexponential time, and
+is one of the main computational assumptions of the fine-grained complexity program [38]. As a
+consequence, there is not much hope of finding a pivot rule for the simplex algorithm yielding good
+approximations of the shortest path towards an optimal solution, even when the linear program is
+integer and its associated matrix totally unimodular.
+
+1.1   Our result
+We consider the complexity of computing short paths on the 0/1 polytope associated with perfect
+matchings of a bipartite graph. Given a balanced bipartite graph G = (V, E), where V is partitioned
+into two equal-size independent sets A and B, we define the perfect matching polytope PG ⊆ RE of
+G as the convex hull of the 0/1 incidence vectors of perfect matchings of G.
+    It is well-known (see e.g. Chapter 18 in [36]) that for bipartite graphs G, there is a nice halfspace
+representation of PG . An edge-vector (xe )e∈E ∈ RE is in PG if and only if the following hold.
+
+                                       X
+                                             xe = 1,   (∀v ∈ V )                                     (1)
+                                       e3v
+                                             xe ≥ 0,   (∀e ∈ E).                                     (2)
+
+   The above is a compact encoding of PG , with a number of constraints and variables of size
+polynomial in G. The assumption that G is bipartite is crucial here: For non-bipartite G the
+polytope defined by the above constraints has non-integral vertices and is thus not a representation
+of PG [36]. The matrix of this representation of a perfect matching polytope of a bipartite graph
+G is simply the vertex-edge-incidence matrix of G, which is totally unimodular. The problem of
+maximizing a linear functional wT x subject to constraints (1)Pand (2) corresponds exactly to the
+problem of finding a perfect matching M of G whose weight e∈M we is maximal.
+   Given that the simplex algorithm moves along the edges of a polytope, it is crucial for our
+considerations to understand adjacency of vertices on PG . The following result is well-known [12,27].
+                             Inapproximability of shortest paths on perfect matching polytopes    3
+
+Lemma 1. For a bipartite graph G, two vertices of PG corresponding to two perfect matchings M1
+and M2 are adjacent in the skeleton of PG if and only if the symmetric difference M1 ∆M2 is a
+cycle in G.
+   This cycle is said to be alternating in both matchings, and one matching can be obtained from
+the other by flipping this alternating cycle. In general, we will say that two perfect matchings are
+at distance at most k from each other on PG , for some positive integer k, if one can be obtained
+from the other by successively flipping at most k alternating cycles.
+
+
+
+
+                                                                ...
+
+
+
+
+                                                                ...
+
+
+
+
+Fig. 1. Two perfect matchings at distance two on the perfect matching polytope, but whose symmetric
+difference consists of an arbitrarily large number of even cycles.
+
+
+   Note that given any two perfect matchings M1 and M2 of a bipartite graph G, it is always
+the case that M1 ∆M2 is a collection of vertex-disjoint even cycles that are alternating in both
+matchings. The number of such cycles is therefore an upper bound on the distance between M1
+and M2 on PG . Interestingly, this upper bound can be arbitrarily larger than the actual distance.
+Figure 1 shows a construction of a graph G with two matchings at distance two on PG , whose
+symmetric difference consists of an arbitrary number of cycles.
+   Our main result is the following.
+Theorem 1. Let k ≥ 2 be any fixed integer. Unless P = NP, there does not exist any polynomial-
+time algorithm solving the following problem:
+ Input: A bipartite graph G of maximum degree 3 and a pair of perfect matchings M1 , M2 of G at
+   distance at most 2 on the polytope PG .
+ Output: A path from M1 to M2 in the skeleton of PG , of length at most k.
+   More strongly, for every absolute constant δ > 0, unless the Exponential Time Hypothesis fails,
+no polynomial-time algorithm can               k problem when k is allowed to grow with the number
+                              j solve the above
+                                1        log N
+N of vertices of G as k(N ) = 4 − δ log log N .
+
+   A path on the perfect matching polytope of a bipartite graph G is said to be monotone with
+respect to some weight vector w = (we )e∈E ∈ RE on the edges of G if the perfect matchings along
+4        J. Cardinal and R. Steiner
+
+the path have monotonically increasing total weights. Given two perfect matchings M1 and M2 at
+distance two on the perfect matching polytope, one can assign weights to edges so that (i) the path
+of length two between them is strictly monotone, and (ii) M2 is the unique matching of maximal
+weight (this will be formally proven later in Lemma 4). This allows us to formulate our result as
+one about the hardness of reaching an optimal solution from a given feasible solution of a linear
+program on the perfect matching polytope.
+
+Corollary 1. Unless P = NP, there does not exist any polynomial-time constant-factor approxi-
+mation algorithm for the following optimization problem:
+    Input: A bipartite graph G = (V, E) of maximum degree 3, a weight function E → R+ , and a
+      perfect matching M of G.
+    Output: A shortest monotone path on PG from M to a maximum-weight perfect matching of G.
+   Furthermore, assuming ETH, for an arbitrary but fixed δ > 0 no polynomial-time algorithm can
+achieve an approximation ratio of less than 18 − δ logloglogNN , where N := |V (G)|.
+
+    This corollary can be further interpreted as a statement on the existence of a polynomial-time
+pivot rule that would make the simplex method use an approximately shortest monotone path to a
+solution. Any such pivot rule could be used as an approximation algorithm for the above problem,
+contradicting the computational hypotheses.
+
+1.2     Pivot rules for circuit-augmentation algorithms.
+Our work on distances in the skeleton of PG for bipartite graphs G was originally motivated by
+questions regarding so-called circuit moves (or circuit augmentations), that have been recently
+studied in linear programming [10,14,32] as well as in the context of relaxations of the Hirsch
+conjecture concerning the diameter of polytopes [9,29]. A circuit move extends the simplex-paradigm
+of moving along an incident edge of the constraint-polyhedron, by additionally allowing to move
+along certain non-edge directions, called circuits. Given a linear program, the circuits in a well-
+defined sense represent all possible edge-directions that could occur after changing the right-hand
+side of the LP. The following is a formal definition.
+
+Definition 1 (cf. Definition 1 in [14]). Given a polyhedron of the form
+
+                                      P = {x ∈ Rn |Ax = b, Bx ≤ d},
+
+a circuit is a vector g ∈ Rn \ {0} such that
+1. Ag = 0, and
+2. the support of Bg is inclusion-wise minimal among the collection {By|Ay = 0, y 6= 0}.
+
+    Given an LP {max cT x|x ∈ P} for a polyhedron P, a current feasible solution x ∈ P and a
+circuit g with cT g > 0, a circuit move then consists of moving to a new feasible solution x0 = x+t∗ g,
+where t∗ ≥ 0 is maximal w.r.t. x + t∗ g ∈ P. Note that in general, an optimization algorithm based
+on a pivot rule for circuit moves may traverse several non-vertices of the polyhedron before reaching
+an optimal solution.
+    Our interest in the perfect matching polytope for understanding the complexity of circuit-pivot
+algorithms came from the following observation.
+                              Inapproximability of shortest paths on perfect matching polytopes       5
+
+Lemma 2. Let G be a bipartite graph. Then
+1. A non-zero vector g ∈ RE is a circuit for PG (defined by the (in)equalities (1) and (2)) if and
+   only if there exists an even cycle C in G decomposed into matchings C + , C − ⊆ C (alternately
+   appearing along C) and α > 0 such that g = g(C, α), where
+                                               
+                                               α,
+                                                     if e ∈ C + ,
+                                    g(C, α)e := −α, if e ∈ C − , .
+                                               
+                                                 0,   if e ∈
+                                                           / C.
+                                               
+
+2. If x is a vertex of PG , and x0 6= x is obtained from x by a circuit move, then x0 is also a vertex
+   of PG and adjacent to x on the skeleton of PG .
+    This observation implies that any sequence of circuit moves, applied starting from a vertex of PG ,
+will follow a monotone path on the skeleton of PG from vertex to vertex. Consequently, Corollary 1
+also yields an inapproximability result for polynomial pivot rules for circuit augmentation, as follows.
+
+Corollary 2. Unless P = NP, there does not exist a polynomial-time constant-factor approximation
+algorithm for the following problem.
+ Input: A bipartite graph G of maximum degree 3, a vertex x ∈ PG and a linear objective function.
+ Output: A shortest sequence of circuit moves on PG from x to an optimal solution.
+Furthermore, assuming       ETH, no polynomial-time alorithm can achieve an approximation ratio of
+less than 81 − δ logloglogNN , where N := |V (G)| and δ > 0 is a constant.
+                
+
+
+1.3   Related works
+Our work relates to two main threads of research in combinatorics and computer science: one
+obviously related to the complexity of the simplex method and linear programming in general,
+and another more recent one, aiming at building a thorough understanding of the computational
+complexity of so-called combinatorial reconfiguration problems.
+
+Complexity of the simplex method. In 1972, Klee and Minty showed that the original simplex
+method had an exponential worst-case behavior on what came to be known as Klee-Minty cubes [31].
+Since then, many other variants have been shown to have exponential or superpolynomial lower
+bounds [28,7,22,4,17], although subexponential rules are known [24]. More dramatic complexity-
+theoretic results have been obtained recently [1,18]. In particular, it was shown by Fearney and
+Savani [19] that Dantzig’s original simplex method can solve PSPACE-complete problems: Given
+an initial vertex, deciding whether some variable will ever be chosen by the algorithm to enter the
+basis is PSPACE-complete. The simplex method is also a key motivation for studying the diameter
+of polytopes, in particular the Hirsch conjecture, refuted in 2012 by Santos [35].
+    The hardness result on approximating monotone paths given by De Loera, Kafer, and Sanità [14]
+is in fact a corollary of the NP-hardness of the following problem: Given a feasible extreme point
+solution of the bipartite matching polytope and an objective function, decide whether there is a
+neighbor extreme point that is optimal. A related result for circulation polytopes was proved by
+Barahona and Tardos [5]. These two results, as well as the hardness results from Aichholzer et al. [2]
+and Ito et al. [26] rely on the NP-hardness of the Hamiltonian cycle problem. In order to deal with
+the approximability of the shortest path, we have to resort to more recent inapproximability results
+on the longest cycle problem [6].
+6      J. Cardinal and R. Steiner
+
+Reconfiguration of matchings. The field of combinatorial reconfiguration deals with the prob-
+lems of transforming a given discrete structure, typically a feasible solution of a combinatorial
+optimization problem, into another one using elementary combinatorial moves [25,37,34,21]. The
+reachability problem, for instance, asks whether there exists such a transformation, while the short-
+est reconfiguration path problem asks for the minimum number of elementary moves.
+    A number of recent works in this vein deal with reconfiguration of matchings in graphs [25,30,8,11,23].
+Ito et al. [25] proved that the reachability problem between matchings of size at least some input
+number k and under single edge addition or removal was solvable in polynomial time. This was ex-
+tended to an adjacency relation involving two edges by Kaminskı́ et al. [30]. The problem of finding
+the shortest reconfiguration path under this model was shown to be NP-hard [11,23]. Another line
+of work involves flip graphs on perfect matchings in which the adjacency relation corresponds to
+flips of alternating cycles of length exactly four [15,16,33,8,13]. Note that for bipartite graphs, this
+flip graph is precisely the subgraph of the skeleton of the perfect matching polytope that consists
+of edges of length two. Bonamy et al. [8] proved that the reachability problem in these flip graphs
+is PSPACE-complete.
+
+
+2     Proof of Theorem 1
+2.1   Preliminaries
+First note that perfect matchings of a balanced bipartite graph G = (A ∪ B, E) can also be rep-
+resented by orientations of G in which every vertex in A has outdegree one and every vertex in B
+has indegree one. The edges of the matching are those oriented from A to B. Alternating cycles
+in a perfect matching are one-to-one with directed cycles in this orientation, and flipping the cycle
+amounts to reverting the orientations of all its arcs. We will switch from one representation to
+another when convenient.
+    We prove Theorem 1 by reducing from the problem of approximating the longest directed cycle
+in a digraph. We rely on the following two results from Björklund, Husfeldt, and Khanna given as
+Theorems 1 and 2 in [6].
+Theorem 2 (Björklund, Husfeldt, Khanna [6]). Consider the problem of computing a long
+directed cycle in a given Hamiltonian digraph D on n vertices.
+1. For every fixed ε > 0, unless P = NP, there does not exist any polynomial-time algorithm that
+   returns a directed cycle of length at least nε in D.
+2. For every polynomial-time computable increasing function f : N → N in ω(1), unless the Expo-
+   nential Time Hypothesis fails, there does not exist any polynomial-time algorithm that returns
+   a directed cycle of length at least f (n) log n in D.
+   Note that in the two problems, the input graph is guaranteed to be Hamiltonian, yet it remains
+hard to explicitly construct a directed cycle of some guaranteed length. Characterising the approx-
+imability of the longest cycle problem in undirected graphs is a longstanding open question [3,20].
+   The second ingredient of our proof is the following lemma, perhaps of independent interest, that
+bounds the increase in length of a longest directed cycle after a number of cycle flips in a digraph.
+Lemma 3. Let G be an undirected graph, and let C1 , . . . , Ct be a sequence of (not necessarily
+distinct) cycles in G. Let D0 , D1 , . . . , Dt be a sequence of orientations of G such that for each
+i ∈ [t] the cycle Ci is directed in Di−1 and such that Di is obtained from Di−1 by flipping Ci .
+                                 Inapproximability of shortest paths on perfect matching polytopes             7
+
+    There exists a polynomial-time algorithm that, given as input a number `, the orientations
+D0 , . . . , Dt and a directed cycle C in Dt of length |C| > `t+1 , computes a directed cycle in D0 of
+length at least `.
+
+    The bound of Lemma 3 can be shown to be essentially tight. We refer to Figure 2 for an
+illustration of the construction. The proof of Lemma 3 is deferred to the end of this section.
+
+
+
+
+Fig. 2. A subcubic digraph in which the maximum length of a directed cycle is 6, yet after flipping two
+cycles, we reach an orientation of the same graph that has the outer face as a directed cycle, and thus
+contains a directed cycle of length greater than 3 · 2 · 5 (exactly 42 in this example). In general, by iterating
+the same construction, for every integer k one can construct a digraph with maximum directed cycle length
+` = 2k and such that after flipping at most t cycles, one can reach an orientation containing a directed
+cycle of length at least k · (k − 1)t−1 · (2k − 1) ≃ 2 · (`/2)t+1 .
+
+
+
+
+2.2   Reduction
+
+We now give a proof of Theorem 1, assuming Lemma 3.
+
+Proof (Theorem 1). We consider the first problem in Theorem 2: For a fixed ε > 0, given a Hamil-
+tonian digraph D on n vertices, return a directed cycle of length at least nε . We first construct a
+digraph D0 from D by replacing every vertex v of D by the gadget illustrated on Figure 3. The
+gadgets are obtained by applying the following transformations to every vertex v of D:
+
+ 1. The set of incoming arcs of v is decomposed into a balanced binary tree with deg−      D (v) leaves
+    and a degree-one root identified to v. Each internal node of this binary tree is further split into
+    an arc. All arcs of the tree are oriented towards the root.
+ 2. The set of outgoing arcs are split into a tree with deg+D (v) leaves in a similar fashion, with all
+    arcs oriented away from the root.
+8       J. Cardinal and R. Steiner
+
+
+
+
+Fig. 3. Illustration of the reduction in the proof of Theorem 1. Every vertex in the given Hamiltonian
+digraph D (left) is replaced by the depicted gadget (right), yielding a maximum degree-three bipartite
+graph with a perfect matching.
+
+
+ 3. Finally, the vertex v itself is replaced by a directed 4-cycle, such that the single incoming arc
+    from the first tree and the single outgoing arc from the second tree have adjacent endpoints on
+    the cycle.
+
+
+
+
+Fig. 4. Flipping the 4-cycles of each gadget in D0 can be done with two successive cycle flips, using the
+Hamiltonian cycle of D.
+
+
+   The digraph D0 thus obtained is bipartite and subcubic. Furthermore, it is easy to see by
+construction that for every vertex v ∈ V (D), the corresponding gadget in D0 has at most
+                           4deg−               +
+                               D (v) + 4 + 4degD (v) ≤ 8(n − 1) + 4 < 8n
+
+vertices, such that N := |V (D0 )| < n · 8n = 8n2 , and D0 is of polynomial size.
+                                Inapproximability of shortest paths on perfect matching polytopes          9
+
+    Furthermore, the orientation of D0 is such that every vertex in one side of the bipartition has
+outdegree one, and every vertex in the other has indegree one, hence it corresponds to a perfect
+matching M1 . By flipping the alternating 4-cycle in each gadget, we obtain another perfect matching
+M2 . We observe that M2 can be obtained from M1 in two cycle flips, by using the Hamiltonian
+cycle of D twice (see Figure 4). Hence, while M1 ∆M2 consists of n disjoint 4-cycles, M2 is in fact
+at distance two from M1 on the perfect matching polytope of D0 . The underlying undirected graph
+of D0 together with the two perfect matchings M1 and M2 therefore constitute an instance of the
+problem described in Theorem 1. We now show that any sequence of length at most k of alternating
+cycle flips transforming M1 into M2 can be turned in polynomial time into a cycle of length at least
+nε in D, for some ε > 0 depending solely on k.
+    Consider a sequence of k cycles C10 , C20 , . . . , Ck0 such that C10 is alternating in D0 , and Ci0 is
+alternating in the graph obtained from D0 after flipping the cycles C10 , C20 , . . . , Ci−1
+                                                                                         0
+                                                                                             , in this order,
+and such that flipping all k cycles in sequence transforms M1 into M2 . Observe that the sum of the
+lengths of the cycles in this sequence must be at least n, since all the orientations of the 4-cycles
+in the n different gadgets in D0 have to be flipped, and since every single cycle Ci0 can intersect at
+most |Ci0 | different gadget-4-cycles. Let ` = dn1/(k+2) e. We have
+
+                                k
+                                X                                     k
+                                                                      X
+                                      |Ci0 | ≥ n = (1 − o(1))`k+2 >         `i+1 ,
+                                i=1                                   i=1
+
+
+hence from the pigeonhole principle, at least one cycle Ci0 in the sequence has length |Ci0 | > `i+1 .
+From Lemma 3, we can now compute in polynomial time a directed cycle in D0 of length at least
+   0
+nε for ε0 = 1/(k + 2). Let us call this cycle C 0 . Note that for every gadget in D0 corresponding
+to a vertex v of D, either C 0 is vertex-disjoint from this gadget, or it traverses it via exactly one
+directed path, consisting of a leaf-to-root path in the in-tree, a directed path of length 7 touching
+the 4-cycle of the gadget, and then a root-to-leaf path in the out-tree. From this it follows that by
+contracting the edges of the gadgets, the cycle C 0 in D0 can be mapped to a cycle C in D. Note
+that the in- and out-degree of a vertex in D is at most n − 1, thus all the in- and out-trees in D0
+corresponding to the gadgets have depth at most 2dlog2 ne. Consequently, the length of C 0 can be
+shrinked by at most a factor of 4dlog2 ne + 7 by contracting the gadgets. In other words, we obtain
+                                              0
+a directed cycle C in D of length at least nε /(4dlog2 ne + 7) = nε , for ε = ε0 − o(1). Hence if we can
+obtain in polynomial time a sequence of at most k = O(1) flips transforming M1 into M2 , we can
+also find a cycle of length at least nε in D for some fixed ε > 0. This establishes the first statement
+of Theorem 1.
+   It remains to prove the second statement. We consider the second problem in Theorem 2, in
+which we seek a path of length at least f (n) log n, for some computable function f (n) = ω(1).
+Suppose that for some
+                 j    δ > 0 therek is a polynomial-time algorithm that can find a sequence of at
+most k = k(N ) = 41 − δ logloglogNN flips transforming M1 into M2 . Note that
+                         
+
+
+
+                                                   log 8n2
+                                            
+                                      1                            1          log n
+                         k+2≤           −δ                  2
+                                                              + 2 < (1 − δ)
+                                      4          log log 8n        2        log log n
+
+for n large enough (larger than some constant depending only on δ).
+10        J. Cardinal and R. Steiner
+
+   Now, from the same reasoning as above, we can turn such an algorithm into a polynomial-time
+algorithm that finds a directed cycle in D of length at least
+                                                                         !
+                n1/(k+2)      n2·log log n/((1−δ) log n)    log2/(1−δ) n
+                            >                            =Ω                = f (n) log n,
+             4dlog2 ne + 7            O(log n)                 log n
+
+for a computable function f (n) = Ω(log2δ/(1−δ) n) = ω(1). This, from Theorem 2, is impossible
+unless the Exponential Time Hypothesis fails.                                               t
+                                                                                            u
+
+      In order to deduce Corollary 1 from Theorem 1, we need the following lemma.
+
+Lemma 4. Given a bipartite graph G = (V, E), let M1 and M2 be two perfect matchings in G at
+distance two on the perfect matching polytope, hence such that M2 = (M1 ∆C1 )∆C2 for some pair
+C1 , C2 of cycles in G, and such that M1 ∆C1 =: M 0 is also a perfect matching. Then there exists a
+weight function w : E → R+ such that
+
+1. M2 is the unique maximum-weight perfect matching of G,
+2. w(M1 ) < w(M 0 ) < w(M2 ) (where w(M ) = e∈M w(e)).
+                                           P
+
+In other words, there exists a linear program over the perfect matching polytope of G such that the
+path M1 , M1 ∆C1 = M 0 = M2 ∆C2 , M2 is a strictly monotone path and M2 is the unique optimum.
+
+Proof. We first claim that M1 \ (M2 ∪ M 0 ) 6= ∅. Indeed, the set of edges M2 ∪ M 0 forms a subgraph
+of G whose components are the edges in M2 \ C2 = M 0 \ C2 and the cycle C2 . From this it is easy to
+see that if we were to have that M1 ⊆ M2 ∪ M 0 , then necessarily M1 ∈ {M2 , M 0 }, a contradiction
+to the fact that M1 and M2 have distance exactly two. Now pick an edge e0 ∈ M1 \ (M2 ∪ M 0 ).
+Define a weighting w : E → R of the edges in G as follows: w(e0 ) := 0, w(e) := 1 for every
+e ∈ E \ ({e0 } ∪ M2 ) and w(e) := 1 + n1 for every e ∈ M2 , where n denotes the number of vertices
+of G. It is now easily verified that M2 is the unique maximum-weight perfect matching in G, and
+that w(M1 ) ≤ 0 + ( n2 − 1)(1 + n1 ) < n2 ≤ w(M 0 ) < w(M2 ). This proves the claim.               t
+                                                                                                   u
+
+
+2.3     Proof of Lemma 3
+
+Proof (Lemma 3). Let the orientations D0 , D1 , . . . , Dt of G be given as input, together with a
+directed cycle C in Dt and a number ` ∈ N such that |C| > `t+1 .
+    Our algorithm starts by computing the sequence of cycles C1 , . . . , Ct by determining for each
+i ∈ [t] the set of edges with different orientation in Di−1 and Di . Next we compute in polynomial
+time the subgraph H of G which is the union of the cycles C1 , . . . , Ct in G. We in particular
+compute a list of the vertex sets of its connected components, which we call Z1 , . . . , Zc for some
+number c ≥ 1.
+    For later use, let us prove the following fact:
+      Claim (∗). For each r ∈ [c] the induced subdigraph D0 [Zr ] of D0 is strongly connected.
+Proof (Claim (∗)). For each i ∈ [t], let us denote by Hi the subgraph of G consisting of the
+vertices and edges on the cycles Ct−i+1 , . . . , Ct . Then we have Ht = H. We will establish the claim
+by proving inductively that for every i = 1, 2, . . . , t, every connected component of Hi induces a
+strongly connected subdigraph of Dt−i .
+                                Inapproximability of shortest paths on perfect matching polytopes           11
+
+    In the case i = 1, this holds easily: The only connected component of H1 is the cycle Ct ,
+and since it forms a directed cycle both in Dt−1 and Dt , its vertices induce a strongly connected
+subdigraph of Dt−1 , as desired.
+    For the inductive step suppose we have established for some 1 ≤ i < t that all components of
+Hi induces strongly connected subgraphs of Dt−i .
+    Note that when we move from Hi to Hi+1 , the only change that happens is the addition of
+the vertices and edges on the cycle Ct−i . If Ct−i is vertex-disjoint from Hi , then it simply forms a
+new component in Hi+1 and since it is a directed cycle in Dt−(i+1) , it induces a strongly connected
+subdigraph thereof, while also all other components still induce strongly connected subdigraphs, as
+their orientations are not affected when flipping Ct−i .
+    Otherwise, Ct−i together with all components of Hi intersected by it creates a new component
+Z of Hi+1 . Since each component intersected by Ct−i induces a strongly connected subdigraph of
+Dt−i by our assumption, and since Ct−i is directed in Dt−i , it is easy to see that also the new
+component X induces a strongly connected subdigraph of Dt−i . The only change when moving
+from Dt−i to Dt−(i+1) is that the orientations of the arcs of Ct−i are reverted. However, it is easily
+seen that this operation preserves the fact that X induces a strongly connected subdigraph, since
+flipping C maintains the pairwise reachability of vertices on C in the subdigraph induced by X.
+    All components of Hi not intersected by Ct−i remain components also in Hi+1 and have the
+same orientations in Dt−(i+1) as in Dt−i . Hence, also they induce strongly connected subdigraphs
+of Dt−(i+1) , as desired. This concludes the proof by the principle of induction.                    t
+                                                                                                     u
+    Let (x0 , x1 , . . . , xk−1 , xk = x0 ) be the cyclic list of vertices on the directed cycle C in Dt , with
+edges oriented from xi to xi+1 for all i ∈ [k−1]. By assumption on the input, we have k = |C| > `t+1 .
+    We first check if C is vertex-disjoint from H, in which case we may return C, which is then also
+a directed cycle in D0 of length k > `t+1 ≥ `, as desired.
+    Otherwise, C intersects some of the components of H. We then for each vertex xi ∈ V (C)
+compute a label lab(xi ) ∈ [c + 1], defined as lab(xi ) := r if xi ∈ Zr lies in the r-th component
+of H, and lab(xi ) := c + 1 if xi is not a vertex of H. We next compute an auxiliary weighted
+directed multigraph M on the vertex set [c] as follows: For every maximal subsequence of C, of
+length at least two, of the form xi , xi+1 , . . . , xj (addition to be understood modulo k) such that
+lab(xs ) = c + 1 for all s = i + 1, . . . , j − 1 (if any), we add an additional arc from lab(xi ) to lab(xj )
+and give it weight j − i, the corresponding number of arcs in C. Note that the total arc weight in M
+is exactly |C|, while the total number of arcs is exactly |V (C) ∩ V (H)| ≤ |V (H)|. The construction
+of M is illustrated in Figure 5.
+    Furthermore, by definition every vertex in M has the same number of incoming and outgoing
+arcs. Hence, we may compute in polynomial time an edge-disjoint decomposition of M into directed
+cycles (including possible loops) in M . Let W1 , . . . , Wp for some p ∈ N be the list of edge-disjoint
+directed cycles in this decomposition of M . We now create, for each Wi , a directed cycle Ki in D0
+of length |Ki | ≥ weight(Wi ), where weight(Wi ) is the total arc weight of Wi , as follows:
+    Let (l0 , l1 , . . . , ls = l0 ) be the cyclic vertex-sequence of Wi .
+    For each arc (lj , lj+1 ) in Wi , we consider the corresponding subsequence P (lj , lj+1 ) of C which
+starts in Zlj , ends in Zlj+1 , and all whose internal vertices are not contained in H. We note that
+since arcs outside H have the same orientation in D0 and Dt , the subsequence P (lj , lj+1 ) is a
+directed path or a directed cycle also in D0 which starts in Zlj and ends in Zlj+1 .
+    We first check whether there exists an index j such that P (lj , lj+1 ) is a directed cycle. In this case,
+necessarily Wi is a loop (i.e. s = 0) and lj = lj+1 = l0 . We thus may simply put Ki := P (lj , lj+1 ),
+with weight(Wi ) = |Ki | satisfied by definition of the weights in M .
+12      J. Cardinal and R. Steiner
+
+
+
+
+                                                                 1                 1            2
+                                                                            2          2
+
+
+
+
+Fig. 5. Construction of the auxiliary directed multigraph M in the proof of Lemma 3. The cycle C is shown
+on the left, together with the connected components of H that it intersects. The resulting weighted directed
+multigraph M is shown on the right.
+
+
+    Otherwise, each of the P (lj , lj+1 ) is a directed path in D0 . We now make use of Claim (∗),
+which tells us that D0 [Zlj ] is strongly connected for every j = 0, 1, . . . , s − 1. We may therefore
+compute in polynomial time for each j = 0, 1, . . . , s − 1 a directed path Qj in D0 [Zlj ] (possibly
+consisting of a single vertex) which connects the endpoint of P (lj−1 , lj ) to the starting point of
+P (lj , lj+1 ) (index-addition modulo s). Crucially, note that any two directed paths in the collection
+{P (lj , lj+1 ), Qj |j = 0, 1, . . . , s−1} are vertex-disjoint except for shared common endpoints. We now
+compute the directed cycle Ki in D0 , which is the union of the directed paths P (lj , lj+1 ) and the
+directed paths Qj for j = 0, . . . , s − 1. It is clear that its length |Ki | is lower-bounded by the sum
+of the lengths of the P (lj , lj+1 ), which by definition of M equals the sum of arc-weights on Wi , i.e.,
+we indeed have |Ki | ≥ weight(Wi ) also in this case.
+    After having computed the directed cycles K1 , . . . , Kp in D0 , the algorithm checks whether one
+of the cycles has length |Ki | ≥ `. If so, it returns the cycle Ki and the algorithm stops with the
+desired output. Otherwise, we have |Ki | < ` for i = 1, . . . , p, which implies that
+                                                  p
+                                                  X                       p
+                                                                          X
+                   t+1
+                   `     < |C| = weight(M ) =           weight(Wi ) ≤           |Ki | ≤ p(` − 1).
+                                                  i=1                     i=1
+
+Note that p is at most as large as the number of arcs in M , which in turn is bounded by |V (H)|.
+We thus obtain
+                                                       t
+                                                       X
+                            `t+1 < |V (H)| · (` − 1) ≤   |Ci | · (` − 1).
+                                                              i=1
+
+This yields that
+                                        t                       t
+                                        X               `t+1   X
+                                              |Ci | >        >     `i .
+                                        i=1
+                                                        `−1    i=1
+
+Therefore there exists i ∈ {1, . . . , t} such that |Ci | > `i . The algorithm proceeds by finding one
+cycle Ci with this property. Note that Ci is a directed cycle in the orientation Di−1 of G. Hence a
+recursive call of the algorithm to the input D0 , D1 , . . . , Di−1 and the cycle Ci will yield a directed
+cycle of length at least ` in D0 , as desired.
+                                Inapproximability of shortest paths on perfect matching polytopes   13
+
+    This proves the correctness of the described algorithm. As all the steps between two recursive
+calls are executable in polynomial time in the size of G and t, and since there will clearly be at
+most t − 1 recursive calls in any execution of the algorithm, the whole algorithm runs in polynomial
+time, as desired.                                                                                 t
+                                                                                                  u
+
+2.4     Proof of Lemma 2
+Proof (Lemma 2).
+1. We start by noting that the hyperplane restrictions (1) and (2) for the perfect matching polytope
+   PG can be expressed as PG = {x ∈ RE |Ax = b, Bx ≤ d}, where A ∈ RV ×E is the vertex-edge
+   incidence matrix of G, b = 1, B = −IE and d = 0. Applying Definition 1, this means that a
+   vector g ∈ RE \ {0} is a circuit for PG if and only if it is a support-minimal member of the set
+                               (                                            )
+                                                X
+                                       E
+                         Y = y ∈ R \ {0}           ye = 0 for every v ∈ V .
+                                                   e3v
+
+   Now consider a circuit g ∈ Y and let H be the subgraph of G spanned by those e ∈ E for which
+   ge 6= 0. The defining equations of Y immediately imply that H has minimum degree at least
+   2. Thus H contains a cycle C, which is necessarily even. It is easy to check that the vectors
+   g(C, α), α > 0 described in the lemma form members of Y. The support-minimality of g thus
+   implies that g is non-zero only on C. It now easily follows that g = g(C, α) for some α > 0.
+   This concludes the proof of the first item.
+2. Let x be a vertex of PG and M the corresponding perfect matching of G. Let x0 ∈ PG be a vector
+   reachable via a circuit-move from x. This means that there is an even cycle C in G decomposed
+   into two matchings C + and C − , some α > 0 and t∗ > 0 such that x0 = x + t∗ g(C, α). The
+   feasibility of x0 implies that xe < 1 for every e ∈ C + and xe > 0 for every e ∈ C − , for otherwise
+   an entry of x0 would be strictly bigger than one or negative. However, since x is the incidence
+   vector of M , this implies that C + = C \ M and C − = C ∩ M . Thus C is an alternating cycle
+   for M , and M 0 := M ∆C is another perfect matching of M . By Lemma 1 1M 0 is adjacent to
+   x = 1M on the skeleton of PG . We now show that x0 := 1M 0 , which will conclude the proof
+   of the claim. To see this, note that by definition of a circuit-move, t∗ ≥ 0 was chosen maximal
+   such that x + t∗ g(C, α) ∈ PG . Since moving in the direction of the circuit g(C, α) preserves
+   all equality-constraints (1) in the hyperplane description of PG , the maximality implies that
+   moving t above t∗ would violate one of the inequality-constraints (2). Thus, there has to exist
+   e ∈ C such that xe0 = 0. On the other hand, we know that
+
+                                            0 = xe0 = xe ± |{z}
+                                                           t∗ α ,
+                                                      |{z}
+                                                      ∈{0,1}   >0
+
+
+      which implies that t∗ α = 1. It follows that x0 = x + t∗ g(C, α) = 1M 0 , as desired.
+                                                                                                     t
+                                                                                                     u
+
+
+Acknowledgements
+This work was initiated during a stay of the first author as a guest professor at ETH Zurich in
+May-July 2022. He wishes to thank Prof. Emo Welzl for his hospitality during this stay.
+14      J. Cardinal and R. Steiner
+
+References
+
+ 1. Ilan Adler, Christos H. Papadimitriou, and Aviad Rubinstein. On simplex pivoting rules and complexity
+    theory. In Jon Lee and Jens Vygen, editors, Integer Programming and Combinatorial Optimization -
+    17th International Conference, IPCO 2014, Bonn, Germany, June 23-25, 2014. Proceedings, volume
+    8494 of Lecture Notes in Computer Science, pages 13–24. Springer, 2014.
+ 2. Oswin Aichholzer, Jean Cardinal, Tony Huynh, Kolja Knauer, Torsten Mütze, Raphael Steiner, and
+    Birgit Vogtenhuber. Flip distances between graph orientations. Algorithmica, 83(1):116–143, 2021.
+ 3. Noga Alon, Raphael Yuster, and Uri Zwick. Color-coding. J. ACM, 42(4):844–856, 1995.
+ 4. David Avis and Oliver Friedmann. An exponential lower bound for Cunningham’s rule. Math. Program.,
+    161(1-2):271–305, 2017.
+ 5. Francisco Barahona and Éva Tardos. Note on Weintraub’s minimum-cost circulation algorithm. SIAM
+    J. Comput., 18(3):579–583, 1989.
+ 6. Andreas Björklund, Thore Husfeldt, and Sanjeev Khanna. Approximating longest directed paths and
+    cycles. In Josep Dı́az, Juhani Karhumäki, Arto Lepistö, and Donald Sannella, editors, Automata,
+    Languages and Programming: 31st International Colloquium, ICALP 2004, Turku, Finland, July 12-
+    16, 2004. Proceedings, volume 3142 of Lecture Notes in Computer Science, pages 222–233. Springer,
+    2004.
+ 7. Robert G. Bland. New finite pivoting rules for the simplex method. Math. Oper. Res., 2(2):103–107,
+    1977.
+ 8. Marthe Bonamy, Nicolas Bousquet, Marc Heinrich, Takehiro Ito, Yusuke Kobayashi, Arnaud Mary,
+    Moritz Mühlenthaler, and Kunihiro Wasa. The perfect matching reconfiguration problem. In Peter
+    Rossmanith, Pinar Heggernes, and Joost-Pieter Katoen, editors, 44th International Symposium on
+    Mathematical Foundations of Computer Science, MFCS 2019, August 26-30, 2019, Aachen, Germany,
+    volume 138 of LIPIcs, pages 80:1–80:14. Schloss Dagstuhl - Leibniz-Zentrum für Informatik, 2019.
+ 9. Steffen Borgwardt, Elisabeth Finhold, and Charles Viss. On the circuit diameter of dual transportation
+    polyhedra. SIAM J. Discrete Math., 29(1):113–121, 2015.
+10. Steffen Borgwardt and Charles Viss. A polyhedral model for enumeration and optimization over the
+    set of circuits. Discret. Appl. Math., 308:68–83, 2022.
+11. Nicolas Bousquet, Tatsuhiko Hatanaka, Takehiro Ito, and Moritz Mühlenthaler. Shortest reconfigu-
+    ration of matchings. In Ignasi Sau and Dimitrios M. Thilikos, editors, Graph-Theoretic Concepts in
+    Computer Science - 45th International Workshop, WG 2019, Vall de Núria, Spain, June 19-21, 2019,
+    Revised Papers, volume 11789 of Lecture Notes in Computer Science, pages 162–174. Springer, 2019.
+12. Vasek Chvátal. On certain polytopes associated with graphs. J. Comb. Theory, Ser. B, 18(2):138–154,
+    1975.
+13. Sebastian M. Cioabă, Gordon Royle, and Zhao Kuang Tan. On the flip graphs on perfect matchings of
+    complete graphs and signed reversal graphs. Australas. J. Comb., 81:480–497, 2021.
+14. Jesús A. De Loera, Sean Kafer, and Laura Sanità. Pivot rules for circuit-augmentation algorithms in
+    linear optimization. SIAM J. Optim., 32(3):2156–2179, 2022.
+15. Persi W. Diaconis and Susan P. Holmes. Matchings and phylogenetic trees. Proc. Natl. Acad. Sci.
+    U.S.A., 95(25):14600–14602, 1998.
+16. Persi W. Diaconis and Susan P. Holmes. Random walks on trees and matchings. Electron. J. Probab.,
+    7(6):1–17, 2002.
+17. Yann Disser, Oliver Friedmann, and Alexander V. Hopp. An exponential lower bound for Zadeh’s pivot
+    rule. CoRR, abs/1911.01074, 2019.
+18. Yann Disser and Martin Skutella. The simplex algorithm is NP-mighty. ACM Trans. Algorithms,
+    15(1):5:1–5:19, 2019.
+19. John Fearnley and Rahul Savani. The complexity of the simplex method. In Rocco A. Servedio and
+    Ronitt Rubinfeld, editors, Proceedings of the Forty-Seventh Annual ACM on Symposium on Theory of
+    Computing, STOC 2015, Portland, OR, USA, June 14-17, 2015, pages 201–208. ACM, 2015.
+                               Inapproximability of shortest paths on perfect matching polytopes       15
+
+20. Harold N. Gabow and Shuxin Nie. Finding a long directed cycle. ACM Trans. Algorithms, 4(1):7:1–7:21,
+    2008.
+21. Tatsuya Gima, Takehiro Ito, Yasuaki Kobayashi, and Yota Otachi. Algorithmic meta-theorems for com-
+    binatorial reconfiguration revisited. In Shiri Chechik, Gonzalo Navarro, Eva Rotenberg, and Grzegorz
+    Herman, editors, 30th Annual European Symposium on Algorithms, ESA 2022, September 5-9, 2022,
+    Berlin/Potsdam, Germany, volume 244 of LIPIcs, pages 61:1–61:15. Schloss Dagstuhl - Leibniz-Zentrum
+    für Informatik, 2022.
+22. Donald Goldfarb and William Y. Sit. Worst case behavior of the steepest edge simplex method. Discret.
+    Appl. Math., 1(4):277–285, 1979.
+23. Manoj Gupta, Hitesh Kumar, and Neeldhara Misra. On the complexity of optimal matching reconfig-
+    uration. In Barbara Catania, Rastislav Královic, Jerzy R. Nawrocki, and Giovanni Pighizzini, editors,
+    SOFSEM 2019: Theory and Practice of Computer Science - 45th International Conference on Current
+    Trends in Theory and Practice of Computer Science, Nový Smokovec, Slovakia, January 27-30, 2019,
+    Proceedings, volume 11376 of Lecture Notes in Computer Science, pages 221–233. Springer, 2019.
+24. Thomas Dueholm Hansen and Uri Zwick. An improved version of the random-facet pivoting rule for
+    the simplex algorithm. In Rocco A. Servedio and Ronitt Rubinfeld, editors, Proceedings of the Forty-
+    Seventh Annual ACM on Symposium on Theory of Computing, STOC 2015, Portland, OR, USA, June
+    14-17, 2015, pages 209–218. ACM, 2015.
+25. Takehiro Ito, Erik D. Demaine, Nicholas J. A. Harvey, Christos H. Papadimitriou, Martha Sideri,
+    Ryuhei Uehara, and Yushi Uno. On the complexity of reconfiguration problems. Theor. Comput. Sci.,
+    412(12-14):1054–1065, 2011.
+26. Takehiro Ito, Naonori Kakimura, Naoyuki Kamiyama, Yusuke Kobayashi, and Yoshio Okamoto. Short-
+    est reconfiguration of perfect matchings via alternating cycles. SIAM J. Discret. Math., 36(2):1102–
+    1123, 2022.
+27. Satoru Iwata. On matroid intersection adjacency. Discret. Math., 242(1-3):277–281, 2002.
+28. Robert G. Jeroslow. The simplex algorithm with the pivot rule of maximizing criterion improvement.
+    Discret. Math., 4(4):367–377, 1973.
+29. Sean Kafer, Kanstantsin Pashkovich, and Laura Sanità. On the circuit diameter of some combinatorial
+    polytopes. SIAM J. Discret. Math., 33(1):1–25, 2019.
+30. Marcin Kaminski, Paul Medvedev, and Martin Milanic. Complexity of independent set reconfigurability
+    problems. Theor. Comput. Sci., 439:9–15, 2012.
+31. Victor Klee and George J. Minty. How good is the simplex algorithm? In Inequalities, III (Proc. Third
+    Sympos., Univ. California, Los Angeles, Calif., 1969; dedicated to the memory of Theodore S. Motzkin),
+    pages 159–175. Academic Press, New York, 1972.
+32. Jesús A. De Loera, Raymond Hemmecke, and Jon Lee. On augmentation algorithms for linear and
+    integer-linear programming: From Edmonds-Karp to Bland and beyond. SIAM J. Optim., 25(4):2494–
+    2511, 2015.
+33. Ruy Fabila Monroy, David Flores-Peñaloza, Clemens Huemer, Ferran Hurtado, David R. Wood, and
+    Jorge Urrutia. On the chromatic number of some flip graphs. Discret. Math. Theor. Comput. Sci.,
+    11(2):47–56, 2009.
+34. Naomi Nishimura. Introduction to reconfiguration. Algorithms, 11(4):52, 2018.
+35. Francisco Santos. A counterexample to the Hirsch conjecture. Ann. Math., 176(1):383–412, 2012.
+36. Alexander Schrijver. Combinatorial Optimization: Polyhedra and Efficiency, volume 24 of Algorithms
+    and Combinatorics. Springer, 2003.
+37. Jan van den Heuvel. The complexity of change. In Simon R. Blackburn, Stefanie Gerke, and Mark
+    Wildon, editors, Surveys in Combinatorics 2013, volume 409 of London Mathematical Society Lecture
+    Note Series, pages 127–160. Cambridge University Press, 2013.
+38. Virginia V. Williams. On some fine-grained questions in algorithms and complexity. In Proceedings of
+    the International Congress of Mathematicians (ICM 2018), pages 3447–3487. World Scientific, 2018.
+

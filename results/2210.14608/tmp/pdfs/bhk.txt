@@ -1,0 +1,681 @@
+          Electronic Colloquium on Computational Complexity, Report No. 32 (2003)
+
+
+
+
+         Approximating Longest Directed Path
+  Andreas Björklund∗                   Thore Husfeldt∗                 Sanjeev Khanna†
+                                      April 16, 2003
+
+
+                                            Abstract
+           We investigate the hardness of approximating the longest path and
+       the longest cycle in directed graphs on n vertices. We show that neither
+       of these two problems can be polynomial time approximated within n1−
+       for any  > 0 unless P = NP. In particular, the result holds for digraphs
+       of constant bounded outdegree that contain a Hamiltonian cycle. As-
+       suming the stronger complexity conjecture that Satisfiability cannot be
+       solved in subexponential time, we show that there is no polynomial time
+       algorithm that always finds a path of length Ω(log 2+ n), or a cycle of
+       length Ω(log 1+ n), for any constant  > 0 in these graphs. In contrast we
+       show that there is a polynomial time algorithm always finding a path of
+       length Ω(log 2 n/ log log n) in these graphs. This separates the approxima-
+       tion hardness of Longest Path and Longest Cycle in this class of graphs.
+       Furthermore, we present a polynomial time algorithm that finds paths of
+       length Ω(n) in most digraphs of constant bounded outdegree.
+
+
+1 Introduction
+Given an unweighted graph or digraph G = (V, A) with n = |V |, the Longest
+Path problem is to find the longest sequence of distinct vertices v1 · · · vk such
+that vi vi+1 ∈ A. This problem is notorious for the difficulty of understanding
+its approximation hardness [6]. The present paper presents a number of upper
+and lower bounds for the directed case.
+
+Hardness result. The best known algorithm [1] finds a path or directed path of
+length Θ(log n) if it exists. In the present paper we establish a strong inapprox-
+imability bound for the directed version of the problem. Specifically, Theorem 1
+states that in directed graphs the length of the longest path cannot be polyno-
+mial time approximated within an approximation ratio of n1− for any  > 0
+unless P = NP.
+   ∗  Department of Computer Science, Lund University, Box 118, 221 00 Lund, Sweden.
+Email: thore@cs.lth.se.
+    † Dept.  of CIS, University of Pennsylvania, Philadelphia, PA 19104. Email: san-
+jeev@cis.upenn.edu. Supported in part by an Alfred P. Sloan Research Fellowship and by
+an NSF Career Award CCR-0093117.
+
+
+                                                1
+
+
+
+
+                                                                                         ISSN 1433-8092
+    We can claim a stronger bound if we make a stronger assumption called the
+Exponential Time Hypothesis (ETH), namely that Satisfiability has no subexpo-
+nential time algorithms [9]: Our Theorem 2 states that for any constant  > 0,
+if there is a polynomial time algorithm that finds a dipath of length log2+ n
+then there is an deterministic algorithm for 3-Sat with n variables with running
+time 2o(n) . This is relevant to the remaining open question in [1]: “Is there a
+polynomial time algorithm for deciding if a given graph G = (V, E) contains
+a path of length, say, log2 n?” Even though this question remains open, Alon,
+Yuster, and Zwick’s choice of time bound was not as capricious as their wording
+may suggest: any stronger algorithm than log2 n for Longest Path would violate
+the Exponential Time Hypothesis.
+
+Algorithm for Hamiltonian Digraphs. Our lower bound holds even if the input
+digraph is known to be Hamiltonian, which addresses the question to what
+extent knowledge of the presence of a long path helps in the search for one. On
+the other hand, in Theorem 3 we show how to efficiently find paths of length
+Ω(log2 n/ log log n) in Hamiltonian digraphs of constant bounded outdegree; this
+is close to our own Ω(log2+ n) lower bound and matches the current best result
+for the undirected case [4, 16]. The best previous upper bound [1] was O(log n).
+
+Algorithm for Most Sparse Digraphs. Even though our lower bounds suggest
+that an efficient approximation algorithm with good worst-case performance
+is unlikely to exist, this does not mean that all instances of the problem are
+difficult. Indeed, we show with Theorem 4 that a very simple algorithm finds
+paths of length Ω(n) in most sparse digraphs on n vertices (it works for all
+bounded-outdegree expanders). Previously, [11] presented
+                                                     √     a deterministic poly-
+nomial time algorithm that find paths of length Ω( n/ log n), but works only
+for a more restricted class of graphs: most Hamiltonian cubic undirected graphs.
+Another related result [5] shows how to find a hidden Hamiltonian circuit fast
+in most undirected graphs, even restricted to graphs whose maximum degree is
+bounded by a large enough constant.
+
+Longest Path versus Longest Cycle. For the related longest cycle problem,
+where we also require vk v1 ∈ A, Theorem 2 shows that the longest cycle can-
+not be approximated within O(log1+ n). This lower bound, together with the
+longest path guarantee Ω(log2 n/ log log n) from Theorem 3, separates the com-
+plexities of the Longest Path and Longest Cycle problems, at least for the di-
+rected, bounded outdegree, Hamiltonian case, and assuming ETH.
+
+Related work. Among the canonical NP-hard problems, the undirected version
+of this problem has been identified as the one that   is least understood [6].
+The best known guarantee is O (log n/ log log n)2 [4], slightly better than for
+                                                  
+
+the directed case, and a recent result establishes a O nα ) bound for graphs
+of maximum degree three [6]. However, it remains fair to say that also in
+undirected graphs, Longest Path does not seem to admit good approximation
+
+
+                                       2
+algorithms. Indeed, it has been conjectured [11] that the length of a longest path
+in undirected graphs cannot be approximated within nα for some α > 0 unless
+P = NP, a somewhat weaker bound than the one we prove for digraphs, but this
+is far from being proved: the quoted reference shows that the Longest Path is not
+in Apx, and that no polynomial time algorithm can approximate the length of
+                              1− n                                      O(1/) n 
+the longest path within 2log        for any  > 0 unless Np ⊆ Dtime 2log            .
+It is believed to be much harder to find paths and cycles in directed graphs than
+in undirected, and our result may be seen to give some credit to this position.
+Our lower bound is stronger than the best current result for the undirected case,
+and the proof is elementary.
+     The central question of closing the gap between the upper and the lower
+bound for undirected graphs remains open. Our lower bound uses a reduction
+to the k Vertex Disjoint Paths problem in digraphs. Thus there is no direct
+way to translate our argument to the undirected case, because the problem is
+known to be polynomially solvable for undirected graphs [14].
+     Some of the results in the present paper have been announced by the authors
+in [12] and [3].
+
+
+2 Preliminaries
+We write uv for the arc (u, v). The vertex set V is sometimes identified with
+{1, 2, . . . , n}. For a subset W ⊆ V of the vertices of a graph G, we denote by
+G[W ] the graph induced by W .
+
+2.1 Two Vertex Disjoint Paths
+Our proof starts in a reduction from a problem known to be NP-complete for
+over twenty years. In the k Vertex Disjoint Paths problem we are given a
+digraph G of order n > 2k, and we are asked whether there exists a set of
+k vertex disjoint paths in G such that the ith path connects vertex 2i − 1 to
+vertex 2i, for i = 1, . . . k. This problem is NP-complete [7] even when k = 2.
+We need to modify this result slightly to see that it is valid even if we restrict
+the ‘yes’-instances to be partitionable into two disjoint paths. To be precise,
+we define the Two Vertex Disjoint Paths problem (2VDP): given a digraph G
+of order n ≥ 4, decide whether there exists a pair of vertex disjoint paths, one
+from 1 to 2 and one from 3 to 4. We study the restricted version of this problem
+(R2VDP), where the ‘yes’-instances are guaranteed to contain two such paths
+that together exhaust all vertices of G. In other words, the graph G with the
+additional arcs 23 and 41 contains a Hamiltonian cycle through these arcs.
+
+Proposition 1 Restricted Two Vertex Disjoint Paths
+   is NP-complete.
+
+   The proof is an extension of the construction in [7] and can be found in
+Sec. 7. It replaces a reduction from 3-Sat by a reduction from Monotone 1-in-
+3-Sat, and uses a more intricate clause gadget to guarantee the existence of two
+
+                                         3
+paths that cover all vertices. The modification is necessary to prove the lower
+bound for Longest Path even for Hamiltonian instances.
+
+
+3 Long Paths Find Vertex Disjoint Paths
+We will use instances of R2VDP to build graphs in which long paths must reveal
+a solution to the original problem. Given an instance G = (V, A) of R2VDP,
+define Td [G] as a graph made up out of m = 2d − 1 copies G1 · · · Gm of G
+arranged in a balanced binary tree structure. For all i < 2d−1 , we say that the
+copies G2i and G2i+1 are the left and right child of the copy Gi . The copy G1
+is the root of the tree, and Gi for i ≥ 2d−1 are the leaves of the tree. The copies
+of G in Td [G] are connected by additional arcs as follows. For every copy Gi
+having children, three arcs are added (cf. Fig. 1):
+    • One arc from 2 in Gi to 1 in G2i .
+    • One arc from 4 in G2i to 1 in G2i+1 .
+    • One arc from 4 in G2i+1 to 3 in Gi .
+Moreover, in every leaf copy Gi (i ≥ 2d−1 ) we add the arc 23, and in the root
+G1 we add the arc 41.
+
+
+                                                                1•
+                                                                   •4
+                                                            ff •G •kXXXXXXXX
+                                                               f
+                                       f f  f  f fffff 2 1 3                        XXXXX
+                                 1 sfff                                                          XX•4
+                                  • 4                                                           1/
+                                 G2 •                                                             •G3
+                            w w•2 •3cGGG                                                      w w•2 •3cGGG
+                          ww             GG                                                 ww            GG
+                    ww                        GG                                      ww                       GG
+              1 {ww                              G4                             1 {ww                             G4
+               • 4                           1/
+                                                  •                              •      4                     1/
+                                                                                                                  •
+              G4  •                            • G5                             G6  •                           • G7
+          2•      •U+3+                      2•     •U+3+                   2•      •U+3+                     2•     •U+3+
+                      ++                              ++                            ++                             ++
+                      ++                              ++                            ++                             ++
+                         +4                              +4                            +4                             +
+    1                                 1                              1                               1
+    • 4 1 •                             • 4 1 •                        • 4 1 •                           • 4 1 •4
+    G8 •             /•G9             G10•             /•G11          G12•             /•G13            G14•            /•G15
+  2
+   • A•3 2• A•3 2• A•3 2• A•3 2• A•3 2• A•3 2• A•3 2• A•3
+
+
+                                                   Figure 1: T4 [G].
+
+
+Lemma 1 Given an instance G = (V, A) of R2VDP on n = |V | vertices, and
+any integers m = 2d − 1 > 3, consider Td [G] with N = mn vertices. Then
+    • If G has a solution then Td [G] contains a path of length N − 1.
+    • Given any path of length larger than (4d − 5)n in Td [G], we can in time
+      polynomial in N construct a solution to G.
+
+                                                               4
+Proof. For the first part of the lemma, consider a solution for G consisting of
+two disjoint paths P and Q connecting 1 to 2 and 3 to 4, respectively, such that
+P + 23 + Q + 41 is a Hamiltonian cycle in G. The copies of P and Q in all Gi s
+together with the added arcs constitute a Hamiltonian cycle in Td [G] of length
+mn and thus a path of the claimed length.
+    For the second part, first consider an internal copy Gi and observe that if
+a path traverses all of the four arcs connecting Gi to the rest of the structure
+then this path constitutes a solution to R2VDP for G. Thus we can restrict our
+attention to paths in Td [G] that avoid at least one the four external arcs of each
+internal Gi ; we call such paths avoiding.
+    Given Td [G] define ed [G] as the length of the longest avoiding path in Td [G]
+ending in vertex 4 of its root copy, and sd [G] as the length of the longest avoiding
+path starting in vertex 1 of the root copy. Consider a path P ending in vertex 4
+of the root copy, for d > 1. At most n vertices of P are in G1 . The path P has
+entered G1 via vertex 3 from G3 ’s vertex 4. There are two possibilities. Either
+the first part of P is entirely in the subtree rooted at G3 , in which case P has
+length at most n + ed−1 [G]. Or it entered G3 via 1 from the subtree rooted
+at G2 , in which case it may pass through at most n vertices in G3 , amounting
+to length at most 2n + ed−1 [G]. (Especially, P cannot leave via G3 ’s vertex
+2, because then it wouldn’t be avoiding). A symmetric argument for sd [G] for
+d > 1 shows an equivalent relation. Thus we have that
+
+                        e1 [G] ≤ n, ed+1 [G] ≤ 2n + ed [G],
+                        s1 [G] ≤ n, sd+1 [G] ≤ 2n + sd [G].
+
+    Furthermore, note that a longest avoiding path in Td [G] connects a path
+amounting to ed−1 [G] in the right subtree, through a bridge consisting of as
+many vertices as possible in the root, with a path amounting to sd−1 [G] in
+the left subtree. Consequently, a typical longest avoiding path starts in a leaf
+copy of the right subtree, travels to its sister copy, goes up a level and over
+to the sister of that copy, continues straight up in this zigzag manner to the
+root copy, and down in the same fashion on the other side. Formally, the
+length of a longest avoiding path in Td [G] for d > 1 is bounded from above by
+ed−1 [G] + n + sd−1 [G] ≤ (4d − 5)n.
+
+Theorem 1 There can be no deterministic, polynomial time approximation al-
+gorithm for Longest Path or Longest Cycle in a Hamiltonian directed graph on
+n vertices with performance ratio n1− for any fixed  > 0, unless P = NP.
+
+Proof. First consider the path case. Given an instance G = (V, A) of R2VDP
+with n = |V |, fix k = 1/ and construct Td [G] for the smallest integers m =
+2d − 1 ≥ (4dn)k . Note that the graph Td [G] has order N = nO(k) . Assume there
+is a deterministic algorithm finding a long path of length lapx in time polynomial
+in N , and let lopt denote the length of a longest path. Return ‘yes’ if and only if
+lapx > (4d − 5)n. To see that this works note that if G is a ‘yes’-instance and if
+indeed lopt /lapx ≤ N 1− then lapx > (4d − 5)n, so Lem. 1 gives a solution to G.
+
+                                         5
+If on the other hand G is a ‘no’-instance then the longest path must be avoiding
+as defined in the proof of Lem. 1, so its length is at most (4d − 5)n. Thus we
+can solve the R2VDP problem in polynomial time, which by Prop. 1 requires
+P = NP.
+    For the cycle case, we may use a simpler construction. Simply connect m
+copies G1 , · · · , Gm of G on a string, by adding arcs from vertex 2 in Gi to vertex
+1 in Gi+1 , and arcs from vertex 4 in Gi to vertex 3 in Gi−1 . Finally, add the
+arc 41 in G1 and the arc 23 in Gm . The resulting graph has a cycle of length
+mn whenever G is a ‘yes’-instance, but any cycle of size at least 2n + 1 must
+reveal a solution to G.
+
+
+4 Subexponential Algorithms for Satisfiability
+In this section we show that a superlogarithmic dipath algorithm implies subex-
+ponential time algorithms for Satisfiability.
+    We need the well-known reduction from Monotone 1-in-3-Sat to 3-Sat. It
+can be verified that the number of variables in the construction (see also [13,
+Exerc. 9.5.3]) is not too large:
+
+Lemma 2 ([15]) Given a 3-Sat instance ϕ with n variables and m clauses we can
+construct an instance of Monotone 1-in-3-Sat with O(m) clauses and variables
+that is satisfiable if and only if ϕ is.
+
+   The next lemma is a variant of Theorem 1.
+
+Lemma 3 There is a deterministic algorithm for Monotone 1-in-3-Sat on n vari-
+                           1/(1+)
+ables running in time 2O(n         )
+                                     , if there is
+  1. a polynomial time deterministic approximation algorithm ALP for Longest
+     Path in N -node Hamiltonian digraphs with guarantee log2+ N , or
+  2. a polynomial time deterministic approximation algorithm ALC for Longest
+     Cycle in N -node Hamiltonian digraphs with guarantee log1+ N .
+
+Proof. We need to verify that our constructions obey the necessary size bounds.
+The R2VDP instance build from the instance to Monotone 1-in-3-Sat described
+in Sec. 7 has size n0 = O(n).
+    For the path case, set d = (4n0 )1/(1+) and construct Td [G] as in Sec. 3, which
+will have N = (2d − 1)n0 nodes. Run the algorithm ALP on Td [G]. Observe
+that (4d − 5)n0 < log2+ ((2d − 1)n0 ), so Lem. 1 tells us how to use ALP to solve
+the R2VDP instance, and hence the 1-in-3-Sat instance.
+    The cycle case follows in a similar fashion from the construction in the proof
+of Theorem 1.
+
+Theorem 2 There is a deterministic algorithm for 3-Sat on n variables running
+in time 2o(n) if there is
+
+                                         6
+  1. a polynomial time deterministic approximation algorithm for Longest Path
+     in N -node Hamiltonian digraphs with guarantee log2+ N , or
+  2. a polynomial time deterministic approximation algorithm for Longest Cy-
+     cle in N -node Hamiltonian digraphs with guarantee log1+ N .
+
+Proof. The previous two lemmas give an algorithm that runs in time 2o(m) ;
+which implies a 2o(n) -algorithm by the Sparsification Lemma of [10].
+
+
+5 Finding Long Paths in Hamiltonian Digraphs
+Vishwanathan [16] presents a polynomial time algorithm that finds a path
+of length Ω(log2 n/ log log n) in undirected Hamiltonian graphs with constant
+bounded degree. We show in this section that, after a minor extension to the
+argument, the algorithm and its analysis apply to the directed case as well.
+
+Theorem 3 There is a polynomial time algorithm always finding a path of length
+Ω(log2 n/ log log n) in any Hamiltonian digraph of constant bounded outdegree
+on n vertices.
+
+   To prove the theorem, we need some additional notation. Let G = (V, A) be
+a digraph. We say that a vertex v ∈ V spans the subgraph Gv = G[Vv ] where
+Vv ⊆ V is the set of vertices reachable from v in G. Consider the algorithm
+below. It takes a digraph G = (V, A) on n = |V | vertices and a specified vertex
+v ∈ V as input, and returns a long path starting in v.
+  1. Enumerate all paths in G starting in v of length log n, if none return the
+     longest found.
+  2. For each such path P = (v, · · · , w), let Vw be the set of vertices reachable
+     from w in G[V − P + {w}].
+  3. Compute a depth first search tree rooted at w in G[Vw ].
+  4. If the deepest path in the tree is longer than log2 n, return this path.
+  5. Otherwise, select the enumerated path P whose end vertex w spans as
+     large a subgraph as possible after removal of P − {w} from the vertex set,
+     i.e the path maximising |Vw |.
+  6. Search recursively for a long path R starting from w in G[Vw ], and return
+     (P − {w}) + R.
+    First note that the algorithm indeed runs in polynomial time. The enumer-
+ation of all paths of length log n takes no more than polynomial time since the
+outdegree is bounded by a constant k, and thus there cannot be more than k log n
+paths. Computing a depth first search tree is also a polynomial time task, and
+
+
+                                        7
+it is seen to be performed a polynomial number of times, since the recursion
+does not branch at all.
+    To prove that the length of the resulting path is indeed Ω(log2 n/ log log n),
+we need to show that at each recursive call of the algorithm, there is still a long
+enough path starting at the current root vertex.
+
+Lemma 4 Let G = (V, A) be a Hamiltonian digraph. Let S ⊆ V, v ∈ V \ S.
+Suppose that on removal of the vertices of S, v spans the subgraph G v = (Vv , Av )
+of size t. If each vertex w ∈ Vv is reachable from v on a path of length less than
+d, then there is a path of length t/d|S| in Gv starting in v.
+
+Proof. Consider a Hamiltonian cycle C in G. The removal of S cuts C into at
+most |S| paths P1 · · · P|S| . Since each vertex in V lies on C, the subgraph Gv
+must contain at least t/|S| vertices W from one of the paths, say Pj . In fact,
+Gv must contain a path of length t/|S|, since the vertex in W first encountered
+along Pj implies the presence in Gv of all the subsequent vertices on Pj , and
+these are at least |W |. Denote one such path by P = p0 · · · p|W |−1 , and let
+R = r0 · · · rl−1 be a path from r0 = v to rl−1 = p0 , of length l ≤ d. Set
+s = |P ∩ R| and enumerate the vertices on P from 0 to |W | − 1 and let i1 · · · is
+denote the indices of vertices in P ∩ R, in particular i1 = 0. Let is+1 = |W |.
+An averaging argument shows that there exists j, such that ij+1 − ij ≥ |W |/s.
+Let q be the index for which rq = pij . The path along R from r0 to rq and
+continuing along P from pij +1 to pij+1 −1 has the claimed length.
+    Observe that the algorithm removes no more than log n vertices from the
+graph at each recursive call. Thus, at call i we have removed at most i log n
+vertices from the original graph; the very same vertices constituting the begin-
+ning of our long path. Lemma 4 tells us that we still are in a position were it
+is possible to extend the path, as long as we can argue that the current end
+vertex of the path we are building spans large enough a subgraph. Note that
+whenever we stand at a vertex v starting a long path P of length > log n in
+step 1 of the algorithm, the path consisting of the first log n vertices of P is one
+of the paths of length log n being enumerated. This is our guarantee that the
+subgraph investigated at the next recursive call is not all that smaller than the
+graph considered during the previous one. It must consist of at least |P | − log n
+vertices. Of course, we cannot be sure that exactly this path is chosen at step
+5, but this is of no concern, since it is sufficient for our purposes to assure that
+there are still enough vertices reachable.
+    Formally, let Vi denote the vertex set of the subgraph considered at the
+recursive call i. In the beginning, we know that regardless of the choice of start
+vertex v, we span the whole graph and thus V0 = V , and furthermore, that a
+path of length n starts in v. Combining the preceding discussion with Lem. 4,
+we establish the following inequality for the only non-trivial case that no path
+of length log2 n is ever found during step 4 of the algorithm:
+
+                                            |Vi |
+                             |Vi+1 | >            − log n
+                                         i log3 n
+
+                                           8
+It is readily verified that |Vi | > 0 for all i < c log n/ log log n for some constant
+c, which completes the proof of Theorem. 3.
+
+
+6 Finding Long Paths in Most Sparse Digraphs
+In this section we show that in a sparse expander graph, a relatively long path
+is easily found. These ideas are inspired by the analysis of the low expected
+time for finding a Hamiltonian cycle in a random graph [2, 8].
+    A digraph G = (V, A) on n vertices is a c-expander if |δU | ≥ c(1 − |Un | )|U |
+for every subset U ⊂ V where δU = { v ∈    / U | ∃u ∈ U : uv ∈ A }. A standard
+probabilistic argument shows that with high probability a random digraphs with
+outdegree k (k > 2), are ck -expanders for some constant ck , for large enough
+n > nk . In other words, the result holds for most bounded outdegree graphs.
+    We propose the following algorithm for finding a long path p0 · · · pl in a
+sparse expander.
+   1. Pick an arbitrary start vertex p0 , and set i = 0.
+                                                                       Si−1
+   2. Let Gi = (Vi , Ai ) be the subgraph spanned by pi in G[V \ (       j=0 pj )].
+
+   3. If Gi consists only of pi , exit.
+   4. For each neighbour v of pi in Gi , evaluate the size of the subgraph spanned
+      by v in Gi [Vi \ pi ].
+   5. Choose the neighbour who has the largest spanned subgraph as pi+1 .
+   6. Set i = i + 1 and goto 2.
+                                                  c
+Theorem 4 The algorithm finds a path of length 2(k+1) n in every c-expander
+digraph G = (V, A) with maximum outdegree k.
+
+Proof. Consider step i. Enumerate the neighbours of pi in Gi as r1 · · · rk0 . Let
+Vi [rj ] be the vertices reachable from rj in Gi [Vi − {pi }]. Now observe that the
+Vi [rj ] either are very small or really large for small i, since the set of vertices
+outside Vi [rj ] in G which are directly connected by an arc from a vertex in Vi [rj ]
+must lie on the prefix path p0 · · · pi by definition, and there must be a lot of
+them because of the expander criterion. Specifically,S when i is small, there must
+be a j for which Vi [rj ] is large, since k 0 ≤ k and Vi [rj ] = Vi − {pi }. Observe
+that Vi+1 is the largest Vi [rj ], to obtain
+
+                                                2(i + 1)
+                                |Vi+1 | ≥ n −
+                                                    c
+whenever at least one Vi [rj ] is too large to be a small subgraph, i.e. as long as
+
+                                 c(|Vi | − 1)
+                                              ≥ i + 1,
+                                     2k
+
+                                          9
+where we for the sake of simplicity have used the expansion factor c/2 which
+holds for all set sizes. Observing that V0 = n, we may solve for the smallest i,
+                                                                            c
+when the inequality above fails to hold. This will not happen unless i ≥ 2(k+1) n,
+as promised.
+
+
+7 Proof of Proposition 1
+We review the construction in [7], in which the switch gadget from Fig. 2 plays
+a central role. Its key property is captured in the following statement.
+
+                                  O                                                                          O
+                                 '&!%"$#
+                                 o7 D gOOOO                                                             D        '&!%"$#gOOOO
+                              ooo
+                  ? ?o?
+                        o o
+                  '&!%"$# 
+    OOOO  ?? o C OO  ??? oo     
+                                             OOO
+                                                       _?                           ? ??? '&! %"$# OOO_???
+        '/ E j             woo
+         '&!%"$#   '&!%"$#
+                         
+                                          O' 
+                                             ??
+                                                 ??
+                                                          4 G woo
+                                                                 o        /'&!%"$#
+                                                                           E
+                                                                                   
+                                                                                                      OOO' ??? ?4'&!%"$#
+                                                                                                        C
+                                                                                                       ?
+                                                                                                                                    G
+                                                                                                                              ?
+            o oF
+                '&!%"$#                    '&!%"$# 
+                                                     H OOO /                        oF ' &
+                                                                                         !  %
+                                                                                            "     $
+                                                                                                  #                        H      '&!%"$#
+             wooo                                          O'                  wooo
+                     kW
+                  '&!%"$#                                              k?W?W?WWWW'&!%"$#  
+                      ??WWWWW gggggg3
+                        ??                       
+                                      GB
+                                                                                      B
+                                                                                                       ?
+                                                                                                         G  
+                               ??
+                                 ?? 
+                  (i)
+                                     
+                                 '&!%"$#A                                           (ii)                A        '&!%"$# 
+                                                                                                        
+
+Figure 2: (i) A switch. Only the labelled vertices are connected to the rest of
+the graph, as indicated by the arrows. (ii) Three vertex-disjoint paths through
+a switch.
+
+
+Lemma 5 ([7]) Consider the subgraph in Fig. 2. Suppose that are two vertex
+disjoint paths passing through the subgraph—one leaving at A and the other
+entering at B. Then the path leaving A must have entered at C and the path
+entering at B must leave at D. Furthermore, there is exactly one additional path
+through the subgraph and it connects either E to F or G to H, depending on the
+actual routing of the path leaving at A.
+    Also, if one of these additional paths is present, all vertices are traversed.
+
+     To prove Prop. 1 we reduce from Monotone 1-in-3-Satisfiability, rather than
+3-Satisfiability as used in [7]. An instance of 1-in-3-Sat is a Boolean expression
+in conjunctive normal form in which every clause has three literals. The question
+is if there is a truth assignment such that in every clause, exactly one literal is
+true. It is known that even when all literals are positive (Monotone 1-in-3-Sat)
+the problem is NP-complete [15].
+     Given such an instance ϕ with clauses t1 , . . . , tm on variables x1 , . . . , xn we
+construct and instance Gϕ of R2VDP as follows.
+
+
+                                                                     10
+                        7 x1             / ¬x2                 / ¬x3 O
+                                             \::LLL                B   OOO
+                  ooooo                          :: LLr   r
+                                                              r
+                                                           r 
+                                                             r            OOO
+                oo                                      L
+                                                   :r:rr LLL               OOO
+           ooooo                                  r
+                                                yr ::  %    L                 OOO
+         oo            / x2            / ¬x3            :: / ¬x1                  O/ '7
+      ci◦OOOOO                                         
+                                                 LLL  : r
+                                                             r                  o
+                                                                                     ◦
+                                                                                 ooo ci+1
+              OOO                                   LLLrr::                 oo
+                                                                             o
+                 OOO
+                    OOO                           rrrLLL:::             ooo
+                         '                   yrrr           L%      oooo
+                           x3           / ¬x1                   / ¬x2
+
+Figure 3: A clause gadget consisting of 9 switches. Every incoming arc to a
+switch ends in the switch’s vertex E, and every outgoing arc leaves the switch’s
+vertex F.
+
+Clause gadgets. Every clause ti is represented by a gadget consisting of a
+vertex ci and nine switches, three for every literal in ti . Consider the clause
+ti = (x1 ∨ x2 ∨ x3 ). The vertices ci , ci+1 and the E and F vertices in the nine
+switches are connected as shown in Fig. 3. Thus all clause gadgets are connected
+on a string ending in a dummy vertex cm+1 .
+    The clause gadget has the following desirable properties: Call a path from
+ci to ci+1 valid if it is consistent with a truth assignment to {x1 , x2 , x3 } in the
+sense that if it passes through a switch labelled with a literal (like ¬x2 ) then
+it cannot pass through its negation (like x2 ). The following claims are easily
+verified:
+
+Lemma 6 Consider the construction in Fig. 3.
+  1. Every valid path from ci to ci+1 corresponds to a truth assignment to
+     {x1 , x2 , x3 } that sets exactly one variable to true.
+  2. If there is a truth assignment to {x1 , x2 , x3 } that sets exactly one variable
+     to true then there is a valid path from ci to ci+1 corresponding to the
+     assignment. Moreover, there is such a valid path passing through all five
+     switches whose labels are consistent with the assignment.
+
+Variable gadgets. Every variable xi is represented by a vertex vi . (Again,
+vertex vn+1 is a dummy vertex.) All switches in the clause gadgets representing
+the positive literal of the variable vi are connected in series (the ordering of the
+switches on this string is not important): the vertex H in a switch is connected
+to vertex G of the next switch with the same label. Furthermore, there is an
+arc from vi to vertex G in the first switch on its literal path, and an arc from
+vertex H in the last switch on the path to vertex vi+1 .
+   Likewise, all switches labelled with negated literals of this variable are con-
+nected. Thus there are two strings of switches leaving vi : one contains all the
+positive literals, and one contains all the negated literals. Both end in vi+1 .
+   Also, all the switches are arranged on a path and connected by added arcs
+from vertex A in a switch to vertex C in the next one, and arcs back from
+
+
+
+                                          11
+vertex D in a switch to vertex B of the preceding switch. The ordering of the
+switches on this switch path is not important.
+   Finally, there is an arc from vn+1 to c1 and an arc from vertex D in the first
+switch on the switch path to v1 .
+   To finish the construction of an instance of R2VDP it remains to identify
+the first four vertices. Vertex 1 is vertex B of the last switch on the switch path,
+vertex 2 is cm+1 , vertex 3 is vertex C of the first switch on the switch path, and
+vertex 4 is vertex A of the last switch on the switch path.
+
+Lemma 7 Gϕ has two vertex disjoint paths from 1 to 2 and from 3 to 4 if and
+only if ϕ has a solution. Moreover, if Gϕ contains such paths then it contains
+two such paths that together exhaust all its vertices.
+
+Proof. Assume ϕ can be satisfied so that exactly one variable in every clause is
+true. Walk through Gϕ starting in vertex 1. This path is forced to traverse all
+switches until it reaches v1 . In general, assume that we reached vi . To continue
+to vi+1 traverse the G–H paths of the string of negative literal switches if xi is
+true; otherwise take the string of positive literal switches. Note that this forces
+us to avoid the E–F paths in these switches later.
+    Arriving at vn+1 continue to c1 . To travel from ci to ci+1 we are forced to
+traverse the clause gadget of Fig. 3. Note that the truth assignment has set
+exactly one of the variables to true, blocking the E–F path in the two switches
+labelled by its negative literal. Likewise, two of the variables are false, blocking
+the (two) switches labelled by their positive literal. The remaining five switches
+are labelled by the positive literal of the true variable or negative literals of the
+falsified variables. The valid path ensured by Lem. 6 passes through exactly
+these five switches.
+    Finally, the path arrives at vm+1 = 2. The path travelling from 3 to 4 is
+now unique. Observe that the two paths exhaust all the vertices and thus form
+a Hamiltonian cycle if we add 23 and 41.
+    Conversely, assume there are two paths from 1 to 2 and from 3 to 4. The
+subpaths connecting vi to vi+1 ensure that all literal switches are consistent in
+the sense that if the E–F path in a switch labelled xi is blocked then it is blocked
+in all such switches, and not blocked in any switch labelled ¬xi . This forces
+the subpaths from ci to ci+1 to be valid. Lem. 6 ensures that the corresponding
+truth assignment is satisfying and sets exactly one variable in each clause.
+
+
+Acknowledgement
+The third author would like to express his thanks to Chandra Chekuri for many
+useful discussions on this problem.
+
+
+
+
+                                         12
+References
+ [1] N. Alon, R. Yuster, and U. Zwick. Color-coding. Journal of the ACM,
+     42(4):844–856, 1995.
+ [2] D. Angluin and L. G. Valiant. Fast probabilistic algorithms for Hamilto-
+     nian circuits and matchings. Journal of Computer and Systems Sciences,
+     18(2):155–193, 1979. Announced at STOC ’77.
+ [3] A. Björklund and T. Husfeldt. Finding long paths in directed graphs is
+     hard. Manuscript, 2001.
+ [4] A. Björklund and T. Husfeldt. Finding a path of superlogarithmic length. In
+     Proc. 29th ICALP, volume 2380 of LNCS, pages 985–992. Springer Verlag,
+     Berlin, 2002.
+ [5] A. Z. Broder, A. M. Frieze, and E. Shamir. Finding hidden Hamiltonian
+     cycles. In Proc. 23ndSTOC, pages 182–189, 1991.
+ [6] T. Feder, R. Motwani, and C. S. Subi. Finding long paths and cycles in
+     sparse Hamiltonian graphs. In Proc. 32th STOC, pages 524–529. ACM,
+     2000.
+ [7] S. Fortune, J. Hopcroft, and J. Wyllie. The directed subgraph homeomor-
+     phism problem. Theoretical Computer Science, 10:111–121, 1980.
+ [8] Y. Gurevich and S. Shelah. Expected computation time for Hamiltonian
+     path problem. SIAM Journal of Computing, 16(3):486–502, 1987.
+ [9] R. Impagliazzo and R. Paturi. On the complexity of k-SAT. Journal of
+     Computer and Systems Sciences, 62(2):367–375, 2001. Announced at CoCo
+     ’99.
+[10] R. Impagliazzo, R. Paturi, and F. Zane. Which problems have strongly
+     exponential complexity? In Proc. 39th FOCS, pages 653–663, 1998.
+[11] D. Karger, R. Motwani, and G.D.S. Ramkumar. On approximating the
+     longest path in a graph. Algorithmica, 18(1):82–98, 1997.
+[12] Sanjeev Khanna. Longest directed path is n1− -hard. Manuscript, 1999.
+[13] C. H. Papadimitriou. Computational Complexity. Addison-Wesley, 1994.
+[14] N. Robertson and P. D. Seymour. Graph minors XIII: The disjoints paths
+     problem. J. Combinatorial Theory Ser. B, 35, 1983.
+[15] T. J. Schaefer. The complexity of satisfiability problems. In Proc. 10th
+     STOC, pages 216–226, 1978.
+[16] S. Vishwanathan. An approximation algorithm for finding a long path in
+     Hamiltonian graphs. In Proc. 11th SODA, pages 680–685, 2000.
+
+
+
+                                      13
+
+
+
+
+                                                                   ECCC                              ISSN 1433-8092
+                                                                   http://www.eccc.uni-trier.de/eccc
+                                                                   ftp://ftp.eccc.uni-trier.de/pub/eccc
+                                                                   ftpmail@ftp.eccc.uni-trier.de, subject ’help eccc’
+
