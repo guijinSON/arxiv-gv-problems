@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **107 / 12,167** resolved (0.88%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **108 / 12,167** resolved (0.89%)
 
 | state | count |
 |---|---:|
 | ✅ done | 57 |
-| 🚫 rejected (documented) | 50 |
-| 🔄 in progress | 20 |
+| 🚫 rejected (documented) | 51 |
+| 🔄 in progress | 19 |
 | ⚪ free | 12,040 |
 | **total** | **12,167** |
 
@@ -16,7 +16,6 @@
 |---|---|---|
 | `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
 | `2306.10294` | GUIJIN SON | 2026-09-04T12:31 |
-| `1702.02885` | GUIJIN SON | 2026-09-04T13:12 |
 | `1912.02640` | GUIJIN SON | 2026-09-04T13:12 |
 | `2605.11545` | GUIJIN SON | 2026-09-04T13:12 |
 | `2201.13153` | GUIJIN SON | 2026-09-04T13:38 |
@@ -41,7 +40,7 @@
 |---|---:|---:|
 | graph structures | 17 | 5,559 |
 | designs and codes | 10 | 1,022 |
-| algebraic decomposition | 10 | 804 |
+| algebraic decomposition | 11 | 804 |
 | integer equations | 4 | 607 |
 | reconfiguration | 10 | 551 |
 | geometric configurations | 5 | 533 |
