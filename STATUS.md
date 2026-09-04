@@ -1,13 +1,13 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **91 / 12,167** resolved (0.75%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **92 / 12,167** resolved (0.76%)
 
 | state | count |
 |---|---:|
 | ✅ done | 42 |
-| 🚫 rejected (documented) | 49 |
+| 🚫 rejected (documented) | 50 |
 | 🔄 in progress | 6 |
-| ⚪ free | 12,070 |
+| ⚪ free | 12,069 |
 | **total** | **12,167** |
 
 ## In progress
@@ -34,8 +34,8 @@
 | constraint satisfaction | 8 | 508 |
 | algebraic identity solutions | 2 | 398 |
 | algebraic geometric structures | 0 | 299 |
-| schedules and allocations | 4 | 259 |
+| schedules and allocations | 5 | 259 |
 | words and permutations | 6 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-04 08:06Z by `scripts/status.sh --write`_
+_regenerated 2026-09-04 10:11Z by `scripts/status.sh --write`_
