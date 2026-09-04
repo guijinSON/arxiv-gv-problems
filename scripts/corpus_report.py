@@ -35,13 +35,15 @@ Two sibling contracts this file is bound by:
   verbatim, and like submit.sh the graph test reads ``render(inst)`` as well as the
   instance keys -- renaming ``edges`` to ``pairs`` was enough to evade a keys-only
   test.  Change one, change both.
-* ``scripts/pick_paper.py`` steers what gets *attempted*, using arXiv-category
-  buckets and ``TARGET_SHARE``, because categories are the only signal that exists
-  before a paper is claimed.  ``--gate`` here measures what actually got *shipped*,
-  on the declared core / certificate / domain axis, which only exists after the
-  build.  They are deliberately different axes and neither substitutes for the
-  other: a paper can be drawn from the ``geometry_real`` bucket and still ship a
-  conflict graph, and that is precisely the failure --gate is looking for.
+* ``scripts/pick_paper.py`` no longer steers at all -- it draws UNIFORMLY AT
+  RANDOM from the free pool, so that acceptance rate and family share become
+  unbiased estimates of what these 12,167 papers actually yield.  That makes this
+  gate the only remaining place corpus skew is caught, and raises the odds it
+  fires: the prior predicts ~75% of the free pool is constraint search, so a
+  uniform draw is expected to push MAX_DISCRETE_SEARCH_SHARE over its 0.50 line.
+  When it does, the gate is working.  The fix at that point is a better POOL --
+  a new retrieval pass over arXiv -- not a cleverer scheduler over this one, and
+  not a looser threshold here.
 
 Usage:
 
@@ -78,9 +80,10 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #
 # WHY --advisory EXISTS.  A quota that cannot fail is decoration, but a quota that
 # cannot be satisfied deadlocks the project.  The binding constraint here is the
-# source pool, not the builders: scripts/pick_paper.py records that the dynamics_opt
-# bucket holds ~524 papers at ~25% acceptance, so it can never supply more than
-# about POOL_CAP_DYNAMICS_OPT_ANALYTIC families in total.  At a 15% floor that caps
+# source pool, not the builders: the dynamics_opt arXiv-category bucket holds ~524
+# papers at ~25% acceptance, so it can never supply more than about
+# POOL_CAP_DYNAMICS_OPT_ANALYTIC families in total -- and under the uniform draw
+# nothing is steering toward it any more, so it will arrive slower than that.  At a 15% floor that caps
 # a fully compliant release at roughly POOL_CAP_DYNAMICS_OPT_ANALYTIC /
 # MIN_DYNAMICS_OPT_ANALYTIC_SHARE problems; past that the quota is arithmetically
 # unsatisfiable no matter how well anyone works.  `--gate --advisory` reports the
@@ -95,7 +98,8 @@ MIN_DYNAMICS_OPT_ANALYTIC_SHARE = 0.15  # dynamics / optimization / certified an
 MAX_SINGLE_INTUITION_SHARE = 0.30       # no single intuition_type above this
 
 # Ceiling on how many dynamics/optimization/analytic families the 12,167-paper pool
-# can ever yield.  Source: scripts/pick_paper.py, TARGET_SHARE comment.
+# can ever yield: ~524 papers in the dynamics_opt arXiv-category bucket at the ~25%
+# acceptance rate measured across the corpus so far.
 POOL_CAP_DYNAMICS_OPT_ANALYTIC = 131
 
 UNKNOWN = "unknown"            # we did not measure it
