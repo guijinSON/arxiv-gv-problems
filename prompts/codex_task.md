@@ -142,23 +142,36 @@ works:
 4. **What produces the certificate.** Find the theorem that hands you the witness and
    ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
    characterisation", "an explicit formula" or "a classification table", then **the
-   family fails H on Track A** — not the witness rule. The certificate is a perfectly
-   good witness; what it is not is hard to obtain. Those are separate gates (see the
-   discriminating test above).
+   family fails H on Track A** — not the witness rule, and *not necessarily at all*.
+   The certificate is a perfectly good witness; what it is not is hard to obtain on
+   Track A. Those are separate gates (see the discriminating test above).
 
-   You then have exactly two honest options, and you must pick one **before** writing
-   code:
+   **This is the single most expensive mistake made on this project so far, so do it
+   in this order.** An independent audit re-read 12 rejected papers against their
+   actual arXiv text: **7 of the 12 should have been built.** Every miss came from
+   stopping at "a method exists" without asking the next question. One rejected paper
+   was dismissed because "Theorem 1 gives u by a short linear formula" — while the
+   paper's own mechanical route was enumerating **16,689,170 dual-lattice vectors,
+   788 seconds and 4.6 GB in Magma**. A fifteen-step shortcut against 16.7 million
+   enumerations is not a non-family. It is the definition of Track B.
 
-   - **Reject**, if the compact route is no shorter than the mechanical one. This is
-     the cheapest rejection available and the one most often skipped: five recent
-     rejections each cost a full builder run to reach a conclusion stated in the
-     paper's own main theorem.
-   - **Declare `TRACK = "B"`**, if — and only if — running that algorithm by hand is
-     genuinely out of reach for a model with no sandbox, *and* a compact route exists
-     for someone who sees the structure. Name the algorithm and its measured cost in
-     `hardness_basis`, as **TWO TRACKS** requires. An SDP over a 40×40 Gram matrix is
-     not something a model executes in its head; a 2×2 linear solve is. Be honest
-     about which one you have.
+   **FIRST ask whether it is Track B. Only then consider rejecting.**
+
+   Write down two numbers before you decide:
+
+   | | what to record |
+   |---|---|
+   | **mechanical cost** | operations the standard method needs at your shipping size — the paper often states it, or you can measure it |
+   | **compact route** | steps a solver needs who sees the structure: the invariant, symmetry, or change of variable |
+
+   - **`TRACK = "B"`** when the mechanical cost is out of reach by hand and the compact
+     route is short. Name the algorithm and both numbers in `hardness_basis`. An SDP
+     over a 40×40 Gram matrix is not something a model does in its head; a 2×2 linear
+     solve is.
+   - **Reject** only when the compact route is *no shorter* than the mechanical one —
+     that is, when there is nothing to see, so the question tests nothing. Say both
+     numbers in `REJECTED.md` and show they are comparable. "An algorithm exists" on
+     its own is **not a sufficient reason to reject** and will be sent back.
 
    What is never acceptable is declaring Track A while knowing the algorithm exists.
 
@@ -940,6 +953,23 @@ one screen of prose plus tables. Cover:
 
 `submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
 `llm_loop_transcript.jsonl` is missing.
+
+## Writing `REJECTED.md`
+
+A rejection is a real result and costs nothing — but a *wrong* rejection throws away a
+paper someone already paid to read, and an audit found 7 of 12 rejections were wrong.
+So `REJECTED.md` must answer the question that was skipped:
+
+- Which of G, H, V fails, and **which track** — a family can fail H on Track A and
+  still be a perfectly good Track B family.
+- If you are rejecting because an efficient method exists, state the **mechanical
+  cost** and the **compact route length**, and show the gap is too small to test
+  anything. Without those two numbers the rejection is not reviewable, and
+  `submit.sh --reject` will refuse it.
+- Which theorem or section you are relying on, by number.
+
+Do not reject on the abstract. Do not reject because the paper "gives a construction" —
+that describes almost every paper in this pool.
 
 ## Report honestly
 

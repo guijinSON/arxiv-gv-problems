@@ -9,6 +9,37 @@ D="results/$ID"
 
 if [ -n "$REJECT" ]; then
   [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+
+  # A rejection that says only "an efficient method exists" is not reviewable, and an
+  # independent audit found 7 of 12 such rejections were WRONG -- the papers were
+  # buildable on Track B. One was dismissed for having "a short linear formula" while
+  # its mechanical alternative was 16,689,170 lattice-vector enumerations. If the note
+  # rests on a method existing, it must quantify the gap it is claiming is too small.
+  python3 - "$D/REJECTED.md" <<'PYREJ' || exit 6
+import re, sys
+t = open(sys.argv[1], encoding="utf-8", errors="ignore").read()
+low = t.lower()
+METHOD_EXISTS = re.compile(
+    r"polynomial[- ]time|explicit (construction|formula)|closed[- ]form|"
+    r"constructive (solution|procedure|algorithm)|efficient algorithm|"
+    r"linear solve|spectral characteri|classification (table|of)|is in p|"
+    r"algorithm (exists|is given)|buchberger|gaussian elimination|sdp", re.I)
+if not METHOD_EXISTS.search(low):
+    sys.exit(0)                       # rejected for some other reason; nothing to check
+has_mech = re.search(r"mechanical|brute[- ]force cost|operations|enumerat|seconds|"
+                     r"cost|running time", low)
+has_compact = re.search(r"compact route|shortcut|by hand|no shorter|"
+                        r"same length|nothing to see|track b", low)
+if has_mech and has_compact:
+    sys.exit(0)
+print("ERROR: this rejection rests on 'an efficient method exists', which is NOT by")
+print("       itself a reason to reject -- that is what TRACK B is for.  State the")
+print("       MECHANICAL COST (operations the standard method needs at shipping size)")
+print("       and the COMPACT ROUTE length, and show the gap is too small to test")
+print("       anything.  7 of 12 audited rejections of this shape were wrong.")
+print("       See prompts/codex_task.md, STEP 0 item 4.")
+sys.exit(1)
+PYREJ
   python3 -c "
 import json,datetime,os
 p='claims/$ID.json'
