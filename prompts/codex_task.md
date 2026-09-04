@@ -431,6 +431,46 @@ def verify(inst, answer) -> tuple[bool, str]
     """(True,"ok") or (False, reason). Accept ANY valid witness, not only
     inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
 
+### The answer format is collapsing too — pick from this menu
+
+Measured across the 55 shipped modules: **82% of answers are plain integers or lists
+of integers**, 65% are literally `list[int]`, and `search_space()` returned an `int`
+**55 times out of 55**. There is not one rational, polynomial, matrix or symbolic
+answer in the corpus.
+
+Nothing forbids those. The gates just happen to be *cheapest* to satisfy with a tuple
+of small integers — `search_space` is easy to count, `random_candidate` is easy to
+sample, G4 is easy to measure. So every builder lands in the same place. Do not let
+the path of least resistance choose your certificate for you.
+
+`gvlib/` exists so the richer options cost about the same: exact rationals, sparse
+multivariate polynomials over ℚ, exact matrices with Bareiss determinant and LDL
+PSD-testing, and Sturm root isolation. Standard library only, already tested. Import
+it rather than hand-rolling arithmetic.
+
+| certificate | JSON-native form | `search_space` | `random_candidate` |
+|---|---|---|---|
+| tuple of indices | `[3, 17, 42]` | C(n,k) | sample k of n |
+| **rational vector** | `[[num, den], ...]` | bound heights: (2H+1)^d | sample numerators/denominators in range |
+| **polynomial** | `[[coef, [e1,e2,...]], ...]` | #monomials under the degree bound, coefficients bounded | sample a support set, then coefficients |
+| **matrix over ℚ or F_q** | `[[...],[...]]` | q^(mn), or bounded heights | sample entries |
+| **SOS decomposition** | list of polynomials | as polynomial, times the number of squares | sample squares, sum them |
+| **primal–dual pair** | `{"x": [...], "y": [...]}` | product of the two spaces | sample both |
+| **algebraic number** | `{"minpoly": [...], "interval": [[a,b],[c,d]]}` | #polynomials under degree+height bound | sample a squarefree minpoly, isolate |
+| **group element / word** | `["a","b","a^-1", ...]` | (2g)^L for length L | sample a reduced word |
+| **permutation / ordering** | `[2, 0, 1, ...]` | n! | Fisher–Yates |
+| **set system / partition** | `[[...],[...]]` | Bell or Stirling number | sample a random partition |
+
+`search_space` may return `None` when the declared language is genuinely uncountable —
+then G5 carries a **sampled density estimate** instead. That path exists and has never
+been used; if your certificate is naturally continuous-but-certified, use it rather
+than discretising the answer to keep the counter happy.
+
+**Before you settle on `list[int]`, write down what the paper's own objects are.** If
+the theorem is about polynomials, the answer should probably be a polynomial. Reducing
+it to indices is the same failure as reducing geometry to a graph — it survives the
+gates and loses the mathematics.
+
 CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
     # {"description": a human-readable grammar/bounds statement, e.g.
     #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed

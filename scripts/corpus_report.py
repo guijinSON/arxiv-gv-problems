@@ -540,6 +540,12 @@ def collect(statuses=("done", "in_progress")):
             prof["intuition_raw"] = ""
         else:
             prof = profile_for_module(m, inst, family=family_for(pid))
+        # measured certificate shape -- what the module actually returns, which
+        # can differ from the CERTIFICATE_LANGUAGE it declares
+        try:
+            prof["answer_shape"] = answer_shape(inst["answer"]) if inst is not None else None
+        except Exception:                            # noqa: BLE001
+            prof["answer_shape"] = None
         prof.update(paper=pid, status=st, error=err)
         rows.append(prof)
     return rows
@@ -722,6 +728,52 @@ def report_solver_families(out, root="."):
     out.append("  restated N times, however varied the source papers look.")
 
 
+def answer_shape(a, depth=0):
+    """Structural shape of a certificate, e.g. list[int] or dict{x:list[int]}.
+
+    Measured rather than declared. CERTIFICATE_LANGUAGE says what a builder
+    intended; this says what the module actually returns, and the two can differ.
+    """
+    if isinstance(a, bool): return "bool"
+    if isinstance(a, int): return "int"
+    if isinstance(a, float): return "float"
+    if isinstance(a, str): return "str"
+    if isinstance(a, dict):
+        if depth > 1: return "dict{...}"
+        return "dict{" + ",".join(f"{k}:{answer_shape(v, depth+1)}"
+                                  for k, v in list(a.items())[:3]) + "}"
+    if isinstance(a, (list, tuple)):
+        if not a: return "list[]"
+        return "list[" + "|".join(sorted({answer_shape(x, depth+1) for x in a[:6]})) + "]"
+    return type(a).__name__
+
+
+def report_answer_shapes(out, rows):
+    """Empirical certificate diversity.
+
+    82% of the first 55 modules answered with plain integers or lists of integers
+    and search_space() returned an int 55/55 -- not because richer certificates are
+    forbidden, but because every gate is cheapest to satisfy with a tuple of small
+    ints. This section exists so that collapse is visible instead of implicit.
+    """
+    shapes = Counter()
+    for r in rows:
+        sh = r.get("answer_shape")
+        if sh: shapes[sh] += 1
+    if not shapes: return
+    tot = sum(shapes.values())
+    out.append("")
+    out.append("=== ANSWER SHAPE (measured, not declared) ===")
+    for sh, n in shapes.most_common(12):
+        out.append(f"   {n:3} ({100*n/tot:5.1f}%)  {sh[:52]:52} {'#'*int(30*n/tot)}")
+    flat = sum(n for sh, n in shapes.items()
+               if sh in ("int", "list[int]", "list[list[int]]"))
+    out.append("")
+    out.append(f"  plain integers / lists of integers: {flat}/{tot} = {100*flat/tot:.0f}%")
+    out.append("  A corpus whose every answer is a tuple of small integers tests one")
+    out.append("  output skill. See prompts/codex_task.md for the certificate menu.")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Report the corpus by native domain and computational core.")
@@ -776,6 +828,7 @@ def main(argv=None):
                + " of modules whose core is DETERMINED (upper bound)")
 
     report_solver_families(out)
+    report_answer_shapes(out, rows)
     out.append("")
 
     _hist(rows, "native_domain", "native domain", out)
