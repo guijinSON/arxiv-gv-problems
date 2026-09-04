@@ -1,13 +1,13 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **86 / 12,167** resolved (0.71%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **87 / 12,167** resolved (0.72%)
 
 | state | count |
 |---|---:|
 | ✅ done | 42 |
-| 🚫 rejected (documented) | 44 |
-| 🔄 in progress | 19 |
-| ⚪ free | 12,062 |
+| 🚫 rejected (documented) | 45 |
+| 🔄 in progress | 20 |
+| ⚪ free | 12,060 |
 | **total** | **12,167** |
 
 ## In progress
@@ -17,6 +17,7 @@
 | `1604.08603` | GUIJIN SON | 2026-09-03T03:58 |
 | `2410.07666` | GUIJIN SON | 2026-09-03T03:58 |
 | `2512.24037` | GUIJIN SON | 2026-09-03T03:58 |
+| `1910.10364` | GUIJIN SON | 2026-09-03T04:20 |
 | `2411.16149` | GUIJIN SON | 2026-09-03T04:36 |
 | `2601.08530` | GUIJIN SON | 2026-09-03T04:37 |
 | `1604.00052` | GUIJIN SON | 2026-09-03T06:44 |
@@ -51,4 +52,4 @@
 | words and permutations | 6 | 237 |
 | finite field constructions | 3 | 235 |
 
-_regenerated 2026-09-03 10:58Z by `scripts/status.sh --write`_
+_regenerated 2026-09-04 05:32Z by `scripts/status.sh --write`_
