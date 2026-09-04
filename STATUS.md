@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **97 / 12,167** resolved (0.80%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **98 / 12,167** resolved (0.81%)
 
 | state | count |
 |---|---:|
-| ✅ done | 48 |
+| ✅ done | 49 |
 | 🚫 rejected (documented) | 49 |
-| 🔄 in progress | 2 |
+| 🔄 in progress | 1 |
 | ⚪ free | 12,068 |
 | **total** | **12,167** |
 
@@ -15,7 +15,6 @@
 | paper | who | claimed |
 |---|---|---|
 | `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
-| `1303.2162` | GUIJIN SON | 2026-09-04T07:39 |
 
 ## By family
 
@@ -26,7 +25,7 @@
 | algebraic decomposition | 7 | 804 |
 | integer equations | 4 | 607 |
 | reconfiguration | 10 | 551 |
-| geometric configurations | 5 | 533 |
+| geometric configurations | 6 | 533 |
 | constraint satisfaction | 8 | 508 |
 | algebraic identity solutions | 2 | 398 |
 | algebraic geometric structures | 0 | 299 |
