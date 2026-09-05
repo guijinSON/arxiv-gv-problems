@@ -1,0 +1,217 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "compact_identity_checks": 12,
+    "failures": [],
+    "pass": true,
+    "theorem_condition_checks": 12
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop": {
+        "reason": "support has fewer than 20 residues",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "support residues must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "support is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "support entry 19 is outside 0..60",
+        "rejected": true
+      },
+      "swap_one_member": {
+        "reason": "support polynomial fails the moment recurrence at shift 0",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true,
+    "valid_reordering_accepted": true
+  },
+  "G3_round_trip": {
+    "answer_json_native": true,
+    "garbage_returns_none": true,
+    "pass": true,
+    "prose_fence_tags_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 6236646703759395,
+    "exact_unique_witness_probability": "1/6236646703759395",
+    "hits": 0,
+    "measurement_method": "uniform samples compared to the theorem-guaranteed unique support",
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over all k-subsets of F_p; shape, range, and distinctness enforced",
+    "total": 200000,
+    "wall_clock_sec": 1.651189
+  },
+  "G5_density_and_baseline_cost": {
+    "demo_candidate_space": 35,
+    "demo_exact_solution_count": 1,
+    "enumerate_all_shipping": null,
+    "failing_attack_candidates": 2048,
+    "pass": true,
+    "reference_algorithm_average_operations": 34205.25,
+    "reference_algorithm_operations": 273642,
+    "reference_algorithm_wall_clock_sec": 0.031139,
+    "shipping_candidate_space": 6236646703759395,
+    "shipping_density_hits": 0,
+    "shipping_density_method": "unique-witness theorem plus uniform structure-aware sampling",
+    "shipping_density_samples": 200000,
+    "shipping_exact_density": "1/6236646703759395",
+    "shipping_observed_fraction": 0.0,
+    "strongest_failing_attack": "random_restart_256",
+    "whole_panel_wall_clock_sec": 0.134805
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_consecutive_support": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_nearest_symmetric_pairs": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_small_ratio_two_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_small_moment_residues": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "candidates": 2048,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations": 34205.25,
+      "average_wall_clock_sec": 0.003892,
+      "complexity": "expected O(k^3 log p) field operations with this naive dense implementation",
+      "max_operations": 36462,
+      "name": "Prony--Hankel recurrence plus Cantor--Zassenhaus factorization",
+      "operations": 273642,
+      "per_seed": [
+        {
+          "operations": 34017,
+          "seed": 61000,
+          "solved": true,
+          "wall_clock_sec": 0.004243
+        },
+        {
+          "operations": 31611,
+          "seed": 61001,
+          "solved": true,
+          "wall_clock_sec": 0.005558
+        },
+        {
+          "operations": 34586,
+          "seed": 61002,
+          "solved": true,
+          "wall_clock_sec": 0.003236
+        },
+        {
+          "operations": 35058,
+          "seed": 61003,
+          "solved": true,
+          "wall_clock_sec": 0.00429
+        },
+        {
+          "operations": 34056,
+          "seed": 61004,
+          "solved": true,
+          "wall_clock_sec": 0.003193
+        },
+        {
+          "operations": 32317,
+          "seed": 61005,
+          "solved": true,
+          "wall_clock_sec": 0.002836
+        },
+        {
+          "operations": 36462,
+          "seed": 61006,
+          "solved": true,
+          "wall_clock_sec": 0.003907
+        },
+        {
+          "operations": 35535,
+          "seed": 61007,
+          "solved": true,
+          "wall_clock_sec": 0.003877
+        }
+      ],
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.031139
+    }
+  },
+  "G7_scales": {
+    "base_n": 3,
+    "base_reference_operations": 109,
+    "base_reference_wall_clock_sec": 4.6e-05,
+    "base_space_bits": 6,
+    "doubled_n": 40,
+    "doubled_reason": "ok",
+    "doubled_space_bits": 153,
+    "doubled_verifies": true,
+    "pass": true,
+    "shipping_n": 20,
+    "shipping_reference_average_operations": 34205.25,
+    "shipping_space_bits": 53
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "pass": true,
+    "scope_caveat": "strongest cheap affine invariant, not a full PGL(2,p) canonical form",
+    "transformations": [
+      "affine coordinate change a -> u*a+t",
+      "global nonzero tensor scaling",
+      "composition of two affine changes with scaling",
+      "reordering of the unordered support witness"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 69,
+    "answer_elements": 20,
+    "answer_tokens": 18,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "diagnostic_complete": true,
+    "hinted_minus_placebo": 0.6666666666666666,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 160,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true
+}
