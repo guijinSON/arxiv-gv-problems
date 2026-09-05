@@ -1,0 +1,128 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "instances": 16,
+    "generation_route": "inverse generation plus Theorem 10(iii)"
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "empty": "answer is empty",
+      "drop_one": "answer must contain exactly three product vertices",
+      "duplicate": "the three product vertices must be distinct",
+      "out_of_range": "a coordinate is outside the allowed range 0..143",
+      "swap_order": "product vertices must be in strict lexicographic order"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "json_native": true,
+    "answer_elements": 6
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "structure_aware_space": 476169905664,
+    "prior": "uniform over all three-vertex triangles of G x G"
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_exact_solution_count": 56454,
+    "shipping_candidate_count": 476169905664,
+    "shipping_exact_valid_fraction": 1.1855852150353169e-07,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "baseline_wall_seconds": 0.3185257229488343,
+    "baseline_max_word_operations": 1273144,
+    "baseline_total_word_operations": 4651332,
+    "baseline_max_triangles_examined": 215584,
+    "baseline_attempts": 8,
+    "baseline_attack": "Theorem-10 exhaustive central-triangle enumeration",
+    "failing_restart_wall_seconds": 0.042002755450084805,
+    "failing_restart_iterations": 2048
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "equal_degree_then_smallest_labels": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "lexicographically_first_factor_triangle": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_minimum_row_overlap": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "anchor_plus_next_numeric_labels": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_legal_product_triangles_256": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "Theorem-10 exhaustive central-triangle enumeration",
+      "complexity": "O(N^4) scalar adjacency checks; O(N^3) bit-parallel",
+      "wall_clock_sec": 0.3185257229488343,
+      "operations_max": 1273144,
+      "operations_total": 4651332,
+      "triangles_examined_max": 215584,
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "anchor maximum-overlap followed by disjoint-row invariant",
+      "operations_max": 284,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_factor_order": 144,
+    "doubled_factor_order": 288,
+    "base_candidate_lower_bound": 85366310400,
+    "doubled_candidate_lower_bound": 5700100184064,
+    "answer_elements_unchanged": 6,
+    "planted_verifies": true
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 40,
+    "real_transform_checks": 20,
+    "product_coordinate_swap_checks": 20,
+    "distinct_unrelated": 20,
+    "unrelated_total": 20,
+    "symmetries": "independent left/right vertex relabelling, input-row reordering, and direct-product coordinate swap"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "hinted": {
+        "solved": 1,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 1,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "too_easy",
+    "answer_chars": 25,
+    "answer_tokens": 25,
+    "answer_elements": 6,
+    "intended_route_operations": 284,
+    "token_measure": "conservative one-token-per-character upper bound"
+  },
+  "all_passed": true
+}
