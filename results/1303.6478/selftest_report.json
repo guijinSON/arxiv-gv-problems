@@ -1,0 +1,200 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "expected 12 exponents, got 11",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "expected 12 exponents, got 13",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "exponent vector is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "every exponent must lie in 0..96",
+        "rejected": true
+      },
+      "swap_two_unequal": {
+        "reason": "prime-exponent factorization does not equal abs(det(M))",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      11,
+      7,
+      6,
+      7,
+      7,
+      6,
+      9,
+      5,
+      11,
+      5,
+      14,
+      8
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 3.227391582095822e-15,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform weak compositions of n into the 12 stated prime exponents",
+    "structure_aware_space": 309847743777845,
+    "total": 200000,
+    "wall_clock_sec": 18.344046
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_candidate_evaluations_total_8": 32768,
+    "attack_wall_clock_sec_total_8": 1.436062,
+    "candidate_space": 309847743777845,
+    "demo_candidate_space": 1365,
+    "demo_exact_valid_answers": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_density_at_shipping": 3.227391582095822e-15,
+    "exact_valid_answers": 1,
+    "pass": true,
+    "reference_algorithm_operations_mean": 1161484,
+    "reference_algorithm_wall_clock_sec_mean": 1.103432,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "random_restart_4096"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "column_content_greedy": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.017722
+      },
+      "diagonal_valuation": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000317
+      },
+      "first_nonzero_column_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000438
+      },
+      "random_restart_4096": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 1.436062
+      },
+      "row_content_greedy": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.092663
+      },
+      "smaller_branch_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.016413
+      },
+      "uniform_prime_counts": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 3.4e-05
+      }
+    },
+    "compact_route": {
+      "name": "co-tree minor identity from the proof of Proposition 2.24, then prime tally",
+      "solves": "8/8, as expected",
+      "worst_case_exact_operations": 128
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "bareiss_updates_mean": 1161280,
+      "complexity": "O(n^3) exact integer arithmetic plus O(n+12) exact divisions",
+      "name": "fraction-free Bareiss determinant followed by division over the fixed prime basis",
+      "operations_max": 1161484,
+      "operations_mean": 1161484,
+      "operations_min": 1161484,
+      "row_swaps_total": 0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 1.103432,
+      "wall_clock_sec_total_8": 8.827457
+    }
+  },
+  "G7_scales": {
+    "doubled_matrix_entries": 36864,
+    "doubled_n": 192,
+    "pass": true,
+    "shipping_matrix_entries": 9216,
+    "shipping_n": 96,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 20,
+    "distinct_keys": 20,
+    "invariance_checks": 20,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "vertex renumbering",
+      "edge renumbering",
+      "vertex/edge storage reordering",
+      "parallel-branch storage swaps",
+      "unimodular row basis changes",
+      "unimodular column basis changes",
+      "row sign change"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 28,
+    "answer_elements": 12,
+    "answer_tokens": 7,
+    "arms": {
+      "bare": {
+        "api_errors": 0,
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "api_errors": 4,
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "api_errors": 4,
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unmeasured: OpenRouter key limit exceeded",
+    "intended_route_operations": 128,
+    "pass": true,
+    "worst_case_answer_chars": 34,
+    "worst_case_answer_tokens": 9
+  },
+  "all_passed": true,
+  "paper": "arXiv:1303.6478",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "mix_bound": 1,
+    "n": 96
+  },
+  "track": "B"
+}
