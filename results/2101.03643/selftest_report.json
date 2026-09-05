@@ -1,0 +1,162 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "generation_route": "inverse generation: operator first, ideal second",
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "expected 8 matrix rows, got 7",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "expected 8 matrix rows, got 9",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "upper entry (1,1) is outside 1..127",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "matrix is not symmetric at (1,2)",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 250,
+    "exact_density": "1/1351498572835652731639153081175187522411132270308353801118756749356335721985",
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "sampling_prior": "uniform over every stated symmetry, bound, and normalization constraint",
+    "total": 200000,
+    "wall_clock_sec": 5.618209
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack": "random_restart_256",
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.002605,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "reference_operation_count": 45866,
+    "reference_wall_clock_sec": 0.01466,
+    "shipping_exact_density": "1/1351498572835652731639153081175187522411132270308353801118756749356335721985",
+    "shipping_exact_solution_count": 1,
+    "shipping_sample_density": 0.0,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_constant_and_small_patterns": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000364
+      },
+      "diagonal_only_relaxation": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000102
+      },
+      "greedy_left_to_right": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 8.8e-05
+      },
+      "outlier_column_l1_rank": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000127
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.02084
+      }
+    },
+    "intended_compact_route": {
+      "name": "rank-one Sherman-Morrison scalar invariant",
+      "operations_upper_bound": 210,
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(M^3) exact arithmetic for M=n(n+1)/2",
+      "name": "exact rational Gaussian elimination for the Weyl-Noether nullspace",
+      "operations": 45866,
+      "paper_route": "Section 5, Algorithm 5.4, steps (2.5)-(2.7)",
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.01466
+    }
+  },
+  "G7_scales": {
+    "candidate_space_bits_doubled": 950,
+    "candidate_space_bits_shipping": 250,
+    "doubled_build_sec": 0.001174,
+    "doubled_monomials": 136,
+    "doubled_n": 16,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "quadratic_monomials_by_preset": [
+      3,
+      21,
+      28,
+      36
+    ],
+    "shipping_monomials": 36,
+    "shipping_n": 8
+  },
+  "G8_canonical_key": {
+    "canonicalized_symmetries": [
+      "quadratic-generator reorder",
+      "invertible quadratic-generator basis shear",
+      "variable permutation",
+      "compositions of these"
+    ],
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "pass": true,
+    "real_transform_verifications": 80,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 227,
+    "answer_elements": 64,
+    "answer_tokens": 57,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "diagnostic_only": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 210,
+    "pass": true
+  },
+  "pass": true
+}
