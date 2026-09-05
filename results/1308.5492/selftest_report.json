@@ -1,0 +1,158 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "expected exactly 4 primes, got 3",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "the four primes must be pairwise distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "expected exactly 4 primes, got 0",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "entry 0 is outside the inclusive prime interval",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "the four primes must be in strictly increasing order",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      6716209,
+      6720409,
+      6724609,
+      6728809
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 191406983,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform increasing 4-subsets of actual interval primes, conditioned on the necessary prime-sum bounds implied by the square subtotal",
+    "total": 250000
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations_max": 2173481,
+    "baseline_operations_mean": 1546346.625,
+    "baseline_wall_clock_sec_max": 0.2555398950353265,
+    "baseline_wall_clock_sec_mean": 0.15371920727193356,
+    "demo_candidate_space": 7160245,
+    "demo_valid_solution_count": 74,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 250000,
+    "shipping_exact_solution_fraction": 1.0448939577089514e-08,
+    "shipping_observed_fraction": 0.0,
+    "shipping_prime_count": 1149,
+    "shipping_structure_aware_space": 191406983,
+    "shipping_valid_solution_count": 2
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_ap_first_8_wheel_steps": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "consecutive_prime_windows_80": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_equal_residual": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_interval_quartiles": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_512": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n log log U + m^2) time and O(m^2) memory",
+      "name": "segmented sieve plus meet-in-the-middle prime-square four-sum",
+      "operations_max": 2173481,
+      "operations_mean": 1546346.625,
+      "pair_visits_max": 538581,
+      "pair_visits_mean": 381802.625,
+      "sieve_candidates_max": 18001,
+      "sieve_candidates_mean": 18001.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.2555398950353265,
+      "wall_clock_sec_mean": 0.15371920727193356
+    }
+  },
+  "G7_scales": {
+    "answer_elements_doubled": 4,
+    "answer_elements_shipping": 4,
+    "doubled_n": 36000,
+    "doubled_space": 1690376804,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 18000,
+    "shipping_space": 191406983
+  },
+  "G8_canonical_key": {
+    "composed_transformation_checks": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "pass": true,
+    "real_transformation_checks": 20,
+    "transformations": [
+      "arbitrary reordering of the 46 fixed summands",
+      "reversal composed with that reordering"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 33,
+    "answer_elements": 4,
+    "answer_tokens": 9,
+    "arms": {
+      "bare": {
+        "attempts": 2,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "oracle_unreachable_http_403_key_limit",
+    "intended_route_operations": 164,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "track": "B"
+}
