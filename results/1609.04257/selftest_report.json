@@ -1,0 +1,158 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "bad_multiplier": {
+        "reason": "each multiplier must be exactly +(1+x) or -(1+x)",
+        "rejected": true
+      },
+      "drop_one": {
+        "reason": "expected exactly five certificate entries",
+        "rejected": true
+      },
+      "duplicate_label": {
+        "reason": "generator labels must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be a nonempty JSON list",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "generator label is outside the inclusive range 1..n",
+        "rejected": true
+      },
+      "swap_order": {
+        "reason": "certificate entries must be sorted by generator label",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 6,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "direct_round_trip": true,
+    "garbage_returns_none": true,
+    "pass": true,
+    "prose_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_wall_clock_sec": 14.270601,
+    "structure_aware_space": 240400160,
+    "theoretical_probability_unique_answer": 4.159731008498497e-09,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_exact_operations": 140914,
+    "baseline_triples_examined": 22419,
+    "baseline_verified": true,
+    "baseline_wall_clock_sec": 0.01101,
+    "compact_route_operations_max": 231,
+    "compact_route_solves": "8/8",
+    "demo_candidate_space": 60,
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_theoretical_solution_fraction": 4.159731008498497e-09,
+    "shipping_theoretical_valid_answers": 1
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_first_five_signs": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_first_moment_residual": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_five_largest_nodes": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) integer additions and O(n^2) stored pairs",
+      "name": "exact positive-pair/negative-triple meet-in-the-middle",
+      "operations_mean": 205840,
+      "solves": "8/8, as expected",
+      "triples_examined_mean": 33240,
+      "wall_clock_sec_max": 0.031656,
+      "wall_clock_sec_mean": 0.018348
+    }
+  },
+  "G7_scales": {
+    "answer_entries_unchanged": 5,
+    "doubled_build_wall_clock_sec": 0.003449,
+    "doubled_n": 160,
+    "doubled_verification_reason": "ok",
+    "pass": true,
+    "shipping_n": 80
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 80,
+    "carried_witness_passed": 80,
+    "invariance_attempts": 80,
+    "invariance_passed": 80,
+    "pass": true,
+    "symmetries_tested": [
+      "generator reversal",
+      "cyclic reordering",
+      "random reordering",
+      "composition of reversal and cyclic reordering"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 162,
+    "answer_elements": 35,
+    "answer_tokens": 41,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": -0.3333333333333333,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 231,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "moment_count": 10,
+    "n": 80,
+    "prime_min": 1000,
+    "prime_span": 8000
+  },
+  "track": "B"
+}
