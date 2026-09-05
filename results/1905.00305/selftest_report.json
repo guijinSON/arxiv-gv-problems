@@ -1,0 +1,175 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "expected exactly 19 set IDs",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "set IDs must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "set ID out of range",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "set IDs must be in strictly increasing order",
+        "rejected": true
+      }
+    },
+    "distinct_reason_count": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed": [
+      10,
+      21,
+      24,
+      42,
+      53,
+      71,
+      86,
+      111,
+      117,
+      130,
+      133,
+      148,
+      169,
+      180,
+      210,
+      226,
+      242,
+      249,
+      264
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_prior": "uniform over increasing n-subsets of all set IDs",
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "search_space": 72581523300283372090528398960,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "algorithm_x_nodes_max": 37221,
+    "algorithm_x_nodes_mean": 20295.0,
+    "algorithm_x_operations_max": 137559040,
+    "algorithm_x_operations_mean": 75943618.75,
+    "algorithm_x_wall_clock_sec_max": 5.953926442191005,
+    "algorithm_x_wall_clock_sec_mean": 2.2842645002820063,
+    "demo_candidate_space": 10,
+    "demo_exact_valid_solution_count": 1,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "shipping_observed_solution_fraction": 0.0,
+    "translation_scan_operations": 1084,
+    "translation_scan_wall_clock_sec_max": 0.00091406493447721
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_first_n_rows": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_mrv_no_backtracking": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_element_degree_score": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256_disjoint_packings": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "efficient_certificate_algorithm": {
+      "complexity": "O(N*width) time and O(N*width) space",
+      "name": "full modular translation-signature grouping",
+      "operations": 1084,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.00091406493447721
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "exponential worst case in candidate sets",
+      "name": "Algorithm X with minimum-remaining-element branching",
+      "nodes_mean": 20295.0,
+      "operations_mean": 75943618.75,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 5.953926442191005,
+      "wall_clock_sec_mean": 2.2842645002820063
+    }
+  },
+  "G7_scales": {
+    "doubled_answer_elements": 38,
+    "doubled_n": 38,
+    "doubled_search_space": 107752047235800669935624754935482247815378112317420597545900,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_answer_elements": 19,
+    "shipping_n": 19,
+    "shipping_search_space": 72581523300283372090528398960
+  },
+  "G8_canonical_key": {
+    "composed_transformation_checks": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "pass": true,
+    "real_transformation_checks": 20,
+    "transformations": [
+      "arbitrary candidate-set relabelling",
+      "arbitrary element relabelling",
+      "incidence-row reversal",
+      "cyclic-column permutation and independent translations composed with row relabelling"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 73,
+    "answer_elements": 19,
+    "answer_tokens": 19,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 3
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 1.0,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 271,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
