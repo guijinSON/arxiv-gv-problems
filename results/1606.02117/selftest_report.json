@@ -1,0 +1,119 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "json_native": 12,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "expected exactly 11 denominators", "rejected": true},
+      "duplicate_one": {"reason": "denominators must not repeat", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "a denominator is not in the displayed candidate list", "rejected": true},
+      "swap_one": {"reason": "the exact reciprocal sum does not equal the target", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 3390642112,
+    "candidate_space_bits": 32,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_prior": "uniform one target-scale denominator and ten larger denominators",
+    "total": 200000,
+    "wall_clock_sec": 7.63307
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "reference_operation_count": 7103905,
+    "reference_wall_clock_sec": 1.296019,
+    "sample_hits": 0,
+    "sample_total": 200000,
+    "shipping_candidate_space": 3390642112,
+    "shipping_count_operations": 19082232,
+    "shipping_count_wall_clock_sec": 2.913337,
+    "shipping_exact_solution_count": 4,
+    "shipping_exact_solution_density": 1.1797175484382116e-09,
+    "strongest_failed_attack": "random_restart_256",
+    "strongest_failed_attack_iterations": 256,
+    "strongest_failed_attack_wall_clock_sec": 0.007685
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "consecutive_magnitude_windows": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.007489},
+      "decimal_length_clustering": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.001418},
+      "greedy_exact_reciprocals": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.000265},
+      "outlier_smallest_magnitude": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.000299},
+      "random_restart_256": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.061477}
+    },
+    "intended_structural_route": {
+      "name": "Lemma 2.5 anchor-and-scale normalization",
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N^6) time and O(N^5) space for fixed witness length eleven",
+      "left_subsets": 658008,
+      "name": "fixed-eleven modular meet-in-the-middle with exact collision checks",
+      "operations": 7103905,
+      "right_subsets": 635644,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 1.296019
+    }
+  },
+  "G7_scales": {
+    "doubled_build_sec": 0.05571,
+    "doubled_candidates": 88,
+    "doubled_search_space": 13171936880960,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_candidates": 44,
+    "shipping_search_space": 3390642112
+  },
+  "G8_canonical_key": {
+    "invariant_relabellings": 80,
+    "pass": true,
+    "real_transformations_verified": 80,
+    "transformations": [
+      "arbitrary candidate-list permutation",
+      "arbitrary witness ordering",
+      "simultaneous odd global scaling",
+      "composition of list permutation and global scaling"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 551,
+    "answer_elements": 11,
+    "answer_tokens": 138,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "blocked: OpenRouter HTTP 403 key-total-limit",
+    "intended_route_operations": 153,
+    "intended_route_solved": "8/8",
+    "pass": true,
+    "worst_case_answer_chars": 561,
+    "worst_case_answer_tokens": 141
+  },
+  "all_passed": true,
+  "paper": "arXiv:1606.02117",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "exponent": 84,
+    "n": 44
+  },
+  "track": "B"
+}
