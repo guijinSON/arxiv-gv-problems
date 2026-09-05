@@ -1,13 +1,13 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **156 / 12,167** resolved (1.28%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **157 / 12,167** resolved (1.29%)
 
 | state | count |
 |---|---:|
 | ✅ done | 78 |
-| 🚫 rejected (documented) | 78 |
-| 🔄 in progress | 45 |
-| ⚪ free | 11,966 |
+| 🚫 rejected (documented) | 79 |
+| 🔄 in progress | 46 |
+| ⚪ free | 11,964 |
 | **total** | **12,167** |
 
 ## In progress
@@ -35,7 +35,6 @@
 | `2511.02616` | GUIJIN SON | 2026-09-05T00:22 |
 | `1708.07419` | GUIJIN SON | 2026-09-05T00:24 |
 | `1612.03280` | GUIJIN SON | 2026-09-05T00:24 |
-| `2210.14608` | Wongi-Jang | 2026-09-05T00:24 |
 | `2402.17528` | GUIJIN SON | 2026-09-05T00:24 |
 | `1011.6021` | GUIJIN SON | 2026-09-05T00:24 |
 | `2410.07666` | GUIJIN SON | 2026-09-05T00:24 |
@@ -54,7 +53,8 @@
 | `1902.05133` | GUIJIN SON | 2026-09-05T01:23 |
 | `1001.3573` | GUIJIN SON | 2026-09-05T01:23 |
 | `2509.05822` | GUIJIN SON | 2026-09-05T01:23 |
-| … 5 more | | |
+| `0807.0592` | GUIJIN SON | 2026-09-05T01:23 |
+| … 6 more | | |
 
 ## By family
 
@@ -64,7 +64,7 @@
 | designs and codes | 15 | 1,022 |
 | algebraic decomposition | 20 | 804 |
 | integer equations | 5 | 607 |
-| reconfiguration | 8 | 551 |
+| reconfiguration | 9 | 551 |
 | geometric configurations | 8 | 533 |
 | constraint satisfaction | 10 | 508 |
 | algebraic identity solutions | 5 | 398 |
@@ -73,4 +73,4 @@
 | words and permutations | 6 | 237 |
 | finite field constructions | 11 | 235 |
 
-_regenerated 2026-09-05 01:33Z by `scripts/status.sh --write`_
+_regenerated 2026-09-05 01:41Z by `scripts/status.sh --write`_
