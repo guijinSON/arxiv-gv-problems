@@ -1,0 +1,232 @@
+{
+  "G1_planted_verifies": {
+    "cases": [
+      {
+        "ok": true,
+        "preset": "demo",
+        "reason": "ok",
+        "seed": 0
+      },
+      {
+        "ok": true,
+        "preset": "demo",
+        "reason": "ok",
+        "seed": 1
+      },
+      {
+        "ok": true,
+        "preset": "demo",
+        "reason": "ok",
+        "seed": 2
+      },
+      {
+        "ok": true,
+        "preset": "easy",
+        "reason": "ok",
+        "seed": 0
+      },
+      {
+        "ok": true,
+        "preset": "easy",
+        "reason": "ok",
+        "seed": 1
+      },
+      {
+        "ok": true,
+        "preset": "easy",
+        "reason": "ok",
+        "seed": 2
+      },
+      {
+        "ok": true,
+        "preset": "medium",
+        "reason": "ok",
+        "seed": 0
+      },
+      {
+        "ok": true,
+        "preset": "medium",
+        "reason": "ok",
+        "seed": 1
+      },
+      {
+        "ok": true,
+        "preset": "medium",
+        "reason": "ok",
+        "seed": 2
+      },
+      {
+        "ok": true,
+        "preset": "hard",
+        "reason": "ok",
+        "seed": 0
+      },
+      {
+        "ok": true,
+        "preset": "hard",
+        "reason": "ok",
+        "seed": 1
+      },
+      {
+        "ok": true,
+        "preset": "hard",
+        "reason": "ok",
+        "seed": 2
+      }
+    ],
+    "json_native": true,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "expected exactly three labels",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "the three labels must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "a label lies outside 0..N-1",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "labels must be in strictly increasing order",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 49985001,
+    "candidate_space_bits": 25,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_prior": "uniform sorted triples already constrained to contain the anchor",
+    "total": 200000,
+    "wall_clock_sec": 47.579778
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 8,
+    "baseline_attack_wall_clock_sec": 0.696983,
+    "demo_candidate_space": 105,
+    "demo_count_wall_clock_sec": 0.001251,
+    "demo_exact_solution_count": 12,
+    "pass": true,
+    "reference_operations": 102500000,
+    "reference_wall_clock_sec": 23.709531,
+    "shipping_candidate_space": 49985001,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 0.0,
+    "strongest_failing_attack": "random_restart_256"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_farthest_first": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.468174
+      },
+      "obvious_two_axis_antipodes": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000823
+      },
+      "outlier_degree_tie_break": {
+        "attempts": 8,
+        "statistic": "all vertices have the same degree 4",
+        "successes": 0,
+        "wall_clock_sec": 0.050493
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "restarts_per_instance": 256,
+        "successes": 0,
+        "wall_clock_sec": 0.696983
+      }
+    },
+    "paper_standard_method": "Section 3.1 reduces edge metric dimension to set cover over pairs of edges",
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N^2) exact distance evaluations and O(N) memory",
+      "distance_evaluations": 102500000,
+      "name": "orbit-reduced greedy edge-signature/set-cover scan",
+      "operations": 102500000,
+      "second_candidates": 2600,
+      "solves": "1/1",
+      "third_candidates": 2524,
+      "verified": true,
+      "wall_clock_sec": 23.709531
+    }
+  },
+  "G7_scales": {
+    "doubled_build_sec": 5.5e-05,
+    "doubled_candidate_space": 935129881,
+    "doubled_verify_reason": "ok",
+    "doubled_vertices": 43248,
+    "pass": true,
+    "shipping_candidate_space": 49985001,
+    "shipping_vertices": 10000
+  },
+  "G8_canonical_key": {
+    "invariant_relabellings": 100,
+    "key_scope": "complete on the generated anchored two-cycle torus family",
+    "pass": true,
+    "real_transformations_verified": 100,
+    "transformations": [
+      "bijective affine relabelling of every public vertex label",
+      "swap of the two Cartesian cycle factors",
+      "translation and independent reflection of the cycle coordinates",
+      "composition of coordinate symmetry with public affine relabelling",
+      "composition of factor swap with public affine relabelling"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 18,
+    "answer_elements": 3,
+    "answer_tokens": 5,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.6666666666666666,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 168,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "1602.00291",
+  "shipping_difficulty": "easy",
+  "shipping_seed": 160200291,
+  "track": "B"
+}
