@@ -1,0 +1,1079 @@
+"""Verified shortest DSR sequence generator for arXiv:1502.04803.
+
+The solver receives the paper's native objects: a simple graph and two
+dominating sets.  A witness is a shortest reconfiguration word.  Generation is
+inverse: source/target vertices are made in false-twin pairs that cover disjoint
+core blocks, so adding a target twin and deleting its source twin is always a
+valid move pair.
+
+This is Track B.  A generic program can recover the pairing by comparing all
+source/target coordinate differences.  The compact route notices that the two
+coordinate sets differ by one additive translation modulo p, recovers that
+translation from the supplied checksums, and writes the corresponding pairs.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import itertools
+import json
+import math
+import os
+import random
+import re
+import time
+from collections import Counter
+
+
+TRACK = "B"
+
+PROBLEM_PROFILE = {
+    "native_domain": "combinatorics",
+    "object_regime": "finite_discrete",
+    "computational_core": "graph",
+    "certificate_form": "exact_symbolic",
+    "native_objects": [
+        "finite simple graph",
+        "source and target dominating sets",
+        "bounded add/delete reconfiguration word",
+    ],
+    "verification_operations": [
+        "exact graph-neighborhood union",
+        "set insertion and deletion",
+        "integer cardinality and endpoint comparison",
+    ],
+    "domain_essentiality": "native",
+    "reduction_kind": "none",
+    "reduction": None,
+    "reduction_source": "paper_central",
+    "intuition_type": "change of variables",
+    "intuition_description": (
+        "Source and target residue coordinates are related by one additive "
+        "translation modulo p, and translated vertices have matching graph "
+        "neighborhoods; without noticing it, one must recover a hidden pairing."
+    ),
+    "hardness_basis": (
+        "Track B: an exact source-target translation scan takes O(r^2+n+m) "
+        "time and is measured by selftest at the shipping preset (80^2=6,400 "
+        "coordinate differences plus graph replay), whereas the checksum "
+        "change of variables gives a 180-operation no-tool route; the paper's "
+        "Section 4.2, Theorem 9 also gives an FPT kernel-and-enumerate algorithm "
+        "for this bounded-degenerate regime, so no Track A claim is made."
+    ),
+    "max_answer_tokens": 224,
+}
+
+NATIVE = {
+    "domain": PROBLEM_PROFILE["native_domain"],
+    "core": PROBLEM_PROFILE["computational_core"],
+    "objects": PROBLEM_PROFILE["native_objects"],
+    "intuition": (
+        PROBLEM_PROFILE["intuition_type"]
+        + ": "
+        + PROBLEM_PROFILE["intuition_description"]
+    ),
+    "reduction": PROBLEM_PROFILE["reduction"],
+}
+
+DIFFICULTY = {
+    "demo": {"n": 17, "pairs": 3, "block_size": 2},
+    "easy": {"n": 127, "pairs": 12, "block_size": 3},
+    "medium": {"n": 509, "pairs": 32, "block_size": 4},
+    "hard": {"n": 2000, "pairs": 80, "block_size": 4},
+}
+
+SHIPPING_DIFFICULTY = "medium"
+
+CERTIFICATE_LANGUAGE = {
+    "description": (
+        "A JSON list of exactly r ordered pairs [a,d].  Each graph vertex is "
+        "an integer in 0..N-1; [a,d] means add a and immediately delete d.  "
+        "Every target-only vertex occurs once as an a, every source-only vertex "
+        "occurs once as a d, and no vertex is repeated."
+    ),
+    "bounds": {
+        "max_move_pairs": 120,
+        "max_atomic_vertices": 240,
+        "vertex_min": 0,
+        "vertex_max_exclusive": 50000,
+    },
+}
+
+STRUCTURAL_HINT = (
+    "The source and target residue coordinates share one additive translation modulo p."
+)
+PLACEBO_HINT = (
+    "The source and target vertex lists should be copied with careful attention."
+)
+
+# Filled after the three isolated harden.py runs.  These arms are diagnostic;
+# the exact answer/operation caps are the only gated part of G9.
+G9_RESULTS = {
+    "bare": {"solved": 0, "attempts": 0},
+    "hinted": {"solved": 0, "attempts": 0},
+    "placebo": {"solved": 0, "attempts": 0},
+}
+
+NOTES = """\
+Section 1 and the formal problem statement fix DSR as additions/deletions among
+dominating sets of sizes k and k+1.  Section 4.2, especially Definition 6,
+Lemma 3, and Theorem 9, fixes the neighborhood-replacement viewpoint and says
+what makes this sparse regime algorithmically easy: compute a bounded domination
+core, delete strongly irrelevant equal-core-neighborhood vertices, and enumerate
+the remaining reconfiguration graph.  Theorem 6 gives W[1]-hardness only on
+general graphs and is not used as an average-case claim.
+
+The generator inversely builds r false-twin source/target pairs.  Each pair has
+one private core block, while a hub common to both endpoints dominates every
+residue vertex.  Thus each add-target/delete-source pair preserves domination,
+and the 2r moves are shortest by symmetric difference.  All residue vertices,
+plants and decoys alike, have degree block_size+1.  Random graph relabelling and
+random edge order defeat positional and degree outliers; random decoy
+neighborhoods defeat simple core-frequency guesses; independently shuffled
+endpoint lists defeat rank pairing; and the additive shift is chosen away from
+small/trivial values.  The successful quadratic translation scan is reported as
+the Track-B reference algorithm rather than mislabelled as a failed attack.
+"""
+
+
+def _is_prime(value: int) -> bool:
+    if value < 2:
+        return False
+    if value % 2 == 0:
+        return value == 2
+    divisor = 3
+    while divisor * divisor <= value:
+        if value % divisor == 0:
+            return False
+        divisor += 2
+    return True
+
+
+def _next_prime(value: int) -> int:
+    candidate = max(2, int(value))
+    if candidate > 2 and candidate % 2 == 0:
+        candidate += 1
+    while not _is_prime(candidate):
+        candidate += 1 if candidate == 2 else 2
+    return candidate
+
+
+def _choose_disjoint_translate(
+    p: int, count: int, rng: random.Random
+) -> tuple[list[int], list[int], int]:
+    """Choose S and nontrivial delta with S disjoint from S+delta."""
+
+    forbidden_deltas = {0, 1, p - 1, p // 2, (p + 1) // 2}
+    while True:
+        delta = rng.randrange(2, p - 1)
+        if delta in forbidden_deltas:
+            continue
+        order = list(range(p))
+        rng.shuffle(order)
+        used: set[int] = set()
+        source: list[int] = []
+        for coordinate in order:
+            target = (coordinate + delta) % p
+            if coordinate in used or target in used or coordinate == target:
+                continue
+            source.append(coordinate)
+            used.add(coordinate)
+            used.add(target)
+            if len(source) == count:
+                targets = [(x + delta) % p for x in source]
+                return source, targets, delta
+        # With p > 2*count this branch is effectively unreachable, but choose a
+        # fresh delta rather than relying on a probabilistic assertion.
+
+
+def _relabel_instance_data(
+    vertex_count: int,
+    edges: list[tuple[int, int]],
+    source: list[int],
+    target: list[int],
+    coordinate_of: list[int | None],
+    rng: random.Random,
+) -> tuple[
+    list[list[int]], list[int], list[int], list[int | None], list[int]
+]:
+    """Apply a uniformly random graph-vertex relabelling."""
+
+    permutation = list(range(vertex_count))
+    rng.shuffle(permutation)  # old vertex -> new vertex
+    moved_edges = [
+        sorted((permutation[u], permutation[v])) for u, v in edges
+    ]
+    rng.shuffle(moved_edges)
+    moved_source = [permutation[v] for v in source]
+    moved_target = [permutation[v] for v in target]
+    rng.shuffle(moved_source)
+    rng.shuffle(moved_target)
+    moved_coordinates: list[int | None] = [None] * vertex_count
+    for old, coordinate in enumerate(coordinate_of):
+        moved_coordinates[permutation[old]] = coordinate
+    return (
+        moved_edges,
+        moved_source,
+        moved_target,
+        moved_coordinates,
+        permutation,
+    )
+
+
+def make_instance(
+    n: int,
+    seed: int = 0,
+    pairs: int = 80,
+    block_size: int = 4,
+    **params,
+) -> dict:
+    """Build a bounded-degenerate DSR instance and a shortest known word.
+
+    `n` is a lower bound for the number p of residue/decoy vertices.  The next
+    prime is used as p so modular inversion is always defined for pairs < p.
+    No path search is performed: the answer is carried directly from the
+    planted equal-neighborhood pairs.
+    """
+
+    del params
+    if isinstance(n, bool) or not isinstance(n, int):
+        raise TypeError("n must be an integer")
+    if isinstance(pairs, bool) or not isinstance(pairs, int):
+        raise TypeError("pairs must be an integer")
+    if isinstance(block_size, bool) or not isinstance(block_size, int):
+        raise TypeError("block_size must be an integer")
+    if pairs < 2:
+        raise ValueError("pairs must be at least 2")
+    if block_size < 1:
+        raise ValueError("block_size must be positive")
+    p = _next_prime(n)
+    if p <= 2 * pairs + 1:
+        raise ValueError("n must leave room for disjoint source/target translates")
+
+    rng = random.Random(seed)
+    source_coordinates, target_coordinates, delta = _choose_disjoint_translate(
+        p, pairs, rng
+    )
+
+    # Abstract vertex IDs before the final random relabelling:
+    # residues 0..p-1, hub p, then pairs*block_size core vertices.
+    hub = p
+    core_start = p + 1
+    core_count = pairs * block_size
+    vertex_count = core_start + core_count
+    coordinate_of: list[int | None] = list(range(p)) + [None] * (1 + core_count)
+
+    edges: list[tuple[int, int]] = []
+    for residue in range(p):
+        edges.append((hub, residue))
+
+    # Source blocks partition the core.  A translated target receives exactly
+    # the same block, so the pair are false twins.  Every other residue draws a
+    # same-size core neighborhood: plants and decoys have identical degree.
+    planted = set(source_coordinates) | set(target_coordinates)
+    core_vertices = list(range(core_start, vertex_count))
+    for pair_index, (source_coordinate, target_coordinate) in enumerate(
+        zip(source_coordinates, target_coordinates)
+    ):
+        block = list(
+            range(
+                core_start + pair_index * block_size,
+                core_start + (pair_index + 1) * block_size,
+            )
+        )
+        for residue in (source_coordinate, target_coordinate):
+            for core_vertex in block:
+                edges.append((residue, core_vertex))
+    for residue in range(p):
+        if residue in planted:
+            continue
+        for core_vertex in rng.sample(core_vertices, block_size):
+            edges.append((residue, core_vertex))
+
+    source_old = [hub] + source_coordinates
+    target_old = [hub] + target_coordinates
+    (
+        moved_edges,
+        moved_source,
+        moved_target,
+        moved_coordinates,
+        permutation,
+    ) = _relabel_instance_data(
+        vertex_count,
+        edges,
+        source_old,
+        target_old,
+        coordinate_of,
+        rng,
+    )
+
+    target_by_coordinate = {
+        moved_coordinates[permutation[old]]: permutation[old]
+        for old in target_coordinates
+    }
+    answer = []
+    for source_coordinate in source_coordinates:
+        source_vertex = permutation[source_coordinate]
+        target_coordinate = (source_coordinate + delta) % p
+        answer.append([target_by_coordinate[target_coordinate], source_vertex])
+
+    return {
+        "paper": "arXiv:1502.04803",
+        "family": "shortest dominating-set reconfiguration by translated twins",
+        "requested_n": n,
+        "n_vertices": vertex_count,
+        "p": p,
+        "pairs": pairs,
+        "block_size": block_size,
+        "k": pairs + 1,
+        "edges": moved_edges,
+        "source": moved_source,
+        "target": moved_target,
+        "coordinate_of": moved_coordinates,
+        "source_checksum": sum(source_coordinates) % p,
+        "target_checksum": sum(target_coordinates) % p,
+        "answer": answer,
+    }
+
+
+def _endpoint_coordinate_rows(inst: dict, vertices: list[int]) -> list[str]:
+    rows = []
+    for vertex in vertices:
+        coordinate = inst["coordinate_of"][vertex]
+        if coordinate is None:
+            rows.append(f"{vertex}: none")
+        else:
+            rows.append(f"{vertex}: {coordinate}")
+    return rows
+
+
+def render(inst: dict) -> str:
+    r = inst["pairs"]
+    p = inst["p"]
+    lines = [
+        "Find a shortest dominating-set reconfiguration sequence.",
+        "",
+        "Definitions.",
+        f"G is the simple undirected graph on vertices 0..{inst['n_vertices'] - 1}.",
+        "A set D dominates G when every vertex either belongs to D or has a",
+        "neighbor in D.  One reconfiguration step adds or deletes one vertex.",
+        f"Every intermediate set, including the endpoints, must have size k={inst['k']}",
+        f"or k+1={inst['k'] + 1}, and must dominate G.",
+        "",
+        "The source and target below both have size k.  They share one vertex and",
+        f"otherwise differ in {r} vertices each, so every sequence needs at least",
+        f"2r={2 * r} single-vertex steps.  Return a sequence of exactly that length.",
+        "Encode it as r JSON pairs [a,d]: add vertex a, check domination, then",
+        "delete vertex d and check domination again.  Vertex repetitions are",
+        "forbidden.  Thus all target-only vertices and all source-only vertices",
+        "must each occur exactly once; the order of the r pairs matters.",
+        "",
+        "Auxiliary residue labels are exact instance data, not graph edges.  A",
+        f"listed coordinate lies in Z/{p}Z, so coordinate arithmetic wraps modulo p.",
+        "The common endpoint vertex has coordinate 'none'.",
+        f"Source-coordinate checksum (sum modulo p): {inst['source_checksum']}",
+        f"Target-coordinate checksum (sum modulo p): {inst['target_checksum']}",
+        "",
+        "Source vertices (graph_vertex: residue_coordinate):",
+    ]
+    lines.extend(_endpoint_coordinate_rows(inst, inst["source"]))
+    lines.extend(["", "Target vertices (graph_vertex: residue_coordinate):"])
+    lines.extend(_endpoint_coordinate_rows(inst, inst["target"]))
+    lines.extend(["", "Undirected edges (one u v pair per line; order is irrelevant):"])
+    lines.extend(f"{u} {v}" for u, v in inst["edges"])
+    lines.extend(
+        [
+            "",
+            "Give your final answer inside <answer></answer> tags as one JSON list",
+            f"of exactly {r} two-integer pairs [add_vertex, delete_vertex].",
+            "Syntax example only (an actual answer has the required r pairs):",
+            "<answer>[[12,34],[56,78]]</answer>",
+            "Output nothing else inside the tags.",
+        ]
+    )
+    mode = os.environ.get("GV_HINT_MODE")
+    if mode == "structural":
+        lines.extend(["", "Hint: " + STRUCTURAL_HINT])
+    elif mode == "placebo":
+        lines.extend(["", "Hint: " + PLACEBO_HINT])
+    return "\n".join(lines)
+
+
+def parse_answer(text: str) -> object | None:
+    try:
+        match = re.search(
+            r"<answer>(.*?)</answer>",
+            str(text),
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if not match:
+            return None
+        body = match.group(1).strip()
+        body = re.sub(r"^```(?:json|python|text)?\s*", "", body, flags=re.I)
+        body = re.sub(r"\s*```$", "", body).strip()
+        if body == "":
+            return []
+        value = json.loads(body)
+        if not isinstance(value, list):
+            return None
+        for pair in value:
+            if not isinstance(pair, list) or len(pair) != 2:
+                return None
+            if not all(
+                isinstance(vertex, int) and not isinstance(vertex, bool)
+                for vertex in pair
+            ):
+                return None
+        return value
+    except Exception:
+        return None
+
+
+def _closed_masks(inst: dict) -> list[int]:
+    cached = inst.get("_closed_masks_cache")
+    if isinstance(cached, list) and len(cached) == inst["n_vertices"]:
+        return cached
+    masks = [1 << vertex for vertex in range(inst["n_vertices"])]
+    for edge in inst["edges"]:
+        if not isinstance(edge, (list, tuple)) or len(edge) != 2:
+            continue
+        u, v = edge
+        if 0 <= u < inst["n_vertices"] and 0 <= v < inst["n_vertices"]:
+            masks[u] |= 1 << v
+            masks[v] |= 1 << u
+    inst["_closed_masks_cache"] = masks
+    return masks
+
+
+def _dominates(inst: dict, vertices: set[int]) -> bool:
+    covered = 0
+    masks = _closed_masks(inst)
+    for vertex in vertices:
+        covered |= masks[vertex]
+    return covered == (1 << inst["n_vertices"]) - 1
+
+
+def verify(inst: dict, answer: object) -> tuple[bool, str]:
+    r = inst["pairs"]
+    n_vertices = inst["n_vertices"]
+    if not isinstance(answer, list):
+        return False, "malformed answer: expected a JSON list of move pairs"
+    if len(answer) == 0:
+        return False, f"empty answer: expected exactly {r} move pairs"
+    if len(answer) != r:
+        return False, f"wrong length: expected {r} move pairs, got {len(answer)}"
+    flattened: list[int] = []
+    for pair_index, pair in enumerate(answer):
+        if not isinstance(pair, list) or len(pair) != 2 or not all(
+            isinstance(vertex, int) and not isinstance(vertex, bool)
+            for vertex in pair
+        ):
+            return False, f"malformed pair: pair {pair_index} must be [integer, integer]"
+        flattened.extend(pair)
+    for vertex in flattened:
+        if vertex < 0 or vertex >= n_vertices:
+            return False, f"out of range: vertex {vertex} is not in 0..{n_vertices - 1}"
+    duplicate = next(
+        (vertex for vertex, count in Counter(flattened).items() if count > 1),
+        None,
+    )
+    if duplicate is not None:
+        return False, f"duplicate move: vertex {duplicate} is touched more than once"
+
+    current = set(inst["source"])
+    if len(current) != inst["k"] or not _dominates(inst, current):
+        return False, "invalid instance: source is not a k-dominating set"
+    for pair_index, (added, deleted) in enumerate(answer):
+        if added in current:
+            return False, f"illegal addition: vertex {added} is already present at pair {pair_index}"
+        current.add(added)
+        if len(current) != inst["k"] + 1:
+            return False, f"size bound after addition: pair {pair_index} has size {len(current)}"
+        if not _dominates(inst, current):
+            return False, f"not dominating after addition: pair {pair_index}, vertex {added}"
+        if deleted not in current:
+            return False, f"illegal deletion: vertex {deleted} is absent at pair {pair_index}"
+        current.remove(deleted)
+        if len(current) != inst["k"]:
+            return False, f"size bound after deletion: pair {pair_index} has size {len(current)}"
+        if not _dominates(inst, current):
+            return False, f"not dominating after deletion: pair {pair_index}, vertex {deleted}"
+    if current != set(inst["target"]):
+        return False, "wrong endpoint: the final dominating set is not the target"
+    return True, "ok"
+
+
+def random_candidate(inst: dict, rng: random.Random) -> object:
+    source_only = list(set(inst["source"]) - set(inst["target"]))
+    target_only = list(set(inst["target"]) - set(inst["source"]))
+    rng.shuffle(source_only)
+    rng.shuffle(target_only)
+    return [[added, deleted] for added, deleted in zip(target_only, source_only)]
+
+
+def search_space(inst: dict) -> int | None:
+    # The statement gives for free that additions and deletions are permutations
+    # of the two symmetric-difference sides.  Candidate pairing and order are
+    # independent, hence (r!)^2 rather than a naive (2N)^(2r).
+    return math.factorial(inst["pairs"]) ** 2
+
+
+def enumerate_all(inst: dict) -> int | None:
+    space = search_space(inst)
+    if space is None or space > 200_000:
+        return None
+    source_only = sorted(set(inst["source"]) - set(inst["target"]))
+    target_only = sorted(set(inst["target"]) - set(inst["source"]))
+    count = 0
+    for additions in itertools.permutations(target_only):
+        for deletions in itertools.permutations(source_only):
+            candidate = [list(pair) for pair in zip(additions, deletions)]
+            count += int(verify(inst, candidate)[0])
+    return count
+
+
+def canonical_key(inst: dict) -> str:
+    """A vertex/edge-order invariant from stable color refinement.
+
+    Initial colors record only membership in the two distinguished endpoints.
+    Residue coordinates and their checksums are deliberately ignored: changing
+    those auxiliary coordinates by an affine bijection does not alter the graph
+    reconfiguration problem.  One-dimensional Weisfeiler-Leman is not a complete
+    graph canonical form; it is the strongest cheap invariant used here and this
+    limitation is disclosed in README.md.
+    """
+
+    n_vertices = inst["n_vertices"]
+    adjacency = [[] for _ in range(n_vertices)]
+    for u, v in inst["edges"]:
+        adjacency[u].append(v)
+        adjacency[v].append(u)
+    source = set(inst["source"])
+    target = set(inst["target"])
+    initial = [(int(v in source), int(v in target)) for v in range(n_vertices)]
+    palette = {signature: i for i, signature in enumerate(sorted(set(initial)))}
+    colors = [palette[signature] for signature in initial]
+    for _ in range(32):
+        signatures = []
+        for vertex in range(n_vertices):
+            neighbor_counts = tuple(sorted(Counter(colors[w] for w in adjacency[vertex]).items()))
+            signatures.append((colors[vertex], neighbor_counts))
+        palette = {signature: i for i, signature in enumerate(sorted(set(signatures)))}
+        refined = [palette[signature] for signature in signatures]
+        if refined == colors:
+            break
+        colors = refined
+    vertex_histogram = sorted(Counter(colors).items())
+    edge_histogram = Counter()
+    for u, v in inst["edges"]:
+        edge_histogram[tuple(sorted((colors[u], colors[v])))] += 1
+    payload = json.dumps(
+        {
+            "n": n_vertices,
+            "k": inst["k"],
+            "vertices": vertex_histogram,
+            "edges": sorted((list(key), value) for key, value in edge_histogram.items()),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return hashlib.sha256(payload).hexdigest()
+
+
+def escalate(params: dict) -> dict | str | None:
+    clean = {key: value for key, value in params.items() if key != "_preset"}
+    n = int(clean.get("n", 2000))
+    pairs = int(clean.get("pairs", 80))
+    block_size = int(clean.get("block_size", 4))
+    if n < 12000:
+        clean["n"] = min(12000, max(n + 503, (3 * n) // 2))
+        return clean
+    # Once the ambient haystack is large, crowd the same core with denser decoy
+    # signatures.  The answer stays at 2*pairs atomic vertices.
+    clean["block_size"] = block_size + 1
+    clean["n"] = n + 1009
+    clean["pairs"] = pairs
+    return clean
+
+
+def _coordinate_maps(inst: dict) -> tuple[dict[int, int], dict[int, int]]:
+    source_coordinates = {
+        inst["coordinate_of"][vertex]: vertex
+        for vertex in inst["source"]
+        if inst["coordinate_of"][vertex] is not None
+    }
+    target_coordinates = {
+        inst["coordinate_of"][vertex]: vertex
+        for vertex in inst["target"]
+        if inst["coordinate_of"][vertex] is not None
+    }
+    return source_coordinates, target_coordinates
+
+
+def _schedule_for_delta(inst: dict, delta: int) -> list[list[int]] | None:
+    source_coordinates, target_coordinates = _coordinate_maps(inst)
+    schedule = []
+    for coordinate, source_vertex in source_coordinates.items():
+        target_coordinate = (coordinate + delta) % inst["p"]
+        target_vertex = target_coordinates.get(target_coordinate)
+        if target_vertex is None:
+            return None
+        schedule.append([target_vertex, source_vertex])
+    return schedule
+
+
+def _recover_translation_scan(inst: dict) -> tuple[list[list[int]] | None, int]:
+    """Mechanical Track-B reference algorithm: all coordinate differences."""
+
+    source_coordinates, target_coordinates = _coordinate_maps(inst)
+    frequency: Counter[int] = Counter()
+    operations = 0
+    for source_coordinate in source_coordinates:
+        for target_coordinate in target_coordinates:
+            frequency[(target_coordinate - source_coordinate) % inst["p"]] += 1
+            operations += 1
+    for delta, _count in frequency.most_common():
+        schedule = _schedule_for_delta(inst, delta)
+        operations += inst["pairs"]
+        if schedule is not None and verify(inst, schedule)[0]:
+            return schedule, operations
+    return None, operations
+
+
+def _recover_from_checksums(inst: dict) -> tuple[list[list[int]] | None, int]:
+    """Intended compact route from the additive first-moment invariant."""
+
+    p = inst["p"]
+    r = inst["pairs"]
+    delta = (
+        (inst["target_checksum"] - inst["source_checksum"])
+        * pow(r, -1, p)
+    ) % p
+    schedule = _schedule_for_delta(inst, delta)
+    # Two operations per pair (translate and dictionary lookup), plus a
+    # conservative 20-operation allowance for subtraction and extended Euclid.
+    return schedule, 2 * r + 20
+
+
+def _attack_degree_pairing(inst: dict) -> list[list[int]]:
+    masks = _closed_masks(inst)
+    source_only = list(set(inst["source"]) - set(inst["target"]))
+    target_only = list(set(inst["target"]) - set(inst["source"]))
+    source_only.sort(key=lambda v: (masks[v].bit_count(), v))
+    target_only.sort(key=lambda v: (masks[v].bit_count(), v))
+    return [[target, source] for target, source in zip(target_only, source_only)]
+
+
+def _circular_distance(a: int, b: int, p: int) -> int:
+    difference = abs(a - b)
+    return min(difference, p - difference)
+
+
+def _attack_nearest_residue(inst: dict) -> list[list[int]]:
+    source_coordinates, target_coordinates = _coordinate_maps(inst)
+    unused = set(source_coordinates)
+    schedule = []
+    for target_coordinate, target_vertex in target_coordinates.items():
+        source_coordinate = min(
+            unused,
+            key=lambda value: (_circular_distance(value, target_coordinate, inst["p"]), value),
+        )
+        unused.remove(source_coordinate)
+        schedule.append([target_vertex, source_coordinates[source_coordinate]])
+    return schedule
+
+
+def _attack_ordinary_checksum(inst: dict) -> list[list[int]]:
+    # The plausible mistake: treat the two displayed modular checksums as
+    # ordinary sums and divide their difference in Z instead of in Z/pZ.
+    raw = inst["target_checksum"] - inst["source_checksum"]
+    delta = raw // inst["pairs"]
+    schedule = _schedule_for_delta(inst, delta % inst["p"])
+    return schedule if schedule is not None else _attack_degree_pairing(inst)
+
+
+def _attack_partial_differences(inst: dict, sample: int = 8) -> list[list[int]]:
+    source_coordinates, target_coordinates = _coordinate_maps(inst)
+    left = list(source_coordinates)[:sample]
+    right = list(target_coordinates)[:sample]
+    frequencies = Counter(
+        (target - source) % inst["p"] for source in left for target in right
+    )
+    delta = frequencies.most_common(1)[0][0]
+    schedule = _schedule_for_delta(inst, delta)
+    return schedule if schedule is not None else _attack_degree_pairing(inst)
+
+
+def _attack_random_restart(inst: dict, seed: int, restarts: int = 64) -> tuple[list[list[int]], int]:
+    rng = random.Random(seed)
+    last = random_candidate(inst, rng)
+    for attempt in range(1, restarts + 1):
+        candidate = last if attempt == 1 else random_candidate(inst, rng)
+        if verify(inst, candidate)[0]:
+            return candidate, attempt
+        last = candidate
+    return last, restarts
+
+
+def _permute_instance_vertices(
+    inst: dict, permutation: list[int]
+) -> tuple[dict, list[list[int]]]:
+    """Apply old->new graph relabelling and carry all vertex-valued data."""
+
+    n_vertices = inst["n_vertices"]
+    if sorted(permutation) != list(range(n_vertices)):
+        raise ValueError("permutation must be a bijection")
+    out = dict(inst)
+    out["edges"] = [sorted((permutation[u], permutation[v])) for u, v in inst["edges"]]
+    out["source"] = [permutation[v] for v in inst["source"]]
+    out["target"] = [permutation[v] for v in inst["target"]]
+    coordinates: list[int | None] = [None] * n_vertices
+    for old, coordinate in enumerate(inst["coordinate_of"]):
+        coordinates[permutation[old]] = coordinate
+    out["coordinate_of"] = coordinates
+    out.pop("_closed_masks_cache", None)
+    carried = [[permutation[a], permutation[d]] for a, d in inst["answer"]]
+    out["answer"] = carried
+    return out, carried
+
+
+def _affine_coordinates(inst: dict, unit: int, offset: int) -> dict:
+    """Change residue coordinates by x -> unit*x+offset, preserving the graph."""
+
+    p = inst["p"]
+    if math.gcd(unit, p) != 1:
+        raise ValueError("unit must be invertible modulo p")
+    out = dict(inst)
+    out["coordinate_of"] = [
+        None if coordinate is None else (unit * coordinate + offset) % p
+        for coordinate in inst["coordinate_of"]
+    ]
+    source_values = [
+        out["coordinate_of"][vertex]
+        for vertex in out["source"]
+        if out["coordinate_of"][vertex] is not None
+    ]
+    target_values = [
+        out["coordinate_of"][vertex]
+        for vertex in out["target"]
+        if out["coordinate_of"][vertex] is not None
+    ]
+    out["source_checksum"] = sum(source_values) % p
+    out["target_checksum"] = sum(target_values) % p
+    out.pop("_closed_masks_cache", None)
+    return out
+
+
+def _answer_atoms(value: object) -> int:
+    if isinstance(value, dict):
+        return sum(_answer_atoms(item) for item in value.values())
+    if isinstance(value, list):
+        return sum(_answer_atoms(item) for item in value)
+    return 1
+
+
+def selftest() -> dict:
+    report: dict = {"track": TRACK, "shipping_difficulty": SHIPPING_DIFFICULTY}
+
+    g1_ok = True
+    g1_cases = 0
+    for params in DIFFICULTY.values():
+        for seed in (0, 1, 17):
+            inst = make_instance(seed=seed, **params)
+            ok, _reason = verify(inst, inst["answer"])
+            g1_ok &= ok
+            g1_ok &= json.loads(json.dumps(inst["answer"])) == inst["answer"]
+            g1_cases += 1
+    report["G1_planted_verifies"] = {"pass": bool(g1_ok), "cases": g1_cases}
+
+    shipping_params = DIFFICULTY[SHIPPING_DIFFICULTY]
+    shipping = make_instance(seed=314159, **shipping_params)
+    answer = [list(pair) for pair in shipping["answer"]]
+    swapped = [list(pair) for pair in answer]
+    swapped[0] = [answer[0][1], answer[0][0]]
+    duplicated = [list(pair) for pair in answer]
+    duplicated[1] = list(duplicated[0])
+    out_of_range = [list(pair) for pair in answer]
+    out_of_range[0][0] = shipping["n_vertices"]
+    corruptions = {
+        "drop": answer[:-1],
+        "swap": swapped,
+        "duplicate": duplicated,
+        "empty": [],
+        "out_of_range": out_of_range,
+    }
+    corruption_results = {}
+    for name, candidate in corruptions.items():
+        ok, reason = verify(shipping, candidate)
+        corruption_results[name] = {"rejected": not ok, "reason": reason}
+    reason_classes = {
+        result["reason"].split(":", 1)[0] for result in corruption_results.values()
+    }
+    report["G2_rejects_corruption"] = {
+        "pass": all(result["rejected"] for result in corruption_results.values())
+        and len(reason_classes) == len(corruption_results),
+        "cases": corruption_results,
+        "distinct_reason_classes": len(reason_classes),
+    }
+
+    model_style = (
+        "The modular pairing gives the following shortest word.\n\n"
+        "```json\n<answer>\n"
+        + json.dumps(answer)
+        + "\n</answer>\n```\n"
+    )
+    parsed = parse_answer(model_style)
+    report["G3_round_trip"] = {
+        "pass": parsed == answer and verify(shipping, parsed)[0],
+        "parsed_pairs": len(parsed) if isinstance(parsed, list) else None,
+    }
+
+    guess_rng = random.Random(8675309)
+    guess_total = 200_000
+    guess_hits = 0
+    crosscheck_total = 256
+    crosscheck_ok = 0
+    source_coordinates, target_coordinates = _coordinate_maps(shipping)
+    true_source_for_target = {
+        target_coordinates[(coordinate + (
+            (shipping["target_checksum"] - shipping["source_checksum"])
+            * pow(shipping["pairs"], -1, shipping["p"])
+        )) % shipping["p"]]: vertex
+        for coordinate, vertex in source_coordinates.items()
+    }
+    guess_start = time.perf_counter()
+    for index in range(guess_total):
+        candidate = random_candidate(shipping, guess_rng)
+        # Exact characterization for this construction: a minimal word is valid
+        # iff every added target is immediately paired with its block-twin source.
+        shortcut = all(true_source_for_target[a] == d for a, d in candidate)
+        guess_hits += int(shortcut)
+        if index < crosscheck_total:
+            crosscheck_ok += int(shortcut == verify(shipping, candidate)[0])
+    guess_seconds = time.perf_counter() - guess_start
+    guess_probability = guess_hits / guess_total
+    report["G4_guess_resistance"] = {
+        "pass": guess_probability < 1e-6 and crosscheck_ok == crosscheck_total,
+        "hits": guess_hits,
+        "total": guess_total,
+        "observed_probability": guess_probability,
+        "structure_aware_space": search_space(shipping),
+        "exact_valid_fraction": f"1/{shipping['pairs']}!",
+        "sampling_wall_clock_sec": round(guess_seconds, 6),
+        "shortcut_crosscheck": {"agreements": crosscheck_ok, "total": crosscheck_total},
+    }
+
+    demo = make_instance(seed=2718, **DIFFICULTY["demo"])
+    demo_count_start = time.perf_counter()
+    demo_count = enumerate_all(demo)
+    demo_count_seconds = time.perf_counter() - demo_count_start
+
+    reference_start = time.perf_counter()
+    recovered, reference_operations = _recover_translation_scan(shipping)
+    reference_seconds = time.perf_counter() - reference_start
+    compact, compact_operations = _recover_from_checksums(shipping)
+    density_total = guess_total
+    density_hits = guess_hits
+    report["G5_density_baseline"] = {
+        "pass": demo_count is not None
+        and density_hits / density_total < 1e-6
+        and recovered is not None
+        and verify(shipping, recovered)[0]
+        and compact is not None
+        and verify(shipping, compact)[0],
+        "shipping_density": {
+            "hits": density_hits,
+            "total": density_total,
+            "observed_fraction": density_hits / density_total,
+        },
+        "exact_reduced_count": {
+            "preset": "demo",
+            "valid": demo_count,
+            "space": search_space(demo),
+            "wall_clock_sec": round(demo_count_seconds, 6),
+        },
+        "strongest_successful_baseline": {
+            "name": "all source-target modular differences then exact replay",
+            "wall_clock_sec": round(reference_seconds, 6),
+            "operations": reference_operations,
+            "verified": recovered is not None and verify(shipping, recovered)[0],
+        },
+        "compact_route": {
+            "name": "checksum translation",
+            "operations": compact_operations,
+            "verified": compact is not None and verify(shipping, compact)[0],
+        },
+    }
+
+    attack_successes = Counter()
+    attack_attempts = Counter()
+    attack_operations = Counter()
+    attack_wall = Counter()
+    reference_successes = 0
+    reference_attempts = 0
+    reference_total_operations = 0
+    reference_wall = 0.0
+    for seed in range(8):
+        inst = make_instance(seed=10_000 + seed, **shipping_params)
+        attacks = {
+            "outlier_degree_pairing": (_attack_degree_pairing, inst["pairs"]),
+            "greedy_nearest_residue": (_attack_nearest_residue, inst["pairs"] ** 2),
+            "ordinary_checksum_ansatz": (_attack_ordinary_checksum, inst["pairs"]),
+            "partial_difference_8x8": (_attack_partial_differences, 64 + inst["pairs"]),
+        }
+        for name, (attack, operations) in attacks.items():
+            started = time.perf_counter()
+            candidate = attack(inst)
+            elapsed = time.perf_counter() - started
+            attack_successes[name] += int(verify(inst, candidate)[0])
+            attack_attempts[name] += 1
+            attack_operations[name] += operations
+            attack_wall[name] += elapsed
+        started = time.perf_counter()
+        random_candidate_answer, used = _attack_random_restart(inst, 5000 + seed)
+        elapsed = time.perf_counter() - started
+        name = "random_restart_64"
+        attack_successes[name] += int(verify(inst, random_candidate_answer)[0])
+        attack_attempts[name] += 1
+        attack_operations[name] += used * inst["pairs"]
+        attack_wall[name] += elapsed
+
+        started = time.perf_counter()
+        reference_answer, operations = _recover_translation_scan(inst)
+        reference_wall += time.perf_counter() - started
+        reference_attempts += 1
+        reference_total_operations += operations
+        reference_successes += int(
+            reference_answer is not None and verify(inst, reference_answer)[0]
+        )
+
+    attack_report = {
+        name: {
+            "successes": attack_successes[name],
+            "attempts": attack_attempts[name],
+            "operations_total": attack_operations[name],
+            "wall_clock_sec": round(attack_wall[name], 6),
+        }
+        for name in attack_attempts
+    }
+    report["G6_adversary_panel"] = {
+        "pass": len(attack_report) >= 4
+        and all(result["successes"] == 0 for result in attack_report.values())
+        and all(result["attempts"] >= 8 for result in attack_report.values())
+        and reference_successes == reference_attempts,
+        "attacks": attack_report,
+        "reference_algorithm": {
+            "name": "quadratic translation-difference scan plus exact replay",
+            "complexity": "O(r^2+n+m) exact",
+            "wall_clock_sec": round(reference_wall, 6),
+            "operations": reference_total_operations,
+            "solves": f"{reference_successes}/{reference_attempts}, as expected",
+        },
+    }
+
+    build_start = time.perf_counter()
+    doubled = make_instance(
+        n=2 * shipping_params["n"],
+        seed=424242,
+        pairs=shipping_params["pairs"],
+        block_size=shipping_params["block_size"],
+    )
+    doubled_build_seconds = time.perf_counter() - build_start
+    doubled_ok = verify(doubled, doubled["answer"])[0]
+    report["G7_scales"] = {
+        "pass": doubled_ok
+        and doubled["n_vertices"] > shipping["n_vertices"]
+        and search_space(make_instance(seed=99, **DIFFICULTY["easy"]))
+        < search_space(shipping),
+        "shipping_vertices": shipping["n_vertices"],
+        "doubled_vertices": doubled["n_vertices"],
+        "doubled_build_wall_clock_sec": round(doubled_build_seconds, 6),
+        "doubled_planted_verifies": doubled_ok,
+        "answer_atoms_unchanged": _answer_atoms(doubled["answer"])
+        == _answer_atoms(shipping["answer"]),
+    }
+
+    invariant_checks = 0
+    real_transform_checks = 0
+    unrelated_keys = []
+    g8_ok = True
+    for seed in range(20):
+        inst = make_instance(seed=7000 + seed, **DIFFICULTY["easy"])
+        base_key = canonical_key(inst)
+        unrelated_keys.append(base_key)
+        rng = random.Random(8000 + seed)
+        permutation = list(range(inst["n_vertices"]))
+        rng.shuffle(permutation)
+        moved, carried = _permute_instance_vertices(inst, permutation)
+        rng.shuffle(moved["edges"])
+        rng.shuffle(moved["source"])
+        rng.shuffle(moved["target"])
+        affine = _affine_coordinates(
+            moved,
+            unit=rng.randrange(1, moved["p"]),
+            offset=rng.randrange(moved["p"]),
+        )
+        for transformed, transformed_answer in (
+            (moved, carried),
+            (affine, carried),
+        ):
+            invariant_checks += 1
+            same = canonical_key(transformed) == base_key
+            real = verify(transformed, transformed_answer)[0]
+            g8_ok &= same and real
+            real_transform_checks += int(real)
+    distinct_keys = len(set(unrelated_keys))
+    report["G8_canonical_key"] = {
+        "pass": g8_ok
+        and invariant_checks >= 40
+        and real_transform_checks == invariant_checks
+        and distinct_keys == 20,
+        "invariance_checks": invariant_checks,
+        "real_transform_verifications": real_transform_checks,
+        "unrelated_distinct": distinct_keys,
+        "unrelated_total": 20,
+        "caveat": "stable color refinement is a strong invariant, not a complete isomorphism canonical form",
+    }
+
+    answer_blob = json.dumps(shipping["answer"], separators=(",", ":"))
+    answer_chars = len(answer_blob)
+    answer_atoms = _answer_atoms(shipping["answer"])
+    # The project treats 2,000 ASCII characters as approximately 500 model
+    # tokens.  Report that same conservative budget conversion.
+    answer_tokens = math.ceil(answer_chars / 4)
+    within_caps = (
+        answer_chars <= 2000
+        and answer_atoms <= 256
+        and compact_operations <= 300
+        and answer_tokens <= 500
+    )
+    hinted = G9_RESULTS["hinted"]
+    placebo = G9_RESULTS["placebo"]
+    hinted_rate = hinted["solved"] / hinted["attempts"] if hinted["attempts"] else 0.0
+    placebo_rate = placebo["solved"] / placebo["attempts"] if placebo["attempts"] else 0.0
+    report["G9_no_tool_suitability"] = {
+        "pass": within_caps,
+        "arms": G9_RESULTS,
+        "hinted_minus_placebo": hinted_rate - placebo_rate,
+        "hinted_verdict": (
+            "not_run"
+            if hinted["attempts"] == 0
+            else ("too_easy" if hinted["solved"] else "hardened")
+        ),
+        "answer_chars": answer_chars,
+        "answer_tokens": answer_tokens,
+        "answer_elements": answer_atoms,
+        "intended_route_operations": compact_operations,
+    }
+
+    report["pass"] = all(
+        gate.get("pass", False)
+        for key, gate in report.items()
+        if key.startswith("G") and isinstance(gate, dict)
+    )
+    return report
+
+
+if __name__ == "__main__":
+    print(json.dumps(selftest(), indent=2, sort_keys=True))
+

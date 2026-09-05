@@ -1,0 +1,170 @@
+{
+  "G1_planted_verifies": {
+    "attempted": 12,
+    "failures": [],
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "expected exactly 16 operations"
+      },
+      "duplicate_vertex": {
+        "accepted": false,
+        "reason": "a vertex may be touched only once"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer must be a nonempty list"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "vertex id out of range"
+      },
+      "swap_first_pair": {
+        "accepted": false,
+        "reason": "operations must alternate removal then addition"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "json_native": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_wall_sec": 3.317004,
+    "structure_aware_space": 1625702400,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_nodes": 66,
+    "baseline_operations": 98418,
+    "baseline_wall_clock_sec": 0.00139,
+    "demo_exact_solution_count": 1,
+    "literal_toggle_updates_if_expanded": 95305568,
+    "pass": true,
+    "shipping_density_fraction": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_largest_labels": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_smallest_labels": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_longest_batch_endpoints": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "unpaired_first_endpoint_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "complexity": "O(B+k+|E|) exact operations",
+      "name": "paired-progression parity cancellation and forced-chain propagation",
+      "operations": 244,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 9.6e-05
+    },
+    "paper_algorithm": {
+      "applies_here": "yes; the final graph is at most k-degenerate",
+      "complexity": "FPT in k+d (Theorem 2)",
+      "name": "Section 3.1 irrelevant-vertex kernelization and exhaustive enumeration"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(B*k^2*log(n) + explored reconfiguration transitions)",
+      "name": "exact modular membership for every endpoint edge, followed by breadth-first search of the bounded TAR state graph",
+      "nodes": 66,
+      "operations": 98418,
+      "solves": "8/8, as expected",
+      "transitions": 642,
+      "wall_clock_sec": 0.00139
+    }
+  },
+  "G7_scales": {
+    "answer_operations_after": 16,
+    "answer_operations_before": 16,
+    "doubled_n": 4031,
+    "literal_updates_after": 191321002,
+    "literal_updates_before": 95305568,
+    "original_n": 2015,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "invariance_checks_attempted": 100,
+    "invariance_checks_passed": 100,
+    "pass": true,
+    "transformations": [
+      "arbitrary vertex relabelling with carried witness",
+      "batch reordering",
+      "batch direction reversal",
+      "addition of a duplicated canceling batch",
+      "composition of all transformations"
+    ],
+    "transformed_witnesses_attempted": 20,
+    "transformed_witnesses_verified": 20,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 84,
+    "answer_elements": 16,
+    "answer_tokens": 53,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": -0.3333333333333333,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 244,
+    "pass": true,
+    "sample_answer_chars": 80,
+    "sample_answer_tokens": 49
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "decoy_groups": 4,
+    "extras": 5,
+    "k": 8,
+    "n": 2015,
+    "replay_span": 1600000
+  }
+}
