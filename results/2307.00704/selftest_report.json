@@ -1,0 +1,168 @@
+{
+  "G1_planted_verifies": {
+    "checked": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer must have exactly the centroid and neighbor fields",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "centroid and neighbor must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "centroid label is outside the allowed residue range",
+        "rejected": true
+      },
+      "swap_roles": {
+        "reason": "the first label is not the unique weighted centroid",
+        "rejected": true
+      },
+      "unused_residue": {
+        "reason": "the stated first-unused label is not a corridor-tree vertex",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 6,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 8882926,
+    "exact_density": 2.251510369443582e-07,
+    "exact_valid_answers": 2,
+    "hits": 0,
+    "measured_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform oriented edges satisfying adjacency and both stated T* bounds; only the centroid condition remains",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_attempts": 8,
+    "baseline_iterations_each": 65536,
+    "baseline_successes": 0,
+    "baseline_wall_clock_sec_max": 0.00828133407048881,
+    "baseline_wall_clock_sec_mean": 0.008159586024703458,
+    "demo_candidate_space": 12,
+    "demo_exact_valid_answers": 2,
+    "pass": true,
+    "reference_attempts": 8,
+    "reference_exact_operations_estimate_max": 142475844,
+    "reference_exact_operations_estimate_mean": 133394404.0,
+    "reference_successes": 8,
+    "reference_vertex_visits_mean": 13339441.0,
+    "reference_wall_clock_sec_max": 5.587718300987035,
+    "reference_wall_clock_sec_mean": 4.90055982946069,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_density_by_symmetry": 2.251510369443582e-07,
+    "shipping_solution_fraction_estimate": 0.0,
+    "strongest_failing_attack": "bounded recurrence walk of 65,536 vertices"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_recurrence_walk_4096": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_endpoint_average": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_numeric_middle": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_oriented_edge_restart_2048": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N) exact",
+      "name": "Section 3.4 linear-time greedy weighted-tree centroid walk",
+      "operations": 133394404,
+      "solves": "8/8, as expected",
+      "vertex_visits_max": 14247585,
+      "vertex_visits_mean": 13339441.0,
+      "wall_clock_sec_max": 5.587718300987035,
+      "wall_clock_sec_mean": 4.90055982946069
+    },
+    "seeds": [
+      800,
+      801,
+      802,
+      803,
+      804,
+      805,
+      806,
+      807
+    ]
+  },
+  "G7_scales": {
+    "answer_elements_base": 2,
+    "answer_elements_doubled": 2,
+    "base_n": 25,
+    "base_vertices": 26648769,
+    "doubled_build_sec": 4.8029934987425804e-05,
+    "doubled_n": 26,
+    "doubled_vertices": 53297537,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariance_checks": 60,
+    "invariant": "path length and exact mirror-symmetric polynomial weight sequence",
+    "pass": true,
+    "real_transformation_witness_checks": 60,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 40,
+    "answer_elements": 2,
+    "answer_tokens": 13,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "service_errors": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "service_errors": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "service_errors": 0,
+        "solved": 0
+      }
+    },
+    "caps_pass": true,
+    "diagnostic_is_not_gated": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 148,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "n": 25
+  },
+  "track": "B"
+}
