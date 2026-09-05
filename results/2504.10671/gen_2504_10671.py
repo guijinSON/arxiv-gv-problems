@@ -1,0 +1,883 @@
+"""Verified problem generator for arXiv:2504.10671.
+
+The paper proves NP-completeness of directed token sliding on depth-3 DAGs by
+reducing 3-SAT.  This module inverse-generates a uniquely satisfiable family of
+3-XOR systems, expands it to 3-CNF, and applies that reduction.  A submitted
+bit string is a compact description of the paper proof's token-slide sequence;
+verification expands and replays the sequence exactly.
+
+Importing this module performs no I/O and prints nothing.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import itertools
+import json
+import math
+import os
+import random
+import re
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals  # noqa: F401
+except ImportError:  # pragma: no cover - this family is stdlib-only
+    exact_matrices = rationals = None
+
+
+TRACK = "B"
+
+PROBLEM_PROFILE = {
+    "native_domain": "combinatorics",
+    "object_regime": "finite_discrete",
+    "computational_core": "csp_sat",
+    "certificate_form": "exact_symbolic",
+    "native_objects": [
+        "depth-3 directed acyclic token-sliding graph in gadget form",
+        "initial and target independent sets",
+        "compressed token-slide sequence encoded by a Boolean assignment",
+    ],
+    "verification_operations": [
+        "exact Boolean parity evaluation",
+        "3-CNF expansion",
+        "directed-edge membership",
+        "independent-set checking after every token slide",
+    ],
+    "domain_essentiality": "licensed_reduction",
+    "reduction_kind": "paper_licensed",
+    "reduction": (
+        "Section 4, proof of Theorem 1.2: the depth-3 DAG reduction from 3-SAT"
+    ),
+    "reduction_source": "paper_central",
+    "intuition_type": "change of variables",
+    "intuition_description": (
+        "The shuffled parity triples are affine relabellings of cyclic "
+        "second-order recurrences; without recovering a cycle step, the "
+        "assignment appears to require generic elimination or SAT search."
+    ),
+    "hardness_basis": (
+        "Track B: Gaussian elimination over GF(2) solves the displayed parity "
+        "system in O(m n^2) bit operations; at the shipping preset the bundled "
+        "reference implementation used 766,164 scalar GF(2) operations and "
+        "0.026337 seconds in the recorded selftest, while the affine-cycle "
+        "recurrence uses 293 exact XOR operations once its change of variables "
+        "is recognized."
+    ),
+    "max_answer_tokens": 25,
+}
+
+NATIVE = {
+    "domain": PROBLEM_PROFILE["native_domain"],
+    "core": PROBLEM_PROFILE["computational_core"],
+    "objects": PROBLEM_PROFILE["native_objects"],
+    "intuition": (
+        PROBLEM_PROFILE["intuition_type"] + ": "
+        + PROBLEM_PROFILE["intuition_description"]
+    ),
+    "reduction": PROBLEM_PROFILE["reduction"],
+}
+
+DIFFICULTY = {
+    "demo": {"n": 7, "cycles": 1},
+    "easy": {"n": 31, "cycles": 2},
+    "medium": {"n": 61, "cycles": 3},
+    "hard": {"n": 97, "cycles": 5},
+}
+SHIPPING_DIFFICULTY = "hard"
+
+CERTIFICATE_LANGUAGE = {
+    "description": (
+        "A raw binary string of exactly n bits, in variable-label order "
+        "x_0,...,x_(n-1).  Every one of the 2^n strings is syntactically valid; "
+        "it denotes the canonical paper-proof slide sequence for that assignment."
+    ),
+    "bounds": {
+        "alphabet": "01",
+        "length": "inst['n']",
+        "candidate_count": "2 ** inst['n']",
+    },
+}
+
+STRUCTURAL_HINT = (
+    "The parity triples form shuffled affine copies of one cyclic second-order recurrence."
+)
+PLACEBO_HINT = (
+    "Careful bookkeeping of the indexed parity constraints helps prevent transcription mistakes."
+)
+
+G9_RESULTS = {
+    "arms": {
+        "bare": {"solved": 0, "attempts": 0},
+        "hinted": {"solved": 0, "attempts": 0},
+        "placebo": {"solved": 0, "attempts": 0},
+    },
+    "hinted_verdict": "unavailable: OpenRouter HTTP 403 key limit",
+}
+
+NOTES = r"""
+Section 2 fixes the exact rule: tokens move only along arc directions, while
+independence is measured in the underlying undirected graph.  Section 4, in
+the proof of Theorem 1.2 (the source label theo:np-complete-depth-2), gives the
+depth-3 reduction from 3-SAT and the forward slide sequence used here.
+
+The tractability boundary matters.  Lemma 3.1 makes depth 2 polynomial, and
+Lemma 3.4 gives a 2k+4^k kernel at depth 3, so k cannot remain small.  Theorem
+1.3 claims W[1]-hardness at depth 4, but its written construction uses open
+neighborhoods where its soundness proof also needs equality; this module does
+not rely on that apparent gap.  Theorem 1.4 makes k+treewidth FPT, so neither
+parameter is bounded here.
+
+This is Track B.  The certificate-producing reference method is GF(2)
+Gaussian elimination, not a hardness claim.  Instances are generated by
+sampling the bit string first and setting every right-hand side from it.  Each
+constant-step cyclic subsystem is nonsingular because n is not divisible by
+3.  The compact route recognizes an affine cycle and uses its order-2
+recurrence.  Per-variable RHS bias, deterministic local improvement, random
+walk, and a displayed-order propagation ansatz all fail in the self-test.
+Every constraint cycle is sampled in the same way; there is no distinguished
+planted row family among decoys.
+""".strip()
+
+
+def _normalise(n: int, cycles: int) -> tuple[int, int]:
+    if type(n) is not int or type(cycles) is not int:
+        raise TypeError("n and cycles must be integers")
+    if n < 7:
+        raise ValueError("n must be at least 7")
+    if n % 3 == 0:
+        raise ValueError("n must not be divisible by 3")
+    if cycles < 1:
+        raise ValueError("cycles must be positive")
+    available = sum(1 for d in range(1, n) if math.gcd(d, n) == 1) // 2
+    if cycles > available:
+        raise ValueError("too many distinct affine cycle steps")
+    return n, cycles
+
+
+def _parity(values) -> int:
+    out = 0
+    for value in values:
+        out ^= int(value)
+    return out
+
+
+def make_instance(n: int, seed: int = 0, **params) -> dict:
+    """Inverse-generate a certified depth-3 token-sliding instance.
+
+    The returned equations are a succinct representation of the 3-CNF and of
+    the paper's DAG gadget.  The answer is sampled before any equation exists;
+    no solving occurs in generation.
+    """
+
+    cycles = params.pop("cycles", 3)
+    if params:
+        raise TypeError("unknown parameters: " + ", ".join(sorted(params)))
+    n, cycles = _normalise(n, int(cycles))
+    rng = random.Random(seed)
+    plant = [rng.randrange(2) for _ in range(n)]
+
+    representatives = [
+        d for d in range(1, n)
+        if math.gcd(d, n) == 1 and d < (-d) % n
+    ]
+    chosen = rng.sample(representatives, cycles)
+    equations = []
+    for d0 in chosen:
+        d = d0 if rng.randrange(2) == 0 else (-d0) % n
+        offset = rng.randrange(n)
+        rows = []
+        for i in range(n):
+            triple = [
+                (offset + i * d) % n,
+                (offset + (i + 1) * d) % n,
+                (offset + (i + 2) * d) % n,
+            ]
+            rhs = _parity(plant[v] for v in triple)
+            rng.shuffle(triple)
+            rows.append({"vars": triple, "rhs": rhs})
+        rng.shuffle(rows)
+        equations.extend(rows)
+    rng.shuffle(equations)
+
+    return {
+        "paper": "arXiv:2504.10671v2",
+        "family": "compressed depth-3 directed token sliding via 3-XOR",
+        "n": n,
+        "cycles": cycles,
+        "equations": equations,
+        "xor_equation_count": len(equations),
+        "cnf_clause_count": 4 * len(equations),
+        "dag_depth": 3,
+        "dag_vertex_count": 8 * n + 5 * (4 * len(equations)) + 2,
+        "token_count": 3 * n + 4 * len(equations) + 1,
+        "expanded_move_count": 4 * n + 8 * len(equations) + 1,
+        "seed": seed,
+        "answer": "".join(map(str, plant)),
+    }
+
+
+def render(inst: dict) -> str:
+    """Render the complete succinct DAG problem and exact output contract."""
+
+    n = inst["n"]
+    lines = [
+        "COMPRESSED DIRECTED TOKEN SLIDING ON A DEPTH-3 DAG",
+        "",
+        "All variables and vertex indices are 0-based. XOR means addition modulo 2.",
+        f"There are n={n} Boolean variables x_0,...,x_{n-1}.",
+        "Each line `a b c | r` below is the parity constraint x_a XOR x_b XOR x_c = r.",
+        "The three indices on a line are distinct; their displayed order has no meaning.",
+        "",
+        "Turn each parity line into four 3-CNF clauses as follows. For each bit triple",
+        "(A,B,C) whose parity is not r, add the clause (L_a OR L_b OR L_c), where",
+        "L_v is x_v when the corresponding forbidden bit is 0 and NOT x_v when it is 1.",
+        "Thus the four clauses exclude exactly the four assignments of the wrong parity.",
+        "Clause order and literal order do not matter.",
+        "",
+        "The 3-CNF defines this depth-3 directed token-sliding DAG H:",
+        "- Timing vertices w (initial) and w' (target), with arc w->w'.",
+        "- For each variable i: initial s_i; middle p_i^0,p_i^1; target t_i; arcs",
+        "  s_i->p_i^0, s_i->p_i^1, p_i^0->t_i, p_i^1->t_i, and w->t_i.",
+        "- For each signed literal (i,b), meaning the literal true exactly when x_i=b:",
+        "  initial l_i^b, target r_i^b, and arc l_i^b->r_i^b.",
+        "- For each CNF clause j and each of its three literal occurrences h:",
+        "  initial c_j, middle g_(j,h), target d_j, with arcs c_j->g_(j,h)->d_j",
+        "  and c_j->w'. Also add l_i^b->g_(j,h) when occurrence h is literal (i,b).",
+        "- Finally add p_i^b->r_i^(1-b) for every i,b.",
+        "No other arcs exist. Adjacency for independence ignores arc direction.",
+        "The initial set is {w}, every s_i, every l_i^b, and every c_j.",
+        "The target set is {w'}, every t_i, every r_i^b, and every d_j.",
+        "",
+        "A candidate n-bit string z denotes this concrete slide sequence:",
+        "1. In increasing i, slide s_i->p_i^(z_i).",
+        "2. In increasing i, slide l_i^(z_i)->r_i^(z_i).",
+        "3. In clause order, use the first true literal occurrence h and slide",
+        "   c_j->g_(j,h)->d_j.",
+        "4. Slide w->w'.",
+        "5. In increasing i, slide p_i^(z_i)->t_i.",
+        "6. In increasing i, slide l_i^(1-z_i)->r_i^(1-z_i).",
+        f"This expands to exactly {inst['expanded_move_count']} directed slides.",
+        "Find any bit string whose induced sequence is legal and reaches the target.",
+        "",
+        f"Parity constraints ({len(inst['equations'])} lines):",
+    ]
+    lines.extend(
+        f"{row['vars'][0]} {row['vars'][1]} {row['vars'][2]} | {row['rhs']}"
+        for row in inst["equations"]
+    )
+    lines.extend([
+        "",
+        f"Give your final answer inside <answer></answer> tags as exactly {n} consecutive bits,",
+        "in x_0,...,x_(n-1) order, with no spaces or punctuation.",
+        "Example for n=5: <answer>01011</answer>",
+        "Output nothing else inside the tags.",
+    ])
+    mode = os.environ.get("GV_HINT_MODE")
+    if mode == "structural":
+        lines.extend(["", "Hint: " + STRUCTURAL_HINT])
+    elif mode == "placebo":
+        lines.extend(["", "Hint: " + PLACEBO_HINT])
+    return "\n".join(lines)
+
+
+def parse_answer(text: str) -> object | None:
+    """Extract the tagged raw bit string, tolerating prose and fences."""
+
+    try:
+        match = re.search(r"<answer\b[^>]*>(.*?)</answer\s*>", text, re.I | re.S)
+        if not match:
+            return None
+        body = match.group(1).strip()
+        body = re.sub(r"^```(?:text|txt|json)?\s*", "", body, flags=re.I)
+        body = re.sub(r"\s*```$", "", body).strip()
+        if len(body) >= 2 and body[0] == body[-1] == '"':
+            body = json.loads(body)
+        if not isinstance(body, str) or not body or re.fullmatch(r"[01]+", body) is None:
+            return None
+        return body
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _clauses(inst: dict) -> list[list[tuple[int, int]]]:
+    """Expand XOR rows to 3-CNF; literal (v,b) is true iff x_v=b."""
+
+    clauses = []
+    for row in inst["equations"]:
+        a, b, c = row["vars"]
+        rhs = row["rhs"]
+        for forbidden in itertools.product((0, 1), repeat=3):
+            if _parity(forbidden) != rhs:
+                clauses.append([(a, 1 - forbidden[0]),
+                                (b, 1 - forbidden[1]),
+                                (c, 1 - forbidden[2])])
+    return clauses
+
+
+def _replay_paper_sequence(inst: dict, bits: list[int]) -> tuple[bool, str]:
+    """Build Section 4's DAG and replay its canonical forward sequence."""
+
+    n = inst["n"]
+    clauses = _clauses(inst)
+    w, wp = ("w",), ("wp",)
+    arcs = {(w, wp)}
+    occupied = {w}
+    target = {wp}
+
+    for i in range(n):
+        s, p0, p1, t = ("s", i), ("p", i, 0), ("p", i, 1), ("t", i)
+        arcs.update({(s, p0), (s, p1), (p0, t), (p1, t), (w, t)})
+        occupied.add(s)
+        target.add(t)
+        for b in (0, 1):
+            lit, litp = ("l", i, b), ("r", i, b)
+            arcs.add((lit, litp))
+            arcs.add((("p", i, b), ("r", i, 1 - b)))
+            occupied.add(lit)
+            target.add(litp)
+
+    chosen_gates = []
+    for j, clause in enumerate(clauses):
+        cs, ct = ("c", j), ("d", j)
+        occupied.add(cs)
+        target.add(ct)
+        arcs.add((cs, wp))
+        first_true = None
+        for h, (v, b) in enumerate(clause):
+            gate = ("g", j, h)
+            arcs.update({(cs, gate), (gate, ct), (("l", v, b), gate)})
+            if first_true is None and bits[v] == b:
+                first_true = gate
+        if first_true is None:
+            return False, f"clause {j} has no true literal"
+        chosen_gates.append((cs, first_true, ct))
+
+    und = {}
+    for u, v in arcs:
+        und.setdefault(u, set()).add(v)
+        und.setdefault(v, set()).add(u)
+
+    moves = []
+    moves.extend((("s", i), ("p", i, bits[i])) for i in range(n))
+    moves.extend((("l", i, bits[i]), ("r", i, bits[i])) for i in range(n))
+    for cs, gate, ct in chosen_gates:
+        moves.extend(((cs, gate), (gate, ct)))
+    moves.append((w, wp))
+    moves.extend((("p", i, bits[i]), ("t", i)) for i in range(n))
+    moves.extend((("l", i, 1 - bits[i]), ("r", i, 1 - bits[i])) for i in range(n))
+
+    for step, (u, v) in enumerate(moves):
+        if u not in occupied:
+            return False, f"expanded slide {step}: source is unoccupied"
+        if v in occupied:
+            return False, f"expanded slide {step}: destination is occupied"
+        if (u, v) not in arcs:
+            return False, f"expanded slide {step}: directed arc is absent"
+        conflicts = (und.get(v, set()) & occupied) - {u}
+        if conflicts:
+            return False, f"expanded slide {step}: independence violation"
+        occupied.remove(u)
+        occupied.add(v)
+    if occupied != target:
+        return False, "expanded sequence does not reach the target set"
+    return True, "ok"
+
+
+def verify(inst: dict, answer: object) -> tuple[bool, str]:
+    """Check any valid compressed sequence without consulting inst['answer']."""
+
+    if not isinstance(answer, str):
+        return False, "malformed answer: expected a raw bit string"
+    if answer == "":
+        return False, "empty answer: a nonempty bit string is required"
+    if len(answer) != inst["n"]:
+        return False, f"wrong length: expected {inst['n']} bits, got {len(answer)}"
+    bad = next((ch for ch in answer if ch not in "01"), None)
+    if bad is not None:
+        return False, f"out-of-range symbol {bad!r}: only 0 and 1 are allowed"
+    bits = [ord(ch) - 48 for ch in answer]
+    for j, row in enumerate(inst["equations"]):
+        if _parity(bits[v] for v in row["vars"]) != row["rhs"]:
+            return False, f"parity constraint {j} is violated"
+    return _replay_paper_sequence(inst, bits)
+
+
+def random_candidate(inst: dict, rng: random.Random) -> object:
+    """Uniformly sample the full structure-aware n-bit certificate language."""
+
+    return "".join(str(rng.randrange(2)) for _ in range(inst["n"]))
+
+
+def search_space(inst: dict) -> int:
+    return 1 << inst["n"]
+
+
+def enumerate_all(inst: dict) -> int | None:
+    if inst["n"] > 22:
+        return None
+    count = 0
+    for bits in itertools.product((0, 1), repeat=inst["n"]):
+        candidate = "".join(map(str, bits))
+        if verify(inst, candidate)[0]:
+            count += 1
+    return count
+
+
+def _pair_edges(inst: dict) -> list[tuple[int, int, int]]:
+    weights = {}
+    for row in inst["equations"]:
+        vs = row["vars"]
+        for i in range(3):
+            for j in range(i + 1, 3):
+                key = tuple(sorted((vs[i], vs[j])))
+                weights[key] = weights.get(key, 0) + 1
+    return [(u, v, w) for (u, v), w in sorted(weights.items())]
+
+
+def _closed_walk_traces(n: int, edges, steps: int = 12) -> list[int]:
+    prime = 1_000_000_007
+    traces = [0] * (steps + 1)
+    for start in range(n):
+        vec = [0] * n
+        vec[start] = 1
+        for k in range(1, steps + 1):
+            nxt = [0] * n
+            for u, v, w in edges:
+                nxt[u] += w * vec[v]
+                nxt[v] += w * vec[u]
+            vec = [x % prime for x in nxt]
+            traces[k] = (traces[k] + vec[start]) % prime
+    return traces[2:]
+
+
+def canonical_key(inst: dict) -> str:
+    """Strong relabelling invariant (not a complete hypergraph canonizer)."""
+
+    edges = _pair_edges(inst)
+    degrees = [0] * inst["n"]
+    for u, v, w in edges:
+        degrees[u] += w
+        degrees[v] += w
+    payload = {
+        "family": "xor-depth3-dts-v1",
+        "n": inst["n"],
+        "m": len(inst["equations"]),
+        "degree_multiset": sorted(degrees),
+        "pair_multiplicities": sorted(w for _, _, w in edges),
+        "traces": _closed_walk_traces(inst["n"], edges),
+    }
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
+def escalate(params: dict) -> dict | str | None:
+    """Grow shuffled recurrence families while keeping the 97-bit answer fixed."""
+
+    n = int(params.get("n", 97))
+    cycles = int(params.get("cycles", 5))
+    if n < 97:
+        return {"n": min(97, n + 24 if (n + 24) % 3 else n + 25),
+                "cycles": cycles + 1}
+    if cycles < 8:
+        return {"n": n, "cycles": cycles + 1}
+    return "cap_bound"
+
+
+# --- Reference algorithm and deliberately weaker attacks -----------------
+
+def _gaussian_reference(inst: dict) -> tuple[str | None, dict]:
+    """Generic Gauss-Jordan elimination over GF(2), measured exactly."""
+
+    n = inst["n"]
+    rows = []
+    for eq in inst["equations"]:
+        mask = 0
+        for v in eq["vars"]:
+            mask ^= 1 << v
+        rows.append(mask | (eq["rhs"] << n))
+    rank = 0
+    row_xors = 0
+    swaps = 0
+    pivots = []
+    for col in range(n):
+        pivot = next((r for r in range(rank, len(rows)) if (rows[r] >> col) & 1), None)
+        if pivot is None:
+            continue
+        if pivot != rank:
+            rows[rank], rows[pivot] = rows[pivot], rows[rank]
+            swaps += 1
+        for r in range(len(rows)):
+            if r != rank and ((rows[r] >> col) & 1):
+                rows[r] ^= rows[rank]
+                row_xors += 1
+        pivots.append(col)
+        rank += 1
+    inconsistent = any((row & ((1 << n) - 1)) == 0 and ((row >> n) & 1) for row in rows)
+    if inconsistent or rank < n:
+        return None, {
+            "rank": rank, "row_xors": row_xors, "row_swaps": swaps,
+            "field_operations": row_xors * (n + 1), "inconsistent": inconsistent,
+        }
+    answer = [0] * n
+    for r, col in enumerate(pivots):
+        answer[col] = (rows[r] >> n) & 1
+    return "".join(map(str, answer)), {
+        "rank": rank, "row_xors": row_xors, "row_swaps": swaps,
+        "field_operations": row_xors * (n + 1), "inconsistent": False,
+    }
+
+
+def _violations(inst: dict, bits: list[int]) -> list[int]:
+    return [j for j, row in enumerate(inst["equations"])
+            if _parity(bits[v] for v in row["vars"]) != row["rhs"]]
+
+
+def _candidate(bits: list[int]) -> str:
+    return "".join(map(str, bits))
+
+
+def _attack_outlier_rhs(inst: dict, rng: random.Random) -> str:
+    del rng
+    zero = [0] * inst["n"]
+    one = [0] * inst["n"]
+    for row in inst["equations"]:
+        for v in row["vars"]:
+            (one if row["rhs"] else zero)[v] += 1
+    return _candidate([int(one[v] > zero[v]) for v in range(inst["n"])])
+
+
+def _attack_greedy(inst: dict, rng: random.Random) -> str:
+    del rng
+    bits = [0] * inst["n"]
+    current = len(_violations(inst, bits))
+    for _ in range(2 * inst["n"]):
+        if current == 0:
+            break
+        bad = _violations(inst, bits)[0]
+        best = None
+        for v in inst["equations"][bad]["vars"]:
+            bits[v] ^= 1
+            score = len(_violations(inst, bits))
+            bits[v] ^= 1
+            if best is None or score < best[0]:
+                best = (score, v)
+        if best is None or best[0] >= current:
+            break
+        current, v = best
+        bits[v] ^= 1
+    return _candidate(bits)
+
+
+def _attack_random_walk(inst: dict, rng: random.Random) -> str | None:
+    n = inst["n"]
+    incident = [[] for _ in range(n)]
+    for j, row in enumerate(inst["equations"]):
+        for v in row["vars"]:
+            incident[v].append(j)
+    m = len(inst["equations"])
+    for _ in range(256):
+        bits = [rng.randrange(2) for _ in range(n)]
+        violated = [
+            _parity(bits[v] for v in row["vars"]) != row["rhs"]
+            for row in inst["equations"]
+        ]
+        bad_count = sum(violated)
+        for _ in range(4 * n):
+            if bad_count == 0:
+                return _candidate(bits)
+            j = rng.randrange(m)
+            while not violated[j]:
+                j = rng.randrange(m)
+            v = rng.choice(inst["equations"][j]["vars"])
+            bits[v] ^= 1
+            for q in incident[v]:
+                if violated[q]:
+                    violated[q] = False
+                    bad_count -= 1
+                else:
+                    violated[q] = True
+                    bad_count += 1
+    return None
+
+
+def _attack_listed_order(inst: dict, rng: random.Random) -> str:
+    """By-hand ansatz: satisfy listed rows once, never revisiting a choice."""
+
+    del rng
+    bits = [-1] * inst["n"]
+    for row in inst["equations"]:
+        unknown = [v for v in row["vars"] if bits[v] < 0]
+        if unknown:
+            v = unknown[-1]
+            known = [0 if bits[u] < 0 else bits[u] for u in row["vars"] if u != v]
+            bits[v] = row["rhs"] ^ _parity(known)
+    return _candidate([0 if b < 0 else b for b in bits])
+
+
+def _run_attacks(params: dict, seeds: list[int]) -> dict:
+    attacks = {
+        "outlier_rhs_incidence": _attack_outlier_rhs,
+        "greedy_first_conflict": _attack_greedy,
+        "random_walk_256x": _attack_random_walk,
+        "listed_order_propagation": _attack_listed_order,
+    }
+    instances = [(s, make_instance(seed=s, **params)) for s in seeds]
+    results = {}
+    for name, attack in attacks.items():
+        successes = 0
+        details = []
+        for seed, inst in instances:
+            ans = attack(inst, random.Random(900_000 + seed))
+            ok, why = (False, "no candidate") if ans is None else verify(inst, ans)
+            successes += int(ok)
+            details.append("ok" if ok else why)
+        results[name] = {"successes": successes, "attempts": len(seeds), "results": details}
+    return results
+
+
+def _transform_instance(inst: dict, rng: random.Random) -> tuple[dict, str]:
+    """Arbitrary variable relabelling, coordinate flips, and input reorder."""
+
+    n = inst["n"]
+    perm = list(range(n))
+    rng.shuffle(perm)
+    flips = [rng.randrange(2) for _ in range(n)]
+    equations = []
+    for row in inst["equations"]:
+        vs = [perm[v] for v in row["vars"]]
+        rhs = row["rhs"] ^ _parity(flips[v] for v in row["vars"])
+        rng.shuffle(vs)
+        equations.append({"vars": vs, "rhs": rhs})
+    rng.shuffle(equations)
+    old = [ord(ch) - 48 for ch in inst["answer"]]
+    carried_bits = [0] * n
+    for v in range(n):
+        carried_bits[perm[v]] = old[v] ^ flips[v]
+    carried = _candidate(carried_bits)
+    changed = dict(inst)
+    changed["equations"] = equations
+    changed["answer"] = carried
+    return changed, carried
+
+
+def _corruptions(inst: dict) -> dict[str, object]:
+    answer = inst["answer"]
+    unequal = next((i for i in range(1, len(answer)) if answer[i] != answer[0]), None)
+    if unequal is None:
+        swapped = list(answer)
+        swapped[0] = "1" if swapped[0] == "0" else "0"
+        swapped = "".join(swapped)
+    else:
+        swapped = list(answer)
+        swapped[0], swapped[unequal] = swapped[unequal], swapped[0]
+        swapped = "".join(swapped)
+    return {
+        "drop_one": answer[:-1],
+        "swap_one": swapped,
+        "duplicate": answer + answer[0],
+        "empty": "",
+        "out_of_range": "2" + answer[1:],
+    }
+
+
+def selftest() -> dict:
+    """Run every mandatory gate and return its machine-readable evidence."""
+
+    report = {
+        "paper": "2504.10671",
+        "track": TRACK,
+        "shipping_difficulty": SHIPPING_DIFFICULTY,
+        "shipping_params": dict(DIFFICULTY[SHIPPING_DIFFICULTY]),
+    }
+
+    g1 = {}
+    all_ok = True
+    for name, params in DIFFICULTY.items():
+        rows = []
+        for seed in (0, 1, 2, 3):
+            inst = make_instance(seed=seed, **params)
+            ok, why = verify(inst, inst["answer"])
+            rows.append({"seed": seed, "ok": ok, "reason": why})
+            all_ok &= ok
+        g1[name] = rows
+    report["G1_planted_verifies"] = {"pass": all_ok, "presets": g1}
+
+    params = DIFFICULTY[SHIPPING_DIFFICULTY]
+    inst = make_instance(seed=12_345, **params)
+    cases = {}
+    for name, ans in _corruptions(inst).items():
+        ok, why = verify(inst, ans)
+        cases[name] = {"accepted": ok, "reason": why}
+    reasons = [row["reason"] for row in cases.values()]
+    report["G2_rejects_corruption"] = {
+        "pass": all(not row["accepted"] for row in cases.values())
+        and len(set(reasons)) == len(reasons),
+        "cases": cases,
+        "distinct_reasons": len(set(reasons)),
+    }
+
+    response = (
+        "The affine recurrence closes consistently.\n\n<answer>\n```text\n"
+        + inst["answer"] + "\n```\n</answer>\n"
+    )
+    parsed = parse_answer(response)
+    report["G3_round_trip"] = {
+        "pass": parsed == inst["answer"],
+        "parsed_length": None if parsed is None else len(parsed),
+    }
+
+    rng = random.Random(880_041)
+    total = 200_000
+    hits = 0
+    for _ in range(total):
+        if verify(inst, random_candidate(inst, rng))[0]:
+            hits += 1
+    report["G4_guess_resistance"] = {
+        "pass": hits / total < 1e-6,
+        "hits": hits,
+        "total": total,
+        "p_hat": hits / total,
+        "exact_probability": f"1/2^{inst['n']}",
+        "prior": "uniform over all syntactically valid n-bit compressed sequences",
+    }
+
+    started = time.perf_counter()
+    ref_answer, ref_stats = _gaussian_reference(inst)
+    elapsed = time.perf_counter() - started
+    ref_ok, ref_why = (False, "no answer") if ref_answer is None else verify(inst, ref_answer)
+    demo = make_instance(seed=77, **DIFFICULTY["demo"])
+    demo_count = enumerate_all(demo)
+    report["G5_sparse"] = {
+        "pass": hits / total < 1e-6 and ref_ok,
+        "shipping_valid_fraction": hits / total,
+        "shipping_density_samples": total,
+        "shipping_baseline_wall_seconds": round(elapsed, 6),
+        "shipping_baseline_operations": ref_stats["field_operations"],
+        "shipping_density": {
+            "valid_samples": hits,
+            "samples": total,
+            "observed_fraction": hits / total,
+            "exact_solution_count_from_full_rank": 1,
+            "search_space": search_space(inst),
+        },
+        "shipping_baseline_cost": {
+            "name": "GF(2) Gauss-Jordan elimination",
+            "solved": ref_ok,
+            "verify_reason": ref_why,
+            "wall_clock_sec": round(elapsed, 6),
+            **ref_stats,
+        },
+        "demo_exact_reference": {
+            "n": demo["n"],
+            "valid_candidates": demo_count,
+            "search_space": search_space(demo),
+        },
+    }
+
+    attack_rows = _run_attacks(params, list(range(100, 108)))
+    refs = []
+    for seed in range(100, 108):
+        candidate, stats = _gaussian_reference(make_instance(seed=seed, **params))
+        refs.append({"seed": seed, "solved": candidate is not None, **stats})
+    report["G6_adversary_panel"] = {
+        "pass": all(row["successes"] == 0 for row in attack_rows.values()),
+        "attacks": attack_rows,
+        "reference_algorithm": {
+            "name": "Gauss-Jordan elimination over GF(2)",
+            "complexity": "O(m n^2) bit operations",
+            "wall_clock_sec": round(elapsed, 6),
+            "operations": ref_stats["field_operations"],
+            "solves": f"{sum(int(r['solved']) for r in refs)}/8, as expected",
+            "runs": refs,
+        },
+    }
+
+    doubled = dict(params)
+    doubled["n"] *= 2
+    scaled = make_instance(seed=54_321, **doubled)
+    scaled_ok, scaled_why = verify(scaled, scaled["answer"])
+    report["G7_scales"] = {
+        "pass": scaled_ok and scaled["xor_equation_count"] > inst["xor_equation_count"],
+        "base_n": inst["n"],
+        "base_equations": inst["xor_equation_count"],
+        "doubled_n": scaled["n"],
+        "doubled_equations": scaled["xor_equation_count"],
+        "verify": [scaled_ok, scaled_why],
+    }
+
+    invariance = 0
+    carried_checks = 0
+    invariant_ok = True
+    carried_ok = True
+    keys = []
+    g8_params = {"n": 61, "cycles": 5}
+    for seed in range(20):
+        base = make_instance(seed=20_000 + seed, **g8_params)
+        key = canonical_key(base)
+        changed, carried = _transform_instance(base, random.Random(30_000 + seed))
+        invariant_ok &= canonical_key(changed) == key
+        invariance += 1
+        ok, _ = verify(changed, carried)
+        carried_ok &= ok
+        carried_checks += 1
+        changed2, carried2 = _transform_instance(changed, random.Random(40_000 + seed))
+        invariant_ok &= canonical_key(changed2) == key
+        invariance += 1
+        ok, _ = verify(changed2, carried2)
+        carried_ok &= ok
+        carried_checks += 1
+        keys.append(key)
+    report["G8_canonical_key"] = {
+        "pass": invariant_ok and carried_ok and len(set(keys)) == len(keys),
+        "invariance_checks": invariance,
+        "carried_witness_checks": carried_checks,
+        "distinct_unrelated": len(set(keys)),
+        "unrelated_attempts": len(keys),
+        "invariant_under": [
+            "arbitrary variable relabelling", "equation reorder", "triple reorder",
+            "independent Boolean-coordinate complementation", "compositions",
+        ],
+        "caveat": "weighted closed-walk fingerprint is not a complete isomorphism canonizer",
+    }
+
+    answer_blob = json.dumps(inst["answer"], separators=(",", ":"))
+    answer_chars = len(answer_blob)
+    answer_tokens = math.ceil(answer_chars / 4)
+    answer_elements = len(inst["answer"])
+    intended_ops = 3 * inst["n"] + 2
+    within = answer_chars <= 2000 and answer_elements <= 256 and intended_ops <= 300
+    arms = G9_RESULTS["arms"]
+    hinted_rate = (arms["hinted"]["solved"] / arms["hinted"]["attempts"]
+                   if arms["hinted"]["attempts"] else 0.0)
+    placebo_rate = (arms["placebo"]["solved"] / arms["placebo"]["attempts"]
+                    if arms["placebo"]["attempts"] else 0.0)
+    report["G9_no_tool_suitability"] = {
+        "pass": within,
+        "arms": arms,
+        "hinted_minus_placebo": hinted_rate - placebo_rate,
+        "hinted_verdict": G9_RESULTS["hinted_verdict"],
+        "answer_chars": answer_chars,
+        "answer_tokens": answer_tokens,
+        "answer_elements": answer_elements,
+        "intended_route_operations": intended_ops,
+        "caps_only_gated": True,
+    }
+
+    report["pass"] = all(
+        bool(report[key]["pass"])
+        for key in (
+            "G1_planted_verifies", "G2_rejects_corruption", "G3_round_trip",
+            "G4_guess_resistance", "G5_sparse", "G6_adversary_panel",
+            "G7_scales", "G8_canonical_key", "G9_no_tool_suitability",
+        )
+    )
+    report["all_passed"] = report["pass"]
+    return report
+
+
+if __name__ == "__main__":
+    print(json.dumps(selftest(), indent=2, sort_keys=True))

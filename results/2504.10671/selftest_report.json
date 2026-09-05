@@ -1,0 +1,364 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "presets": {
+      "demo": [
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 0
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 1
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 2
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 3
+        }
+      ],
+      "easy": [
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 0
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 1
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 2
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 3
+        }
+      ],
+      "hard": [
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 0
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 1
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 2
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 3
+        }
+      ],
+      "medium": [
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 0
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 1
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 2
+        },
+        {
+          "ok": true,
+          "reason": "ok",
+          "seed": 3
+        }
+      ]
+    }
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "wrong length: expected 97 bits, got 96"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "wrong length: expected 97 bits, got 98"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty answer: a nonempty bit string is required"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "out-of-range symbol '2': only 0 and 1 are allowed"
+      },
+      "swap_one": {
+        "accepted": false,
+        "reason": "parity constraint 3 is violated"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_length": 97,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": "1/2^97",
+    "hits": 0,
+    "p_hat": 0.0,
+    "pass": true,
+    "prior": "uniform over all syntactically valid n-bit compressed sequences",
+    "total": 200000
+  },
+  "G5_sparse": {
+    "demo_exact_reference": {
+      "n": 7,
+      "search_space": 128,
+      "valid_candidates": 1
+    },
+    "pass": true,
+    "shipping_baseline_cost": {
+      "field_operations": 766164,
+      "inconsistent": false,
+      "name": "GF(2) Gauss-Jordan elimination",
+      "rank": 97,
+      "row_swaps": 86,
+      "row_xors": 7818,
+      "solved": true,
+      "verify_reason": "ok",
+      "wall_clock_sec": 0.080716
+    },
+    "shipping_baseline_operations": 766164,
+    "shipping_baseline_wall_seconds": 0.080716,
+    "shipping_density": {
+      "exact_solution_count_from_full_rank": 1,
+      "observed_fraction": 0.0,
+      "samples": 200000,
+      "search_space": 158456325028528675187087900672,
+      "valid_samples": 0
+    },
+    "shipping_density_samples": 200000,
+    "shipping_valid_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_first_conflict": {
+        "attempts": 8,
+        "results": [
+          "parity constraint 6 is violated",
+          "parity constraint 2 is violated",
+          "parity constraint 13 is violated",
+          "parity constraint 5 is violated",
+          "parity constraint 3 is violated",
+          "parity constraint 26 is violated",
+          "parity constraint 13 is violated",
+          "parity constraint 12 is violated"
+        ],
+        "successes": 0
+      },
+      "listed_order_propagation": {
+        "attempts": 8,
+        "results": [
+          "parity constraint 0 is violated",
+          "parity constraint 0 is violated",
+          "parity constraint 3 is violated",
+          "parity constraint 3 is violated",
+          "parity constraint 0 is violated",
+          "parity constraint 2 is violated",
+          "parity constraint 1 is violated",
+          "parity constraint 2 is violated"
+        ],
+        "successes": 0
+      },
+      "outlier_rhs_incidence": {
+        "attempts": 8,
+        "results": [
+          "parity constraint 0 is violated",
+          "parity constraint 0 is violated",
+          "parity constraint 0 is violated",
+          "parity constraint 1 is violated",
+          "parity constraint 0 is violated",
+          "parity constraint 2 is violated",
+          "parity constraint 0 is violated",
+          "parity constraint 1 is violated"
+        ],
+        "successes": 0
+      },
+      "random_walk_256x": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m n^2) bit operations",
+      "name": "Gauss-Jordan elimination over GF(2)",
+      "operations": 766164,
+      "runs": [
+        {
+          "field_operations": 783216,
+          "inconsistent": false,
+          "rank": 97,
+          "row_swaps": 85,
+          "row_xors": 7992,
+          "seed": 100,
+          "solved": true
+        },
+        {
+          "field_operations": 820652,
+          "inconsistent": false,
+          "rank": 97,
+          "row_swaps": 84,
+          "row_xors": 8374,
+          "seed": 101,
+          "solved": true
+        },
+        {
+          "field_operations": 623672,
+          "inconsistent": false,
+          "rank": 97,
+          "row_swaps": 87,
+          "row_xors": 6364,
+          "seed": 102,
+          "solved": true
+        },
+        {
+          "field_operations": 735392,
+          "inconsistent": false,
+          "rank": 97,
+          "row_swaps": 90,
+          "row_xors": 7504,
+          "seed": 103,
+          "solved": true
+        },
+        {
+          "field_operations": 686392,
+          "inconsistent": false,
+          "rank": 97,
+          "row_swaps": 83,
+          "row_xors": 7004,
+          "seed": 104,
+          "solved": true
+        },
+        {
+          "field_operations": 798896,
+          "inconsistent": false,
+          "rank": 97,
+          "row_swaps": 89,
+          "row_xors": 8152,
+          "seed": 105,
+          "solved": true
+        },
+        {
+          "field_operations": 780864,
+          "inconsistent": false,
+          "rank": 97,
+          "row_swaps": 88,
+          "row_xors": 7968,
+          "seed": 106,
+          "solved": true
+        },
+        {
+          "field_operations": 834960,
+          "inconsistent": false,
+          "rank": 97,
+          "row_swaps": 89,
+          "row_xors": 8520,
+          "seed": 107,
+          "solved": true
+        }
+      ],
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.080716
+    }
+  },
+  "G7_scales": {
+    "base_equations": 485,
+    "base_n": 97,
+    "doubled_equations": 970,
+    "doubled_n": 194,
+    "pass": true,
+    "verify": [
+      true,
+      "ok"
+    ]
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 40,
+    "caveat": "weighted closed-walk fingerprint is not a complete isomorphism canonizer",
+    "distinct_unrelated": 20,
+    "invariance_checks": 40,
+    "invariant_under": [
+      "arbitrary variable relabelling",
+      "equation reorder",
+      "triple reorder",
+      "independent Boolean-coordinate complementation",
+      "compositions"
+    ],
+    "pass": true,
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 99,
+    "answer_elements": 97,
+    "answer_tokens": 25,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps_only_gated": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unavailable: OpenRouter HTTP 403 key limit",
+    "intended_route_operations": 293,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "2504.10671",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "cycles": 5,
+    "n": 97
+  },
+  "track": "B"
+}
