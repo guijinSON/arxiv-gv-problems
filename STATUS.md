@@ -6,7 +6,7 @@
 |---|---:|
 | ✅ done | 332 |
 | 🚫 rejected (documented) | 218 |
-| 🔄 in progress | 146 |
+| 🔄 in progress | 145 |
 | ⚪ free | 11,467 |
 | **total** | **12,167** |
 
@@ -54,7 +54,7 @@
 | `2211.08812` | GUIJIN SON | 2026-09-05T04:59 |
 | `1901.09651` | GUIJIN SON | 2026-09-05T05:18 |
 | `2511.22914` | GUIJIN SON | 2026-09-05T05:19 |
-| … 106 more | | |
+| … 105 more | | |
 
 ## By family
 
