@@ -1,0 +1,92 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 16,
+    "json_native_checks": 16
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "rejected": 5,
+    "reasons": {
+      "empty": "answer is empty",
+      "drop_one": "answer must contain exactly four indices",
+      "swap_order": "indices must be strictly increasing",
+      "duplicate": "indices must be distinct",
+      "out_of_range": "index out of range"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed": [36, 83, 128, 130]
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "sampled_fraction": 0.0,
+    "exact_valid_answers": 1,
+    "search_space": 15329615,
+    "exact_probability": 6.523321035785961e-08,
+    "sampler": "uniform over all four-subsets; all are automatically equidistant"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_valid_answer_count": 1,
+    "shipping_solution_density": 6.523321035785961e-08,
+    "density_sample_hits": 0,
+    "density_sample_total": 200000,
+    "baseline_wall_clock_seconds": 0.0015490849036723375,
+    "baseline_pair_operations": 8179,
+    "baseline_collision_checks": 1
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_label_weight": {"successes": 0, "attempts": 8},
+      "greedy_two_lowest_labels": {"successes": 0, "attempts": 8},
+      "random_restart_256": {"successes": 0, "attempts": 8},
+      "lexicographic_pair_xor_256": {"successes": 0, "attempts": 8}
+    },
+    "reference_algorithm": {
+      "name": "pair-XOR collision hashing",
+      "complexity": "O(N^2) exact word operations and O(N^2) memory",
+      "wall_clock_sec_total_8": 0.00691351480782032,
+      "operations_total_8": 38426,
+      "operations_mean": 4803.25,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "preset_search_spaces": [495, 15329615, 17178876, 19190605],
+    "size_doubled_n": 296,
+    "size_doubled_verifies": true
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 100,
+    "real_transformation_checks": 100,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "invariant": "affine rank plus triple-XOR collision profile"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {"solved": 0, "attempts": 0},
+      "hinted": {"solved": 0, "attempts": 0},
+      "placebo": {"solved": 0, "attempts": 0}
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_yet_run",
+    "answer_chars": 18,
+    "answer_tokens": 5,
+    "answer_elements": 4,
+    "intended_route_operations": 224,
+    "route_verified": true,
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "oracle_status": "attempted; no attempt counted because every OpenRouter call returned HTTP 403 key limit exceeded"
+  },
+  "all_passed": true,
+  "external_blocker": "STEP 4 and the three G9 oracle arms could not complete because the configured OpenRouter workspace key reached its total limit. The script-owned transcripts contain only error records and make no hardness claim."
+}
