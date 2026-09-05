@@ -1,0 +1,163 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop_one": {
+        "rejected": true,
+        "reason": "expected 144 oriented-tile codes, got 143"
+      },
+      "swap_two": {
+        "rejected": true,
+        "reason": "gray-border rule fails at row 0, column 0"
+      },
+      "duplicate_one": {
+        "rejected": true,
+        "reason": "a tile ID is duplicated and another tile is missing"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "answer list is empty"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "oriented-tile code outside inclusive range 0..575"
+      }
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "surrounding_prose_and_markdown_fence": true,
+    "json_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "candidate_space": 2936696714698920559657968174670359956780003731379361367626937038985402925650046421317872117931436469856073260116749808037461908611227665160270956438459352746557957634285522046435109891616877959205372091159127317441267023067207216136192000000000000000000000000000000000,
+    "candidate_space_log10": 267.4678590973795,
+    "prior": "uniform over permutations within corner, non-corner border, and interior tile classes, with every border-gray orientation forced and every inner rotation uniform",
+    "sampling_method": "exact lazy form of random_candidate: category permutations are drawn uniformly without replacement, but a suffix is not materialized after its prefix already proves the board invalid",
+    "sampling_wall_seconds": 1.8071493150200695
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "shipping_candidate_space": 2936696714698920559657968174670359956780003731379361367626937038985402925650046421317872117931436469856073260116749808037461908611227665160270956438459352746557957634285522046435109891616877959205372091159127317441267023067207216136192000000000000000000000000000000000,
+    "enumerate_all_shipping": null,
+    "demo_exact_solution_count": 8,
+    "demo_candidate_space": 24,
+    "strongest_attack": "chronological CSP/DPLL with forward checking",
+    "strongest_attack_wall_seconds": 11.618032292928547,
+    "strongest_attack_nodes": 5000000,
+    "strongest_attack_backtracks": 5000000,
+    "strongest_attack_budget": 5000000,
+    "strongest_attack_budget_exhausted": true,
+    "strongest_attack_success": false
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_border_type_and_color_rarity": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_rarest_continuation_no_backtracking": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_greedy_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "csp_dpll_forward_checking": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "standard_algorithm": {
+      "name": "chronological CSP/DPLL with unit domains and forward checking",
+      "complexity": "exponential worst case; O(n^2) storage",
+      "total_wall_clock_sec": 347.7777430044953,
+      "total_nodes": 40000000,
+      "total_backtracks": 40000000,
+      "per_seed_node_budget": 5000000,
+      "budget_exhaustions": 8
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 12,
+    "doubled_n": 24,
+    "base_candidate_log10": 267.4678590973795,
+    "doubled_candidate_log10": 1518.0537635033052,
+    "doubled_verify": "ok",
+    "first_escalation_fixed_answer_length": true,
+    "first_escalation": {
+      "n": 12,
+      "colors": 10,
+      "dpll_nodes": 5000000,
+      "balanced": true
+    }
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "invariance_attempts": 60,
+    "transformed_witness_checks": 60,
+    "transformed_witness_attempts": 60,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "square-board reflection, input-tile permutation, independent stored-orientation rotation, global nonzero-color relabeling, and their composition",
+    "method": "rotation-aware color refinement plus the lexicographically lesser of the two global chiral normal forms"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3,
+        "errors": 0
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3,
+        "errors": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "hardened",
+    "answer_chars": 550,
+    "answer_tokens": 138,
+    "answer_elements": 144,
+    "answer_size_sample_count": 256,
+    "intended_route_operations": 144,
+    "intended_route_operation_definition": "one oriented-tile placement per board cell after the combinatorial search has identified a complete compatible continuation; this is the certificate-assembly work left after the searched-for insight",
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "track": "A",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 12,
+    "colors": 10,
+    "dpll_nodes": 5000000
+  },
+  "all_passed": true
+}
