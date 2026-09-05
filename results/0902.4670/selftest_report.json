@@ -1,0 +1,202 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "too few signs: expected 31",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "too many signs: expected 31",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "every entry must be the integer 1 or -1",
+        "rejected": true
+      },
+      "swap_opposite_signs": {
+        "reason": "the signed combined form is not principal",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      1,
+      1,
+      1,
+      1,
+      -1,
+      1,
+      1,
+      -1,
+      1,
+      1,
+      1,
+      -1,
+      -1,
+      1,
+      1,
+      1,
+      1,
+      -1,
+      1,
+      1,
+      1,
+      1,
+      -1,
+      1,
+      1,
+      1,
+      -1,
+      1,
+      1,
+      -1,
+      -1
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1073741824,
+    "construction_proved_probability": 9.313225746154785e-10,
+    "construction_proved_valid_answers": 1,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform sign vectors conditioned on epsilon_0=+1",
+    "total": 250000
+  },
+  "G5_density_and_baseline": {
+    "baseline_candidates_max": 64607,
+    "baseline_candidates_mean": 48836.5,
+    "baseline_form_reductions_mean": 64905.0,
+    "baseline_operations_max": 1596404,
+    "baseline_operations_mean": 1237669.75,
+    "baseline_reduction_steps_mean": 163204.75,
+    "baseline_wall_clock_sec_max": 3.421962898923084,
+    "baseline_wall_clock_sec_mean": 1.8413553620048333,
+    "demo_candidate_space": 16,
+    "demo_valid_solution_count": 1,
+    "pass": true,
+    "shipping_construction_proved_fraction": 9.313225746154785e-10,
+    "shipping_construction_proved_valid_solution_count": 1,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 250000,
+    "shipping_observed_fraction": 0.0,
+    "shipping_structure_aware_space": 1073741824,
+    "shipping_valid_solution_count": null
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_first_8_signs": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_minimum_prefix_crt": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_all_positive": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_smallest_oriented_root": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_2048": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "candidates_max": 64607,
+      "candidates_mean": 48836.5,
+      "complexity": "O(2^(k/2) poly(log|D|)) time and memory",
+      "form_reductions_max": 96446,
+      "form_reductions_mean": 64905.0,
+      "name": "meet-in-the-middle signed relation search on reduced form classes",
+      "operations_max": 1596404,
+      "operations_mean": 1237669.75,
+      "reduction_steps_max": 174988,
+      "reduction_steps_mean": 163204.75,
+      "solves": "8/8, as expected",
+      "table_entries_max": 32768,
+      "table_entries_mean": 32768.0,
+      "wall_clock_sec_max": 3.421962898923084,
+      "wall_clock_sec_mean": 1.8413553620048333
+    }
+  },
+  "G7_scales": {
+    "answer_elements_doubled": 62,
+    "answer_elements_shipping": 31,
+    "doubled_n": 62,
+    "doubled_space": 2305843009213693952,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 31,
+    "shipping_space": 1073741824
+  },
+  "G8_canonical_key": {
+    "composed_transformation_checks": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "pass": true,
+    "real_transformation_checks": 20,
+    "transformations": [
+      "arbitrary row permutation with carried sign permutation",
+      "independent inversion b_i -> -b_i with carried sign flip",
+      "composition of both transformations"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 93,
+    "answer_elements": 31,
+    "answer_tokens": 24,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "error_calls": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "error_calls": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "error_calls": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "compact_route_verifies": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 187,
+    "measured_instance_route_operations": 178,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "0902.4670",
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
