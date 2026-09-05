@@ -1,0 +1,149 @@
+{
+  "G1_planted_verifies": {
+    "independent_routes_match": 16,
+    "instances": 16,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "change_one": "pair [24,0] has intersecting coordinate neighborhoods",
+      "drop_one": "expected exactly 4 pairs",
+      "duplicate": "pairs must be distinct",
+      "empty": "answer is empty",
+      "out_of_range": "entry 3 has an index out of range",
+      "swap_order": "pairs must be lexicographically sorted"
+    },
+    "distinct_reasons": 6,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_native": true,
+    "pass": true,
+    "realistic_response": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 2.9431921825675043e-16,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform sorted target_count-subset of the n^2 typed X-Y pairs",
+    "structure_aware_space": 3397671432817025,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_iterations": 2048,
+    "baseline_wall_clock_sec": 0.008347859140485525,
+    "demo_candidate_space": 630,
+    "demo_exact_valid_answers_by_enumeration": 1,
+    "pass": true,
+    "reference_algorithm_operations": 1216800,
+    "reference_algorithm_wall_clock_sec": 0.07774154856451787,
+    "sampling_wall_clock_sec": 0.6038912581279874,
+    "shipping_density_sample": {
+      "hits": 0,
+      "total": 200000
+    },
+    "shipping_exact_solution_fraction": 2.9431921825675043e-16,
+    "shipping_theoretical_density": "1/3397671432817025",
+    "strongest_failing_attack": {
+      "iterations": 2048,
+      "name": "random_restart_256",
+      "successes": 0,
+      "wall_clock_sec_for_panel": 0.008347859140485525
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_minimum_intersection": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_equal_degree": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "visual_same_or_reverse_row": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "compact_route": "half-swap orbit exceptions, then their cross-product",
+      "compact_route_operations": 276,
+      "compact_route_solves": "8/8, as expected",
+      "compact_route_wall_clock_sec": 4.8827496357262135e-05,
+      "complexity": "O(n^2 d)",
+      "name": "naive Orthogonal Vectors pair scan from the Theorem 4 reduction",
+      "operations": 1216800,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.07774154856451787
+    }
+  },
+  "G7_scales": {
+    "base_n": 130,
+    "base_space": 3397671432817025,
+    "doubled_n": 260,
+    "doubled_space": 870035542217123100,
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_unrelated": 20,
+    "invariance_checks": 80,
+    "method": "1-WL quotient plus degree and common-neighbor multisets",
+    "pass": true,
+    "transformations": [
+      "X/Y reorderings",
+      "coordinate permutation",
+      "side swap",
+      "composition"
+    ],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 40,
+    "answer_elements": 8,
+    "answer_tokens": 10,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 2
+      }
+    },
+    "hinted_minus_placebo": -0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 276,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "indices_per_pair": 2,
+      "max_index_exclusive": 130,
+      "pairs": 4
+    },
+    "description": "A lexicographically sorted JSON list of exactly target_count distinct 0-based [X-index,Y-index] pairs, each index in 0..n-1"
+  },
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "d": 72,
+    "n": 130,
+    "target_count": 4,
+    "weight": 20
+  },
+  "track": "B"
+}
