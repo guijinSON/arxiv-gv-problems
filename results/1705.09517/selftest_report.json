@@ -1,0 +1,167 @@
+{
+  "G1_planted_verifies": {
+    "cases": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "wrong length: expected 9 indices, got 8",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "duplicate index: all proposed universe elements must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "empty answer: expected exactly 9 indices",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "out of range: index 60 is not in 0..59",
+        "rejected": true
+      },
+      "swap_for_decoys": {
+        "reason": "not shattered: only 468 of 512 label patterns occur",
+        "rejected": true
+      }
+    },
+    "distinct_reason_classes": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      4,
+      17,
+      22,
+      30,
+      37,
+      42,
+      46,
+      53,
+      56
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_shortcut_cases": {
+      "checked_exactly": 81254,
+      "proved_not_shattered": 118746
+    },
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "structure_aware_space": 14783142660,
+    "total": 200000,
+    "wall_clock_sec": 5.117434
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations": 524860,
+    "baseline_solved": true,
+    "baseline_wall_clock_sec": 0.163142,
+    "demo_candidate_count": 35,
+    "demo_exact_solution_count": 35,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "adjacent_row_difference": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_projection_growth": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_column_degree": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "pairwise_correlation": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "intended_compact_route": {
+      "name": "XOR one pair of rows at equal offsets in the two halves",
+      "operations_worst_of_8": 120,
+      "solves": "8/8",
+      "wall_clock_sec": 7e-06
+    },
+    "paper_general_algorithm": {
+      "complexity": "|U|^{O(log |C|)} (Section 1 of the paper)",
+      "name": "enumerate all element subsets up to log2(|C|)",
+      "shipping_k_subset_count": 14783142660
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(|C|^2) machine-word XOR and hash-membership operations",
+      "name": "translation-stabilizer scan on the concept-row set",
+      "operations": 524860,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.241212
+    }
+  },
+  "G7_scales": {
+    "base_n": 60,
+    "build_and_verify_sec": 0.031906,
+    "doubled_concepts": 1024,
+    "doubled_n": 120,
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "invariance_checks_passed": 140,
+    "invariance_checks_total": 140,
+    "invariant": "multiset of exact 3-column projection cell-count histograms",
+    "pass": true,
+    "transformations": [
+      "concept-row reorder",
+      "universe-element permutation",
+      "fixed coordinate complementation",
+      "all four nontrivial multi-operation compositions"
+    ],
+    "transformed_witness_checks_passed": 140,
+    "transformed_witness_checks_total": 140,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 36,
+    "answer_elements": 9,
+    "answer_size_seeds": 100,
+    "answer_tokens": 9,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 120,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
