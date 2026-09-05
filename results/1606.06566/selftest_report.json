@@ -1,0 +1,151 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "expected exactly 23 endpoint pairs",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "event ranks are not all distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "row 0 has a rank outside 0..45",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "row 0 is not introduced before it is forgotten",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 161,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_language": "uniform labelled event sequences with introduction-before-forget and maximum active set k+1",
+    "total": 200000,
+    "wall_clock_sec": 18.19389
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.007252,
+    "demo_candidate_space": 52920,
+    "demo_exact_solution_count": 72,
+    "pass": true,
+    "reference_operation_count": 6456295,
+    "reference_wall_clock_sec": 2.630534,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_fewest_unvisited": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000137
+      },
+      "numeric_label_order": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000352
+      },
+      "outlier_degree_order": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000236
+      },
+      "width_aware_random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.058018
+      }
+    },
+    "intended_compact_route": {
+      "name": "modular edge-difference invariant and FIFO bags",
+      "operations_upper_bound": 225,
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n 2^n) exact bit-set transitions",
+      "name": "exact subset DP over vertex-separation prefixes",
+      "operations": 6456295,
+      "reachable_states": 390843,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 2.630534
+    }
+  },
+  "G7_scales": {
+    "candidate_space_bits_doubled": 378,
+    "candidate_space_bits_shipping": 161,
+    "doubled_build_sec": 0.000355,
+    "doubled_n": 46,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 23
+  },
+  "G8_canonical_key": {
+    "caveat": "1-WL is complete on these 20 tested asymmetric instances; tied color classes fall back to a safe but potentially colliding quotient invariant",
+    "invariance_attempts": 60,
+    "invariant_relabellings": 60,
+    "pass": true,
+    "real_transformation_attempts": 60,
+    "real_transformations_verified": 60,
+    "transformations": [
+      "input-edge reordering",
+      "arbitrary vertex renaming with carried certificate",
+      "composition of vertex renaming, edge reordering, and endpoint reversal"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 175,
+    "answer_elements": 46,
+    "answer_tokens": 44,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 225,
+    "pass": true,
+    "worst_case_answer_chars": 185,
+    "worst_case_answer_tokens": 47
+  },
+  "all_passed": true
+}
