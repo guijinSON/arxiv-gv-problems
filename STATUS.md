@@ -1,12 +1,12 @@
 # Status
 
-`█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **486 / 12,167** resolved (3.99%)
+`█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **487 / 12,167** resolved (4.00%)
 
 | state | count |
 |---|---:|
-| ✅ done | 287 |
+| ✅ done | 288 |
 | 🚫 rejected (documented) | 199 |
-| 🔄 in progress | 126 |
+| 🔄 in progress | 125 |
 | ⚪ free | 11,554 |
 | **total** | **12,167** |
 
@@ -18,7 +18,6 @@
 | `2601.05272` | GUIJIN SON | 2026-09-05T00:24 |
 | `2312.10599` | GUIJIN SON | 2026-09-05T02:45 |
 | `2209.15396` | GUIJIN SON | 2026-09-05T03:07 |
-| `2505.18885` | GUIJIN SON | 2026-09-05T03:07 |
 | `2101.04258` | GUIJIN SON | 2026-09-05T03:50 |
 | `1504.05476` | GUIJIN SON | 2026-09-05T03:50 |
 | `1802.04870` | GUIJIN SON | 2026-09-05T03:50 |
@@ -54,13 +53,14 @@
 | `1005.0488` | GUIJIN SON | 2026-09-05T04:55 |
 | `2307.00704` | GUIJIN SON | 2026-09-05T04:55 |
 | `1804.06328` | GUIJIN SON | 2026-09-05T04:57 |
-| … 86 more | | |
+| `1104.1293` | GUIJIN SON | 2026-09-05T04:57 |
+| … 85 more | | |
 
 ## By family
 
 | family | resolved | total |
 |---|---:|---:|
-| graph structures | 184 | 5,559 |
+| graph structures | 185 | 5,559 |
 | designs and codes | 49 | 1,022 |
 | algebraic decomposition | 39 | 804 |
 | integer equations | 23 | 607 |
