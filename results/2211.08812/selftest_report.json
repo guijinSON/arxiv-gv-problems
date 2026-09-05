@@ -1,0 +1,153 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "instances": 16,
+    "theorem_28_checks": 16,
+    "generation_route": "inverse generation and composition of even block-error parities realized by exact bipartite degree sequences"
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "empty": "answer must be a nonempty hexadecimal string",
+      "drop_one": "hexadecimal answer is too short (5<6)",
+      "duplicate_one": "hexadecimal answer is too long (7>6)",
+      "non_hex": "answer contains a non-hexadecimal character",
+      "out_of_range": "integer payload is outside the declared range",
+      "flip_one_digit": "payload 965eb8 exceeds radius 104 at channel 1 (distance 105)",
+      "swap_two_digits": "payload 695eb9 exceeds radius 104 at channel 2 (distance 112)",
+      "wrong_type": "answer must be a hexadecimal string"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "json_native": true,
+    "answer_hex_digits": 6
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "structure_aware_space": 16777216,
+    "prior": "uniform over all fixed-width hexadecimal payloads"
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_exact_solution_count": 1,
+    "shipping_candidate_count": 16777216,
+    "shipping_exact_valid_fraction_formula": "1/2^24",
+    "shipping_exact_valid_fraction_decimal": 5.960464477539063e-08,
+    "exact_count_basis": "Theorem 28 with k=e=4 places every valid repetition-code word within four bits of one majority word; distance nine makes it unique, and G1 supplies one",
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_valid_fraction": 0.0,
+    "demo_exact_solution_count": 1,
+    "demo_candidate_count": 16,
+    "baseline_attack": "Section 6 majority restricted to one repeated block",
+    "baseline_wall_seconds_8_instances": 0.00039999978616833687,
+    "baseline_max_bit_observations": 1032,
+    "full_paper_majority_bit_observations": 9288,
+    "baseline_attempts": 8,
+    "failing_restart_wall_seconds": 0.0033414240460842848,
+    "failing_restart_iterations": 2048
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "per_element_lowest_raw_weight": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_hamming_medoid_first_block": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_payload_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_first_block_hex_plurality": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_within_row_bit_majority": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_three_block_partial_xor": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "Section 6 majority specialized to one repetition block",
+      "complexity": "Theta(N*d) on this distribution; full scan Theta(N*n)",
+      "wall_clock_sec": 0.00039999978616833687,
+      "operations": 1032,
+      "full_word_operations": 9288,
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "within-row XOR of all repetition blocks",
+      "operation_unit": "one single-hex-digit XOR",
+      "operations": 48,
+      "solves": "8/8"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_channels": 43,
+    "doubled_channels": 83,
+    "base_input_bits": 9288,
+    "doubled_input_bits": 17928,
+    "answer_bits_held_fixed": 24,
+    "compact_operations_held_fixed": 48,
+    "named_preset_n_strictly_increases": true,
+    "planted_verifies": true
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 100,
+    "real_transform_checks": 100,
+    "original_answer_transform_checks": 40,
+    "distinct_unrelated": 20,
+    "unrelated_total": 20,
+    "symmetries": "channel reordering, repetition-block permutation, consistent payload-bit permutation, codeword translation, and composition"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3,
+        "errors": 0
+      },
+      "hinted": {
+        "solved": 3,
+        "attempts": 3,
+        "errors": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 3,
+        "errors": 0
+      }
+    },
+    "hinted_minus_placebo": 1.0,
+    "hinted_verdict": "solved 3/3 (diagnostic, not gated)",
+    "answer_chars": 8,
+    "answer_tokens": 8,
+    "answer_elements": 24,
+    "intended_route_operations": 48,
+    "operation_unit": "one single-hex-digit XOR",
+    "token_measure": "conservative one-token-per-character upper bound",
+    "caps": {
+      "chars": 2000,
+      "tokens": 500,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true,
+  "external_hardening_complete": true
+}
