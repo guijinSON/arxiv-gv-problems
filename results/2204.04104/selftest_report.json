@@ -1,0 +1,194 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "rejections": {
+      "drop_one": {
+        "reason": "query is missing a coordinate",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "query has a duplicate or extra coordinate",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be a nonempty JSON object",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "seed is outside the implicit dictionary range",
+        "rejected": true
+      },
+      "swap_one": {
+        "reason": "query does not equal the implicit dictionary word Q_seed",
+        "rejected": true
+      }
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "certificate_space": 1000003,
+    "exact_density": 9.99997000009e-07,
+    "exact_valid_certificates": 1,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "structure_aware_prior": "uniform legal seed; query and branch table are deterministically filled from that seed, so redundant certificate fields add no entropy",
+    "total": 200000,
+    "wall_clock_sec": 4.500686
+  },
+  "G5_density_and_baseline": {
+    "baseline_exact_operations": 26854305,
+    "baseline_feedback_calls": 440241,
+    "baseline_seeds_tested": 201773,
+    "baseline_wall_clock_sec": 3.36941,
+    "demo_certificate_space": 101,
+    "demo_valid_count_enumerated": 1,
+    "pass": true,
+    "shipping_certificate_space": 1000003,
+    "shipping_density_exact": 9.99997000009e-07,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_valid_count_exact": 1,
+    "strongest_attack": "Algorithm 2 specialized exhaustive g=2 query enumeration"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_first_64_seeds": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_zero_seed": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "terminal_map_only": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "unweighted_offset_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(M*R + M*|W|*d) exact operations",
+      "feedback_calls": 440241,
+      "name": "Theorem 1 / Algorithm 2 specialized to g=2",
+      "operations": 26854305,
+      "seeds_tested": 201773,
+      "solves": "1/1, as expected on Track B",
+      "wall_clock_sec": 3.36941
+    }
+  },
+  "G7_scales": {
+    "doubled_answer_atoms": 37,
+    "doubled_dictionary_seeds": 2000029,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_answer_atoms": 35,
+    "shipping_dictionary_seeds": 1000003
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "pass": true,
+    "symmetries": [
+      "target-row reordering",
+      "physical-position permutation",
+      "independent alphabet relabelling at every position",
+      "their composition"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 117,
+    "answer_elements": 35,
+    "answer_tokens": 30,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "diagnostic_not_gated": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 156,
+    "pass": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "max_atomic_elements": 47,
+      "next_entries": "-1 or a 0-based target-row index",
+      "next_length": "d",
+      "query_length": "d = target_modulus + base-p seed digits",
+      "query_symbols": "integers 0,...,target_modulus",
+      "seed": "0 <= seed < M"
+    },
+    "description": "A JSON object {seed,query,next}.  The seed is an integer 0<=seed<M; query is the uniquely determined length-d implicit-dictionary word Q_seed; next is the uniquely determined length-d branch table, with a displayed target-row index at active positions and -1 at filler positions.  Thus there is exactly one well-formed certificate object per dictionary seed."
+  },
+  "problem_profile": {
+    "certificate_form": "exact_symbolic",
+    "computational_core": "csp_sat",
+    "domain_essentiality": "native",
+    "hardness_basis": "Track B: Theorem 1's recursive solvable algorithm, specialized to g=2 and Remark 4.3's implicit dictionary, scans M legal query seeds in O(M*R+M*|W|*d) exact operations; at the shipping preset M=1000003, R=24 it tested 201773 seeds and 440241 feedbacks, totaling 26854305 counted exact operations in about 3.3 seconds, while composing the affine chain once and replaying the resulting strategy takes at most 156 exact arithmetic operations.",
+    "intuition_description": "The displayed affine substitutions compose to one bijection, whose zero selects the sole first query that turns the target set into singleton feedback classes; without composing them, one scans the implicit dictionary.",
+    "intuition_type": "change of variables",
+    "max_answer_tokens": 30,
+    "native_domain": "combinatorics",
+    "native_objects": [
+      "Wordle instance (alphabet, word length, implicit dictionary, target words, game length)",
+      "two-level deterministic Wordle strategy",
+      "exact ternary Wordle feedback vectors"
+    ],
+    "object_regime": "finite_discrete",
+    "reduction": null,
+    "reduction_kind": "none",
+    "reduction_source": "paper_central",
+    "verification_operations": [
+      "modular integer arithmetic",
+      "implicit-dictionary word evaluation",
+      "exact Wordle feedback computation",
+      "feedback-partition comparison",
+      "strategy replay against every target word"
+    ]
+  },
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 1000003,
+    "rounds": 24,
+    "targets": 11
+  },
+  "track": "B"
+}
