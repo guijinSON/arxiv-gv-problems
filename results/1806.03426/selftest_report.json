@@ -1,0 +1,275 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "presets": {
+      "demo": [
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 0,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 1,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 2,
+          "verified": true
+        }
+      ],
+      "easy": [
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 0,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 1,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 2,
+          "verified": true
+        }
+      ],
+      "hard": [
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 0,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 1,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 2,
+          "verified": true
+        }
+      ],
+      "medium": [
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 0,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 1,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 2,
+          "verified": true
+        }
+      ]
+    }
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "wrong length: expected 174 entries, got 173"
+      },
+      "duplicate_variable": {
+        "accepted": false,
+        "reason": "duplicate variable index in signed assignment"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty answer: expected one signed integer per variable"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "literal index out of range: absolute values must be 1..174"
+      },
+      "swap_two_slots": {
+        "accepted": false,
+        "reason": "slot 1 must name variable 1"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 11972621413014756705924586149611790497021399392059392,
+    "hits": 0,
+    "measured_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform canonical n-bit assignment with global complement removed",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_name": "break-count WalkSAT (32 restarts, 100n flips each)",
+    "demo_candidate_space": 32,
+    "demo_exact_fraction": 0.40625,
+    "demo_exact_valid_answers": 13,
+    "flips": 1716,
+    "flips_per_restart": 17400,
+    "incident_clause_evaluations": 21888,
+    "pass": false,
+    "restart_limit": 32,
+    "restarts_started": 1,
+    "shipping_baseline_solved": true,
+    "shipping_baseline_wall_clock_sec": 0.00987,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_solution_fraction_estimate": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "dpll_unit_propagation_4000": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "greedy_best_improvement": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "outlier_polarity_and_degree": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "spectral_signed_pair_matrix": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "walksat_breakcount_32x100n": {
+        "attempts": 8,
+        "results": [
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok"
+        ],
+        "successes": 8
+      }
+    },
+    "pass": false,
+    "standard_algorithm": "DPLL with NAE unit propagation, plus standard break-count WalkSAT as the domain local-search attack"
+  },
+  "G7_scales": {
+    "base_candidate_space": 11972621413014756705924586149611790497021399392059392,
+    "base_n": 174,
+    "doubled_build_sec": 0.048291,
+    "doubled_candidate_space": 286687326998758938951352611912760867599570623646035140467198604923365359511060601008752319138765710819328,
+    "doubled_n": 348,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "complete_isomorphism_canonizer": false,
+    "invariance_checks": 40,
+    "invariance_failures": [],
+    "invariant": "signed-switching and unsigned closed-walk traces",
+    "pass": true,
+    "real_transformation_witness_checks": 40,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 763,
+    "answer_elements": 174,
+    "answer_tokens": 191,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps_pass": true,
+    "diagnostic_recorded_not_gated": true,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unavailable_key_limit",
+    "intended_route_operations": 174,
+    "oracle_diagnostic_status": "Bare completed 0/3; hinted and placebo produced no countable attempts because OpenRouter returned HTTP 403 key-limit errors on every redraw.",
+    "pass": true,
+    "sample_answer_chars": 668
+  },
+  "all_passed": false,
+  "paper": "1806.03426",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "degree": 6,
+    "n": 174
+  },
+  "track": "A"
+}
