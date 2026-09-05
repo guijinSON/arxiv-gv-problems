@@ -1,0 +1,33 @@
+{
+ "paper": "2409.17832",
+ "schema_version": 2,
+ "model": "gpt-5.6-sol",
+ "effort": "xhigh",
+ "codex_version": "0.150.1",
+ "started_at": "2026-09-05T01:04:49Z",
+ "harden_master_seed": 9950819105718126241,
+ "oracle_pool": [
+  "openai/gpt-5.6-terra",
+  "anthropic/claude-sonnet-5",
+  "google/gemini-3.1-pro-preview",
+  "x-ai/grok-4.6"
+ ],
+ "oracle_effort": "medium",
+ "max_escalations": 6,
+ "harden_verdict": {
+  "verdict": "budget_bound",
+  "escalations_used": 6,
+  "axes_moved": [
+   "n",
+   "weight_bits"
+  ],
+  "answer_atoms": 2,
+  "answer_chars": 31,
+  "next_level": {
+   "n": 629,
+   "weight_bits": 44
+  },
+  "escalate_says": "more levels",
+  "reason": "the oracle pool solved every level through 6 escalations, but escalate() was STILL WILLING TO CLIMB ({'n': 629, 'weight_bits': 44}). The binding constraint was this harness's escalation budget, not the paper.  PARK it -- do not write REJECTED.md.  Re-run with ORACLE_MAX_ESCALATIONS raised, or ship at a higher preset."
+ }
+}

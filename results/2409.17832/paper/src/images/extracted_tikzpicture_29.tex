@@ -1,0 +1,183 @@
+\documentclass[convert]{standalone} %article [12] %Computer Modern font, 11pt
+
+\usepackage{amssymb,latexsym, xcolor}%,a4wide
+\usepackage{amsthm,amssymb}
+%\usepackage[paperheight=24cm,paperwidth=17cm]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\usepackage{tikz-cd}
+\usetikzlibrary{decorations.markings} %for adding an arrow along the outer circle, to indicate the order via drawing.
+
+\usepackage{mathtools}
+%\usepackage{fontspec}
+%\setfontfamily\BoldOutline{QTHelvet-BoldOutline}
+%\cS{new command for wiggle equivalence class - to be set}
+\newcommand{\wiggleQ}{Q \hspace{-7pt} Q}%{\hspace{2pt}\mathclap{Q}Q}%{{\BoldOutline \text{Q} } }%{\pdfsave \pdfliteral{q 1 Tr .7 w [0.5 0.5] 0d}\scalebox{1.15}{\ensuremath{\mathrlap{\mathbf{Q}}}} \pdfrestore \hphantom{\scalebox{1.15}{\ensuremath{\mathbf{Q}}}}}%{\mathrlap{\backsim}Q }
+%\setmainfont{QTHelvet-BoldOutline}
+
+\usepackage{ccaption}
+\changecaptionwidth
+\captionwidth{5.6in}
+
+%for superimposing symbols
+%\usepackage{mathtools}
+
+%for tableau with Le diagrams
+%\usepackage{ytableau}
+\usepackage{bm}
+
+%latex SE https://tex.stackexchange.com/a/23316/192420
+\setlength{\abovecaptionskip}{3pt} %default is 10.0pt
+\setlength{\intextsep}{3.0pt plus 1.0pt minus 2.0pt} %default is 10.0pt plus...
+
+%global settings for enumerate and itemize; can be overwritten locally
+\setitemize{leftmargin=.2in}
+\setenumerate{leftmargin=.3in}
+
+\newcommand{\comment}[1]{{\noindent\textsf{\color{blue}
+$\clubsuit$~#1~$\clubsuit$}}}
+\newcommand{\cS}[1]{{\noindent\textsf{\color{purple}$\blacksquare$~#1~$\blacksquare$}}}
+\newcommand{\hide}[1]{}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{claim}[theorem]{Claim}
+
+\theoremstyle{definition}
+
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{question}[theorem]{Question}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{problem}[theorem]{Problem}
+%\newtheorem{restr}[theorem]{Restriction}
+\newtheorem{observation}[theorem]{Observation}
+\numberwithin{equation}{section}
+
+\def\AA{{\mathbb A}}
+\def\ZZ{{\mathbb Z}}
+\def\RR{{\mathbb R}}
+\def\QQ{{\mathbb Q}}
+\def\NN{{\mathbb N}}
+\def\CC{{\mathbb C}}
+\def\KK{{\mathbf K}}
+\def\PP{{\mathbb P}}
+
+\def\O{{\mathcal{O}}}
+
+\def\ww{{\mathbf{w}}}
+\def\wind{{\operatorname{wind}}}
+
+\def\GL{{\operatorname{GL}}}
+\def\In{{\operatorname{In}}}
+\def\Out{{\operatorname{Out}}}
+
+\newcommand\Pf{\operatorname{Pf}}
+\newcommand\sgn{\operatorname{sgn}}
+
+\def\tr{{\operatorname{tr}}}
+
+\newcommand{\boxQ}{\overset{\hspace*{0.4pt}\scalebox{0.4}{$\bm{\Box}$}}{Q}} %manually implemented once in section 5
+
+\newcommand{\Qinit}{Q_0}
+\newcommand{\Qtmut}{Q_t}
+\newcommand{\Lgraph}{L}
+
+%allegedly, the following command shrinks spacing around operators like + and *.
+\medmuskip=3mu plus 1mu minus 3mu
+%and this one shrinks spacing around = signs and the like.
+\thickmuskip=4mu plus 2mu minus 3mu
+%\pagestyle{empty} 
+%
+%Macros used for some figures
+
+\newcommand\cyclicWeights[5]{% local command to draw 3-vertex cyclic quivers with labels 1,2,3
+	\filldraw[black] (#4,#5)++(150:0.8cm) circle (2pt) node[above left=-1pt] {$v_1$} coordinate (a);
+	\filldraw[black] (#4,#5)++(30:0.8cm) circle (2pt) node[above right=-1pt] {$v_2$} coordinate (b);
+	\filldraw[black] (#4,#5)++(-90:0.8cm) circle (2pt) node[below right=-1pt] {$v_3$} coordinate (c);
+	%\draw[black, dashed, decoration={markings, mark=at position 0 with {\arrow{<}}}, postaction={decorate}] (#4,#5) circle (0.8cm);
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (a) -- (b) node [midway, above] {#1};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (b) -- (c) node [midway, right] {#2};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (c) -- (a) node [midway, left] {#3};
+}
+\newcommand\extht{-1.5cm} %these vary with images.
+\newcommand\boxSize{2.5pt}
+\newcommand\hgap{2.3cm}
+\newcommand\h{1.7cm}
+\newcommand\radius{0.9cm}
+\newcommand\radii{1cm}
+
+\newcommand\cyclicLabels[7]{%
+	\filldraw[black] (#4,#5)++(135:0.8cm) circle (2pt) node[above left=-1pt] {$v_1$} coordinate (v_1);
+	\filldraw[black] (#4,#5)++(45:0.8cm) circle (2pt) node[above right=-1pt] {$#1$} coordinate (#1);
+	\filldraw[black] (#4,#5)++(-45:0.8cm) circle (2pt) node[below right=-1pt] {$#2$} coordinate (#2);
+	\filldraw[black] (#4,#5)++(-135:0.8cm) circle (2pt) node[below left=-1pt] {$#3$} coordinate (#3);
+	\draw[black, dashed, decoration={markings, mark=at position 0 with {\arrow{<}}}, postaction={decorate}] (#4,#5) circle (0.8cm);
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (v_1) -- (v_2);% node [midway, above] {#1};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (v_2) -- (v_4) node [#6] {{\tiny $2$}};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (v_3) -- (v_4);% node [midway, left] {#3};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (v_1) -- (v_3);% node [midway, left] {#3};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (v_1) -- (v_4) node [#7] {{\tiny $3$}};
+	\draw (#4,#5-1) node[below] {{\small $(v_1, #1, #2, #3)$}};
+}
+
+\newcommand\cyclicVerts[5]{%
+	\filldraw[black] (#4,#5)++(135:0.8cm) circle (2pt) node[above left=-1pt] {$v_1$} coordinate (v_1);
+	\filldraw[black] (#4,#5)++(45:0.8cm) circle (2pt) node[above right=-1pt] {$#1$} coordinate (#1);
+	\filldraw[black] (#4,#5)++(-45:0.8cm) circle (2pt) node[below right=-1pt] {$#2$} coordinate (#2);
+	\filldraw[black] (#4,#5)++(-135:0.8cm) circle (2pt) node[below left=-1pt] {$#3$} coordinate (#3);
+	\draw[black, dashed, decoration={markings, mark=at position 0 with {\arrow{<}}}, postaction={decorate}] (#4,#5) circle (0.8cm);
+}
+
+\newcommand\tildeI[1]{
+	\filldraw[magenta] (1,1) circle (2pt);
+	\filldraw[magenta] (0,0) circle (2pt);
+	\filldraw[black!60!green] (-1,1) circle (2pt);
+	\filldraw[magenta] (1,0) circle (2pt) ;
+	\filldraw[magenta] (-1,0) circle (2pt);
+	\filldraw[black!60!green] (0,1) circle (2pt);
+
+	\filldraw[black] (1,1) circle (0pt) node[above] {$v_1$} coordinate (a);
+	\filldraw[black] (0,0) circle (0pt) node[below] {$v_2$} coordinate (b);
+	\filldraw[black] (-1,1) circle (0pt) node[above] {$v_3$} coordinate (c);
+	\filldraw[black] (1,0) circle (0pt) node[below] {$v_4$} coordinate (d);
+	\filldraw[black] (-1,0) circle (0pt) node[below] {$v_5$} coordinate (e);
+	\filldraw[black] (0,1) circle (0pt) node[above] {$v_6$} coordinate (f);
+	
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (a) -- (d);% node [midway, above] {#1};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (d) -- (b); % node [above] {{\tiny $2$}};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (f) -- (b);% node [midway, left] {#3};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (f) -- (a);% node [midway, left] {#3};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (b) -- (e); % node {{\tiny $3$}};
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (c) -- (e);
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (c) -- (b);
+	\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (f) -- (c);
+	\draw (0,-0.3) node[below] {$\Lgraph_{v_{#1}}(\Qtmut)$};
+}
+\newcommand\spacingh{1.5cm}
+\newcommand\hgtOne{1cm}
+\newcommand\hgtTwo{-1cm}
+
+\begin{document}
+\thispagestyle{empty}
+
+\begin{tikzpicture}[scale=0.8]
+\filldraw[black] (0,1.5) circle (2pt) node[above left] {$v_1$} coordinate (a);
+\filldraw[black] (1.5,1.5) circle (2pt) node[above right] {$v_2$} coordinate (b);
+\filldraw[black] (1.5,0) circle (2pt) node[below right] {$v_3$} coordinate (c);
+\filldraw[black] (0,0) circle (2pt) node[below left] {$v_4$} coordinate (d);
+
+\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (a) -- (b);% node [midway, above] {#1};
+\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (a) -- (d);% node [midway, above] {#1};
+\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (c) -- (a) node [pos=0.6, above] {{\tiny $2$}};
+\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (d) -- (b) node [pos=0.35, left] {{\tiny $2$}};
+\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (c) -- (d); % node [midway, left] {$2$};
+\draw[black, -{stealth}, shorten >=3pt, shorten <= 3pt] (b) -- (c) node [midway, right] {{\tiny $3$}};
+\end{tikzpicture}
+
+\end{document}
+
