@@ -1,0 +1,105 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "json_native": true,
+    "pass": true,
+    "verified": 16
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "block count mismatch", "rejected": true},
+      "duplicate_one": {"reason": "block 0 row and column multipliers must differ", "rejected": true},
+      "empty": {"reason": "answer must be an object with exactly the key blocks", "rejected": true},
+      "out_of_range": {"reason": "block 0 field element out of range", "rejected": true},
+      "swap_two": {"reason": "product mismatch at displayed row 1, column 3", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true,
+    "surrounding_prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 4090881600,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over distinct-nonzero affine multiplier triples in every block",
+    "total": 200000,
+    "wall_clock_sec": 138.119211
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_membership_tests": 154417,
+    "baseline_solved": true,
+    "baseline_wall_seconds": 0.558137,
+    "exact_count_wall_seconds": 0.80881,
+    "pass": true,
+    "shipping_candidate_count": 4090881600,
+    "shipping_preset": "easy",
+    "shipping_valid_answer_count": 1,
+    "shipping_valid_fraction": 2.444460871221499e-10
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_sorted_boundary_pair": {"attempts": 8, "successes": 0},
+      "in_context_linear_moment_c_equals_one": {"attempts": 8, "successes": 0},
+      "outlier_equal_degree_identity": {"attempts": 8, "successes": 0},
+      "random_restart_256": {"attempts": 8, "successes": 0}
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(blocks*p^5) worst-case exact; p*(p-1)*(p-2) candidates per block",
+      "name": "exhaustive affine-certificate enumeration with early exact comparison",
+      "operation_unit": "predicted-versus-displayed Boolean membership test",
+      "operations": 911832,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 1.706585
+    }
+  },
+  "G7_scales": {
+    "doubled_matrix_side": 166,
+    "doubled_modulus": 83,
+    "pass": true,
+    "shipping_matrix_side": 82,
+    "shipping_modulus": 41,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "invariance_passed": 80,
+    "pass": true,
+    "real_transform_verifications": 80,
+    "symmetries": [
+      "arbitrary displayed row and column reorder",
+      "block renaming",
+      "independent affine relabelling of public row and column coordinates",
+      "compositions of these maps"
+    ],
+    "unrelated_seeds": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 63,
+    "answer_elements": 6,
+    "answer_tokens": 16,
+    "worst_case_answer_chars": 66,
+    "worst_case_answer_tokens": 17,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 48,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
