@@ -1,0 +1,150 @@
+{
+  "G1_planted_verifies": {
+    "failures": [],
+    "instances_checked": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "expected exactly 73 insertions, received 72"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "duplicate insertion edge"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "insertion list is empty"
+      },
+      "illegal_endpoint": {
+        "accepted": false,
+        "reason": "every insertion must have T as its first endpoint"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "unknown set vertex S1400"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "model_style_response_parsed": true,
+    "pass": true,
+    "round_trip_equal": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1539382421130785387107249046685592043044094722596169948565530141969794057780067386133882513793328689038290523341808795398000,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "analytical_probability_upper_bound": 2.9038368894904413e-18,
+    "upper_bound_basis": "at most q! exact covers, since every valid selection uses each X-coordinate once",
+    "pass": true,
+    "sampling_prior": "uniform q-subsets of the n legal set-neighbor insertions",
+    "total": 200000,
+    "wall_clock_sec": 27.610678
+  },
+  "G5_density_and_baseline": {
+    "demo_candidate_space": 1287,
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "reference_membership_probes_8_seeds": 33835,
+    "reference_wall_clock_sec_8_seeds": 0.00847,
+    "shipping_density_samples": 200000,
+    "shipping_observed_solution_fraction": 0.0,
+    "shipping_analytical_solution_fraction_upper_bound": 2.9038368894904413e-18,
+    "shipping_valid_hits": 0,
+    "strongest_attack_candidate_scans_8_seeds": 2867200,
+    "strongest_attack_wall_clock_sec_8_seeds": 1.05477,
+    "strongest_failing_attack": "random_restart_256_disjoint"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_slope_one_ansatz": {
+        "attempts": 8,
+        "operations": 795,
+        "successes": 0,
+        "wall_clock_sec": 0.002603
+      },
+      "greedy_max_new_coordinates": {
+        "attempts": 8,
+        "operations": 796576,
+        "successes": 0,
+        "wall_clock_sec": 0.232849
+      },
+      "outlier_coordinate_frequency": {
+        "attempts": 8,
+        "operations": 11200,
+        "successes": 0,
+        "wall_clock_sec": 0.006781
+      },
+      "random_restart_256_disjoint": {
+        "attempts": 8,
+        "operations": 2867200,
+        "successes": 0,
+        "wall_clock_sec": 1.05477
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n + q^3) time and O(n) space",
+      "max_operations_one_instance": 7250,
+      "name": "exhaustive affine-line scan with hash membership",
+      "operations": 33835,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.00847
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 2800,
+    "doubled_space_bits": 484,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 1400,
+    "shipping_space_bits": 410
+  },
+  "G8_canonical_key": {
+    "key_equalities": 20,
+    "pass": true,
+    "relabelled_instances": 20,
+    "transformations": "set reorder + affine coordinate relabel + optional X/Y swap, composed",
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20,
+    "witnesses_preserved": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 1184,
+    "answer_elements": 219,
+    "answer_tokens": 296,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "arms_recorded_not_gated": true,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.6666666666666666,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 146,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "2602.19328",
+  "shipping_difficulty": "medium",
+  "track": "B"
+}
