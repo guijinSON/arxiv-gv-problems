@@ -1,0 +1,199 @@
+{
+  "G1_planted_verifies": {
+    "answers_json_native": true,
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "length: expected exactly 4 set records",
+        "rejected": true
+      },
+      "duplicate_record": {
+        "reason": "duplicate_set: each collection must occur exactly once",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "empty: answer contains no set records",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "row_range: row index for set 0 is outside 0,...,95",
+        "rejected": true
+      },
+      "swap_one_row": {
+        "reason": "not_orthogonal: every selected vector has a 1 at coordinate 28",
+        "rejected": true
+      }
+    },
+    "distinct_reason_codes": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G4_guess_resistance": {
+    "candidate_prior": "uniform one-row-per-collection tuples",
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "search_space": 84934656,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_attack_nodes": 8000000,
+    "baseline_attack_wall_clock_sec": 18.492467,
+    "demo_exact_valid_answers": 1,
+    "demo_search_space": 8,
+    "pass": true,
+    "shipping_alpha": 96,
+    "shipping_d": 633,
+    "shipping_density_fraction": 0.0,
+    "shipping_density_samples": 200000,
+    "shipping_k": 4,
+    "shipping_n": 96,
+    "shipping_valid_hits": 0,
+    "strongest_attack": {
+      "attempts": 8,
+      "name": "Section 9 prefix-downsampling enumeration",
+      "nodes": 8000000,
+      "nodes_per_seed": [
+        1000000,
+        1000000,
+        1000000,
+        1000000,
+        1000000,
+        1000000,
+        1000000,
+        1000000
+      ],
+      "successes": 0,
+      "wall_clock_sec": 18.492467
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_running_and": {
+        "attempts": 8,
+        "operations": 3072,
+        "successes": 0
+      },
+      "minimum_pair_intersection_ansatz": {
+        "attempts": 8,
+        "operations": 147456,
+        "successes": 0
+      },
+      "minimum_weight_outlier": {
+        "attempts": 8,
+        "operations": 3072,
+        "successes": 0
+      },
+      "random_restart_512": {
+        "attempts": 8,
+        "operations": 4096,
+        "successes": 0
+      },
+      "section9_downsampling_1m": {
+        "attempts": 8,
+        "nodes": 8000000,
+        "nodes_per_seed": [
+          1000000,
+          1000000,
+          1000000,
+          1000000,
+          1000000,
+          1000000,
+          1000000,
+          1000000
+        ],
+        "projected_coordinates_per_seed": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "source": "Section 9, Theorem 16",
+        "standard_algorithm": true,
+        "successes": 0,
+        "wall_clock_sec": 18.492467
+      }
+    },
+    "pass": true
+  },
+  "G7_scales": {
+    "answer_records_unchanged": true,
+    "base_n": 96,
+    "base_search_space": 84934656,
+    "build_and_verify_sec": 0.048816,
+    "doubled_n": 192,
+    "doubled_search_space": 1358954496,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "invariance_checks": 80,
+    "invariant": "sorted row weights, within-collection pair-intersection weights, and sorted per-coordinate collection counts",
+    "nontrivial_transformations": 80,
+    "pass": true,
+    "transformations": [
+      "row permutations within every collection",
+      "coordinate permutation",
+      "collection permutation",
+      "composition of all three"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20,
+    "witness_transport_checks": 80
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 29,
+    "answer_elements": 8,
+    "answer_tokens": 8,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "caps_pass": true,
+    "diagnostic_arms_are_not_gated": true,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unavailable_openrouter_http_403",
+    "intended_route_operations": 163,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "2505.00206",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "alpha_floor": 96,
+    "k": 4,
+    "n": 96
+  },
+  "track": "A"
+}
