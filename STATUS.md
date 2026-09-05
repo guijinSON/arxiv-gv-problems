@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **204 / 12,167** resolved (1.68%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **205 / 12,167** resolved (1.68%)
 
 | state | count |
 |---|---:|
-| ✅ done | 102 |
+| ✅ done | 103 |
 | 🚫 rejected (documented) | 102 |
-| 🔄 in progress | 92 |
+| 🔄 in progress | 91 |
 | ⚪ free | 11,871 |
 | **total** | **12,167** |
 
@@ -14,7 +14,6 @@
 
 | paper | who | claimed |
 |---|---|---|
-| `1609.05136` | GUIJIN SON | 2026-09-04T19:53 |
 | `1408.5515` | GUIJIN SON | 2026-09-04T23:24 |
 | `2402.17528` | GUIJIN SON | 2026-09-05T00:24 |
 | `1011.6021` | GUIJIN SON | 2026-09-05T00:24 |
@@ -54,7 +53,8 @@
 | `1706.08050` | GUIJIN SON | 2026-09-05T03:50 |
 | `1312.6840` | GUIJIN SON | 2026-09-05T03:50 |
 | `1504.08316` | GUIJIN SON | 2026-09-05T03:50 |
-| … 52 more | | |
+| `1604.08603` | GUIJIN SON | 2026-09-05T03:50 |
+| … 51 more | | |
 
 ## By family
 
@@ -69,7 +69,7 @@
 | constraint satisfaction | 10 | 508 |
 | algebraic identity solutions | 8 | 398 |
 | algebraic geometric structures | 7 | 299 |
-| schedules and allocations | 5 | 259 |
+| schedules and allocations | 6 | 259 |
 | words and permutations | 6 | 237 |
 | finite field constructions | 12 | 235 |
 
