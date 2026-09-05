@@ -1,0 +1,2687 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/1601.03780
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a070fb-fdbd-74f0-af72-8668a3c74966
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know a certificate for it by
+  construction*. Four routes count:
+  - **inverse generation** — sample the answer first and build the problem around it;
+  - **theorem-backed construction** — a theorem in the paper guarantees the object you
+    just assembled has the property, and the certificate is what its proof produces;
+  - **transformation of a known instance** — apply a structure-preserving map to an
+    instance whose certificate you hold, and carry the certificate through the map;
+  - **composition of identities** — build the instance from pieces whose certificates
+    compose: a product of telescoping terms, a sum of squares assembled from known
+    squares, a substitution chain with a known inverse.
+
+  What is forbidden is shipping a family whose answer you obtained by *solving* the
+  instance. If you had to search for it, so will your generator, and the family will
+  not scale.
+- **H — hard.** Hard in the sense your `TRACK` declares — see **TWO TRACKS** below.
+  Under either track the answer space must be far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+## The witness rule
+
+The answer must be a **witness**: a concrete object whose validity is decided by
+inspecting only the object and the instance. No search, no oracle, no appeal to a
+theorem the checker cannot execute.
+
+That is a statement about the *checker*, not about the answer's type. So certified
+negatives, certified optima and numeric answers **are admissible** — provided the
+certificate is itself such an object:
+
+| the claim | the certificate that makes it admissible |
+|---|---|
+| no solution exists | a Farkas certificate, a Nullstellensatz or Positivstellensatz certificate, a bounded-length refutation |
+| this is the optimum | a primal–dual pair with complementary slackness, or a feasible point plus a dual bound that meets it |
+| this real number | an algebraic number as (minimal polynomial, isolating interval with rational endpoints) |
+| this quantity lies here | a rigorous enclosure with **exact rational** endpoints |
+| this system is stable | a Lyapunov or barrier certificate with rational coefficients |
+
+**But — the discriminating test, and it is the one that matters:**
+
+> If the certificate is simply the output of a polynomial-time algorithm run on the
+> instance, you have not found a way past H. You have found the reason the family
+> fails it.
+
+An LP dual, a Gram matrix read off by coefficient matching, an SOS certificate that an
+SDP returns, a Lyapunov function that a linear solve produces, a root isolation — each
+is a perfectly good *witness* and a disqualifying *family*. The witness rule and the
+hardness rule are separate gates, and a certificate can clear the first while failing
+the second.
+
+Ask this at **STEP 0, before you write any code.** It is one question — *what algorithm
+produces this certificate, and what does it cost?* — and the paper's own theorem
+statements usually answer it in a line.
+
+The five algebraic papers rejected most recently were all rejected on exactly this
+point, and every one of them cost a full builder run first:
+
+| paper | what produces the certificate |
+|---|---|
+| `2605.28674` | disjunctive SOS: the paper reduces certificate search to an SDP, with SOCP and LP refinements |
+| `2504.18110` | the Gram matrix and the switching root are written out explicitly in Section 2 |
+| `2211.12582` | a necessary-and-sufficient spectral characterisation; the dimension is read off an eigenvalue multiplicity |
+| `1910.13133` | the witness is given by an explicit matrix formula |
+| `2512.19313` | the witness is a direct evaluation of a displayed trinomial construction — found after reading all 31 pages and the LaTeX source |
+
+One sentence applied at triage would have stopped all five. Instead each was claimed,
+read end to end, and rejected: five builder runs, roughly 90 minutes and 1.5M tokens, to
+rediscover a fact stated in each paper's own main theorem.
+
+---
+
+## TWO TRACKS — say which hardness you are claiming
+
+Declare `TRACK = "A"` or `TRACK = "B"` at module level. Required.
+
+**Track A — structural hardness.** No known efficient general method for the
+distribution you generate. Note *distribution*, not *worst case*: worst-case NP-hardness
+is a different claim and does not imply this one. `2503.01929` sat exactly inside the
+strongly NP-hard 3-PARTITION band and fell to Algorithm X in under five seconds, because
+random instances in that band are not hard. `PROBLEM_PROFILE["hardness_basis"]` must
+name the theorem *and* the parameter regime; G5's baseline cost is the evidence.
+
+**Track B — no-tool compression.** An efficient algorithm exists, and you say so. The
+claim is narrower and different: the evaluated model has no sandbox, no CAS and no
+solver, so it must find and execute a compact route unaided. The difficulty is the gap
+between the mechanical route (10⁶ operations — fine for a solver, impossible by hand)
+and the compact one (a change of variables, an invariant, a symmetry — a dozen
+operations, if you see it).
+
+**Track B families must be honest about the algorithm that exists.** In
+`hardness_basis`, name it, give its complexity, and give its measured cost at the
+shipping preset. A Track B family that hides the algorithm is a Track A claim, and a
+false one.
+
+The track also changes what G6 means:
+
+- **Track A** — every entry in `attacks` must have `successes == 0`, the domain-standard
+  algorithm included. Unchanged from today.
+- **Track B** — the domain-standard algorithm is *expected* to succeed. Report it under
+  a separate key `reference_algorithm` (name, complexity, wall-clock, operation count),
+  **not** inside `attacks`; that number is your `hardness_basis`, not a failure.
+  `attacks` still needs its ≥4 failing entries, and for Track B the fourth is an attack a
+  solver could actually run *in context, without tools* — the by-hand heuristic, the
+  greedy route, the obvious ansatz. If you cannot find a fourth in-context attack that
+  fails, the family is guessable by hand and you should reject it.
+
+Why the label is mandatory: without it the project drifts silently between
+complexity-theoretic hardness and practical model difficulty. Both are defensible
+benchmarks. They are not the same benchmark, and a corpus that mixes them unlabelled can
+support neither claim. Every family shipped so far is an unlabelled Track A claim, and
+`AUDIT.md` records five where that claim was simply false.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the four things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+4. **What produces the certificate.** Find the theorem that hands you the witness and
+   ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
+   characterisation", "an explicit formula" or "a classification table", then **the
+   family fails H on Track A** — not the witness rule, and *not necessarily at all*.
+   The certificate is a perfectly good witness; what it is not is hard to obtain on
+   Track A. Those are separate gates (see the discriminating test above).
+
+   **This is the single most expensive mistake made on this project so far, so do it
+   in this order.** An independent audit re-read 12 rejected papers against their
+   actual arXiv text: **7 of the 12 should have been built.** Every miss came from
+   stopping at "a method exists" without asking the next question. One rejected paper
+   was dismissed because "Theorem 1 gives u by a short linear formula" — while the
+   paper's own mechanical route was enumerating **16,689,170 dual-lattice vectors,
+   788 seconds and 4.6 GB in Magma**. A fifteen-step shortcut against 16.7 million
+   enumerations is not a non-family. It is the definition of Track B.
+
+   **FIRST ask whether it is Track B. Only then consider rejecting.**
+
+   Write down two numbers before you decide:
+
+   | | what to record |
+   |---|---|
+   | **mechanical cost** | operations the standard method needs at your shipping size — the paper often states it, or you can measure it |
+   | **compact route** | steps a solver needs who sees the structure: the invariant, symmetry, or change of variable |
+
+   - **`TRACK = "B"`** when the mechanical cost is out of reach by hand and the compact
+     route is short. Name the algorithm and both numbers in `hardness_basis`. An SDP
+     over a 40×40 Gram matrix is not something a model does in its head; a 2×2 linear
+     solve is.
+   - **Reject** only when the compact route is *no shorter* than the mechanical one —
+     that is, when there is nothing to see, so the question tests nothing. Say both
+     numbers in `REJECTED.md` and show they are comparable. "An algorithm exists" on
+     its own is **not a sufficient reason to reject** and will be sent back.
+
+   What is never acceptable is declaring Track A while knowing the algorithm exists.
+
+### Build in the paper's own objects first
+
+Before you reduce anything, write down the problem **in the objects the theorem and
+proof actually use** — vectors, Gram matrices, polynomials over ℚ or ℚ(i),
+coordinates, functions, trajectories, group elements. Ask whether a finite exact
+certificate exists *for that* object: a Gram or Seidel matrix, a rational SOS
+decomposition, a minimal polynomial with an isolating interval, a telescoping
+certificate, an antiderivative, a coordinate/sign construction checked by exact
+inner products, a dual witness. Verification stays exact — the *object* may be
+continuous even when its *certificate* is a finite symbolic thing.
+
+Only after that may you consider a discrete reduction.
+
+**Do not replace a problem over ℝ, ℂ, manifolds, functions or trajectories with a
+graph, SAT/CSP, finite field or integer-coordinate surrogate unless that reduction
+is central to the source paper.** If you do reduce, name the theorem or section that
+licenses it. If you reduce for convenience, the result is a *discretised analogue*:
+declare `reduction_kind="convenience"` in `PROBLEM_PROFILE` (and mirror the citation
+text in `NATIVE["reduction"]`), and do not present it as coverage of the paper's native
+domain. Such a family is archived, never counted in the native release — see
+PROBLEM_PROFILE in STEP 1.
+
+This has gone wrong repeatedly and silently. Real examples from this corpus:
+
+- An equiangular-lines paper (Gram matrices, Seidel matrices, eigenvalue
+  interlacing) shipped as a 720-vertex adjacency matrix with `verify` documented as
+  *"check any size-k clique"*. **The instance contained no vectors at all.**
+- A quantum-satisfiability paper about complex polynomial systems shipped as an
+  assignment problem over 𝔽₁₁.
+- A kissing-number paper with explicit real coordinates and sign patterns shipped as
+  a conflict graph.
+
+In each case the paper's mathematics was discarded before the solver saw anything,
+every gate passed, and the row was counted as geometric or algebraic coverage.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, deterministic given `(n, seed)`. No file IO, no network, no printing at
+import. Use `random.Random(seed)`, never global `random`.
+
+**What you may import.** The standard library, and `gvlib/` from the repo root. `gvlib`
+is standard-library-only itself, so importing it keeps the module dependency-free: it
+carries exact rationals with JSON encoding (`gvlib.rationals`), multivariate polynomials
+over ℚ (`gvlib.sparse_poly`), rational matrices with Bareiss determinant, rank, solve,
+Gram and LDL/PSD (`gvlib.exact_matrices`), and Sturm sequences and real-root isolation
+(`gvlib.roots`). Use it — a certificate that is a polynomial identity, a Gram matrix or
+an isolating interval should not cost you a day of writing `Fraction` row reduction for
+the fifth time. Nothing else may be imported.
+
+`gvlib` sits at the repo root and your module sits in `results/<id>/`, so the import
+needs the root on `sys.path` — `emit.sh` and `submit.sh` run from the root and find it,
+but `harden.py` is invoked from your own directory and will not. Do it once, at the top,
+and degrade gracefully:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals
+except ImportError:                 # not present: stay standard-library-only
+    exact_matrices = rationals = None
+```
+
+If it does not import, stay standard-library-only and say so in the README rather than
+adding a dependency. Do not let a missing helper library become the reason a family
+ships as a graph.
+
+**`inst["answer"]` must be JSON-native.** `emit.sh` writes it straight into
+`artifacts/<id>.jsonl` with `json.dumps`, so a `Fraction`, a `complex` or a custom class
+does not fail your selftest — it fails the emit, after the expensive part is paid for.
+Serialise: **rationals as `[num, den]`**, **monomials as exponent lists**, polynomials as
+lists of `[[num, den], [e1, e2, ...]]`, matrices as lists of lists. `json.loads(
+json.dumps(a)) == a` must hold for every answer the family produces, and whatever
+`verify` accepts, `parse_answer` must be able to return.
+
+```python
+TRACK: str                  # "A" or "B" -- see TWO TRACKS.  Required.
+    # scripts/corpus_report.py reads this straight into its `track` column; anything
+    # that is not "A" or "B" is recorded as "unknown", which is what every family
+    # shipped before this prompt reads as today.
+
+PROBLEM_PROFILE: dict       # what this family really is, on a controlled vocabulary.
+    # PREFERRED.  NATIVE (below) is the LEGACY form and is still what submit.sh reads,
+    # so declare BOTH and keep them consistent.  Seven shipped modules declare only
+    # NATIVE; they stay valid and nothing here orphans them.
+    #
+    # The token spellings below are the ones scripts/corpus_report.py reads.  Inventing
+    # a synonym does not produce a warning -- it silently drops your row out of the
+    # coverage counts, which is the exact failure mode this schema exists to stop.
+    #
+    # {"native_domain":  combinatorics|algebra|geometry|analysis|dynamics|
+    #                    optimization|number_theory|logic
+    #                    -- what the SOLVER reasons about, NOT the arXiv category.
+    #
+    #  "object_regime":  what kind of object the solver actually manipulates:
+    #      finite_discrete     finite, exactly representable as ints and structures
+    #      finite_field        elements of GF(q)
+    #      integer_lattice     integer vectors / lattice points
+    #      rational_exact      rationals, polynomials, matrices over Q; exact
+    #                          arithmetic end to end, no approximation anywhere
+    #      real_algebraic      the object is a real number, but the certificate is a
+    #                          finite exact symbolic thing -- (minimal polynomial,
+    #                          isolating interval with rational endpoints)
+    #      continuous_analytic the object lives in R, C, a manifold, a function space
+    #                          or a trajectory.  Then the certificate MUST be exact:
+    #                          a rational SOS, a Lyapunov function over Q, or a
+    #                          rigorous enclosure with exact rational endpoints
+    #                          (declare certificate_form="interval" for that last one).
+    #                          A float anywhere in verify() is a bug, not a regime.
+    #
+    #  "computational_core":  what the solver actually searches, one of
+    #                    graph|csp_sat|exact_cover|subset_sum|permutation|
+    #                    linear_algebra|polynomial_identity|sos|telescoping|
+    #                    symbolic_integration|interval_bound|other
+    #
+    #  "certificate_form":  the shape of the answer, one of
+    #                    sos|telescoping|symbolic_integral|algebraic_number|
+    #                    matrix_certificate|interval|polynomial|rational|exact_symbolic
+    #                        -- these count toward the release quota on symbolic
+    #                           certificates
+    #                    integer_tuple
+    #                        -- this one does not, and it is what the corpus already
+    #                           has far too much of.  Do not reach for it by reflex:
+    #                           an answer that IS a tuple of small ints is one thing,
+    #                           an answer flattened into one to make G4 easy to report
+    #                           is the collapse this schema exists to measure.
+    #  "native_objects": the objects the solver is HANDED, e.g.
+    #                    ["Gram matrix over Q", "unit vectors"].  If the honest answer
+    #                    is ["adjacency matrix"], write that and take the consequence.
+    #  "verification_operations": the exact operations verify() performs, e.g.
+    #                    ["exact rational inner product", "PSD check via LDL",
+    #                     "sign comparison"].  If this list is nothing but set
+    #                    membership and integer comparison, your core is discrete
+    #                    whatever native_domain says.
+    #
+    #  "domain_essentiality":  how load-bearing the paper's mathematics is:
+    #      native               ESSENTIAL -- the paper's objects are handed to the
+    #                           solver AND verify() operates on them; delete the domain
+    #                           structure and the problem is gone
+    #      licensed_reduction   REPRESENTATIONAL -- a reduction the paper itself
+    #                           licenses; the native objects are visible but the search
+    #                           is carried by the surrogate
+    #      discretised_analogue ANALOGUE -- the paper's mathematics was compiled away
+    #                           before the solver saw anything
+    #
+    #  "reduction_kind":  none | paper_licensed | convenience
+    #  "reduction":       None when reduction_kind == "none" -- it MUST be falsy then,
+    #                     or the report labels a native family a discretised analogue.
+    #                     Otherwise the citation string: "Section 5, Lemma 5 (...)".
+    #  "reduction_source": paper_central | external_standard | benchmark_convenience
+    #                     -- the finer distinction reduction_kind cannot spell.
+    #                     paper_central     -> reduction_kind "paper_licensed"
+    #                     external_standard -> reduction_kind "convenience": a textbook
+    #                                          reduction is not this paper's
+    #                                          mathematics and must not buy coverage
+    #                     benchmark_convenience -> reduction_kind "convenience"
+    #
+    #  "intuition_type":  one of, and write it with SPACES, not underscores --
+    #                     "symmetry" | "invariant" | "duality" |
+    #                     "change of variables" | "ansatz" | "extremal bound" |
+    #                     "decomposition" | "constraint propagation" |
+    #                     "reduction recognition" | "search pruning".
+    #                     The reporter matches this as prose: "change_of_variables"
+    #                     with underscores does NOT match and lands as
+    #                     "unclassified".  All ten match when written with spaces.
+    #  "intuition_description": one sentence: the insight, and what a solver who does
+    #                     not have it must do instead.
+    #  "hardness_basis":  one sentence, and it must match TRACK.  Track A: the theorem
+    #                     and the parameter regime.  Track B: the algorithm that
+    #                     exists, its complexity, its measured cost at the shipping
+    #                     preset, and why the compact route is not mechanically
+    #                     executable in context.
+    #  "max_answer_tokens": your MEASURED worst-case serialised answer length at the
+    #                     shipping preset, in tokens.  See G9(c) for the cap.}
+    #
+    # **Only `domain_essentiality == "native"` together with `reduction_kind` in
+    # {none, paper_licensed} counts toward native-domain coverage.**  Everything else
+    # is recorded honestly and reported separately, and `benchmark_convenience` is
+    # archived and excluded from the native release entirely.  Declaring
+    # `discretised_analogue` costs you a coverage row.  Declaring `native` when the
+    # solver is handed an adjacency matrix costs the corpus its credibility, which is
+    # the failure this schema exists to prevent.
+
+NATIVE: dict                # LEGACY form.  Still REQUIRED: submit.sh reads this one.
+    # {"domain":    one of combinatorics|algebra|geometry|analysis|dynamics|
+    #                       optimization|number_theory|logic
+    #  "core":      what a solver actually searches, one of
+    #               graph|csp_sat|exact_cover|subset_sum|permutation|
+    #               linear_algebra|polynomial_identity|sos|telescoping|
+    #               symbolic_integration|interval_bound|other
+    #  "objects":   the mathematical objects the solver is handed, e.g.
+    #               ["adjacency matrix"] or ["Gram matrix over Q", "unit vectors"]
+    #  "intuition": the insight the problem is meant to test, e.g. "symmetry",
+    #               "invariant", "change of variables", "ansatz", "duality"
+    #  "reduction": None if the family is stated in the paper's own objects;
+    #               otherwise the section/theorem that licenses the surrogate.}
+    # Derive it from PROBLEM_PROFILE and keep the two consistent:
+    #   domain    <- native_domain        core      <- computational_core
+    #   objects   <- native_objects       reduction <- reduction  (same value)
+    #   intuition <- intuition_type + ": " + intuition_description
+    # `domain` is NOT the arXiv category -- it is what the solver reasons about.
+    # A geometry paper rendered as an adjacency matrix has domain="combinatorics"
+    # and core="graph".  Labelling it "geometry" is the failure this field exists
+    # to prevent.
+
+DIFFICULTY: dict            # exactly four presets, named "demo", "easy", "medium"
+                            # and "hard", in that order -- harden.py walks the dict
+                            # in insertion order, so it is the ladder, ascending.
+                            # Each maps to kwargs for make_instance.
+                            # "demo" is the smallest setting the family supports:
+                            # a person must be able to solve it and check the
+                            # answer on paper.  It is an illustration, not a
+                            # difficulty level -- harden.py skips it, and
+                            # SHIPPING_DIFFICULTY must never name it.
+
+def make_instance(n, seed=0, **params) -> dict
+    """Build an instance whose certificate you know BY CONSTRUCTION -- by inverse
+    generation, theorem-backed construction, transformation of a known instance, or
+    composition of identities (see G above). Never by solving the instance you just
+    built. Returns a dict containing key "answer" (the certificate, JSON-native)
+    plus all data the solver needs. `n` is the size parameter; larger n must mean
+    harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT.
+
+    Hint modes, for G9: when os.environ.get("GV_HINT_MODE") is "structural" append
+    STRUCTURAL_HINT, when it is "placebo" append PLACEBO_HINT, and otherwise append
+    NOTHING. The default MUST be no hint -- emit.sh, submit.sh and the STEP 4
+    hardening run all call render(), and a hint leaking into artifacts/ would
+    silently change what the dataset is."""
+
+STRUCTURAL_HINT: str        # ONE sentence naming the structural insight -- the thing
+                            # intuition_description says this family tests.  Required.
+                            # "The columns of the Gram matrix repeat with period 7."
+PLACEBO_HINT: str           # ONE sentence of the same length and register carrying no
+                            # structural information.  Required.  "This problem
+                            # rewards being careful with the indexing."  See G9(a).
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+### The answer format is collapsing too — pick from this menu
+
+Measured across the 55 shipped modules: **82% of answers are plain integers or lists
+of integers**, 65% are literally `list[int]`, and `search_space()` returned an `int`
+**55 times out of 55**. There is not one rational, polynomial, matrix or symbolic
+answer in the corpus.
+
+Nothing forbids those. The gates just happen to be *cheapest* to satisfy with a tuple
+of small integers — `search_space` is easy to count, `random_candidate` is easy to
+sample, G4 is easy to measure. So every builder lands in the same place. Do not let
+the path of least resistance choose your certificate for you.
+
+`gvlib/` exists so the richer options cost about the same: exact rationals, sparse
+multivariate polynomials over ℚ, exact matrices with Bareiss determinant and LDL
+PSD-testing, and Sturm root isolation. Standard library only, already tested. Import
+it rather than hand-rolling arithmetic.
+
+| certificate | JSON-native form | `search_space` | `random_candidate` |
+|---|---|---|---|
+| tuple of indices | `[3, 17, 42]` | C(n,k) | sample k of n |
+| **rational vector** | `[[num, den], ...]` | bound heights: (2H+1)^d | sample numerators/denominators in range |
+| **polynomial** | `[[coef, [e1,e2,...]], ...]` | #monomials under the degree bound, coefficients bounded | sample a support set, then coefficients |
+| **matrix over ℚ or F_q** | `[[...],[...]]` | q^(mn), or bounded heights | sample entries |
+| **SOS decomposition** | list of polynomials | as polynomial, times the number of squares | sample squares, sum them |
+| **primal–dual pair** | `{"x": [...], "y": [...]}` | product of the two spaces | sample both |
+| **algebraic number** | `{"minpoly": [...], "interval": [[a,b],[c,d]]}` | #polynomials under degree+height bound | sample a squarefree minpoly, isolate |
+| **group element / word** | `["a","b","a^-1", ...]` | (2g)^L for length L | sample a reduced word |
+| **permutation / ordering** | `[2, 0, 1, ...]` | n! | Fisher–Yates |
+| **set system / partition** | `[[...],[...]]` | Bell or Stirling number | sample a random partition |
+
+`search_space` may return `None` when the declared language is genuinely uncountable —
+then G5 carries a **sampled density estimate** instead. That path exists and has never
+been used; if your certificate is naturally continuous-but-certified, use it rather
+than discretising the answer to keep the counter happy.
+
+**Before you settle on `list[int]`, write down what the paper's own objects are.** If
+the theorem is about polynomials, the answer should probably be a polynomial. Reducing
+it to indices is the same failure as reducing geometry to a graph — it survives the
+gates and loses the mathematics.
+
+CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
+    # {"description": a human-readable grammar/bounds statement, e.g.
+    #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed
+    #                  monomial basis, rational coefficients with |num|,|den| < 2^32"
+    #  "bounds":      the numeric bounds that make it finite, e.g.
+    #                 {"n_squares": 6, "max_degree": 4, "basis": 45, "coeff_bits": 32}}
+    #
+    # This field exists because requiring an integer `search_space` silently forces
+    # every family to be a tuple of small integers.  Measured over the first 40
+    # shipped generators: search_space returned an int 40/40 and None 0/40, and not
+    # one answer was a rational, a polynomial or a symbolic expression -- because a
+    # symbolic answer has no uniformly-sampleable candidate set, so G4 could not be
+    # reported and the family was never built.
+    #
+    # Declaring bounds fixes that.  An antiderivative is infinite; an antiderivative
+    # over a fixed operator set with depth <= 4 and coefficients under 2^16 is a
+    # finite, countable, samplable space.  Bound the language and the continuous
+    # families become expressible without weakening exact verification at all.
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of CERTIFICATE_LANGUAGE at these parameters -- the space
+    `random_candidate` samples from, not a looser superset. Return None ONLY if
+    the declared language is genuinely uncountable; then G5 must carry a sampled
+    density estimate instead."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | str | None
+    """Parameters strictly harder than `params`.
+
+    GROW THE HAYSTACK, NOT THE NEEDLE.  This is the rule, and 61% of shipped
+    modules break it: they escalate by raising `n`, which lengthens the ANSWER,
+    which hits the output cap, at which point they return None and the harness
+    calls the family `too_easy` and the paper is thrown away.  Ten papers have
+    been discarded that way -- judged un-writable rather than unsuitable.
+
+    Difficulty should scale with the SPACE THE ANSWER IS DRAWN FROM, not with the
+    NUMBER OF THINGS IN THE ANSWER.  A planted clique is the model: n goes from
+    512 to 4096 while k stays 16, so the search explodes and the answer stays
+    sixteen numbers long.
+
+    Axes that raise difficulty at FIXED answer length -- reach for these first:
+      - enlarge the ground set / ambient space, keeping the witness size fixed
+      - raise the modulus, field size or coefficient range, so each answer
+        element carries more entropy without taking more characters
+      - raise decoy density or crowding: more near-misses per real element
+      - move the plant closer to the feasibility boundary
+      - delete redundant clues from the instance -- less given, same answer
+      - tighten the constraints, shrinking the solution set
+
+    Only after those are exhausted should you consider a longer answer.
+
+    RETURN VALUES, and the distinction matters:
+      dict          -- harder parameters. Preferred.
+      "cap_bound"   -- the family CAN be made harder, but only by pushing the
+                       answer past the output cap.  Say this instead of None.
+                       It parks the paper rather than condemning it: the limit
+                       is our answer format, not the paper's mathematics.
+      None          -- genuinely nothing left on ANY axis.  Rare.  If you are
+                       returning None because the answer got too long, you mean
+                       "cap_bound"."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+- **Keep the answer writable.** The solver has to type it out, by hand, with no
+  scratchpad. An answer running to thousands of elements measures transcription
+  stamina, not intuition, and the failures it produces tell you nothing. G9(c) puts a
+  hard cap on this.
+- **Serialise rationals and polynomials the way `parse_answer` reads them back**, and
+  say so in the statement: rationals as `num/den`, monomials as exponent lists. The
+  rendered form and the JSON form must agree.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship** — except where a part is explicitly marked
+*recorded, not gated*, which is true of G9(a) and of nothing else.
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples drawn from `CERTIFICATE_LANGUAGE`, measured **structure-aware** (see below). Report hits/total. |
+| **G5 density + baseline cost** | A real number, never "not feasible": an exact solution count where enumeration works at any preset, otherwise a sampled density estimate — **plus** the measured cost of your strongest attack. See below. |
+| **G6 adversary panel** | ≥4 attacks in `attacks`, each FAILING across ≥8 seeds. Track A: three cheap probes **plus the standard algorithm for the problem class**. Track B: three cheap probes plus an in-context attack, with the standard algorithm reported separately under `reference_algorithm`. See TWO TRACKS and below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+| **G9 no-tool suitability** | **One** gated part — the answer and route fit the caps (G9c). The three-arm diagnostic (bare / hinted / placebo) is **recorded, never gated**; the hinted arm G9(b) was a gate until 2026-09-05 and is now diagnostic too. See below. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G5: measure difficulty, do not infer it from cardinality
+
+Across the first 40 shipped generators, `enumerate_all` returned `None` at the
+**shipping** preset **40/40**. G5 was therefore measured on a reduced instance
+(n = 4–40, against shipping n up to 512) or carried no number at all (7/40). It
+never described the instance that actually ships — and a density at n=4 says
+nothing about n=32.
+
+Worse, a reduced-preset number can be passed while being alarming: `2104.04330`
+reported a solution fraction of **5.7e-4** at n=18 — roughly one candidate in 1768
+is valid — and passed G5 anyway.
+
+A large space is not difficulty. `2503.01929` reported a 1536-bit candidate space
+and fell to Algorithm X in under five seconds. Report both of these, as numbers,
+**at the shipping preset**:
+
+1. **Density at the shipping preset.** Exact count if `enumerate_all` terminates
+   there; otherwise sample `random_candidate` and report the observed fraction of
+   valid answers with the sample size. A count from a smaller preset may be given
+   in addition, labelled with its `n` — never instead. `None` is not an answer.
+2. **Baseline cost.** Run your strongest G6 attack at the *shipping* preset and
+   record what it actually cost: wall-clock seconds, and nodes/restarts/iterations.
+   A family whose best attack fails in 0.2 s is not obviously hard — it may simply
+   be unsatisfiable-looking to that attack. Cost is the honest difficulty signal.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+- **The standard algorithm for the problem class — REQUIRED, not optional.** The
+  three above are generic and they are *not sufficient*; they probe how you built
+  the instance, not what is known about the problem. Ask what a specialist would
+  reach for first and run *that*:
+
+  | the problem is about | run at least |
+  |---|---|
+  | satisfiability / CSP | a SAT or SMT solver, or DPLL with unit propagation |
+  | covering, packing, assignment, scheduling | an ILP/LP relaxation, or matching |
+  | a planted subgraph, colouring, partition, or community | **a spectral method** — top eigenvectors of the adjacency/Laplacian, and an SDP or nuclear-norm relaxation if the paper mentions one |
+  | subset sum, knapsack, lattice, or small-coefficient integer relations | LLL / lattice reduction |
+  | exact cover, tiling, set partition | Algorithm X / DLX, or a CP solver |
+  | paths, cycles, flows, connectivity | the classical polynomial algorithm for the relaxed version, then repair |
+  | permutations, words, group elements | normal forms and the natural rewriting/canonicalisation |
+
+  If no library is available, implement the cheap version — power iteration is a
+  dozen lines and breaks most planted-subgraph constructions. If you genuinely
+  cannot run the standard attack, say so explicitly in the README caveats and name
+  the attack you could not run. Never silently omit it.
+
+**Report G6 in this shape**, so the panel can be checked mechanically rather than
+read prose-by-prose:
+
+```python
+report["G6_adversary_panel"] = {
+    "pass": all_failed,
+    "attacks": {                      # one entry per attack, name -> result
+        "outlier_degree":     {"successes": 0, "attempts": 8},
+        "greedy_largest_first":{"successes": 0, "attempts": 8},
+        "random_restart_256": {"successes": 0, "attempts": 8},
+        "spectral_top_eigenvector": {"successes": 0, "attempts": 8},   # the domain attack
+    },
+}
+```
+
+Extra keys alongside `attacks` are fine. `submit.sh` requires `attacks` to be
+present with **at least 4 entries** — three generic probes plus the domain attack — and
+it **recomputes `pass` from the `successes` on disk**: a panel that records a solved
+attack is refused no matter what `pass` says. `2410.07666` logged walksat at 8/8 and
+honestly set `pass=false`; nothing else would have caught it.
+
+That recomputation is exactly why a **Track B** family must not put its
+domain-standard algorithm in `attacks`. On Track B that algorithm is *supposed* to
+succeed — it is the `hardness_basis`, not a failure — so it goes in a sibling key and
+`attacks` keeps its meaning:
+
+```python
+report["G6_adversary_panel"]["reference_algorithm"] = {   # Track B only
+    "name": "Bareiss elimination over Q",
+    "complexity": "O(n^3) exact",
+    "wall_clock_sec": 0.4,
+    "operations": 1_240_000,      # this number IS the Track B hardness claim
+    "solves": "8/8, as expected",
+}
+```
+
+Track B still needs four *failing* entries in `attacks`, and its fourth is an attack a
+solver could actually run in context without tools — the by-hand heuristic, the greedy
+route, the obvious ansatz. If you cannot find one that fails, the family is guessable by
+hand and you should reject it.
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+- **A bounded Token Jumping family (arXiv:2408.04743) passed every gate, and the
+  four-vendor oracle pool returned `hardened`.** A construction-aware spectral
+  attack then recovered a verified witness on **20/20 shipping instances in
+  polynomial time** — the planted colour classes formed an exact −3 eigenvector.
+  The generic outlier/greedy/restart panel saw nothing. This is why the domain
+  attack is mandatory: gates passing and the oracle failing to solve are jointly
+  *not* evidence of hardness, and this family would have shipped on that evidence.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+### G9: is the failure informative? — measured, mostly not gated
+
+Every family here is built so that a model fails it. That makes "the model failed"
+almost uninformative on its own: a model also fails a question whose answer is forty
+thousand tokens long, and one that needs ten thousand exact multiplications. Those
+failures say nothing about mathematical intuition, and a corpus full of them measures
+patience.
+
+G9 separates the two. **It is not a "the model must succeed" gate.** That would be the
+exact negation of STEP 4, which holds a level only when all three oracles fail, and it
+would delete every family that survives the hardening loop. Three parts, and only two of
+them are gates.
+
+#### (a) The three-arm diagnostic — recorded, never gated
+
+Run the shipping preset three times and record solved/attempts for each arm:
+
+| arm | prompt |
+|---|---|
+| bare | `render(inst)` as shipped |
+| hinted | `render(inst)` + `STRUCTURAL_HINT` |
+| placebo | `render(inst)` + `PLACEBO_HINT` |
+
+**Why the placebo arm exists.** Appending *any* sentence changes the prompt — its
+length, its register, and the signal that the asker thought a hint was warranted.
+Comparing hinted against bare confounds all of that with the hint's actual content. The
+placebo holds everything fixed except the structural information, so **hinted − placebo**
+is the estimate of real structural help; hinted − bare is contaminated by prompt leakage
+and is not.
+
+If hinted ≈ placebo, your hint carried no information: either it is badly written, or
+the family does not respond to the intuition you claimed in `intuition_type`. That is a
+finding, not a failure. Record the three numbers and say what you conclude in the
+README. **It does not block the ship** — this arm exists so the corpus knows what it is
+measuring, and gating on it would let a builder tune the hint instead of the family.
+
+#### (b) The hinted arm — RECORDED, NOT GATED (retired 2026-09-05)
+
+> Run the shipping preset with `STRUCTURAL_HINT` appended and record solved/attempts.
+> **This does not block the ship.**
+
+**This used to be a gate**, requiring the family to defeat the pool even when handed its
+hint. It was retired because the premise was backwards and the cost was enormous.
+
+The premise: "a family that dissolves the moment you name the trick was never testing
+whether a model can *find* the structure — it had already memorised it." That does not
+follow. A model that had memorised the trick would solve the **bare** statement, and
+STEP 4 proves it does not. What dissolving-on-hint actually shows is that the difficulty
+sits in *finding* the insight — which is precisely what this corpus is for, and what
+G9's own preamble contrasts against families that merely measure patience. As a gate it
+kept families that stay hard *even when handed the insight* — hard for reasons other
+than insight — and deleted the rest.
+
+The cost: 8 rejections and 23 papers blocked at submit, **six of which had already
+defeated the four-vendor no-tool pool at their shipping preset**. Three more were
+`cap_bound`/`budget_bound`, which made the gate unsatisfiable in principle — it asked
+for a family that could not be escalated at all to be escalated. Against 100 accepted
+problems that was the single largest loss mechanism in the pipeline.
+
+It also had the exact defect G9(a) is explicitly protected against: gating on a hinted
+arm lets a builder tune the *hint* instead of the family. Measured over the 17 modules
+carrying a hint, 4 of 9 rejected papers had handed the solver a procedure rather than an
+invariant.
+
+Record `hinted − placebo` and say what you conclude in the README. If the hint makes the
+family easy, that is a **good** sign about where its difficulty lives — note it and
+ship.
+
+Run it with the harness, not by hand:
+
+```bash
+mkdir -p g9_hinted && cp gen_<arxiv_id>.py g9_hinted/
+# in the COPY, cut DIFFICULTY down to the shipping preset alone, so the ladder
+# has one rung and the verdict is about that rung
+cd g9_hinted && GV_HINT_MODE=structural python3 ../../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+`harden.py` opens `llm_loop_transcript.jsonl` and `.meta.json` with mode `"w"` — it
+**overwrites**. Run every G9 arm in its own scratch directory, never in the result
+directory, or you will destroy the STEP 4 evidence you already paid for. Copy the
+finished transcripts back as `g9_<arm>_transcript.jsonl`.
+
+#### What a structural hint may contain — read this before you write one
+
+G9(b) rejects a paper when the hinted oracle solves it. That inference is only valid if
+the hint carries **the insight and nothing else**. If you hand over the algorithm, the
+oracle solving it measures your hint, not the paper — and the paper is discarded for it.
+
+A structural hint **names the invariant a solver has to notice**. It says what to look
+at. It does not say what to do next, it does not chain a second step, and it does not
+state a quantity the solver was supposed to derive.
+
+Measured over the 17 modules on disk carrying a `STRUCTURAL_HINT`: 4 of 9 rejected
+papers handed over a procedure, against 1 of 8 accepted. Real examples, all four from
+rejected papers:
+
+| hint | why it is a procedure |
+|---|---|
+| "Among target-one vertices, keep edges whose endpoints have equal eligible degree; **the result is three even cycles, so take alternating edges on each**." | states the derived count *and* the final step — the whole algorithm |
+| "Subtract the displayed center modulo p, **then** enumerate the two named exponent cosets by repeated multiplication" | chains a second step |
+| "Link repeated-letter word patterns **first, then** propagate one bijection across every occurrence **before using** ordinary letter frequencies" | a three-step method |
+
+Contrast one that is fine, from a paper whose G9(b) rejection stands on other grounds:
+
+> "Reduce every magnitude modulo 997: each four-element residue bucket contains two
+> complementary pairs with identical sums."
+
+It names the invariant — residue buckets carry complementary pairs — and stops. What to
+do with that is left to the solver.
+
+`submit.sh --reject` refuses a G9-citing rejection whose hint chains steps ("then",
+"; ...", "so take", "first,") or hands over a derived fact ("the result is ...",
+"there are three ..."). Rewrite the hint to name only the invariant, re-run the G9(b)
+arm, and reject only if the family still dissolves.
+
+Record the verdict. `hardened` means the hint did not break the family; `too_easy` means
+it did. **Neither blocks the ship** — put the number in the README and move on. Do not
+write `REJECTED.md` citing G9(b); `submit.sh --reject` will refuse it.
+
+#### (c) The size and effort caps — gated
+
+| cap | limit at the shipping preset |
+|---|---|
+| serialised answer | ≤ **2,000 characters** (≈ **500 tokens**) and ≤ **256 atomic elements** |
+| intended route | ≤ **300 exact arithmetic operations** |
+
+Measure both, put the numbers in the gate dict, and put the token figure in
+`PROBLEM_PROFILE["max_answer_tokens"]`.
+
+"Intended route" means the operations left **after** the insight — the compact route the
+family claims to test, not the search it replaces. A family over the answer cap is a
+transcription test. A family whose intended method needs thousands of arithmetic
+operations is a calculator test, and the evaluated model has no calculator; that is a
+fact about the harness, not a property of the mathematics.
+
+If you are genuinely over a cap and believe the family should ship anyway, say so in the
+README caveats with the measured number and expect to be argued with. Do not quietly
+round it down.
+
+Report the gate like this:
+
+```python
+report["G9_no_tool_suitability"] = {
+    "pass": hinted_still_hardened and within_caps,     # (b) and (c) only
+    "arms": {                                          # (a): recorded, not gated
+        "bare":    {"solved": 0, "attempts": 3},
+        "hinted":  {"solved": 0, "attempts": 3},
+        "placebo": {"solved": 0, "attempts": 3},
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",                      # (b)
+    "answer_chars": 412, "answer_tokens": 104, "answer_elements": 32,   # (c)
+    "intended_route_operations": 47,                   # (c)
+}
+```
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- The ladder starts at `easy`. `demo` is skipped: it is built to be solvable, so
+  starting there would spend an escalation proving exactly that.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+- It opens both files with mode `"w"`. **A second run in the same directory overwrites
+  the evidence from the first.** This run — bare, no hint — is the one that ships, so
+  G9's extra arms run in their own scratch directories. See G9(b).
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, the four names are already taken, so
+  **slide the ladder up**: drop the rung the oracle solved, keep the survivors in
+  ascending order, and put the escalated level in as the new `hard`, leaving
+  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+  whichever name now carries the level that held, then re-run STEP 3's gates at it.
+  `demo` never moves: it stays the hand-solvable rung.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results,
+   G9's three arms and its measured answer size and operation count).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. `g9_hinted_transcript.jsonl` and `g9_placebo_transcript.jsonl` — the G9 arms,
+   produced by `harden.py` in scratch directories and copied back. See G9(b).
+5. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+6. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **The profile up front**: `TRACK`, native domain, object regime, computational core,
+  certificate form, intended intuition and `domain_essentiality` — copied from
+  `PROBLEM_PROFILE`. If `reduction_kind` is anything but `none` or `paper_licensed`,
+  say plainly that this is **not** native coverage of the paper's domain, and name what
+  was discarded.
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard**, in the sense your `TRACK` declares. Track A: the specific theorem
+  and parameter regime you are inside, and — just as important — the easy regimes you
+  had to avoid and the results that identify them. Track B: **name the algorithm that
+  solves it**, its complexity and its measured cost, then say why the compact route is
+  not something a model can execute in context. A Track B README that reads like a
+  Track A README is the failure mode here. Cite sections by number either way. This is
+  the part only you know.
+- **A worked example.** A rendered instance small enough to read in full — use the
+  `demo` preset, which exists for this — its answer, `verify` returning True on it,
+  and `verify` returning False with its reason on a corrupted variant. Say plainly
+  whether a person can actually solve it by hand, and if not, why the family's
+  smallest supported setting still is not hand-scale.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **The G9 arms**, as a table: bare / hinted / placebo solved-out-of-attempts, the
+  hinted − placebo difference, and what you conclude. If the structural hint bought the
+  oracle nothing, say so — that is evidence about your `intuition_type`, and this
+  README is the only place it will ever be written down. Give the measured answer size
+  and intended-route operation count here too.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+### `cap_bound` is not a rejection
+
+If the harness returns `cap_bound`, **do not write `REJECTED.md`.** The family is
+fine and the paper is fine; the answer simply cannot be written out at the size that
+would make it hard. Say so in your report and stop. The paper goes back to the pool
+for a future run under a larger cap, not into the reject pile.
+
+You should reach `cap_bound` only after trying the fixed-length axes in
+`escalate()`. If you reached it by raising `n` alone, you have not finished the job.
+
+## Writing `REJECTED.md`
+
+A rejection is a real result and costs nothing — but a *wrong* rejection throws away a
+paper someone already paid to read, and an audit found 7 of 12 rejections were wrong.
+So `REJECTED.md` must answer the question that was skipped:
+
+- Which of G, H, V fails, and **which track** — a family can fail H on Track A and
+  still be a perfectly good Track B family.
+- If you are rejecting because an efficient method exists, state the **mechanical
+  cost** and the **compact route length**, and show the gap is too small to test
+  anything. Without those two numbers the rejection is not reviewable, and
+  `submit.sh --reject` will refuse it.
+- Which theorem or section you are relying on, by number.
+
+Do not reject on the abstract. Do not reject because the paper "gives a construction" —
+that describes almost every paper in this pool.
+
+### If you built a module, KEEP it
+
+If you got as far as writing a generator and are now rejecting, **rename it to
+`rejected_gen_<id>.py` and leave it in place. Do not delete it.** `REJECTED.md` is
+what `submit.sh` reads, so a retained module cannot be mistaken for a shipped one —
+deleting it does not protect anything, and it destroys the only evidence that can
+re-open the decision later.
+
+This is not hypothetical. `harden.py` used to take `escalate() -> None` at face value
+and record `too_easy` when the real obstacle was the 256-atom answer cap. Replaying
+the fixed detector over past rejections recovered five papers that should have been
+parked, not rejected — and it could only do that for rejections that still had a
+module. `2411.12911` and `2601.05272` deleted theirs, so their rejections cannot be
+re-checked at all: both had to be parked on suspicion instead of measurement.
+
+Keep the module, and keep `.meta.json` and `llm_loop_transcript.jsonl` with it.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 1601.03780
+url: https://arxiv.org/abs/1601.03780
+title: On the Long-Repetition-Free 2-Colorability of Trees
+categories: math.CO
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: graph structures
+  method: structural scan
+  candidate generator: generate a tree from a coloring avoiding long squares
+  candidate verifier: scan every path word for repeated blocks of length at least three
+codex
+I’ll start with the paper’s exact definitions, hardness/easy cases, and—before coding—the algorithmic cost of producing or finding a coloring certificate. I’ll only build the module if the paper supports a genuine Track A or Track B family under those constraints.
+web search: 
+web search: https://arxiv.org/abs/1601.03780
+web search: 
+web search: 
+codex
+Step 0 points toward rejection, not a build: Proposition 2.2’s certificate is produced by a direct breadth-first level coloring with the fixed word `00010111`. Under the 256-element answer cap, that mechanical algorithm and the “compact” route both require essentially one output action per vertex, so there is no Track B compression gap; Track A is also false because the method is linear-time. I’m checking the source and repository rejection requirements before recording that conclusion.
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g 'REJECTED.md' -g 'gen_*.py' -g 'submit.sh' -g 'harden.py' | sed -n '1,120p'" in /home/gson/gvrepo/results/1601.03780
+ succeeded in 0ms:
+/home/gson/gvrepo/results/1601.03780
+
+exec
+/bin/bash -lc "rg --files /home/gson/gvrepo | rg '("'^|/)(AGENTS'"\\.md|submit\\.sh|harden\\.py|REJECTED\\.md)"'$'"' | sed -n '1,160p'" in /home/gson/gvrepo/results/1601.03780
+ succeeded in 0ms:
+/home/gson/gvrepo/scripts/submit.sh
+/home/gson/gvrepo/scripts/harden.py
+/home/gson/gvrepo/results/1608.06944/REJECTED.md
+/home/gson/gvrepo/results/2009.14171/REJECTED.md
+/home/gson/gvrepo/results/1802.09981/REJECTED.md
+/home/gson/gvrepo/results/1806.09562/REJECTED.md
+/home/gson/gvrepo/results/2002.08085/REJECTED.md
+/home/gson/gvrepo/results/1612.03280/REJECTED.md
+/home/gson/gvrepo/results/1604.06031/REJECTED.md
+/home/gson/gvrepo/results/2110.12933/REJECTED.md
+/home/gson/gvrepo/results/2401.02846/REJECTED.md
+/home/gson/gvrepo/results/2509.07282/REJECTED.md
+/home/gson/gvrepo/results/1602.08620/REJECTED.md
+/home/gson/gvrepo/results/1106.1258/REJECTED.md
+/home/gson/gvrepo/results/2103.00306/REJECTED.md
+/home/gson/gvrepo/results/2011.08447/REJECTED.md
+/home/gson/gvrepo/results/1808.10677/REJECTED.md
+/home/gson/gvrepo/results/1610.03115/REJECTED.md
+/home/gson/gvrepo/results/2302.04845/REJECTED.md
+/home/gson/gvrepo/results/2604.26533/REJECTED.md
+/home/gson/gvrepo/results/2505.09165/REJECTED.md
+/home/gson/gvrepo/results/2512.00695/REJECTED.md
+/home/gson/gvrepo/results/2101.05057/REJECTED.md
+/home/gson/gvrepo/results/1707.01795/REJECTED.md
+/home/gson/gvrepo/results/1403.5807/REJECTED.md
+/home/gson/gvrepo/results/1806.03426/REJECTED.md
+/home/gson/gvrepo/results/1403.0679/REJECTED.md
+/home/gson/gvrepo/results/2006.14813/REJECTED.md
+/home/gson/gvrepo/results/2306.00850/REJECTED.md
+/home/gson/gvrepo/results/1804.09638/REJECTED.md
+/home/gson/gvrepo/results/2603.30009/REJECTED.md
+/home/gson/gvrepo/results/2604.19140/REJECTED.md
+/home/gson/gvrepo/results/1209.0315/REJECTED.md
+/home/gson/gvrepo/results/2505.00298/REJECTED.md
+/home/gson/gvrepo/results/1305.0539/REJECTED.md
+/home/gson/gvrepo/results/1808.05940/REJECTED.md
+/home/gson/gvrepo/results/1401.4178/REJECTED.md
+/home/gson/gvrepo/results/2408.03727/REJECTED.md
+/home/gson/gvrepo/results/2408.04743/REJECTED.md
+/home/gson/gvrepo/results/2410.12251/REJECTED.md
+/home/gson/gvrepo/results/2509.05822/REJECTED.md
+/home/gson/gvrepo/results/1602.02461/REJECTED.md
+/home/gson/gvrepo/results/1610.01187/REJECTED.md
+/home/gson/gvrepo/results/2409.17832/REJECTED.md
+/home/gson/gvrepo/results/1608.00931/REJECTED.md
+/home/gson/gvrepo/results/2212.01053/REJECTED.md
+/home/gson/gvrepo/results/2101.11601/REJECTED.md
+/home/gson/gvrepo/results/2405.15663/REJECTED.md
+/home/gson/gvrepo/results/1311.2969/REJECTED.md
+/home/gson/gvrepo/results/1507.08094/REJECTED.md
+/home/gson/gvrepo/results/1509.07098/REJECTED.md
+/home/gson/gvrepo/results/2510.05231/REJECTED.md
+/home/gson/gvrepo/results/0909.3424/REJECTED.md
+/home/gson/gvrepo/results/1906.02157/REJECTED.md
+/home/gson/gvrepo/results/1911.12960/REJECTED.md
+/home/gson/gvrepo/results/1803.01480/REJECTED.md
+/home/gson/gvrepo/results/1611.03069/REJECTED.md
+/home/gson/gvrepo/results/2307.13921/REJECTED.md
+/home/gson/gvrepo/results/2411.12911/REJECTED.md
+/home/gson/gvrepo/results/1301.4884/REJECTED.md
+/home/gson/gvrepo/results/1204.4298/REJECTED.md
+/home/gson/gvrepo/results/2312.03399/REJECTED.md
+/home/gson/gvrepo/results/2501.06427/REJECTED.md
+/home/gson/gvrepo/results/2307.06623/REJECTED.md
+/home/gson/gvrepo/results/1909.08511/REJECTED.md
+/home/gson/gvrepo/results/2511.20771/REJECTED.md
+/home/gson/gvrepo/results/2604.24502/REJECTED.md
+/home/gson/gvrepo/results/1608.07197/REJECTED.md
+/home/gson/gvrepo/results/2205.03727/REJECTED.md
+/home/gson/gvrepo/results/1010.3338/REJECTED.md
+/home/gson/gvrepo/results/1601.03361/REJECTED.md
+/home/gson/gvrepo/results/1112.6263/REJECTED.md
+/home/gson/gvrepo/results/2509.01698/REJECTED.md
+/home/gson/gvrepo/results/2008.00775/REJECTED.md
+/home/gson/gvrepo/results/2512.16116/REJECTED.md
+/home/gson/gvrepo/results/1902.02646/REJECTED.md
+/home/gson/gvrepo/results/2205.05947/REJECTED.md
+/home/gson/gvrepo/results/2211.12582/REJECTED.md
+/home/gson/gvrepo/results/1804.07496/REJECTED.md
+/home/gson/gvrepo/results/1610.05406/REJECTED.md
+/home/gson/gvrepo/results/1303.1960/REJECTED.md
+/home/gson/gvrepo/results/0807.0592/REJECTED.md
+/home/gson/gvrepo/results/2602.05957/REJECTED.md
+/home/gson/gvrepo/results/2112.02313/REJECTED.md
+/home/gson/gvrepo/results/2510.25360/REJECTED.md
+/home/gson/gvrepo/results/1703.02332/REJECTED.md
+/home/gson/gvrepo/results/1811.09530/REJECTED.md
+/home/gson/gvrepo/results/1211.1490/REJECTED.md
+/home/gson/gvrepo/results/1210.7684/REJECTED.md
+/home/gson/gvrepo/results/1412.7373/REJECTED.md
+/home/gson/gvrepo/results/2405.10238/REJECTED.md
+/home/gson/gvrepo/results/1406.2440/REJECTED.md
+/home/gson/gvrepo/results/1601.07131/REJECTED.md
+/home/gson/gvrepo/results/1803.04931/REJECTED.md
+/home/gson/gvrepo/results/1105.2672/REJECTED.md
+/home/gson/gvrepo/results/1411.2503/REJECTED.md
+/home/gson/gvrepo/results/1003.3704/REJECTED.md
+/home/gson/gvrepo/results/2211.12813/REJECTED.md
+/home/gson/gvrepo/results/2512.19313/REJECTED.md
+/home/gson/gvrepo/results/2410.14605/REJECTED.md
+/home/gson/gvrepo/results/2308.16515/REJECTED.md
+/home/gson/gvrepo/results/1507.05605/REJECTED.md
+/home/gson/gvrepo/results/2512.15237/REJECTED.md
+/home/gson/gvrepo/results/1907.07907/REJECTED.md
+/home/gson/gvrepo/results/2404.09835/REJECTED.md
+/home/gson/gvrepo/results/2306.09948/REJECTED.md
+/home/gson/gvrepo/results/1810.00876/REJECTED.md
+/home/gson/gvrepo/results/2412.00561/REJECTED.md
+/home/gson/gvrepo/results/1504.07369/REJECTED.md
+/home/gson/gvrepo/results/1801.03542/REJECTED.md
+/home/gson/gvrepo/results/1910.13133/REJECTED.md
+/home/gson/gvrepo/results/1301.4723/REJECTED.md
+/home/gson/gvrepo/results/1806.01064/REJECTED.md
+/home/gson/gvrepo/results/2003.05015/REJECTED.md
+/home/gson/gvrepo/results/1903.10618/REJECTED.md
+/home/gson/gvrepo/results/1301.4764/REJECTED.md
+/home/gson/gvrepo/results/2006.01256/REJECTED.md
+/home/gson/gvrepo/results/2012.11953/REJECTED.md
+/home/gson/gvrepo/results/2311.01183/REJECTED.md
+/home/gson/gvrepo/results/2512.17821/REJECTED.md
+/home/gson/gvrepo/results/2006.10650/REJECTED.md
+/home/gson/gvrepo/results/1310.6780/REJECTED.md
+/home/gson/gvrepo/results/1810.08983/REJECTED.md
+/home/gson/gvrepo/results/2406.10780/REJECTED.md
+/home/gson/gvrepo/results/1903.12570/REJECTED.md
+/home/gson/gvrepo/results/1512.01613/REJECTED.md
+/home/gson/gvrepo/results/2510.26972/REJECTED.md
+/home/gson/gvrepo/results/1703.00606/REJECTED.md
+/home/gson/gvrepo/results/1308.6717/REJECTED.md
+/home/gson/gvrepo/results/1102.0041/REJECTED.md
+/home/gson/gvrepo/results/1908.11192/REJECTED.md
+/home/gson/gvrepo/results/1803.03550/REJECTED.md
+/home/gson/gvrepo/results/2212.13149/REJECTED.md
+/home/gson/gvrepo/results/2508.16963/REJECTED.md
+/home/gson/gvrepo/results/2105.01787/REJECTED.md
+/home/gson/gvrepo/results/2012.10803/REJECTED.md
+/home/gson/gvrepo/results/2605.29443/REJECTED.md
+/home/gson/gvrepo/results/2411.10209/REJECTED.md
+/home/gson/gvrepo/results/1802.04870/REJECTED.md
+/home/gson/gvrepo/results/2510.00228/REJECTED.md
+/home/gson/gvrepo/results/1010.3415/REJECTED.md
+/home/gson/gvrepo/results/2105.11317/REJECTED.md
+/home/gson/gvrepo/results/1605.04000/REJECTED.md
+/home/gson/gvrepo/results/1608.05573/REJECTED.md
+/home/gson/gvrepo/results/2306.12848/REJECTED.md
+/home/gson/gvrepo/results/2506.10471/REJECTED.md
+/home/gson/gvrepo/results/2111.13552/REJECTED.md
+/home/gson/gvrepo/results/2101.12205/REJECTED.md
+/home/gson/gvrepo/results/2007.08967/REJECTED.md
+/home/gson/gvrepo/results/2605.28674/REJECTED.md
+/home/gson/gvrepo/results/2210.14608/REJECTED.md
+/home/gson/gvrepo/results/2605.03893/REJECTED.md
+/home/gson/gvrepo/results/2105.05784/REJECTED.md
+/home/gson/gvrepo/results/2505.08551/REJECTED.md
+/home/gson/gvrepo/results/2006.16756/REJECTED.md
+/home/gson/gvrepo/results/1306.6796/REJECTED.md
+/home/gson/gvrepo/results/1604.08603/REJECTED.md
+/home/gson/gvrepo/results/2403.03404/REJECTED.md
+/home/gson/gvrepo/results/1802.05903/REJECTED.md
+/home/gson/gvrepo/results/2604.13514/REJECTED.md
+
+exec
+/bin/bash -lc "sed -n '1,240p' /home/gson/gvrepo/results/1601.03361/REJECTED.md
+sed -n '1,240p' /home/gson/gvrepo/results/2512.19313/REJECTED.md
+rg -n \"REJECTED|mechanical cost|compact route|Track\" /home/gson/gvrepo/scripts/submit.sh | sed -n '1,220p'" in /home/gson/gvrepo/results/1601.03780
+ succeeded in 0ms:
+# Rejected at Step 0: arXiv 1601.03361
+
+Paper: Clinton T. Conley, Andrew S. Marks, and Robin D. Tucker-Drob,
+[*Brooks's theorem for measurable colorings*](https://arxiv.org/abs/1601.03361)
+(v2, 1 June 2016).
+
+## Decision
+
+No generator is shipped. The paper's native search object is a measurable
+coloring of a generally infinite (and potentially uncountable) Borel graph.
+The existence proof does not produce a
+bounded finite certificate on which `verify()` can decide measurability and
+properness by exact computation, so that native task fails **V (executable
+witness verification)**.
+
+The prior-triage fallback—plant a coloring of a finite graph and add only
+cross-color edges—does pass **G** by inverse generation and **V** by scanning
+the edge list. It nevertheless fails **H on Track A** because it lies in the
+promise regime of Brooks's theorem, for which a coloring can be found in
+linear time. It also does not make a defensible **Track B** family: with fixed
+degree, the mechanical Brooks algorithm and even writing the proposed answer
+have the same linear size. A random planted coloring supplies no shorter
+instance-visible invariant; adding a private encoding solely to hide and then
+reveal the plant would make that encoding, not this paper's measurable
+coloring mathematics, carry the benchmark.
+
+This is therefore both a native-V rejection and a finite-surrogate-H
+rejection. I stopped before Step 1, as required, rather than label ordinary
+finite graph coloring as coverage of measurable/Borel coloring.
+
+## What the full paper actually proves
+
+Section 2 defines a Borel graph as a symmetric irreflexive Borel relation on a
+standard Borel space. A coloring in the main theorem is not merely a finite
+table: it is a function on that space that is measurable for the completion of
+a probability measure, or Baire measurable for a compatible Polish topology.
+
+The exact regimes are:
+
+- **Theorem 1.1 (classical Brooks):** a finite graph of maximum degree at most
+  `d` has a proper `d`-coloring when it has no `K_(d+1)`; for `d=2`, odd cycles
+  are an additional exception.
+- **Theorem 1.2 (the paper's main theorem):** for a Borel graph of degree at
+  most finite `d >= 3` with no `K_(d+1)`, a `mu`-measurable `d`-coloring exists
+  for every Borel probability measure, and a Baire measurable `d`-coloring
+  exists for every compatible Polish topology.
+- **Theorem 1.4:** if no connected component is a Gallai tree, the graph is
+  Borel degree-list-colorable. Here a Gallai tree is a connected graph whose
+  blocks are complete graphs or odd cycles.
+- **Theorem 1.5:** under the stated end assumptions, an acyclic locally finite
+  Borel graph has a one-ended Borel function on a conull or comeager set.
+  Section 4 uses that function as a coloring skeleton.
+- **Corollary 5.3:** except for the two degree-two groups, the Cayley graph has
+  an automorphism-invariant random degree-coloring that is a factor of IID.
+  Its witness is a measurable equivariant map from an infinite Bernoulli shift,
+  not a finite local rule or finite table.
+
+The easy/exceptional regimes matter. The introduction states that a greedy
+procedure gives a Borel `(d+1)`-coloring, while Marks's examples show that even
+an acyclic degree-`d` Borel graph may have no Borel `d`-coloring. For `d=2`,
+the irrational-rotation graph has neither a Lebesgue-measurable nor a Baire
+measurable 2-coloring. Section 6 characterizes the degree-two measurable
+obstruction instead of extending Theorem 1.2 to it. These distinctions vanish
+if the instance is replaced by a finite adjacency list.
+
+## Step-0 certificate test
+
+### Native measurable coloring
+
+The certificate-producing proof is not a finite algorithm returning a bounded
+JSON object. Proposition 2.1 passes to invariant conull/comeager Borel sets.
+Section 3 constructs one-ended subforests through countable Borel operations.
+Section 4 invokes Borel independent sets, point-away functions, degree-list
+coloring, and Lusin--Novikov uniformization. Section 5 additionally invokes the
+wired minimal spanning forest and an almost-sure one-endedness theorem.
+
+A finite string purporting to describe a function on an arbitrary standard
+Borel space is not enough for the requested checker. The checker would have to
+establish, beyond finitely many substitutions, all of the following:
+
+1. that the description denotes a total function on the relevant conull or
+   comeager invariant domain;
+2. that every graph edge in that infinite domain has differently colored
+   endpoints; and
+3. that every color preimage is measurable in the required completed
+   sigma-algebra, or has the Baire property.
+
+The paper supplies no bounded syntax and no decision procedure for those three
+claims. A proof transcript would contain unbounded Borel codes and external
+uniformization/existence results, contrary to the witness rule. Hence the main
+problem clears existence but not executable verification.
+
+### Finite planted fallback
+
+For the proposed finite fallback, the plant is a valid certificate and edge
+scanning is an exact verifier. The fatal algorithm is the constructive form of
+Brooks's theorem. Baetz and Wood,
+[*Brooks' Vertex-Colouring Theorem in Linear Time*](https://arxiv.org/abs/1401.8023),
+give an `O(n+m)` algorithm for exactly the coloring promised by Theorem 1.1.
+Thus a required domain-standard G6 attack would solve the family; it could not
+appear among Track A's four zero-success attacks.
+
+The construction "sample colors, then add cross-color edges" does not change
+that conclusion. Its nominal random-coloring space may be exponentially large,
+but solution-space cardinality is irrelevant once the promised graph class has
+a linear-time coloring algorithm.
+
+## Mechanical cost versus compact route
+
+The most favorable faithful finite regime is fixed `d=3`, the first degree
+covered by Theorem 1.2. Under the 256-atom answer cap, take the largest possible
+explicit coloring, `n=256`. A subcubic graph has at most
+
+```text
+m <= 3n/2 = 384 edges.
+```
+
+The linear Brooks method therefore processes `n+m <= 640` vertex/edge records,
+up to its implementation constants, and writes 256 colors. Any explicit
+coloring certificate already requires **256 atomic outputs**, so even an
+imagined compact route has length at least 256 assignments. The relevant work
+counts are therefore at most **640 input records mechanically versus at least
+256 output operations compactly**, a ratio no greater than 2.5 in the
+fixed-degree regime. Both are `Theta(n)`, and the purported compact route is
+already at the 256-operation cap. This does not create the required contrast
+between a mechanical route that is out of reach in context and a short route
+that becomes practical after one structural insight.
+
+Allowing `d` to grow can make an explicit graph denser, but it does not provide
+an insight from this paper. A randomly planted coloring remains hidden random
+data, so the solver's route is still the general coloring algorithm. Conversely,
+publishing a formula, checksum, affine mask, or other decoding invariant would
+create a short route only by adding a new encoding problem absent from the
+paper. Such a benchmark-convenience wrapper cannot repair native coverage, and
+the paper gives no theorem about its generated distribution or decoding
+hardness.
+
+## Why nearby alternatives do not rescue a family
+
+| Paper object or result | Candidate witness | Failure |
+|---|---|---|
+| Theorem 1.2 measurable/Baire coloring | finite program or Borel code | **V:** no bounded certificate language or exact checker for totality, properness on all edges, and measurability is supplied. |
+| Theorem 1.4 degree-list coloring | finite list coloring after discretization | **H:** the finite promised problem has constructive algorithms; discretization removes the Borel content. |
+| Theorem 1.5 one-ended subforest | parent map | **V/G:** on the native infinite graph, one-endedness and conull/comeager domain coverage are not finitely checkable from a bounded map description. On a finite graph, every forest has zero ends. |
+| Corollary 5.3 factor-of-IID coloring | finite-radius local rule | **G:** the proof establishes a measurable equivariant factor through spanning-forest machinery; it does not provide a bounded-radius rule whose exhaustive local check certifies the corollary. |
+| Section 6 degree-two obstruction | negative certificate | **V:** the obstruction quantifies over invariant measurable sets modulo null/meager sets; no Farkas-, Nullstellensatz-, or bounded-refutation-style certificate is given. |
+| Finite Brooks graph | list of colors | **H Track A:** linear-time Brooks coloring succeeds. **H Track B:** at fixed degree, mechanical and output costs are both linear and differ only by a small constant factor at the writable limit. |
+
+## Gate outcome
+
+| Requirement | Result | Evidence |
+|---|:---:|---|
+| G -- answer known by construction | Passes only for the finite planted surrogate | Sample colors first and add edges only between unlike colors. The native theorem is existential and does not emit a bounded certificate. |
+| H -- Track A | **Fails for the finite surrogate** | Constructive Brooks coloring is `O(n+m)` on the exact promised class; the planted distribution cannot be harder than this universal algorithm. |
+| H -- Track B | **Fails for the finite surrogate** | At `d=3, n=256`, at most 640 input records versus at least 256 answer writes; no paper-backed compact invariant exists. |
+| V -- exact witness checking | **Fails for the native measurable task** | The paper supplies no finite executable test for measurable/Baire correctness on an arbitrary Borel graph. |
+| Domain essentiality | **Fails for the fallback** | A finite adjacency list plus edge scan retains graph coloring but discards standard Borel spaces, measures/topologies, conull/comeager sets, and factor-of-IID structure. |
+| G4--G9 and oracle loop | Not run | Step 0 already rules out G+H+V; random-guess and oracle failures cannot reverse a deterministic algorithm or create a finite native witness. |
+
+No `gen_1601_03361.py`, `selftest_report.json`, `README.md`, or oracle
+transcripts were created. Those are release artifacts for a family that has
+passed Step 0. The prior triage was correct about inverse generation and edge
+verification, but it overlooked both the linear Brooks algorithm and the fact
+that the paper's actual contribution is measurability on infinite Borel
+graphs, not ordinary finite proper coloring.
+# Rejected: arXiv 2512.19313
+
+Paper: Claude Carlet and Alexander Kholosha, [“Results on cubic bent and weakly regular bent p-ary functions leading to a class of cubic ternary not weakly regular bent functions”](https://arxiv.org/abs/2512.19313).
+
+## Decision
+
+This paper does not yield a problem family satisfying G, H, and V simultaneously. I read the full 31-page paper and its LaTeX source, including the exact definitions in Section 2, the cubic-like characterization in Section 3, the Walsh-derivative identities in Section 4, and the main construction and its proofs in Section 5. No generator module or hardening transcript was produced because the task explicitly requires stopping when the family fails a gate.
+
+The prior-triage proposal—instantiate a constructed p-ary polynomial and ask for a bent function—fails **H**. Section 5's main trinomial theorem explicitly constructs
+
+\[
+F(x)=\operatorname{Tr}^{4k}_k\!\left(x^{3^k+2}-x^{2\cdot3^k+1}
++\zeta^{t(3^k+1)/2}x^{3^j+1}\right)
+\]
+
+whenever `n = 4k`, `j` has parity opposite to `k`, and `t` is odd. It also proves that every nonzero component is cubic, bent, and not weakly regular. Producing such a polynomial is therefore a direct evaluation of the displayed construction, not a hard witness search. Sampling the coefficients first does not repair this: the solver can reproduce the same formula in polynomial time.
+
+## Candidate witness searches considered
+
+| Candidate task | Gate failure | Reason |
+|---|---|---|
+| Output a bent/non-weakly-regular member of the trinomial class | H | The main theorem in Section 5 is an explicit closed-form construction in the full admissible parameter regime. |
+| Given a nonzero direction `c`, output `d` for which the second derivative is a nonzero constant | H | Section 3 proves this is equivalent to bentness for cubic functions. For fixed `c`, the nonconstant coefficients of `D_{c,d}f` are linear constraints in `d`; after solving them by finite-field linear algebra, the remaining constant is a degree-at-most-two form. The Section 5 proof goes further and supplies suitable subspaces/case formulas for `d`. This is polynomial-time algebra, not exponential search. |
+| Output a full cubic-like certificate (one `d` for every nonzero `c`) | V / witness size | It contains exponentially many directions in the succinct dimension parameter, so the witness and checker are exponential-size. |
+| Output or verify a Walsh spectrum / bentness claim | V | Direct exact Walsh evaluation enumerates the entire field (and all coefficients for a full check). That is exponential in `n`. In the regimes where Sections 4–5 provide symbolic Walsh formulas, verification becomes a theorem/formula lookup and again fails H. |
+| Find a component that is not weakly regular | H | The Section 5 theorem says every nonzero component has this property, so any nonzero component coefficient is a valid answer. |
+| Recover the dual in the paper's explicit cases | H | Section 5 derives the Walsh transform and dual explicitly for odd `k` with `j` equal to `0` or `2k`, including concrete coordinate formulas and examples. |
+| Invert the constructed vectorial map | H not supported | The paper makes no one-wayness or preimage-hardness claim. Its map has a `4k`-dimensional domain and `k`-dimensional codomain, and the explicitly analysed odd-`k` cases are transformed to a Maiorana–McFarland form containing the term `x_0 x_3`, which exposes direct algebraic preimage choices before any extra constraints. Adding a random affine slice could create a generic-looking polynomial-system problem, but that would be a new hardness construction not established by this paper. |
+
+## Easy regimes and why they matter
+
+Section 2 states that original Maiorana–McFarland functions are bent exactly when their defining map is a permutation, already an efficient structural criterion. Its concatenation constructions likewise manufacture bent functions from supplied bent functions and permutations. Section 3's cubic-like theorem is an exact characterization for cubic functions, but its individual direction witnesses reduce to elementary finite-field algebra as described above. Section 5 places important odd-`k`, `j in {0, 2k}` components inside a particular Maiorana–McFarland concatenation form and calculates their Walsh transforms. These are precisely the regimes that would make a generated search instance easiest, not hardest.
+
+The paper contains no NP-hardness result, no average-case hardness result, and no parameterized-hardness result for any associated witness search. It is a construction-and-classification paper: its substantive achievement is proving properties of explicitly given functions. Turning those properties into an allegedly hard benchmark would confuse mathematical proof complexity or exponential truth-table evaluation with a hard, cheaply checkable witness problem.
+
+## Gate outcome
+
+| Gate | Outcome |
+|---|---|
+| G — inverse-generatable | Possible for several artificial formulations |
+| H — no known polynomial/closed-form solution | **Failed** for paper-native construction and derivative witnesses; unsupported for an invented preimage restriction |
+| V — cheap exact checking | **Failed** for bentness/Walsh-spectrum certificates; possible only for preimages, whose hardness is not supplied by the paper |
+
+Accordingly, the family is rejected before implementation and before the LLM hardening loop. No empirical oracle failure can substitute for the missing H justification, and running the loop on a knowingly invalid family would not make it acceptable.
+11:  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+31:rj = os.path.join(d, "REJECTED.md")
+111:    print("       more levels available.  PARK it -- delete REJECTED.md and re-run with")
+125:print("       PARK it -- delete REJECTED.md and leave the claim in_progress.  Harden")
+134:  # buildable on Track B. One was dismissed for having "a short linear formula" while
+137:  python3 - "$D/REJECTED.md" <<'PYREJ' || exit 6
+150:has_compact = re.search(r"compact route|shortcut|by hand|no shorter|"
+174:    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+390:                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+
+exec
+/bin/bash -lc 'work_tmp=$(mktemp -d) && curl -L --fail --silent --show-error https://arxiv.org/e-print/1601.03780 -o "$work_tmp/source.tar" && file "$work_tmp/source.tar" && tar -tf "$work_tmp/source.tar" | sed -n '"'1,80p' && tar -xf \""'$work_tmp/source.tar" -C "$work_tmp" && rg -n "Definition|Proposition|Lemma|algorithm|complex|color" "$work_tmp" -g '"'*.tex' | sed -n '1,240p'" in /home/gson/gvrepo/results/1601.03780
+ succeeded in 836ms:
+/tmp/tmp.dr4hV3HmUD/source.tar: gzip compressed data, last modified: Fri Jan 28 01:25:18 2022, from Unix, original size modulo 2^32 40960
+TtreeHeight2BinaryTreeColored.png
+paper1.bbl
+paper1.tex
+/tmp/tmp.dr4hV3HmUD/paper1.tex:8:\newtheorem{prop}[thm]{Proposition}
+/tmp/tmp.dr4hV3HmUD/paper1.tex:10:\newtheorem{lemma}[thm]{Lemma}
+/tmp/tmp.dr4hV3HmUD/paper1.tex:14:\newtheorem{definition}{Definition}[section]
+/tmp/tmp.dr4hV3HmUD/paper1.tex:40:A word $\bar{w} = \bar{u}\bar{u}$ is a {\em long square} if $\bar{u}$ is of length at least 3; a word $\bar{w}$ is {\em long-square-free} if $\bar{w}$ contains no sub-word that is a long square. We can use words to generate graph colorings; a graph coloring is called {\em long-repetition-free} if the word formed by the coloring of each path in the graph is long-square-free. Every rooted tree of radius less than or equal to seven is long-repetition-free two-colorable. There exists a class of trees which are not long-repetition-free two-colorable.
+/tmp/tmp.dr4hV3HmUD/paper1.tex:44:{\bf Keywords:} graph coloring; long-square-free; long-repetition-free
+/tmp/tmp.dr4hV3HmUD/paper1.tex:47:The aim of this paper is to introduce the concepts of ``long square'' and ``long repetition,'' and to prove two main results regarding the long-repetition-free 2-colorability of trees. Most terminology relevant to this paper is provided, but the reader is encouraged to reference M. Lothaire \cite{Lothaire} and Bondy and Murty \cite{BondyMurty} for more information regarding combinatorics on words and graph theory, respectively. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:49:\indent The investigation of words that avoid specific letter patters (such as, for example, squares, cubes, or palindromes) has been a topic of interest in the mathematical sciences and the biological sciences since the early 20th century, beginning largely with the papers of Axel Thue (cf. \cite{Thue1}, \cite{Thue2}). Thue proved that it is impossible to define an infinitely-long, square-free word over a binary alphabet; however, Thue proved that it {\em is} possible to define an infinitely-long, square-free word over a ternary alphabet, and Thue gave a definition for such a word (which today is called the Thue-Morse word). One can use such a word to color the vertices of a graph and, in so doing, create what we call repetition-free 3-colorings. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:51:\indent We say a word $\bar{w}$ is a ``long square'' if $\bar{w} = \bar{u}\bar{u}$ for some  word $\bar{u}$ where $|\bar{u}| \geq 3$. Much is known regarding words that avoid squares generally (and graph colorings that avoid repetitions generally) - see Grytczuk \cite{Grytczuk} for a survey of such results; however, little is known about words that allow for squares of lengths 2 and 4. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:53:\indent In this article, we use two results regarding palindromes (in particular, ``long palindromes,'' or palindromes of length at least 4) to prove two main results regarding the long-repetition-free 2-colorability of trees. The first main result asserts that every rooted tree of radius less than or equal to seven is long-repetition-free 2-colorable. The second main results answers the question of whether or not every tree is long-repetition-free 2-colorable. We construct a tree called a Tyler tree of height 8 and prove that it is not long-repetition-free 2-colorable.
+/tmp/tmp.dr4hV3HmUD/paper1.tex:68:	Let $G = (V,E)$ be a simple, connected graph, and let $A = \{1, \dots, k\} \subset \mathbb{N}$. Graph $G$ is said to be {\em long-repetition-free $k$-colorable} if there exists a coloring $\chi : V \rightarrow A$ such that, for every path $P = u_1 e_1 \dots e_{n-1} u_n \subseteq G$, the word $\chi(u_1)\dots \chi(u_n)$ is long-square-free. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:87:The goal of the present section is to prove the first of our two main results: Proposition \ref{SmallTrees}, which asserts that every rooted tree of radius less than or equal to $7$ can be long-repetition-free 2-colored. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:89:In order to prove Proposition \ref{SmallTrees}, we rely on Lemma \ref{abxba} which we now state and prove. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:107:With Lemma \ref{abxba} in hand, we move to state and prove the first main result of this paper. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:110:	Every rooted tree of radius less than or equal to $7$ is long-repetition-free 2-colorable.
+/tmp/tmp.dr4hV3HmUD/paper1.tex:114:	Let $T = (V,E)$ be a rooted tree of radius less than or equal to $7$. Let $v \in V$ be a vertex in the center of $T$, and designate $v$ as the root. Let $j$ be the number of generations of $v$, and note that $j \leq 7$. Let $\bar{a} = \dot{a}_1 \dots \dot{a}_7 = 00010111$, and let $\phi: V \rightarrow \{0,1\}$ be the coloring defined by $\phi(u) = \dot{a}_i$, for every vertex $u$ in the $i\textsuperscript{th}$ generation from $v$ and for every $1 \leq i \leq j$. We prove that $\phi$ is a long-repetition-free 2-coloring.
+/tmp/tmp.dr4hV3HmUD/paper1.tex:118:	Case 1: suppose $j < k$. Then $\dot{a}_1 \dot{a}_0 \dot{a}_1 \leq \bar{u}'$. Since $\bar{u}' = \bar{u}''$, we have $\dot{a}_1 \dot{a}_0 \dot{a}_1 \leq \bar{u}''$ as well. Thus, since $j < k$, we have a word of the form $\dot{a}_0 \dot{a}_1 \bar{x} \dot{a}_1 \dot{a}_0 \leq \bar{a}$, where $\bar{x} \in \{0,1\}^*$.  By Lemma \ref{abxba}, we find that $\bar{a}$ contains a palindrome of length 4 or 5. However, $\bar{a} = 00010111$ has no palindrome of length greater than 3, which is a contradiction. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:120:	Case 2: suppose $j = k$. Then either $\bar{a} = \bar{u}'$ and $\bar{a} = \overleftarrow{u}''$, or $\bar{a} = \overleftarrow{u}'$ and $\bar{a} = \bar{u}''$. Assuming, without loss of generality, that the latter is true, it follows that $\bar{u}''$ (and therefore $\bar{a}$) is of the form $\bar{u}' = \dot{a}_0 \dot{a}_1 \dots \dot{a}_1 \dot{a}_0$. Thus it follows by Lemma \ref{abxba} that $\bar{a} = 00010111$ contains a palindrome of length 4 or of length 5, which is a contradiction. Hence, $\phi$ is a long-repetition-free 2-coloring.
+/tmp/tmp.dr4hV3HmUD/paper1.tex:124:One may ask whether or not every tree is long-repetition-free 2-colorable. In this section, we show that a certain class of trees require a minimum of 3 colors for a long-repetition-free coloring, making 3 colors the lowest bound for long-repetition-free colorings of trees. In order to gain this result, we first prove Lemma \ref{LPalindrome} and Lemma \ref{BinaryTree}. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:144:\begin{lemma}\label{BinaryTree} Let $\mathbb{T}_n$ denote the Tyler tree of height $n$ with root $r$, and apply an arbitrary 2-coloring $\phi$ to $\mathbb{T}_n$. Then $\mathbb{T}_n$ contains a binary sub-tree of height $n$, denoted $\mathbb{B}_n$, with root $r$ such that, for every $u,v \in G_i(\mathbb{B}_n)$, $\phi(u) = \phi(v)$, for all $0 \leq i \leq n-1$.  \end{lemma}
+/tmp/tmp.dr4hV3HmUD/paper1.tex:148:	Tyler tree $\mathbb{T}_1$ contains exactly four vertices: root $r$ and 3 children vertices adjacent to $r$. By the pigeonhole principle, at least 2 of these 3 children vertices must be colored with the same color. Thus, $\mathbb{T}_1$ contains a binary tree of height $1$ whose root is $r$ and where all the vertices on the same level have the same color. See Figure \ref{fig:basecase} for an example of $\mathbb{T}_1$ and $\mathbb{T}_2$ each with an embedded binary tree colored by generations.  \\
+/tmp/tmp.dr4hV3HmUD/paper1.tex:152:	\begin{fig}\label{fig:basecase} The Tyler tree of height $1$ (left) and the Tyler tree of height $2$ (right) each contain a binary sub-tree in which every vertex in each generation from the root has the same color. \end{fig} \end{center}
+/tmp/tmp.dr4hV3HmUD/paper1.tex:155:	Suppose every Tyler tree of height $k \leq n-1$ contains a binary sub-tree such that, for every $u,v \in G_i(\mathbb{B}_k)$, we have $\phi(u) = \phi(v)$, for every $0 \leq i \leq k-1$. Let $\mathbb{T}_{k+1}$ denote the Tyler tree of height $k+1$ with root $r$, and apply arbitrary 2-coloring $\phi$ to $\mathbb{T}_{k+1}$. By definition, $r$ has $2^{k+1} + 1$ children, and each of these children are the root of a Tyler tree of height $k$. Therefore, $\mathbb{T}_{k+1}$ contains $2^{k+1}+1$ Tyler trees of height $k$ as sub-trees, and, by the inductive hypothesis, it follows that each of these Tyler trees of height $k$ contain a binary sub-tree of height $k$ such that, for every $u,v \in G_i(\mathbb{B}_k)$, we have $\phi(u) = \phi(v)$, for every $0 \leq i \leq k-1$. 
+/tmp/tmp.dr4hV3HmUD/paper1.tex:157:	Each of these $2^{k+1}+1$ binary sub-trees has $k$ generations, and, given the coloring constraints provided in the inductive hypothesis, there are exactly $2^k$ possible 2-colorings of these binary sub-trees. Attach to these binary sub-trees the root $r$. As there are $2$ possible 2-colorings of $r$, there are a total of $2^{k+1}$ possible 2-colorings of this binary sub-tree of height $k+1$. Since there are $2^{k+1} + 1$ binary sub-trees of height $k$ and only $2^{k+1}$ possible 2-colorings, it follows that at least two binary sub-trees of height $k$ must be colored identically. The sub-tree induced by these two identically-colored binary trees of height $k$, when attached to $r$, form a binary tree of height $k+1$ in which, for every $u,v \in G_i(\mathbb{B}_{k+1})$, we have $\phi(u) = \phi(v)$, for all $0 \leq i \leq k$, thereby completing the proof. \end{proof}
+/tmp/tmp.dr4hV3HmUD/paper1.tex:160:\begin{prop}\label{Thm:TylerTree} If $n \geq 8$, then $\mathbb{T}_{n}$ is not long-repetition-free 2-colorable. \end{prop}
+/tmp/tmp.dr4hV3HmUD/paper1.tex:162:\begin{proof} Let $\mathbb{T}_8$ denote the Tyler tree of height $8$ with root $r$. We need only consider $\mathbb{T}_8$ to prove the result. Apply an abritrary 2-coloring $\phi$ to $\mathbb{T}_8$. By Lemma \ref{BinaryTree}, $\mathbb{T}_8$ contains a binary sub-tree $\mathbb{B}_8$ in which, for each $u,v \in G_i (\mathbb{B}_8)$, we have $\phi(u) = \phi(v)$, for all $0 \leq i \leq 7$.\\
+/tmp/tmp.dr4hV3HmUD/paper1.tex:164:	Pick vertices $u_0, \dots, u_7$ such that $u_i \in G_i (\mathbb{B}_8)$ for each $0 \leq i \leq 7$, and such that $u_0 , \dots , u_7$ is a simple path. Let $\dot{b}_i$ denote the letter associated with $\phi(u_i)$, and let $\bar{b} = \dot{b}_0 \dots \dot{b}_7$. By Lemma \ref{LPalindrome}, $\bar{b}$ contains a palindrome $\bar{p}$ of length 4 or of length 5. Suppose $\bar{p} = \dot{b}_j \dots \dot{b}_{j+m}$, where $0 \leq j \leq 4$ and where $m = 3$ or $m = 4$. Consider the path $P = u_{j+m} \dots u_{j+1} u_j u_{j+1}' \dots u_{j+m}'$, where $u_i' \in G_i (\mathbb{B}_8)$ for each $0 \leq i \leq j + m$.  
+/tmp/tmp.dr4hV3HmUD/paper1.tex:166:	Let $\bar{c}$ be the word associated with $\phi(P) = \phi( u_{j+m} \dots u_{j+1} u_j u_{j+1}' \dots u_{j+m}')$. If $|\bar{p}| = 4$, then either $\bar{c} = \dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1$, or $\bar{c} = \dot{c}_1\dot{c}_2\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_2\dot{c}_1$, where $c_i \in \{0,1\}$. In either case, $\bar{c}$ contains a long square. If $|\bar{p}| = 5$, then there are four possibilities: (1) $\bar{c} = \dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1$, (2) $\bar{c} = \dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_1$, (3) $\bar{c} = \dot{c}_1\dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_1$ or (4) $\bar{c} = \dot{c}_1\dot{c}_2\dot{c}_2\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_2\dot{c}_2\dot{c}_1$. In any of these four cases, $\bar{c}$ contains a long square. Since $\bar{c}$ contains a long square regardless of the length of $\bar{p}$, it follows that $P$ contains a long repetition, and thus $\mathbb{T}_8$ is not long-repetition-free 2-colorable. 
+
+exec
+/bin/bash -lc 'work_tmp=$(mktemp -d) && curl -L --fail --silent --show-error https://arxiv.org/e-print/1601.03780 -o "$work_tmp/source.tar" && tar -xf "$work_tmp/source.tar" -C "$work_tmp" && sed -n '"'55,175p' \""'$work_tmp/paper1.tex"' in /home/gson/gvrepo/results/1601.03780
+ succeeded in 43ms:
+
+\section{Terminology and Notation}
+We begin by providing several useful definitions and detailing the notation that is used throughout this paper. 
+
+\begin{definition}
+	An {\em alphabet} is a finite set of elements called {\em letters}, and we typically denote alphabets by a single capital letter (for example, $A$). The set of all words over alphabet $A$ is denoted $A^*$. We typically denote words of arbitrary length by a single lower-case letter with an overhead bar (for example, $\bar{w}$), and we typically denote letters (words of length 1) by a single lower-case letter with an overhead dot (for example, $\dot{a}$). We denote by $\epsilon$ the word of length $0$, called the {\em empty word}. We denote the concatenation of words $\bar{w}$ and $\bar{v}$ by $\bar{w}\bar{v}$ or, if we wish to stress the significance of concatenation, by $\bar{w} \cdot \bar{v}$. If a word $\bar{u}$ contains sub-word $\bar{w}$, we say $\bar{w} \leq \bar{u}$. 
+\end{definition}
+
+\begin{definition}
+	For word $\bar{w} = \dot{a}_1 \dots \dot{a}_n$ over alphabet $A$, we define the {\em reversal} of $\bar{w}$ to be $\overleftarrow{w} = \dot{a}_n \dots \dot{a}_1$. A {\em palindrome} is a word $\bar{w}$ such that $\bar{w} = \overleftarrow{w}$. We define a {\em long palindrome} to be a palindrome of length at least 4. Word $\bar{w}$ is a square if there exists some non-$\epsilon$ word $\bar{u}$ such that $\bar{w} = \bar{u}\bar{u}$. Word $\bar{w}$ is {\em square-free} if $\bar{w}$ contains no sub-word that is a square. Similarly, word $\bar{w} = \bar{u}\bar{u}$ is a {\em long square} if $|\bar{u}| \geq 3$. Word $\bar{w}$ is {\em long-square-free} if $\bar{w}$ contains no sub-word that is a long square. 
+\end{definition}
+
+\begin{definition}
+	Let $G = (V,E)$ be a simple, connected graph, and let $A = \{1, \dots, k\} \subset \mathbb{N}$. Graph $G$ is said to be {\em long-repetition-free $k$-colorable} if there exists a coloring $\chi : V \rightarrow A$ such that, for every path $P = u_1 e_1 \dots e_{n-1} u_n \subseteq G$, the word $\chi(u_1)\dots \chi(u_n)$ is long-square-free. 
+\end{definition}
+
+\begin{definition}
+	Let $G=(V,E)$ be a connected graph. The {\em distance} between vertices $u,v \in V$ is defined to be the number of edges contained in the shortest path from $u$ to $v$. The {\em eccentricity} of vertex $v$ is the maximum distance between $v$ and any other vertex in $G$. The {\em radius} of graph $G$ is the minimum eccentricity of its vertices, and the {\em center} of graph $G$ is the sub-graph induced by the vertices of minimum eccentricity. 
+\end{definition}
+
+\begin{definition}
+	A tree $T = (V,E)$ is called a {\em rooted tree} if one vertex has been distinguished to be called the {\em root} of $T$. The edges of a rooted tree are described with an implicit orientation away from the root vertex. In a rooted tree, the {\em parent} of a vertex $v$ is the vertex adjacent to $v$ on the path to the root vertex. A {\em child} (plural, {\em children}) of vertex $v$ is a vertex of which $v$ is the parent. A {\em descendant} of a vertex $v$ is any vertex which is either a child of $v$ or is, recursively, the descendant of any of the children of $v$. A {\em sibling} to a vertex $v$ is any other vertex in $V$ which has the same parent as $v$. The {\em $k$\textsuperscript{th} generation} of root $r$ of tree $T$, denoted $G_k(T)$, is the set of descendant vertices of distance $k$ from $r$. The {\em height} of $T$ is the number of generations in $T$ from $r$, with the convention that $G_0(T) = \{r\}$. 
+\end{definition}
+
+In particular, it is of note that if $T = (V,E)$ is a rooted tree, then for root $r \in T$ and vertex $v \in V$ there exists a unique paths from $r$ to $v$ and from $v$ to $r$. As a matter of notation, it is perhaps noteworthy that while the $k\textsuperscript{th}$ generation from $r$ is of course dependent on our choice of $r$, we simply notate this $G_k(T)$ since, for this paper, the particular vertex distinguished as the root is not particularly relevant and furthermore does not change once the root has been chosen. 
+
+\begin{definition}
+	The {\em Tyler tree of height $n$}, denoted $\mathbb{T}_n = (\mathbb{V}_n,\mathbb{E}_n)$, is the rooted tree with root $r$ in which each vertex in the $j$\textsuperscript{th} generation from $r$ has $2^{n-j}+1$ children, for every $0 \leq j \leq n-1$. Computationally, $|\mathbb{V}_n| = 1 + \displaystyle\sum_{j=0}^{n-1}\displaystyle\prod_{k=n-j}^{n} (2^{k}+1)$. A {\em binary tree} of height $n$ has at most $2^{n+1} - 1$ vertices. The reader can verify that the Tyler tree of height $n$ contains $2^n + 1$ Tyler trees of height $n-1$. 
+\end{definition}
+
+\section{A Class of Trees that is Long-Repetition-Free 2-Colorable}
+
+The goal of the present section is to prove the first of our two main results: Proposition \ref{SmallTrees}, which asserts that every rooted tree of radius less than or equal to $7$ can be long-repetition-free 2-colored. 
+
+In order to prove Proposition \ref{SmallTrees}, we rely on Lemma \ref{abxba} which we now state and prove. 
+
+\begin{lemma}\label{abxba}
+	Let $A = \{\dot{a},\dot{b}\}$, and let $\bar{w} \in A^*$. If $\bar{w} = \dot{a}\dot{b}\bar{x}\dot{b}\dot{a}$ for some $\bar{x} \in A^*$, then $\bar{w}$ contains a long palindrome. 
+\end{lemma}
+
+\begin{proof}
+	We consider two cases: case (1), if $\bar{x}$ contains no square of length $2$, and case (2), if $\bar{x}$ contains at least one square of length $2$. \\
+	
+	Suppose first that $\bar{x}$ contains no square of length $2$. If $|\bar{x}| \leq 1$, then clearly we have the desired long palindrome. If $|\bar{x}| > 2$, then since by assumption $\bar{x}$ contains no square of length $2$, it must be the case that $\bar{x}$ is an alternating sequence of $\dot{a}$'s and $\dot{b}$'s. It follows that $\bar{x}$ must contain a long palindrome of the form $\dot{a}\dot{b}\dot{b}\dot{a}$ or $\dot{a}\dot{b}\dot{a}\dot{b}\dot{a}$. 
+		
+	Suppose next that $\dot{y}\dot{y} \leq \bar{x}$ for some $\dot{y} \in A$. If follows that, for some $\dot{l}_1 , \dot{l}_2, \dot{r}_1, \dot{r}_2 \in A$, we have $\dot{l}_1\dot{l}_2\dot{y}\dot{y}\dot{r}_1\dot{r}_2 \leq \bar{w}$. If $\dot{l}_2 = \dot{r}_1$, then we have the desired long palindrome. Suppose $\dot{l}_2 \neq \dot{r}_1$; then either $\dot{l}_2 = \dot{y} \neq \dot{r}_1$ or $\dot{l}_2 \neq \dot{y} = \dot{r}_1$. 
+	
+	Suppose first that $\dot{l}_2 = \dot{y} \neq \dot{r}_1$, from which follows $\dot{l}_1 \dot{l}_2 \dot{y}\dot{y}\dot{r}_1\dot{r}_2 = \dot{l}_1 \dot{l}_1 \dot{y}\dot{y}\dot{r}_1 \dot{r}_2 \leq \bar{w}$. If $\dot{l}_1 = \dot{r}_1$, then we have the desired long palindrome; otherwise, we have $\dot{y}\dot{y}\dot{y}\dot{y}\dot{r}_1\dot{r}_2 \leq \bar{w}$ since $\dot{l}_2 = \dot{y} \neq \dot{r}_1$ by assumption, which contains the desired long palindrome. 
+	
+	Now suppose $\dot{l}_2 \neq \dot{y} = \dot{r}_1$, from which follows $\dot{l}_1 \dot{l}_2 \dot{y}\dot{y}\dot{r}_1\dot{r}_2 = \dot{l}_1 \dot{l}_2 \dot{y}\dot{y}\dot{y}\dot{r}_2 \leq \bar{w}$. Either $\dot{l}_1 = \dot{y}$ or $\dot{l}_1 = \dot{l}_2$. In the former case, then either we have $\dot{r}_2 = \dot{y}$, in which case we have $\dot{l}_1 \dot{l}_2 \dot{y}\dot{y}\dot{r}_1\dot{r}_2 = \dot{y}\dot{l}_2 \dot{y}\dot{y}\dot{y}\dot{y}$, or we have $\dot{r}_2 = \dot{l}_2$, in which case we have $\dot{l}_1 \dot{l}_2 \dot{y}\dot{y}\dot{r}_1\dot{r}_2 = \dot{y}\dot{l}_2\dot{y}\dot{y}\dot{y}\dot{l}_2$; in either case, we have the desired long palindrome. In the latter case where $\dot{l}_1 = \dot{l}_2$, then either we have $\dot{r}_2 = \dot{l}_2$ in which case we have $\dot{l}_1 \dot{l}_2 \dot{y}\dot{y}\dot{r}_1\dot{r}_2 = \dot{l}_2 \dot{l}_2 \dot{y}\dot{y}\dot{y}\dot{l}_2$, or we have $\dot{r}_2 = \dot{y}$, in which case we have $\dot{l}_1 \dot{l}_2 \dot{y}\dot{y}\dot{r}_1\dot{r}_2 = \dot{l}_2 \dot{l}_2 \dot{y} \dot{y} \dot{y} \dot{y}$; in either case, we have the desired long palindrome. 
+\end{proof}
+
+With Lemma \ref{abxba} in hand, we move to state and prove the first main result of this paper. 
+
+\begin{prop}\label{SmallTrees}
+	Every rooted tree of radius less than or equal to $7$ is long-repetition-free 2-colorable.
+\end{prop}
+
+\begin{proof}
+	Let $T = (V,E)$ be a rooted tree of radius less than or equal to $7$. Let $v \in V$ be a vertex in the center of $T$, and designate $v$ as the root. Let $j$ be the number of generations of $v$, and note that $j \leq 7$. Let $\bar{a} = \dot{a}_1 \dots \dot{a}_7 = 00010111$, and let $\phi: V \rightarrow \{0,1\}$ be the coloring defined by $\phi(u) = \dot{a}_i$, for every vertex $u$ in the $i\textsuperscript{th}$ generation from $v$ and for every $1 \leq i \leq j$. We prove that $\phi$ is a long-repetition-free 2-coloring.
+	
+	By way of contradiction, suppose there exists a path $P = p_1 \dots p_{2k} \in T$ for $k \geq 3$ such that, for words $\bar{u}' = \phi(p_1) \dots \phi(p_k)$ and $\bar{u}'' = \phi(p_{k+1}) \dots \phi(p_{2k})$, we have $\bar{u}' = \bar{u}''$. Since $P$ contains a long repetition and since $\bar{a} = 00010111$ is long-square-free, $P$ cannot be a path of vertices each from different generations. So, there exists some vertex $p_j \in P$ such that $p_{j-1}$ and $p_{j+1}$ are in the same generation; however, it must be the case that $p_j = v$, for in no other way can adjacent vertices of $p_j$ be in the same generation. It follows that $p_{j-1}$ and $p_{j+1}$ are in the first generation from $v$, and the word $\bar{u}'\bar{u}''$ is of the form $\bar{u}'\bar{u}''= \dot{a}_{j-1} \dots \dot{a}_1 \dot{a}_0 \dot{a}_1 \dots \dot{a}_{j-1} \dot{a}_{j} \dots \dot{a}_{2k-j}$. Assume that $j \leq k$ (for the argument that follows is similar for $j > k$), and we consider the cases where $j<k$ and $j = k$.
+	
+	Case 1: suppose $j < k$. Then $\dot{a}_1 \dot{a}_0 \dot{a}_1 \leq \bar{u}'$. Since $\bar{u}' = \bar{u}''$, we have $\dot{a}_1 \dot{a}_0 \dot{a}_1 \leq \bar{u}''$ as well. Thus, since $j < k$, we have a word of the form $\dot{a}_0 \dot{a}_1 \bar{x} \dot{a}_1 \dot{a}_0 \leq \bar{a}$, where $\bar{x} \in \{0,1\}^*$.  By Lemma \ref{abxba}, we find that $\bar{a}$ contains a palindrome of length 4 or 5. However, $\bar{a} = 00010111$ has no palindrome of length greater than 3, which is a contradiction. 
+	
+	Case 2: suppose $j = k$. Then either $\bar{a} = \bar{u}'$ and $\bar{a} = \overleftarrow{u}''$, or $\bar{a} = \overleftarrow{u}'$ and $\bar{a} = \bar{u}''$. Assuming, without loss of generality, that the latter is true, it follows that $\bar{u}''$ (and therefore $\bar{a}$) is of the form $\bar{u}' = \dot{a}_0 \dot{a}_1 \dots \dot{a}_1 \dot{a}_0$. Thus it follows by Lemma \ref{abxba} that $\bar{a} = 00010111$ contains a palindrome of length 4 or of length 5, which is a contradiction. Hence, $\phi$ is a long-repetition-free 2-coloring.
+\end{proof}
+
+\section{A Class of Trees that is Not Long-Repetition-Free 2-Colorable}
+One may ask whether or not every tree is long-repetition-free 2-colorable. In this section, we show that a certain class of trees require a minimum of 3 colors for a long-repetition-free coloring, making 3 colors the lowest bound for long-repetition-free colorings of trees. In order to gain this result, we first prove Lemma \ref{LPalindrome} and Lemma \ref{BinaryTree}. 
+
+\begin{lemma}\label{LPalindrome} Every binary word of length at least $9$ contains a long palindrome. \end{lemma}
+
+\begin{proof} It is clear that we need only consider binary words of length $9$, for any binary words of length greater than $9$ contains a binary word of length $9$. Let $\dot{a}_{1}\dot{a}_{2} \dots \dot{a}_{9}$ be a word over alphabet $A=\{0,1\}$. Define $\dot{a}^{c}_{i}$ to be the binary complement of $\dot{a}_i$; more precisely, $\dot{a}^c_i \equiv \dot{a}_i+1 \mod{1}$ for every $i \leq 9$. The reader can verify that for $\dot{a}_1 \dots \dot{a}_9$ to be long-palindrome-free, the following conditions must hold:
+	\begin{enumerate}[(i)]
+		\item If $\dot{a}_i = \dot{a}_{i+3}$, then $\dot{a}_{i+1} = \dot{a}^{c}_{i+2}$, for $1 \leq i \leq 6$; 
+		\item If $\dot{a}_i = \dot{a}_{i+4}$, then $\dot{a}_{i+1} = \dot{a}^{c}_{i+3}$, for $1 \leq i \leq 5$; 
+		\item If $\dot{a}_i = \dot{a}_{i+1}$, then $\dot{a}_{i+1} = \dot{a}^{c}_{i+2}$, for $2 \leq i \leq 6$. 
+	\end{enumerate}
+	
+	\noindent
+	Suppose without loss of generality that $\dot{a}_0 = 0$. We consider four cases. First, suppose $\dot{a}_0 = \dot{a}_4 = \dot{a}_5 = 0$. By (i), it follows that $\dot{a}_2 = \dot{a}_3^{c}$. Then $\dot{a}_2 = 1$ and $\dot{a}_3 = 0$, for otherwise we have long palindrome $00100$. However, we now have no choice for $\dot{a}_6$, for $\dot{a}_6 = 0$ yields long palindrome $0000$, and $\dot{a}_6 = 1$ yields long palindrome $10001$. 
+	
+	\indent Suppose next that $\dot{a}_1 = \dot{a}_4 = \dot{a}_5^c = 0$. By (i), it follows that $\dot{a}_2 = \dot{a}_3^c$. Then $\dot{a}_2 = 0$ and $\dot{a}_3 = 1$, for otherwise we have long palindrome $1001$. Then $\dot{a}_6 = 1$, for otherwise we have long palindrome $01010$, and so $\dot{a}_7 = 0$, for otherwise we have long palindrome $0110$. However, we now have no choice for $\dot{a}_8$, for $\dot{a}_8 = 0$ yields long palindrome $01110$, and $\dot{a}_8 = 1$ yields long palindrome $1111$. 
+	
+	\indent Suppose that $\dot{a}_1 = \dot{a}_4^c = \dot{a}_5^c = 0$. By (iii), $\dot{a}_6 = 0$, and it follows that $\dot{a}_3 = 1$ for otherwise we have long palindrome $0110$. However, we now have no choice for $\dot{a}_2$, for $\dot{a}_2 = 0$ yields long palindrome $01110$, and $\dot{a}_2 = 1$ yields long palindrome $1111$. 
+	
+	\indent Finally, suppose that $\dot{a}_1 = \dot{a}_4^c = \dot{a}_5 = 0$. By (ii), $\dot{a}_2 = 1$, and it follows that $\dot{a}_3 = 0$ for otherwise we have long palindrome $0110$. Then $\dot{a}_6=1$, for otherwise we have long palindrome $00100$; $\dot{a}_7 = 1$, for otherwise we have long palindrome $01010$; and $\dot{a}_8 = 1$, for otherwise we have $0110$. However, we now have no choice for $\dot{a}_9$, for $\dot{a}_9 = 0$ yields long palindrome $01110$, and $\dot{a}_9 =1 $ yields long palindrome $1111$.  \end{proof}
+	
+\begin{lemma}\label{BinaryTree} Let $\mathbb{T}_n$ denote the Tyler tree of height $n$ with root $r$, and apply an arbitrary 2-coloring $\phi$ to $\mathbb{T}_n$. Then $\mathbb{T}_n$ contains a binary sub-tree of height $n$, denoted $\mathbb{B}_n$, with root $r$ such that, for every $u,v \in G_i(\mathbb{B}_n)$, $\phi(u) = \phi(v)$, for all $0 \leq i \leq n-1$.  \end{lemma}
+
+\begin{proof} We prove the result by induction on height $n$. \\
+	
+	Tyler tree $\mathbb{T}_1$ contains exactly four vertices: root $r$ and 3 children vertices adjacent to $r$. By the pigeonhole principle, at least 2 of these 3 children vertices must be colored with the same color. Thus, $\mathbb{T}_1$ contains a binary tree of height $1$ whose root is $r$ and where all the vertices on the same level have the same color. See Figure \ref{fig:basecase} for an example of $\mathbb{T}_1$ and $\mathbb{T}_2$ each with an embedded binary tree colored by generations.  \\
+	
+	
+	\begin{center}{\includegraphics[scale=1.00]{TtreeHeight2BinaryTreeColored.png}}
+	\begin{fig}\label{fig:basecase} The Tyler tree of height $1$ (left) and the Tyler tree of height $2$ (right) each contain a binary sub-tree in which every vertex in each generation from the root has the same color. \end{fig} \end{center}
+
+
+	Suppose every Tyler tree of height $k \leq n-1$ contains a binary sub-tree such that, for every $u,v \in G_i(\mathbb{B}_k)$, we have $\phi(u) = \phi(v)$, for every $0 \leq i \leq k-1$. Let $\mathbb{T}_{k+1}$ denote the Tyler tree of height $k+1$ with root $r$, and apply arbitrary 2-coloring $\phi$ to $\mathbb{T}_{k+1}$. By definition, $r$ has $2^{k+1} + 1$ children, and each of these children are the root of a Tyler tree of height $k$. Therefore, $\mathbb{T}_{k+1}$ contains $2^{k+1}+1$ Tyler trees of height $k$ as sub-trees, and, by the inductive hypothesis, it follows that each of these Tyler trees of height $k$ contain a binary sub-tree of height $k$ such that, for every $u,v \in G_i(\mathbb{B}_k)$, we have $\phi(u) = \phi(v)$, for every $0 \leq i \leq k-1$. 
+	
+	Each of these $2^{k+1}+1$ binary sub-trees has $k$ generations, and, given the coloring constraints provided in the inductive hypothesis, there are exactly $2^k$ possible 2-colorings of these binary sub-trees. Attach to these binary sub-trees the root $r$. As there are $2$ possible 2-colorings of $r$, there are a total of $2^{k+1}$ possible 2-colorings of this binary sub-tree of height $k+1$. Since there are $2^{k+1} + 1$ binary sub-trees of height $k$ and only $2^{k+1}$ possible 2-colorings, it follows that at least two binary sub-trees of height $k$ must be colored identically. The sub-tree induced by these two identically-colored binary trees of height $k$, when attached to $r$, form a binary tree of height $k+1$ in which, for every $u,v \in G_i(\mathbb{B}_{k+1})$, we have $\phi(u) = \phi(v)$, for all $0 \leq i \leq k$, thereby completing the proof. \end{proof}
+
+
+\begin{prop}\label{Thm:TylerTree} If $n \geq 8$, then $\mathbb{T}_{n}$ is not long-repetition-free 2-colorable. \end{prop}
+
+\begin{proof} Let $\mathbb{T}_8$ denote the Tyler tree of height $8$ with root $r$. We need only consider $\mathbb{T}_8$ to prove the result. Apply an abritrary 2-coloring $\phi$ to $\mathbb{T}_8$. By Lemma \ref{BinaryTree}, $\mathbb{T}_8$ contains a binary sub-tree $\mathbb{B}_8$ in which, for each $u,v \in G_i (\mathbb{B}_8)$, we have $\phi(u) = \phi(v)$, for all $0 \leq i \leq 7$.\\
+	
+	Pick vertices $u_0, \dots, u_7$ such that $u_i \in G_i (\mathbb{B}_8)$ for each $0 \leq i \leq 7$, and such that $u_0 , \dots , u_7$ is a simple path. Let $\dot{b}_i$ denote the letter associated with $\phi(u_i)$, and let $\bar{b} = \dot{b}_0 \dots \dot{b}_7$. By Lemma \ref{LPalindrome}, $\bar{b}$ contains a palindrome $\bar{p}$ of length 4 or of length 5. Suppose $\bar{p} = \dot{b}_j \dots \dot{b}_{j+m}$, where $0 \leq j \leq 4$ and where $m = 3$ or $m = 4$. Consider the path $P = u_{j+m} \dots u_{j+1} u_j u_{j+1}' \dots u_{j+m}'$, where $u_i' \in G_i (\mathbb{B}_8)$ for each $0 \leq i \leq j + m$.  
+	
+	Let $\bar{c}$ be the word associated with $\phi(P) = \phi( u_{j+m} \dots u_{j+1} u_j u_{j+1}' \dots u_{j+m}')$. If $|\bar{p}| = 4$, then either $\bar{c} = \dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1$, or $\bar{c} = \dot{c}_1\dot{c}_2\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_2\dot{c}_1$, where $c_i \in \{0,1\}$. In either case, $\bar{c}$ contains a long square. If $|\bar{p}| = 5$, then there are four possibilities: (1) $\bar{c} = \dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_1$, (2) $\bar{c} = \dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_1$, (3) $\bar{c} = \dot{c}_1\dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_1\dot{c}_1\dot{c}_2\dot{c}_1\dot{c}_1$ or (4) $\bar{c} = \dot{c}_1\dot{c}_2\dot{c}_2\dot{c}_2\dot{c}_1\dot{c}_2\dot{c}_2\dot{c}_2\dot{c}_1$. In any of these four cases, $\bar{c}$ contains a long square. Since $\bar{c}$ contains a long square regardless of the length of $\bar{p}$, it follows that $P$ contains a long repetition, and thus $\mathbb{T}_8$ is not long-repetition-free 2-colorable. 
+\end{proof}
+
+\raggedright
+\section*{Acknowledgements}
+This research was conducted in part under the direction of David Milan at the 2013 Research Experience for Undergraduates program at the University of Texas at Tyler and was supported in part by the National Science Foundation (Grant DMS-1062740). This research was also conducted in part under the direction of Annika Miller at Susquehanna University. 
+
+
+
+\bibliography{ReferencesPaper1justTrees2ndEd}{}
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+w='00010111'
+for a in range(8):
+  for b in range(8):
+    for lca in range(min(a,b)+1):
+      depths=list(range(a,lca-1,-1))+list(range(lca+1,b+1))
+      s=''.join(w[d] for d in depths)
+      for half in range(3,len(s)//2+1):
+        for i in range(len(s)-2*half+1):
+          if s[i:i+half]==s[i+half:i+2*half]:
+            print('counterexample',a,b,lca,depths,s,'square',i,half,s[i:i+2*half]); raise SystemExit
+print('all good')
+PY" in /home/gson/gvrepo/results/1601.03780
+ succeeded in 0ms:
+all good
+
+exec
+/bin/bash -lc "sed -n '1,220p' /home/gson/gvrepo/scripts/submit.sh
+for f in /home/gson/gvrepo/results/1608.06944/REJECTED.md /home/gson/gvrepo/results/1802.09981/REJECTED.md; do sed -n '1,220p' \""'$f"; done' in /home/gson/gvrepo/results/1601.03780
+ succeeded in 0ms:
+#!/usr/bin/env bash
+# Submit a finished paper.  Usage: scripts/submit.sh <arxiv_id>
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
+D="results/$ID"
+[ -d "$D" ] || { echo "ERROR: $D missing."; exit 1; }
+
+if [ -n "$REJECT" ]; then
+  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+
+  # A cap_bound paper must not be rejected.  scripts/harden.py now DETECTS this
+  # rather than waiting for escalate() to declare it: if the ladder stopped with the
+  # answer near the output cap, or never moved more than one dial, the binding
+  # constraint was our answer FORMAT, not the paper.  2601.05272 climbed n=64..84,
+  # stopped at 249 atoms against a 256 cap, reported "cannot be made harder", and was
+  # rejected.  Instruction alone did not prevent that; this guard does.
+  # A G9(b) rejection blames the PAPER for a result produced by the builder's own
+  # hint.  Measured over the 17 modules on disk that carry a STRUCTURAL_HINT: 4 of 9
+  # rejected papers hand the solver a procedure, against 1 of 8 accepted.  This gate
+  # only ever runs on --reject, so that one accepted paper is never touched by it.
+  #
+  # 1904.00563 is the pattern: "Among target-one vertices, keep edges whose endpoints
+  # have equal eligible degree; the result is three even cycles, so take alternating
+  # edges on each."  That is the whole algorithm, including the derived count and the
+  # final step.  The hinted oracle solving it says nothing about the paper.
+  python3 - "$D" <<'PYHINT' || exit 6
+import ast, glob, re, sys, os
+d = sys.argv[1]
+rj = os.path.join(d, "REJECTED.md")
+try:
+    note = open(rj, encoding="utf-8", errors="ignore").read()
+except OSError:
+    sys.exit(0)
+# only gate rejections that actually turn on G9
+if not re.search(r"G9\(b\)|G9\b", note):
+    sys.exit(0)
+# G9(b) stopped being a gate on 2026-09-05, so a rejection that turns on it is no
+# longer a valid rejection at all -- regardless of how the hint was written. Refuse
+# it outright when G9(b) is named as the deciding reason.
+if re.search(r"fails?\s+\*{0,2}(H|hardness)?\*{0,2}[^.]{0,60}G9\(b\)|G9\(b\)[^.]{0,40}(gate|fail)"
+             r"|rejected?[^.]{0,60}G9\(b\)", note, re.I):
+    print("ERROR: this rejection turns on G9(b), the polarity-flipped hinted-oracle gate.")
+    print("       G9(b) was retired to a DIAGNOSTIC on 2026-09-05: a family that")
+    print("       dissolves when you name the trick is one whose difficulty lies in")
+    print("       FINDING the insight, which is what this corpus is for. It cost 8")
+    print("       rejections and 23 blocked papers, 6 of which had already defeated")
+    print("       the four-vendor no-tool pool.")
+    print("       If the family passed G, V and STEP 4, SHIP IT. Record the hinted arm")
+    print("       in the README as a diagnostic. See prompts/codex_task.md G9(b).")
+    sys.exit(1)
+
+hint = None
+for f in glob.glob(os.path.join(d, "*gen_*.py")):
+    try:
+        tree = ast.parse(open(f, encoding="utf-8", errors="ignore").read())
+    except Exception:
+        continue
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign):
+            for t in n.targets:
+                if isinstance(t, ast.Name) and t.id == "STRUCTURAL_HINT":
+                    try:
+                        hint = " ".join(str(ast.literal_eval(n.value)).split())
+                    except Exception:
+                        pass
+    if hint:
+        break
+if not hint:
+    sys.exit(0)                      # no module or no hint kept: cannot check
+CHAIN = re.compile(r";\s*(the\s+)?\w+|,\s*then\b|\bthen\b|\bso (take|use|apply|read|pick|choose)\b"
+                   r"|\bbefore using\b|\bfirst,|\bnext,|\bfinally\b", re.I)
+DERIVED = re.compile(r"\bthe result is\b|\bthis (gives|yields|produces)\b|\byou (get|obtain)\b"
+                     r"|\bthere are (two|three|four|five|\d+)\b|\bexactly (two|three|four|\d+)\b", re.I)
+bad = []
+if CHAIN.search(hint):
+    bad.append("it chains a SECOND step (\"then\" / \"; ...\" / \"so take\" / \"first,\")")
+if DERIVED.search(hint):
+    bad.append("it hands over a DERIVED FACT the solver was supposed to find "
+               "(\"the result is ...\", \"there are three ...\")")
+if not bad:
+    sys.exit(0)
+print("ERROR: this rejection cites G9, but the STRUCTURAL_HINT is a PROCEDURE, not a")
+print("       structural hint, so G9(b) measured your hint and not the paper.")
+print(f"       hint: {hint[:200]}")
+for b in bad:
+    print(f"       - {b}")
+print("       A structural hint names the INVARIANT a solver has to notice -- the thing")
+print("       to look at. It does not say what to do with it, does not chain steps, and")
+print("       does not state a quantity the solver was supposed to derive.")
+print("       Rewrite the hint to name only the invariant, re-run the G9(b) arm, and")
+print("       reject only if the family still dissolves. See prompts/codex_task.md G9(b).")
+sys.exit(1)
+PYHINT
+
+  python3 - "$D/.meta.json" <<'PYCAP' || exit 6
+import json, sys
+try:
+    v = (json.load(open(sys.argv[1])) or {}).get("harden_verdict") or {}
+except Exception:
+    sys.exit(0)                       # no verdict recorded; nothing to contradict
+if v.get("verdict") not in ("cap_bound", "budget_bound"):
+    sys.exit(0)
+if v.get("verdict") == "budget_bound":
+    print("ERROR: the oracle harness recorded verdict=budget_bound for this paper.")
+    print("       The ladder ran out of ESCALATIONS while escalate() was still willing")
+    print(f"       to climb ({v.get('escalate_says')}); the binding constraint was this")
+    print("       harness's budget, not the paper.  7 of 13 too_easy verdicts on disk")
+    print("       were this, including 1612.03280, which stopped at n=149 with five")
+    print("       more levels available.  PARK it -- delete REJECTED.md and re-run with")
+    print("       ORACLE_MAX_ESCALATIONS raised, or ship at a higher preset.")
+    sys.exit(1)
+print("ERROR: the oracle harness recorded verdict=cap_bound for this paper, which")
+print("       means the ANSWER CAP stopped the ladder, not the mathematics.")
+a, c = v.get("answer_atoms"), v.get("answer_chars")
+if a is not None:
+    print(f"       answer at the last level: {a} atoms / {c} chars "
+          f"(cap {v.get('atom_cap')} atoms / {v.get('char_cap')} chars)")
+print(f"       dials the ladder ever moved: {v.get('axes_moved') or 'none'}")
+sig = v.get("signal", "")
+if "single_axis" in sig and "answer_cap" not in sig:
+    print("       signal=single_axis: the answer is still small -- this family was never")
+    print("       explored, not exhausted. Turn a SECOND dial before giving it up.")
+print("       PARK it -- delete REJECTED.md and leave the claim in_progress.  Harden")
+print("       at FIXED ANSWER LENGTH instead: grow the haystack, not the needle.")
+print("       Bigger ground set with the same witness size, larger modulus, denser")
+print("       decoys, tighter constraints.  See prompts/codex_task.md, escalate().")
+sys.exit(1)
+PYCAP
+
+  # A rejection that says only "an efficient method exists" is not reviewable, and an
+  # independent audit found 7 of 12 such rejections were WRONG -- the papers were
+  # buildable on Track B. One was dismissed for having "a short linear formula" while
+  # its mechanical alternative was 16,689,170 lattice-vector enumerations. If the note
+  # rests on a method existing, it must quantify the gap it is claiming is too small.
+  python3 - "$D/REJECTED.md" <<'PYREJ' || exit 6
+import re, sys
+t = open(sys.argv[1], encoding="utf-8", errors="ignore").read()
+low = t.lower()
+METHOD_EXISTS = re.compile(
+    r"polynomial[- ]time|explicit (construction|formula)|closed[- ]form|"
+    r"constructive (solution|procedure|algorithm)|efficient algorithm|"
+    r"linear solve|spectral characteri|classification (table|of)|is in p|"
+    r"algorithm (exists|is given)|buchberger|gaussian elimination|sdp", re.I)
+if not METHOD_EXISTS.search(low):
+    sys.exit(0)                       # rejected for some other reason; nothing to check
+has_mech = re.search(r"mechanical|brute[- ]force cost|operations|enumerat|seconds|"
+                     r"cost|running time", low)
+has_compact = re.search(r"compact route|shortcut|by hand|no shorter|"
+                        r"same length|nothing to see|track b", low)
+if has_mech and has_compact:
+    sys.exit(0)
+print("ERROR: this rejection rests on 'an efficient method exists', which is NOT by")
+print("       itself a reason to reject -- that is what TRACK B is for.  State the")
+print("       MECHANICAL COST (operations the standard method needs at shipping size)")
+print("       and the COMPACT ROUTE length, and show the gap is too small to test")
+print("       anything.  7 of 12 audited rejections of this shape were wrong.")
+print("       See prompts/codex_task.md, STEP 0 item 4.")
+sys.exit(1)
+PYREJ
+  python3 -c "
+import json,datetime,os
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='rejected'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d,open(p,'w'))"
+  rm -f "$D/.orkey" "$D/.task.md" "$D/.runner.sh"; rm -rf "$D/__pycache__"
+  bash scripts/status.sh --write >/dev/null
+  git add "$D" "claims/$ID.json" STATUS.md
+  git commit -q -m "reject $ID"
+  git pull -q --rebase origin main && bash scripts/status.sh --write >/dev/null && git add STATUS.md \
+    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+    echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+  exit 0
+fi
+
+MOD="$(ls "$D"/gen_*.py 2>/dev/null | head -1)"
+[ -n "$MOD" ] || { echo "ERROR: no gen_*.py in $D — nothing to submit."; exit 2; }
+
+# The builder writes these; a result nobody can read or re-check is not a result.
+for f in README.md selftest_report.json llm_loop_transcript.jsonl; do
+  [ -s "$D/$f" ] || { echo "ERROR: $D/$f missing or empty — see prompts/codex_task.md STEP 5."; exit 7; }
+done
+if [ "$(wc -l < "$D/README.md")" -lt 25 ]; then
+  echo "ERROR: $D/README.md is too short to explain the task — see STEP 5."; exit 7
+fi
+
+# Gate results are the builder's to produce, but "the file exists" is not evidence
+# it ran them.  G8 gets named explicitly: it is the one gate nothing downstream can
+# reconstruct, because a canonical_key built on the seed or on hash(render(inst))
+# passes the diversity count below while making it meaningless.
+python3 - "$D/selftest_report.json" <<'PYGATE' || exit 7
+import json, sys
+try:
+    rep = json.load(open(sys.argv[1]))
+except Exception as e:
+    print(f"ERROR: selftest_report.json is not readable JSON: {e}"); sys.exit(1)
+if not isinstance(rep, dict):
+    print("ERROR: selftest_report.json must be a JSON object"); sys.exit(1)
+gates = {k: v for k, v in rep.items() if k.startswith("G") and k[1:2].isdigit()}
+if not gates:
+    print("ERROR: selftest_report.json records no G* gates — see STEP 3."); sys.exit(1)
+# G9(b) -- the polarity-flipped hinted gate -- was retired to a diagnostic on
+# 2026-09-05. It had become the pipeline's largest loss mechanism: 8 rejections and
+# 23 blocked papers, six of which had already DEFEATED the four-vendor no-tool pool
+# at their shipping preset. Its premise was also wrong: a family that dissolves when
+# you name the trick is one whose difficulty lies in FINDING the insight, which is
+# what this corpus is for.
+#
+# G9's `pass` folds (a) the three-arm diagnostic, (b) that retired gate, and (c) the
+# size/effort caps into one flag. Only (c) still gates, so recompute it from the
+# measured numbers rather than trust a flag that may still encode the retired rule.
+g9key = next((k for k in gates if k.startswith("G9")), None)
+if g9key:
+    g9 = gates[g9key]
+    caps = g9.get("caps") if isinstance(g9.get("caps"), dict) else {}
+    def _num(d, k):
+        v = d.get(k)
+# Rejection: the planted `(3,4)` zero-sum-flow distribution is easy
+
+The proposed family passes **G** and **V** but fails **H on Track A**. It inverse-generates a zero-sum 3-flow on an all-negative `(3,4)`-semiregular signed graph, and the checker validates any candidate by exact incident-edge sums. The failure is distributional hardness, not generation or verification.
+
+The source is Section 2.7 of arXiv:1608.06944. Its exact definition identifies a zero-sum `k`-flow with a nowhere-zero `k`-flow on the all-negative signed graph. Theorem 27(ii) reports NP-completeness for zero-sum 3-flow on `(3,4)`-semiregular graphs, while Theorem 27(i) gives a polynomial algorithm for `(2,4)`-graphs with only `O(log n)` degree-4 vertices. The draft is inside the hard theorem's ambient regime, but that worst-case theorem does not cover its planted distribution.
+
+## Decisive attack
+
+Every degree-3 vertex has one of two sign types: a permutation of `(1,1,-2)` or of `(-1,-1,2)`. The draft's exact-2-in-4 propagation finds a consistent type assignment quickly on these planted instances. For fixed types, the remaining problem is **bipartite perfect matching**. Put the two types on opposite sides and join two degree-3 vertices when they share a degree-4 neighbour. Matching them chooses one magnitude-two edge at every degree-3 vertex and balances selected counts of the two types at each degree-4 vertex. Hopcroft–Karp completes the flow and the ordinary checker verifies it.
+
+This type-then-matching attack solved 8/8 seeds at `n=18`, 8/8 at `n=20`, and 8/8 at the largest writable `n=21` (252 edge values against the 256-atom cap). At `n=21` it averaged **0.0249 seconds**, never exceeded **0.0666 seconds**, used two Hopcroft–Karp phases, and scanned roughly **482–500 matching edges**. The sign-type search is exponential in the worst case, so this does not refute Theorem 27; it refutes the Track A claim for the generated distribution.
+
+## Why Track B also does not apply
+
+The **mechanical cost** at the largest writable size is already below 0.07 seconds for the exact construction-aware attack. The **compact route** is not shorter: it is the same exact-2-in-4 propagation followed by the same perfect-matching completion, with hundreds of matching-edge scans and no additional invariant, symmetry, or change of variables. Thus there is no large mechanical-versus-compact gap for a Track B no-tool-compression benchmark.
+
+Increasing `n` cannot rescue the draft within the output contract: `n=21` already has 252 answer atoms, and `n=22` would have 264. This is not a `cap_bound` hard family—the attack has already solved every writable rung—so the correct outcome is rejection of this generator. A different gadget distribution derived from the Monotone NAE-3-SAT reduction may remain possible; this rejection does not claim otherwise.
+# Rejected at Step 0: arXiv 1802.09981
+
+Paper: Pham Hoang Ha, [*Spanning trees in a Claw-free graph whose stems
+have at most k branch vertices*](https://arxiv.org/abs/1802.09981) (2018).
+
+## Decision
+
+No paper-supported generated distribution clears **G + H + V**.  A listed
+spanning tree is an exact, cheap witness, and inverse planting or a composition
+of Euler tours can supply one without solving the emitted instance.  The
+obstacle is **H on both tracks**.
+
+* **Track A fails.**  The paper proves extremal existence conditions, not
+  computational or distributional hardness.  Its proof does not give a
+  certificate-producing sampler, and the natural inverse-generated claw-free
+  distribution tested below is solved on 20/20 shipping-size instances by an
+  ordinary degree-aware greedy path heuristic.
+* **Track B fails.**  On the natural line-graph construction, the public
+  certificate route is line-graph root reconstruction followed by an Euler
+  tour.  That route and the supposed compact route are the same incidence
+  reconstruction; the generator's private Walecki-cycle labels are not present
+  in the problem.  Moreover, the much simpler by-hand-style greedy attack
+  already succeeds 20/20, so the mandatory four-failing-attack panel cannot be
+  reported honestly.
+
+Implementation therefore stopped before Step 1, as the task requires.  No
+generator, gate report, or oracle transcripts were fabricated.
+
+## What the paper actually defines
+
+Section 1 works with finite simple connected graphs.  A leaf of a tree has
+degree one, a branch vertex has degree at least three, and
+`Stem(T) = T - Leaf(T)` removes the leaves of the original tree once.  The
+requested object is a spanning tree `T` for which `Stem(T)` has at most `k`
+branch vertices.
+
+For `l >= 2`, `alpha^l(G)` is the largest cardinality of a vertex set whose
+distinct members have pairwise graph distance at least `l`.  The quantity
+`sigma_k^l(G)` is the minimum degree sum over such `k`-sets and is defined to be
+infinity when `alpha^l(G) < k`.
+
+The two main results are:
+
+* **Theorem 1.7:** a connected claw-free graph has the desired tree if
+  `sigma_(k+3)^4(G) >= |G| - 2k - 5`;
+* **Theorem 1.8:** the same conclusion follows from
+  `sigma_2^5(G) >= |G| - 3k - 6`.
+
+Theorem 1.9 specializes these statements to stems that are spiders when
+`k = 1`.  These are sufficient existence conditions, not hardness results.
+
+## Step-0 certificate question
+
+The proof in Section 3 is by contradiction.  It chooses, among subtrees whose
+stems have exactly `k` branch vertices, one that is successively extremal in
+three quantities `(C1)--(C3)`, and then performs exchange arguments.  It does
+not output a spanning tree from a graph satisfying either hypothesis.  Finding
+the globally extremal starting subtree is already a search problem.
+
+Consequently, sampling a graph only from a theorem hypothesis does **not** meet
+G: the theorem promises a witness but its proof does not hand the generator a
+finite witness without search.  The honest alternatives are to plant a tree
+first or to compose a known traversal and carry it through a claw-free
+construction.  Both pass G, but then need an independent hardness argument for
+the resulting distribution.  The paper supplies none.
+
+Verification itself is not a problem.  Given a proposed edge list, a checker
+can test exact edge membership, `|V|-1` edges, connectivity, acyclicity, remove
+the original leaves, and count degree-at-least-three vertices in the remaining
+tree.  Thus V passes in isolation.
+
+## The natural theorem-regime family tested
+
+I tested the strongest faithful version of the prior-triage idea while keeping
+claw-freeness guaranteed rather than hoping that arbitrary added edges preserve
+it.
+
+1. For odd `q = 41`, take Walecki's decomposition of `K_41` into 20
+   edge-disjoint Hamilton cycles.
+2. Select six cycles and take their union `H`.  Concatenating the six closed
+   tours at their common vertex is a known Euler tour by composition; no search
+   is used to obtain it.
+3. Form the line graph `G = L(H)` and randomly relabel its vertices.  Line
+   graphs are claw-free.  The Euler edge order in `H` becomes a Hamilton path
+   in `G`, hence a spanning tree whose stem has zero branch vertices.
+
+Here `H` is 12-regular with 246 edges, so `G` has 246 vertices, is 22-regular,
+and has 2,706 edges.  Its natural path certificate has 246 integer atoms and
+875 compact JSON characters, just below the task's 256-atom cap.  Twenty seeds
+selected twenty distinct six-cycle subsets.
+
+For all 20 sampled seeds, `alpha^4(G) <= 2`: thirteen line graphs had diameter
+three, and seven had a few distance-four pairs (2--26 pairs), but none had a
+triple pairwise at distance at least four.  Therefore
+`sigma_3^4(G) = infinity`, placing every tested instance in Theorem 1.7's
+`k = 0` regime rather than merely in an unrelated claw-free subclass.
+
+The planted certificate is not statistically special: every line-graph vertex
+has the same degree, and every chosen Walecki cycle is carried through the same
+random relabelling as the others.  Nevertheless, the family is easy.
+
+## Measured failure of H
+
+The construction-aware standard route is:
+
+1. recognize the line graph and reconstruct its 41-vertex root graph; and
+2. run Hierholzer's algorithm on the even-degree root, mapping the Euler edge
+   order back to line-graph vertices.
+
+Both stages are linear in the represented graph size.  At the tested setting a
+single scan already touches 5,412 line-graph adjacency entries, followed by
+about 492 root-edge incidences and 246 emitted path vertices.  A public
+"compact" route must recover the same incidence cliques before it knows which
+randomly relabelled line vertex denotes which root edge, so it has the same
+roughly 5,904 structural touches plus output.  The private six-cycle order
+would take only 245 transitions, but using it requires the generator's hidden
+cycle selection and relabelling inverse; it is not an insight available from
+the public instance.  Thus the public mechanical/compact ratio is effectively
+one, and the public route also exceeds the 300-operation no-tool cap.
+
+More decisively, root reconstruction is unnecessary on this distribution.  I
+ran the standard Warnsdorff-style path heuristic: from a random start, repeatedly
+choose an unused neighbor with the fewest unused neighbors, breaking ties with
+a seed-local RNG and allowing up to 32 starts.  At `q = 41`, six cycles:
+
+| measurement | result |
+|---|---:|
+| verified Hamilton paths | **20 / 20** |
+| median wall time | **0.0235429 s** |
+| median neighbor probes | **64,922** |
+| median path decisions | **245** |
+
+Each returned Hamilton path is itself a valid paper witness, whether or not it
+matches the planted traversal.  This is a successful in-context greedy attack,
+so it cannot be hidden under Track B's successful `reference_algorithm` key;
+the required `attacks` panel would fail G6.
+
+I also tested two simpler variants before this one.  On randomly relabelled
+`L(K_23)` (253 answer atoms, the largest odd complete-root case under the cap),
+the same heuristic solved 20/20 in a median 0.0334116 seconds and 233,730
+neighbor probes.  On 240-vertex line graphs of triangle-free 4-regular roots
+formed from two known Hamilton cycles, randomized minimum-remaining-degree
+search solved all eight measured seeds within 64 starts.  Sparsifying the
+theorem-regime example therefore did not expose a usable hard window.
+
+These measurements do not prove every inverse-planted claw-free distribution
+easy.  They do show that the paper gives no basis for claiming the needed
+distributional hardness, and that the natural native constructions are broken
+by the domain-appropriate attack.  Further conditioning on this particular
+heuristic would be benchmark-specific tuning absent from the paper.
+
+## The sharpness construction cannot be used as stated
+
+Section 2 claims its displayed graph has no spanning tree whose stem has at
+most `k` branch vertices.  For `k >= 1`, the claim is false for the graph as
+written.
+
+Let `r = k+3`; the vertices `z_1,...,z_r` form the displayed clique.  In each
+copy `D_i = K_m`, choose `d_i`.  Take the following spanning tree:
+
+* the central star `z_1 z_i` for `i = 2,...,r`;
+* `z_i d_i` and `d_i v_i` for every `i`; and
+* `d_i x` for every other `x` in `D_i`.
+
+After the leaves of this tree are removed, every `d_i` is a stem leaf,
+`z_2,...,z_r` have stem degree two, and only `z_1` is a stem branch vertex.
+Thus the construction has a spanning tree with one stem branch vertex, contrary
+to the stated lower bound of `k+1` whenever `k >= 1`.  The `k = 0` instance is
+an obstruction, but its three clique hubs are directly exposed by the block
+structure and do not supply a hard family.  I therefore did not use Section 2
+as a theorem-backed negative certificate.
+
+## Other native tasks considered
+
+| candidate | disposition |
+|---|---|
+| Sample a graph satisfying Theorem 1.7 or 1.8, then output the promised tree | **G fails:** the Section 3 contradiction proof does not construct the witness without extremal-tree search. |
+| Plant a bounded-stem tree, then add claw-free-preserving structure | **H unsupported:** worst-case graph difficulty says nothing about the planted distribution; the natural line-graph realization is greedily solved. |
+| Use `k=0` and ask for a Hamilton path, a stronger valid witness | **H fails empirically:** 20/20 at the largest diverse tested preset. |
+| Use the Section 2 graph as a certified negative | **Paper guarantee fails for `k>=1`; H fails for the visible `k=0` block obstruction.** |
+| Ask for a set attaining `sigma_k^l` | **V fails without an optimum certificate:** a set proves its own distance and degree sum, not that no better set exists. |
+| Ask only whether a supplied tree is valid | **H fails:** that is direct linear-time verification with no witness search. |
+
+## Gate diagnosis
+
+| requirement | result | evidence |
+|---|---:|---|
+| G -- certificate known by construction | Passes in isolation | Compose known Hamilton cycles into an Euler tour, then carry it to the line graph. |
+| V -- exact witness verification | Passes in isolation | Exact edge, tree, stem, and branch-degree checks. |
+| H -- Track A | **Fails** | No distributional hardness result; the natural theorem-regime family is solved 20/20 by greedy search. |
+| H -- Track B | **Fails** | Public mechanical and compact routes are the same root reconstruction plus Euler traversal, and a simpler in-context attack succeeds 20/20. |
+| Paper sharpness route | **Fails as written for `k>=1`** | The explicit central-star spanning tree above has exactly one stem branch vertex. |
+| Overall | **Rejected at Step 0** | G, H, and V do not hold simultaneously for a paper-supported family. |
+
+This rejection is not based merely on an efficient algorithm existing.  It
+records both costs, explains why the generator's 245-step private traversal is
+not a public compact route, and reports the successful 20-seed attack that
+prevents either hardness label.
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+from collections import deque
+from random import Random
+from time import perf_counter
+n=256
+rng=Random(0)
+# A radius-at-most-7 rooted tree in parent-before-child form.
+depth=[0]
+parent=[]
+for v in range(1,n):
+    eligible=[u for u,d in enumerate(depth) if d<7]
+    p=eligible[rng.randrange(len(eligible))]
+    parent.append(p); depth.append(depth[p]+1)
+adj=[[] for _ in range(n)]
+for v,p in enumerate(parent,1): adj[p].append(v); adj[v].append(p)
+word='00010111'
+def color():
+    dist=[-1]*n; dist[0]=0; q=deque([0]); ops=0
+    while q:
+        u=q.popleft(); ops+=1
+        for v in adj[u]:
+            ops+=1
+            if dist[v]<0:
+                dist[v]=dist[u]+1; q.append(v); ops+=1
+    ans=[]
+    for d in dist:
+        ans.append(int(word[d])); ops+=1
+    return ans,ops
+for _ in range(1000): color()
+t0=perf_counter()
+for _ in range(10000): ans,ops=color()
+elapsed=(perf_counter()-t0)/10000
+levels=max(depth)
+print({'n':n,'edges':n-1,'height':levels,'counted_queue_edge_discovery_assignment_ops':ops,'mean_wall_clock_sec':elapsed,'answer_atoms':len(ans)})
+counts=[]
+prod=1
+total=1
+for d in range(1,9):
+    prod*=2**(9-d)+1
+    counts.append(prod); total+=prod
+print({'T8_level_sizes':[1]+counts,'T8_vertices':total,'explicit_coloring_bits':total})
+PY" in /home/gson/gvrepo/results/1601.03780
+ succeeded in 907ms:
+{'n': 256, 'edges': 255, 'height': 7, 'counted_queue_edge_discovery_assignment_ops': 1277, 'mean_wall_clock_sec': 9.143578859511763e-05, 'answer_atoms': 256}
+{'T8_level_sizes': [1, 257, 33153, 2154945, 71113185, 1208924145, 10880317305, 54401586525, 163204759575], 'T8_vertices': 229768889091, 'explicit_coloring_bits': 229768889091}
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+def squarefree(s):
+    for h in range(3,len(s)//2+1):
+        for i in range(len(s)-2*h+1):
+            if s[i:i+h]==s[i+h:i+2*h]: return False
+    return True
+ok=[]
+for mask in range(256):
+    w=''.join(str((mask>>i)&1) for i in range(8))
+    good=True
+    for a in range(8):
+      for b in range(8):
+       for lca in range(min(a,b)+1):
+        ds=list(range(a,lca-1,-1))+list(range(lca+1,b+1))
+        if not squarefree(''.join(w[d] for d in ds)):
+         good=False; break
+       if not good: break
+      if not good: break
+    if good: ok.append(w)
+print(len(ok))
+print(ok)
+PY" in /home/gson/gvrepo/results/1601.03780
+ succeeded in 0ms:
+2
+['11101000', '00010111']
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+from collections import deque
+from random import Random
+from time import perf_counter
+n=256; rng=Random(160103780)
+# Force two depth-7 arms, then grow without exceeding depth 7.
+parent=[0]
+depth=[0,1]
+last=1
+for _ in range(6): parent.append(last); depth.append(depth[last]+1); last=len(depth)-1
+parent.append(0); depth.append(1); last=len(depth)-1
+for _ in range(6): parent.append(last); depth.append(depth[last]+1); last=len(depth)-1
+while len(depth)<n:
+    eligible=[u for u,d in enumerate(depth) if d<7]
+    p=eligible[rng.randrange(len(eligible))]
+    parent.append(p); depth.append(depth[p]+1)
+adj=[[] for _ in range(n)]
+for v,p in enumerate(parent,1): adj[p].append(v); adj[v].append(p)
+word='00010111'
+def bfs(start, need_parent=False):
+    d=[-1]*n; d[start]=0; par=[-1]*n; q=deque([start]); ops=0
+    while q:
+        u=q.popleft(); ops+=1
+        for v in adj[u]:
+            ops+=1
+            if d[v]<0:
+                d[v]=d[u]+1; par[v]=u; q.append(v); ops+=1
+    return max(range(n),key=d.__getitem__),d,par,ops
+def solve():
+    a,_,_,o1=bfs(0)
+    b,d,p,o2=bfs(a,True)
+    path=[]; x=b
+    while x"'!=-1: path.append(x); x=p[x]
+    center=path[len(path)//2]
+    _,dc,_,o3=bfs(center)
+    ans=[]
+    for x in dc: ans.append(int(word[x]));
+    return ans,o1+o2+o3+n,center,max(dc)
+for _ in range(1000): solve()
+t=perf_counter()
+for _ in range(10000): ans,ops,c,r=solve()
+print({'"'n':n,'edges':n-1,'radius':r,'center':c,'counted_ops':ops,'mean_wall_clock_sec':(perf_counter()-t)/10000,'answer_atoms':len(ans)})
+PY" in /home/gson/gvrepo/results/1601.03780
+ succeeded in 4299ms:
+{'n': 256, 'edges': 255, 'radius': 7, 'center': 0, 'counted_ops': 3319, 'mean_wall_clock_sec': 0.0003959036814980209, 'answer_atoms': 256}
+
+exec
+/bin/bash -lc "find . -maxdepth 2 -mindepth 1 -printf '%P\\n' | sort | sed -n '1,160p'
+git status --short -- ." in /home/gson/gvrepo/results/1601.03780
+ exited 128 in 0ms:
+.meta.json
+.runner.sh
+.task.md
+codex_run.log
+fatal: not a git repository (or any of the parent directories): .git
+
+codex
+The full TeX confirms the decisive point and also exposes indexing typos that the PDF obscures. Interpreting the eight-bit palette as depths `0..7`, I exhaustively checked every possible down-then-up depth sequence of a path: `00010111` and its complement are valid. That makes generation trustworthy, but it also makes recovery linear and leaves no shorter Track B route than the algorithm itself. I’m recording the measured comparison and the unusable Tyler-tree alternatives in `REJECTED.md`.
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1601.03780/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..5323570013772721c44b75cc327ae97d2ddc91cf
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,185 @@
++# Rejected at Step 0: arXiv 1601.03780
++
++Paper: Joseph Antonides, Claire Kiers, and Nicole Yamzon,
++[*On the Long-Repetition-Free 2-Colorability of Trees*](https://arxiv.org/abs/1601.03780)
++(v2, 27 January 2022).
++
++## Decision
++
++No generator is shipped. The prior-triage family—generate a tree of radius at
++most seven and ask for a long-repetition-free binary coloring—passes **G** and
++**V**, but it fails **H on both tracks**.
++
++- **Track A is false.** Proposition 2.2 does not merely establish existence. Its
++  proof gives the coloring directly: find a center, assign each vertex its
++  distance from that center, and read its color from the fixed depth word
++  `00010111`. This is an `O(|V|+|E|)=O(|V|)` algorithm on a tree and succeeds on
++  every instance in the proposed radius-seven distribution.
++- **Track B has no compression gap.** The compact route is the same center/depth
++  traversal as the mechanical route. With an explicit coloring as the answer,
++  it also has to emit one bit per vertex. At the 256-atom answer limit, the
++  reference computation takes only about 0.00040 seconds and 3,319 elementary
++  traversal/output events, while any route must already write 256 atoms. If the
++  center is supplied, both routes reduce to the same one-BFS lookup procedure.
++  There is no invariant that replaces a large mechanical calculation by a
++  short calculation; recognizing the theorem *is* the whole algorithm.
++
++The negative Tyler-tree result does not rescue the paper. A bare claim that a
++Tyler tree has no valid 2-coloring is not an executable witness, while giving a
++coloring and asking for a violating path requires an explicitly colored
++229,768,889,091-vertex tree at height eight. A succinct coloring circuit plus a
++private decoding trick would make the added encoding, rather than this paper's
++tree-coloring mathematics, carry the difficulty.
++
++I therefore stopped before Step 1, as required. No module, self-test report, or
++oracle transcripts were fabricated.
++
++## Exact paper objects and regimes
++
++Definition 1.2 calls `uu` a *long square* when `|u| >= 3`; a word is
++long-square-free when it contains no such contiguous factor. Definition 1.3
++calls a vertex coloring long-repetition-free when the color word on **every
++simple path** is long-square-free.
++
++The paper proves two complementary statements:
++
++1. **Proposition 2.2:** every tree of radius at most seven has a
++   long-repetition-free 2-coloring. The proof colors by generation from a center
++   using `00010111`.
++2. **Lemma 3.2 and Proposition 3.4:** the Tyler tree `T_n`, whose level-`j`
++   vertices have `2^(n-j)+1` children, is claimed not to admit such a coloring
++   for `n >= 8`. The proof recursively extracts a binary subtree monochromatic
++   on each level and turns a long palindrome in the level word into a repeated
++   path word.
++
++No hardness theorem, average-case statement, FPT boundary, approximation
++result, or computational search problem appears in the paper. The positive
++regime is constructive in the strongest possible sense, and the negative
++regime is a fixed extremal obstruction rather than a hard family of search
++instances.
++
++## Step-0 certificate-producing algorithm
++
++For the proposed positive family, the certificate algorithm is immediate from
++the proof of Proposition 2.2:
++
++1. Find a diameter by two breadth-first traversals and take its midpoint as a
++   center (or use the already designated center if the instance supplies it).
++2. Run breadth-first search from the center to obtain every vertex depth.
++3. For depth `d in {0,...,7}`, output bit `00010111[d]`.
++
++The complexity is linear because a tree has `|E|=|V|-1`. Randomly relabeling
++the vertices does not hide this construction: breadth-first search is invariant
++under relabeling and recovers the same generations.
++
++The paper has several indexing slips in this proof: it writes
++`a_1 ... a_7 = 00010111` even though the displayed word has eight symbols, and
++later uses `a_0`. I used the only consistent interpretation, namely depths
++`0,...,7`. I then independently checked the certificate instead of relying on
++the prose proof. Every tree path has a depth sequence
++
++```text
++s, s-1, ..., l, l+1, ..., t
++```
++
++for endpoint depths `s,t <= 7` and lowest depth `l`. Exhaustively scanning all
++such triples and every possible half-length at least three finds no square for
++`00010111`; the only valid binary depth palettes of length eight are that word
++and its bitwise complement `11101000`. Thus the positive construction is
++correct under the repaired indexing, but a compressed palette answer would
++have only two possibilities and would fail guess resistance.
++
++## Mechanical cost versus compact route
++
++I measured the strongest faithful version at the largest possible explicit
++coloring under the output cap. The test tree had 256 vertices, two depth-seven
++arms ensuring radius seven, and all remaining vertices attached with a local
++seeded RNG without exceeding depth seven. The solver used three BFS traversals
++(two to find a diameter/center and one for depths) followed by the palette
++lookup.
++
++The operation counter charged one event for each queue pop, directed-edge
++examination, newly discovered vertex, and emitted color. On a tree this is
++
++```text
++3 * (n + 2(n-1) + (n-1)) + n = 13n - 9.
++```
++
++At `n=256` the measured figures were:
++
++| quantity | result |
++|---|---:|
++| reference algorithm | diameter-center BFS + depth BFS + palette lookup |
++| asymptotic complexity | `O(n)` time, `O(n)` space |
++| counted events | **3,319** |
++| mean CPython wall time over 10,000 runs | **0.000396 s** |
++| answer atoms | **256** |
++| unavoidable answer writes | **256** |
++
++If a center is supplied, one BFS plus output costs `5n-3 = 1,277` counted
++events at `n=256` and measured about `0.000091 s`. If the input is weakened
++further to a parent-before-child array, both the standard and purported compact
++routes use roughly `2n` depth/lookup operations. Reducing `n` enough to fit the
++300-operation intended-route cap only makes this already identical algorithm
++smaller; it does not uncover a shortcut.
++
++So the comparison required for Track B is not “millions of mechanical steps
++versus a dozen insightful steps.” It is the **same linear pass versus the same
++linear pass**, with a 256-symbol output lower bound at the largest writable
++setting. The large nominal space of all `2^256` color tables is irrelevant
++because the theorem directly computes a valid member.
++
++## Why the negative result does not yield another family
++
++The height-eight Tyler tree is extraordinarily large. From Definition 1.6 its
++level sizes are
++
++```text
++1,
++257,
++33,153,
++2,154,945,
++71,113,185,
++1,208,924,145,
++10,880,317,305,
++54,401,586,525,
++163,204,759,575,
++```
++
++for a total of **229,768,889,091 vertices**. This leaves the following options,
++none of which clears all three gates:
++
++| candidate task | disposition |
++|---|---|
++| Output a long-repetition-free coloring of a radius-seven tree | **H fails on Track A:** Proposition 2.2 gives the linear algorithm. **H fails on Track B:** the compact and mechanical routes coincide. |
++| Output only the center and eight-bit depth palette as a compressed coloring | **H/G4 fail:** tree centers are found in linear time, and the exact palette scan leaves only the displayed word and its complement. At ordinary explicit sizes the candidate language is small; at huge succinct sizes the encoding, not the coloring theorem, creates the puzzle. |
++| Certify that `T_8` has no valid 2-coloring | **V fails:** the word “no” is not a witness. The paper gives a prose universal argument, not a bounded refutation object with an executable local checker. Reusing the same fixed proof template would in any event be a lookup, not a large answer space. |
++| Given an arbitrary coloring of explicit `T_8`, output a bad path | The path would pass **V**, but the instance needs over 229 billion explicit color bits. The paper gives no succinct coloring language or compact-route theorem. |
++| Inverse-plant one bad path in a moderate colored tree | **G and V can pass, H is unsupported:** the paper proves no hardness for that planted distribution. Any public checksum, affine mask, or circuit used to reveal the planted path would be a benchmark-convenience wrapper absent from the paper. |
++| Ask for a 3-coloring of `T_8` | The certificate itself has over 229 billion atoms; it violates the output contract before hardness is considered. |
++
++There are also source-level off-by-one errors in the negative proof: Lemma 3.1
++requires a binary word of length at least nine, but Proposition 3.4 selects only
++`b_0,...,b_7` before invoking it, while the base case and the definition of
++height indicate that level eight was intended. The source also defines binary
++complement using `mod 1`, evidently instead of `mod 2`. These are repairable
++typographical errors, but a benchmark checker cannot use the published prose as
++an opaque negative certificate. Even under the natural repairs, the size and
++hardness conclusions above are unchanged.
++
++## Gate diagnosis
++
++| requirement | result | evidence |
++|---|:---:|---|
++| G — certificate known without solving | Passes for the positive radius-seven construction | Proposition 2.2 supplies the depth palette; exact enumeration independently validates it. |
++| V — exact witness checking | Passes for an explicit positive coloring or a supplied bad path | Enumerate tree paths and compare adjacent blocks exactly. |
++| H — Track A | **Fails** | The certificate-producing algorithm is `O(n)` on every tree in the proposed regime. |
++| H — Track B | **Fails** | At `n=256`, 3,319 mechanical events and 256 mandatory outputs; the compact route is the identical traversal, not a shorter structural computation. |
++| Native negative alternative | **Fails V or the size contract** | Non-colorability has no finite executable certificate in the paper; an explicitly colored `T_8` has 229,768,889,091 vertices. |
++| Overall | **Rejected at Step 0** | No paper-supported family satisfies G, H, and V simultaneously under either declared track. |
++
++This rejection is not based merely on the existence of an efficient algorithm.
++It identifies that algorithm, measures it at the writable limit, gives the
++compact-route lower bound, and shows that the two routes are the same
++calculation. The only ways found to create a large gap introduce a succinct
++encoding or hidden decoding problem not present in the paper.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..5323570013772721c44b75cc327ae97d2ddc91cf
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,185 @@
++# Rejected at Step 0: arXiv 1601.03780
++
++Paper: Joseph Antonides, Claire Kiers, and Nicole Yamzon,
++[*On the Long-Repetition-Free 2-Colorability of Trees*](https://arxiv.org/abs/1601.03780)
++(v2, 27 January 2022).
++
++## Decision
++
++No generator is shipped. The prior-triage family—generate a tree of radius at
++most seven and ask for a long-repetition-free binary coloring—passes **G** and
++**V**, but it fails **H on both tracks**.
++
++- **Track A is false.** Proposition 2.2 does not merely establish existence. Its
++  proof gives the coloring directly: find a center, assign each vertex its
++  distance from that center, and read its color from the fixed depth word
++  `00010111`. This is an `O(|V|+|E|)=O(|V|)` algorithm on a tree and succeeds on
++  every instance in the proposed radius-seven distribution.
++- **Track B has no compression gap.** The compact route is the same center/depth
++  traversal as the mechanical route. With an explicit coloring as the answer,
++  it also has to emit one bit per vertex. At the 256-atom answer limit, the
++  reference computation takes only about 0.00040 seconds and 3,319 elementary
++  traversal/output events, while any route must already write 256 atoms. If the
++  center is supplied, both routes reduce to the same one-BFS lookup procedure.
++  There is no invariant that replaces a large mechanical calculation by a
++  short calculation; recognizing the theorem *is* the whole algorithm.
++
++The negative Tyler-tree result does not rescue the paper. A bare claim that a
++Tyler tree has no valid 2-coloring is not an executable witness, while giving a
++coloring and asking for a violating path requires an explicitly colored
++229,768,889,091-vertex tree at height eight. A succinct coloring circuit plus a
++private decoding trick would make the added encoding, rather than this paper's
++tree-coloring mathematics, carry the difficulty.
++
++I therefore stopped before Step 1, as required. No module, self-test report, or
++oracle transcripts were fabricated.
++
++## Exact paper objects and regimes
++
++Definition 1.2 calls `uu` a *long square* when `|u| >= 3`; a word is
++long-square-free when it contains no such contiguous factor. Definition 1.3
++calls a vertex coloring long-repetition-free when the color word on **every
++simple path** is long-square-free.
++
++The paper proves two complementary statements:
++
++1. **Proposition 2.2:** every tree of radius at most seven has a
++   long-repetition-free 2-coloring. The proof colors by generation from a center
++   using `00010111`.
++2. **Lemma 3.2 and Proposition 3.4:** the Tyler tree `T_n`, whose level-`j`
++   vertices have `2^(n-j)+1` children, is claimed not to admit such a coloring
++   for `n >= 8`. The proof recursively extracts a binary subtree monochromatic
++   on each level and turns a long palindrome in the level word into a repeated
++   path word.
++
++No hardness theorem, average-case statement, FPT boundary, approximation
++result, or computational search problem appears in the paper. The positive
++regime is constructive in the strongest possible sense, and the negative
++regime is a fixed extremal obstruction rather than a hard family of search
++instances.
++
++## Step-0 certificate-producing algorithm
++
++For the proposed positive family, the certificate algorithm is immediate from
++the proof of Proposition 2.2:
++
++1. Find a diameter by two breadth-first traversals and take its midpoint as a
++   center (or use the already designated center if the instance supplies it).
++2. Run breadth-first search from the center to obtain every vertex depth.
++3. For depth `d in {0,...,7}`, output bit `00010111[d]`.
++
++The complexity is linear because a tree has `|E|=|V|-1`. Randomly relabeling
++the vertices does not hide this construction: breadth-first search is invariant
++under relabeling and recovers the same generations.
++
++The paper has several indexing slips in this proof: it writes
++`a_1 ... a_7 = 00010111` even though the displayed word has eight symbols, and
++later uses `a_0`. I used the only consistent interpretation, namely depths
++`0,...,7`. I then independently checked the certificate instead of relying on
++the prose proof. Every tree path has a depth sequence
++
++```text
++s, s-1, ..., l, l+1, ..., t
++```
++
++for endpoint depths `s,t <= 7` and lowest depth `l`. Exhaustively scanning all
++such triples and every possible half-length at least three finds no square for
++`00010111`; the only valid binary depth palettes of length eight are that word
++and its bitwise complement `11101000`. Thus the positive construction is
++correct under the repaired indexing, but a compressed palette answer would
++have only two possibilities and would fail guess resistance.
++
++## Mechanical cost versus compact route
++
++I measured the strongest faithful version at the largest possible explicit
++coloring under the output cap. The test tree had 256 vertices, two depth-seven
++arms ensuring radius seven, and all remaining vertices attached with a local
++seeded RNG without exceeding depth seven. The solver used three BFS traversals
++(two to find a diameter/center and one for depths) followed by the palette
++lookup.
++
++The operation counter charged one event for each queue pop, directed-edge
++examination, newly discovered vertex, and emitted color. On a tree this is
++
++```text
++3 * (n + 2(n-1) + (n-1)) + n = 13n - 9.
++```
++
++At `n=256` the measured figures were:
++
++| quantity | result |
++|---|---:|
++| reference algorithm | diameter-center BFS + depth BFS + palette lookup |
++| asymptotic complexity | `O(n)` time, `O(n)` space |
++| counted events | **3,319** |
++| mean CPython wall time over 10,000 runs | **0.000396 s** |
++| answer atoms | **256** |
++| unavoidable answer writes | **256** |
++
++If a center is supplied, one BFS plus output costs `5n-3 = 1,277` counted
++events at `n=256` and measured about `0.000091 s`. If the input is weakened
++further to a parent-before-child array, both the standard and purported compact
++routes use roughly `2n` depth/lookup operations. Reducing `n` enough to fit the
++300-operation intended-route cap only makes this already identical algorithm
++smaller; it does not uncover a shortcut.
++
++So the comparison required for Track B is not “millions of mechanical steps
++versus a dozen insightful steps.” It is the **same linear pass versus the same
++linear pass**, with a 256-symbol output lower bound at the largest writable
++setting. The large nominal space of all `2^256` color tables is irrelevant
++because the theorem directly computes a valid member.
++
++## Why the negative result does not yield another family
++
++The height-eight Tyler tree is extraordinarily large. From Definition 1.6 its
++level sizes are
++
++```text
++1,
++257,
++33,153,
++2,154,945,
++71,113,185,
++1,208,924,145,
++10,880,317,305,
++54,401,586,525,
++163,204,759,575,
++```
++
++for a total of **229,768,889,091 vertices**. This leaves the following options,
++none of which clears all three gates:
++
++| candidate task | disposition |
++|---|---|
++| Output a long-repetition-free coloring of a radius-seven tree | **H fails on Track A:** Proposition 2.2 gives the linear algorithm. **H fails on Track B:** the compact and mechanical routes coincide. |
++| Output only the center and eight-bit depth palette as a compressed coloring | **H/G4 fail:** tree centers are found in linear time, and the exact palette scan leaves only the displayed word and its complement. At ordinary explicit sizes the candidate language is small; at huge succinct sizes the encoding, not the coloring theorem, creates the puzzle. |
++| Certify that `T_8` has no valid 2-coloring | **V fails:** the word “no” is not a witness. The paper gives a prose universal argument, not a bounded refutation object with an executable local checker. Reusing the same fixed proof template would in any event be a lookup, not a large answer space. |
++| Given an arbitrary coloring of explicit `T_8`, output a bad path | The path would pass **V**, but the instance needs over 229 billion explicit color bits. The paper gives no succinct coloring language or compact-route theorem. |
++| Inverse-plant one bad path in a moderate colored tree | **G and V can pass, H is unsupported:** the paper proves no hardness for that planted distribution. Any public checksum, affine mask, or circuit used to reveal the planted path would be a benchmark-convenience wrapper absent from the paper. |
++| Ask for a 3-coloring of `T_8` | The certificate itself has over 229 billion atoms; it violates the output contract before hardness is considered. |
++
++There are also source-level off-by-one errors in the negative proof: Lemma 3.1
++requires a binary word of length at least nine, but Proposition 3.4 selects only
++`b_0,...,b_7` before invoking it, while the base case and the definition of
++height indicate that level eight was intended. The source also defines binary
++complement using `mod 1`, evidently instead of `mod 2`. These are repairable
++typographical errors, but a benchmark checker cannot use the published prose as
++an opaque negative certificate. Even under the natural repairs, the size and
++hardness conclusions above are unchanged.
++
++## Gate diagnosis
++
++| requirement | result | evidence |
++|---|:---:|---|
++| G — certificate known without solving | Passes for the positive radius-seven construction | Proposition 2.2 supplies the depth palette; exact enumeration independently validates it. |
++| V — exact witness checking | Passes for an explicit positive coloring or a supplied bad path | Enumerate tree paths and compare adjacent blocks exactly. |
++| H — Track A | **Fails** | The certificate-producing algorithm is `O(n)` on every tree in the proposed regime. |
++| H — Track B | **Fails** | At `n=256`, 3,319 mechanical events and 256 mandatory outputs; the compact route is the identical traversal, not a shorter structural computation. |
++| Native negative alternative | **Fails V or the size contract** | Non-colorability has no finite executable certificate in the paper; an explicitly colored `T_8` has 229,768,889,091 vertices. |
++| Overall | **Rejected at Step 0** | No paper-supported family satisfies G, H, and V simultaneously under either declared track. |
++
++This rejection is not based merely on the existence of an efficient algorithm.
++It identifies that algorithm, measures it at the writable limit, gives the
++compact-route lower bound, and shows that the two routes are the same
++calculation. The only ways found to create a large gap introduce a succinct
++encoding or hidden decoding problem not present in the paper.
+
+ERROR: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 12th, 2026 6:06 AM.
+ERROR: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 12th, 2026 6:06 AM.
+tokens used
+94,963
