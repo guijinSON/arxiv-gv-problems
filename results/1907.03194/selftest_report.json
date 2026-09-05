@@ -1,0 +1,228 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction_audit": "each witness is sampled before its decoys and is a common cyclic translate of an independently audited trace-zero Frobenius starter",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "wrong length: expected 93, got 92"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "row 92 start 1784 is not a displayed candidate"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "row 0 start 2047 is outside [0,2046]"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "row 0 start 1648 is not a displayed candidate"
+      }
+    },
+    "distinct_reasons": 5,
+    "duplicate_positions": [
+      0,
+      92
+    ],
+    "pass": true,
+    "swap_positions": [
+      0,
+      1
+    ]
+  },
+  "G3_round_trip": {
+    "fenced_matches": true,
+    "garbage_returns_none": true,
+    "pass": true,
+    "tagged_matches": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 9343878384890255807777119448474196633381331982845050737826186276657715542443371287564109437577976626746659450006721346172290467269376897020421450382791094657540085093089822617769726345721044533248,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform independent choice of one displayed start from every signed Frobenius-difference row; sampled lazily with exact early rejection after a necessary hyperplane-membership failure",
+    "total": 200000,
+    "wall_clock_sec": 7.406514
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations": 95976,
+    "baseline_wall_clock_sec": 0.144043,
+    "exact_demo_candidate_count": 27,
+    "exact_demo_solution_count": 2,
+    "pass": true,
+    "shipping_density": {
+      "hits": 0,
+      "method": "sampled from CERTIFICATE_LANGUAGE",
+      "n": 128,
+      "observed_fraction": 0.0,
+      "samples": 200000,
+      "v": 11
+    },
+    "strongest_baseline": {
+      "attempts": 8,
+      "complexity": "O(r*n) modular operations",
+      "name": "full row-relative offset histogram",
+      "operations": 95976,
+      "operations_per_instance": 11997,
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec": 0.144043
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "first_four_rows_histogram": {
+        "attempts": 8,
+        "operations": 4840,
+        "successes": 0,
+        "wall_clock_sec": 0.029104
+      },
+      "greedy_first_candidate": {
+        "attempts": 8,
+        "operations": 744,
+        "successes": 0,
+        "wall_clock_sec": 3e-05
+      },
+      "outlier_smallest_residue": {
+        "attempts": 8,
+        "operations": 744,
+        "successes": 0,
+        "wall_clock_sec": 0.007381
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "operations": 2048,
+        "successes": 0,
+        "wall_clock_sec": 1.480388
+      },
+      "two_marker_offset_ansatz": {
+        "attempts": 8,
+        "operations": 744,
+        "successes": 0,
+        "wall_clock_sec": 9.7e-05
+      }
+    },
+    "compact_route": {
+      "attempts": 8,
+      "name": "marked repeated-offset symmetry",
+      "operations": 2024,
+      "operations_per_instance": 253,
+      "successes": 8
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "O(r*n) modular operations",
+      "name": "full row-relative offset histogram",
+      "operations": 95976,
+      "operations_per_instance": 11997,
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec": 0.144043
+    }
+  },
+  "G7_scales": {
+    "answer_entries_after": 93,
+    "answer_entries_before": 93,
+    "base_candidates_per_row": 128,
+    "doubled_candidates_per_row": 256,
+    "doubled_verify_reason": "ok",
+    "next_escalation": {
+      "blocker_count": 92,
+      "marked_true": 12,
+      "marker_count": 180,
+      "n": 128,
+      "v": 11
+    },
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_verifies": {
+      "attempts": 20,
+      "successes": 20
+    },
+    "examples": [
+      {
+        "carried_reason": "ok",
+        "carried_verify": true,
+        "frobenius_exponent": 1,
+        "key_invariant": true,
+        "seed": 0,
+        "translation": 894
+      },
+      {
+        "carried_reason": "ok",
+        "carried_verify": true,
+        "frobenius_exponent": 2,
+        "key_invariant": true,
+        "seed": 1,
+        "translation": 656
+      },
+      {
+        "carried_reason": "ok",
+        "carried_verify": true,
+        "frobenius_exponent": 3,
+        "key_invariant": true,
+        "seed": 2,
+        "translation": 638
+      }
+    ],
+    "invariance": {
+      "attempts": 20,
+      "successes": 20,
+      "transformations": "global Singer translation, nonidentity Frobenius relabelling, row/candidate/marker reorder, and their composition"
+    },
+    "pass": true,
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 418,
+    "answer_elements": 93,
+    "answer_tokens": 105,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "arms_recorded_not_gated": true,
+    "caps": {
+      "answer_chars": 2000,
+      "answer_elements": 256,
+      "intended_route_operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 253,
+    "pass": true
+  },
+  "all_gates_pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "blocker_count": 92,
+    "marked_true": 12,
+    "marker_count": 160,
+    "n": 128,
+    "v": 11
+  },
+  "track": "B"
+}
