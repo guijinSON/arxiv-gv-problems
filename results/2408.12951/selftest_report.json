@@ -1,0 +1,119 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "sample covector first; build all graph parts as its affine level sets",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "answer must contain exactly 6 coefficients", "rejected": true},
+      "duplicate_one": {"reason": "nonedge component 0 is split: vertices 135029 and 184187 receive different residues", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "coefficient 5 is outside 0..2147483646", "rejected": true},
+      "swap_one": {"reason": "the normalization coefficient w[0] must equal 1", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [1, 1140041608, 469610217, 442766910, 668842270, 2002834235],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 2.189528855605421e-47,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform among all normalized projective covectors w[0]=1",
+    "structure_aware_space": 45671926060252476630107084286792841360213803007,
+    "total": 200000,
+    "wall_clock_sec": 1.720127
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_candidate_trials_total_8": 65536,
+    "attack_wall_clock_sec_total_8": 0.620848,
+    "candidate_space": 45671926060252476630107084286792841360213803007,
+    "demo_exact_valid_answers": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_density_at_shipping": 2.189528855605421e-47,
+    "exact_valid_answers": 1,
+    "pass": true,
+    "reference_algorithm_operations_mean": 9316,
+    "reference_algorithm_wall_clock_sec_mean": 0.00479723,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "random_restart_8192"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "coordinate_axis_outlier": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.000016},
+      "one_pass_greedy": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.008571},
+      "random_restart_8192": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.620848},
+      "single_nonedge_equation": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.000309},
+      "small_coefficient_ansatz": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.104379}
+    },
+    "compact_route": {
+      "field_operations_max": 185,
+      "field_operations_mean": 185.0,
+      "name": "solve the d-1 differences from one affine-independent nonedge class",
+      "solves": "8/8, as expected",
+      "wall_clock_sec_total_8": 0.000864
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N^2 + N*d^2) exact field operations",
+      "equation_rows_mean": 255.375,
+      "name": "complement-component recognition plus modular Gaussian elimination",
+      "operations_max": 9873,
+      "operations_mean": 9316,
+      "operations_min": 8787,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.00479723,
+      "wall_clock_sec_total_8": 0.038378
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 68,
+    "doubled_vertices": 581,
+    "pass": true,
+    "shipping_n": 34,
+    "shipping_vertices": 301,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "canonical_form": "prime, dimension, and sorted complete-multipartite part sizes",
+    "carried_witness_checks": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "vertex renumbering and input/list reordering",
+      "invertible affine coordinate change with projectively normalized carried covector",
+      "composition of coordinate change and vertex relabelling"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 55,
+    "answer_elements": 6,
+    "answer_tokens": 14,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unrun",
+    "intended_route_operations": 185,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:2408.12951",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {"class_spread": 5, "dimension": 6, "n": 34, "prime": 2147483647},
+  "track": "B"
+}
