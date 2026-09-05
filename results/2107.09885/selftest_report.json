@@ -1,0 +1,108 @@
+{
+  "paper": "2107.09885",
+  "track": "B",
+  "shipping_difficulty": "medium",
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 16,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": "expected exactly 32 jumps",
+      "swap": "jump 1 violates a precedence twin class",
+      "duplicate": "a remove vertex is repeated",
+      "empty": "answer is empty",
+      "out_of_range": "jump 1 remove vertex is out of range"
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed_equals_planted": true,
+    "realistic_prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "fraction": 0.0,
+    "structure_aware_space": 69237837345426015193166198943959583654468513190741907865600000000000000
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_exact_valid_answer_count": 1,
+    "shipping_candidate_space": 69237837345426015193166198943959583654468513190741907865600000000000000,
+    "shipping_exact_solution_fraction": 1.4442969889585408e-71,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_total": 200000,
+    "shipping_sampled_density": 0.0,
+    "demo_bruteforce_valid_count": 1,
+    "reference_wall_clock_sec_mean": 0.00024044999736361206,
+    "reference_wall_clock_sec_max": 0.0003129499964416027,
+    "reference_operation_count_mean": 4690.0,
+    "reference_operation_count_max": 4690
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "input_order_zip": {"successes": 0, "attempts": 8},
+      "outlier_raw_threshold": {"successes": 0, "attempts": 8},
+      "greedy_smallest_threshold_gap": {"successes": 0, "attempts": 8},
+      "in_context_twin_pairs_numeric_order": {"successes": 0, "attempts": 8},
+      "random_restart_256": {"successes": 0, "attempts": 8}
+    },
+    "reference_algorithm": {
+      "name": "constraint extraction plus Kahn topological sort",
+      "complexity": "O(c+n^2) on c compressed twin classes",
+      "wall_clock_sec": 0.00024044999736361206,
+      "operations": 4690,
+      "compressed_classes": 1553,
+      "expanded_graph_vertices": 4278083,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 32,
+    "doubled_n": 64,
+    "shipping_compressed_classes": 1553,
+    "doubled_compressed_classes": 4129,
+    "doubled_build_sec": 0.004965952830389142,
+    "doubled_verify_reason": "ok",
+    "escalated_params": {"n": 32, "decoy_classes": 2048, "decoy_width": 4},
+    "escalated_verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_passes": 60,
+    "invariance_attempts": 60,
+    "real_transformation_passes": 60,
+    "real_transformation_attempts": 60,
+    "distinct_unrelated_keys": 20,
+    "distinct_unrelated_attempts": 20,
+    "transformations": [
+      "element-vertex relabelling",
+      "constraint-row permutation",
+      "composition with endpoint reversal"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {"solved": 0, "attempts": 3},
+      "hinted": {"solved": 0, "attempts": 3},
+      "placebo": {"solved": 0, "attempts": 3}
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "placebo_verdict": "hardened",
+    "answer_chars": 311,
+    "answer_tokens": 78,
+    "answer_elements": 64,
+    "intended_route_operations": 192,
+    "caps": {"chars": 2000, "elements": 256, "operations": 300}
+  },
+  "all_passed": true
+}
