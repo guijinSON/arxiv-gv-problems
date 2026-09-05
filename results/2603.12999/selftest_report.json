@@ -1,0 +1,175 @@
+{
+  "G1_planted_verifies": {
+    "answers_json_native": true,
+    "attempts": 12,
+    "paper_interval_checks": 12,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "too few choices: expected 72, got 71",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "too many choices: expected 72, got 73",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "choice 0 is outside the allowed range 0..1",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "bin A load 1835128131392789112087432862857 differs from target 1835128131392789112087428476269",
+        "rejected": true
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "model_style_response_parsed": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hit_test": "exact centred-load equality; every hit is rechecked by verify",
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over one legal 0/1 choice per displayed group",
+    "sampling_wall_clock_sec": 9.773425590014085,
+    "structure_aware_space": "4722366482869645213696",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "demo_candidate_space": 16,
+    "demo_exact_valid_answers": 2,
+    "pass": true,
+    "reference_wall_clock_sec": 2.6708068973384798,
+    "reference_word_operations_max": 33300648,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_sampled_density": 0.0,
+    "strongest_failing_attack_candidates": 2088,
+    "strongest_failing_attack_wall_clock_sec": 0.2732970076613128
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_signed_load_balance": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_alternating_differences": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_choose_smaller_item": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_median_half_difference": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "suffix_bucket_first_half": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "failing_attack_candidates_checked": 2088,
+    "failing_attacks_wall_clock_sec": 0.2732970076613128,
+    "intended_compact_route": {
+      "exact_arithmetic_operations_max": 180,
+      "name": "same-suffix quartet decomposition",
+      "solves": "8/8, as expected",
+      "wall_clock_sec_total": 0.0006058886647224426
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(q*D/word_size) word operations and O(D) bits",
+      "name": "centre-normalised word-parallel subset-sum dynamic programming",
+      "reconstruction_masks_total": 77856,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.6698363369796425,
+      "wall_clock_sec_total": 2.6708068973384798,
+      "word_operations_max": 33300648,
+      "word_operations_total": 246798432
+    }
+  },
+  "G7_scales": {
+    "doubled_groups": 144,
+    "doubled_n": 288,
+    "doubled_search_space_bits": 144,
+    "pass": true,
+    "shipping_groups": 72,
+    "shipping_n": 144,
+    "shipping_search_space_bits": 72,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 100,
+    "carried_witness_checks": 100,
+    "changed_serializations": 100,
+    "distinct_keys": 20,
+    "invariance_attempts": 100,
+    "invariance_checks": 100,
+    "normal_form": "sorted half-differences divided by their common gcd",
+    "pass": true,
+    "transformations": [
+      "group reordering",
+      "within-group item swaps",
+      "independent group translations with target translation",
+      "positive global scaling",
+      "composition of all four"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 145,
+    "answer_elements": 72,
+    "answer_tokens": 37,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "diagnostic_recorded_not_gated": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 180,
+    "operation_accounting": "one subtraction and one exact halving per group, plus two pair-sum additions per quartet",
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "2603.12999",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 144,
+    "spread": 2000,
+    "tag_mod": 1000
+  },
+  "track": "B"
+}
