@@ -70,12 +70,14 @@ NATIVE = {
     "reduction": PROBLEM_PROFILE["reduction"],
 }
 
-DIFFICULTY = {"medium": {"n": 71}}
-SHIPPING_DIFFICULTY = "medium"
+DIFFICULTY = {
+    "easy": {"n": 47},
+}
+SHIPPING_DIFFICULTY = "easy"
 
 STRUCTURAL_HINT = (
-    "Hint: The dense coefficient matrix is circulant, and its inverse is "
-    "identity plus 3 times one cyclic shift."
+    "Hint: The coefficient matrix acts as a cyclic convolution on the indexed "
+    "variables."
 )
 PLACEBO_HINT = (
     "Hint: Keep every modular reduction exact, and preserve the stated bit "
@@ -397,7 +399,15 @@ def canonical_key(inst: dict) -> str:
 
 def escalate(params: dict) -> dict | None:
     """Increase n while the compact route remains under the 300-operation cap."""
-    return None
+    if not isinstance(params, dict) or set(params) != {"n"}:
+        return None
+    n = params["n"]
+    if not isinstance(n, int) or n >= 145:
+        return None
+    nxt = min(145, n + 16)
+    if nxt % 256 == 0:
+        nxt += 1
+    return {"n": nxt}
 
 
 def _gaussian_solve(inst: dict) -> tuple[str | None, int]:
