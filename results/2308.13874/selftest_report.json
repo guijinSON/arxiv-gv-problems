@@ -1,0 +1,138 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "instances": 16,
+    "generation_route": "inverse generation: sample affine bijections first and retain one"
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "empty": "answer must not be empty",
+      "drop_one": "answer must have exactly 251 entries",
+      "out_of_range": "entry 250 is outside 0..250",
+      "duplicate": "right endpoints must form a permutation without repeats",
+      "swap_two": "pair (L_0,R_214) is not an edge"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "json_native": true,
+    "answer_elements": 251
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "structure_aware_space": 811446921488186040812524452558116486219705773136118947353733549205318760636332913581693296758128078062183055345650547664609463859915056696520548600046891762340808337287505448037728337751512715064266648553413711482053864096073935168807868779389231199415987090547371213614453678579719100407204882954963078533417133568165939310960491560595435373673195910930411701938747154349882416287042721093688617485205308997682124247612021055212748800000000000000000000000000000000000000000000000000000000000000,
+    "exact_density_upper_numerator": 696112233200181784304155800972990575901534258602325747315643611070396491404131894035151164331903644621279507087536241113695706775879236935593907103896109094650305321789300063944860359193579810803497460932911410173912717195876328461769183878497631696672512016862891749337629928430395024373379636623292424941233,
+    "exact_density_upper_denominator": 811446921488186040812524452558116486219705773136118947353733549205318760636332913581693296758128078062183055345650547664609463859915056696520548600046891762340808337287505448037728337751512715064266648553413711482053864096073935168807868779389231199415987090547371213614453678579719100407204882954963078533417133568165939310960491560595435373673195910930411701938747154349882416287042721093688617485205308997682124247612021055212748800000000000000000000000000000000000000000000000000000000000000,
+    "exact_density_upper": 8.578653942312314e-187,
+    "exact_density_upper_log10": -186.06658085099582,
+    "prior": "uniform permutations; length, range, and all-different enforced",
+    "sample_wall_seconds": 13.976350851124153
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sample_fraction": 0.0,
+    "shipping_exact_density_upper": 8.578653942312314e-187,
+    "shipping_exact_density_upper_log10": -186.06658085099582,
+    "shipping_known_valid_affine_matchings_lower_bound": 17,
+    "shipping_sample_wall_seconds": 13.976350851124153,
+    "demo_exact_solution_count": 2,
+    "demo_candidate_count": 120,
+    "reference_max_wall_seconds": 0.0008134411182254553,
+    "reference_mean_wall_seconds": 0.0007826698711141944,
+    "reference_max_operations": 10765,
+    "reference_max_edge_inspections": 10263,
+    "reference_max_phases": 2,
+    "reference_attempts": 8,
+    "failing_restart_wall_seconds": 1.721229469170794,
+    "failing_restart_row_visits": 445319
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "equal_degree_outlier_then_smallest": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "left_to_right_display_greedy": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_greedy_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_unit_slope_affine_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "Hopcroft--Karp bipartite maximum matching",
+      "complexity": "O(E sqrt(V))",
+      "wall_clock_sec_max": 0.0008134411182254553,
+      "wall_clock_sec_mean": 0.0007826698711141944,
+      "operations": 10765,
+      "edge_inspections": 10263,
+      "phases": 2,
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "modular neighborhood-sum invariant and affine recurrence",
+      "operations": 297,
+      "solves": "8/8"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 251,
+    "doubled_n": 502,
+    "base_edges": 4267,
+    "doubled_edges": 8534,
+    "planted_verifies": true,
+    "fixed_answer_length_escalation_axis": "raise d from 17 to 19 at n=251"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "real_transform_checks": 80,
+    "distinct_unrelated": 20,
+    "unrelated_total": 20,
+    "symmetries": "neighbor-list reorder, arbitrary independent left/right relabelling, side swap, and their composition",
+    "key_invariant": "two-sided multiset of edge-local integer codegrees"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 3,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 1,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.6666666666666667,
+    "hinted_verdict": "solved at the shipping preset (3/3); script verdict cap_bound after the fixed-length d=19 escalation was also solved",
+    "answer_chars": 895,
+    "answer_tokens": 224,
+    "answer_elements": 251,
+    "intended_route_operations": 297,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true
+}
