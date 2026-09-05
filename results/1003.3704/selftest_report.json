@@ -1,0 +1,243 @@
+{
+  "G1_planted_verifies": {
+    "instances_checked": 12,
+    "json_native_roundtrips": 12,
+    "pass": true,
+    "presets": {
+      "demo": [
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 0
+        },
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 1
+        },
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 17
+        }
+      ],
+      "easy": [
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 0
+        },
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 1
+        },
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 17
+        }
+      ],
+      "hard": [
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 0
+        },
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 1
+        },
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 17
+        }
+      ],
+      "medium": [
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 0
+        },
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 1
+        },
+        {
+          "json_native": true,
+          "ok": true,
+          "reason": "ok",
+          "seed": 17
+        }
+      ]
+    }
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "the partition is missing at least one vertex"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "a side contains a duplicate vertex"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer is missing a required side"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "vertex is outside the allowed range"
+      },
+      "swap_order": {
+        "accepted": false,
+        "reason": "each side must be strictly increasing"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_left": 90,
+    "parsed_right": 90,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 766247770432944429179173513575154591809369561091801087,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over all nontrivial oriented partitions, with vertex 0 in left",
+    "total": 200000,
+    "wall_clock_sec": 17.181649
+  },
+  "G5_density_and_baseline_cost": {
+    "exact_demo_candidate_count": 511,
+    "exact_demo_valid_answer_count": 37,
+    "pass": true,
+    "shipping_baseline_clause_scans": 65639663,
+    "shipping_baseline_nodes": 50001,
+    "shipping_baseline_solved": false,
+    "shipping_baseline_wall_seconds": 24.855899,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_valid_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_left_to_right": {
+        "attempts": 8,
+        "operations": 1202880,
+        "successes": 0,
+        "wall_clock_sec": 0.070312
+      },
+      "nae_dpll_unit_propagation_50000": {
+        "attempts": 8,
+        "operations": 484408278,
+        "successes": 2,
+        "wall_clock_sec": 136.52797
+      },
+      "occurrence_outlier": {
+        "attempts": 8,
+        "operations": 10080,
+        "successes": 0,
+        "wall_clock_sec": 0.000814
+      },
+      "random_restart_walksat_64x8n": {
+        "attempts": 8,
+        "operations": 737280,
+        "successes": 0,
+        "wall_clock_sec": 1.162077
+      },
+      "spectral_bottom_eigenvector_with_repair": {
+        "attempts": 8,
+        "operations": 3174520,
+        "successes": 0,
+        "wall_clock_sec": 0.154051
+      }
+    },
+    "dpll_nodes_median": 50001,
+    "dpll_wall_clock_sec_median": 15.052648,
+    "pass": false,
+    "strongest_attack": "NAE-DPLL with unit propagation"
+  },
+  "G7_scales": {
+    "doubled_clauses": 840,
+    "doubled_n": 360,
+    "doubled_planted_verifies": true,
+    "doubled_verify_reason": "ok",
+    "escalated_params": {
+      "degree": 6,
+      "extra_layers": 3,
+      "n": 210
+    },
+    "escalated_planted_verifies": true,
+    "fixed_answer_length_crowding_exhausted_before_n_growth": true,
+    "pass": true,
+    "shipping_clauses": 420,
+    "shipping_n": 180
+  },
+  "G8_canonical_key": {
+    "caveat": "closed-walk traces are a strong invariant, not a complete hypergraph canonizer",
+    "certificate_preservation_checks": 60,
+    "distinct_unrelated_instances": 20,
+    "invariance_checks": 60,
+    "pass": true,
+    "transformations": [
+      "arbitrary variable renumbering with certificate carried",
+      "clause and within-clause reordering",
+      "composition of both transformations"
+    ],
+    "unrelated_instances_tested": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 630,
+    "answer_elements": 180,
+    "answer_size_instances_measured": 64,
+    "answer_tokens": 158,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 1,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 180,
+    "operation_model": "one exact side-membership write per vertex after identifying the global split",
+    "pass": true,
+    "placebo_status": "incomplete: OpenRouter key total limit after one completed attempt"
+  },
+  "all_passed": false,
+  "paper": "1003.3704",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "degree": 6,
+    "extra_layers": 3,
+    "n": 180
+  },
+  "track": "A"
+}
