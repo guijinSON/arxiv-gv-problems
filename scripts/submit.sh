@@ -36,6 +36,21 @@ except OSError:
 # only gate rejections that actually turn on G9
 if not re.search(r"G9\(b\)|G9\b", note):
     sys.exit(0)
+# G9(b) stopped being a gate on 2026-09-05, so a rejection that turns on it is no
+# longer a valid rejection at all -- regardless of how the hint was written. Refuse
+# it outright when G9(b) is named as the deciding reason.
+if re.search(r"fails?\s+\*{0,2}(H|hardness)?\*{0,2}[^.]{0,60}G9\(b\)|G9\(b\)[^.]{0,40}(gate|fail)"
+             r"|rejected?[^.]{0,60}G9\(b\)", note, re.I):
+    print("ERROR: this rejection turns on G9(b), the polarity-flipped hinted-oracle gate.")
+    print("       G9(b) was retired to a DIAGNOSTIC on 2026-09-05: a family that")
+    print("       dissolves when you name the trick is one whose difficulty lies in")
+    print("       FINDING the insight, which is what this corpus is for. It cost 8")
+    print("       rejections and 23 blocked papers, 6 of which had already defeated")
+    print("       the four-vendor no-tool pool.")
+    print("       If the family passed G, V and STEP 4, SHIP IT. Record the hinted arm")
+    print("       in the README as a diagnostic. See prompts/codex_task.md G9(b).")
+    sys.exit(1)
+
 hint = None
 for f in glob.glob(os.path.join(d, "*gen_*.py")):
     try:
@@ -187,12 +202,49 @@ if not isinstance(rep, dict):
 gates = {k: v for k, v in rep.items() if k.startswith("G") and k[1:2].isdigit()}
 if not gates:
     print("ERROR: selftest_report.json records no G* gates — see STEP 3."); sys.exit(1)
+# G9(b) -- the polarity-flipped hinted gate -- was retired to a diagnostic on
+# 2026-09-05. It had become the pipeline's largest loss mechanism: 8 rejections and
+# 23 blocked papers, six of which had already DEFEATED the four-vendor no-tool pool
+# at their shipping preset. Its premise was also wrong: a family that dissolves when
+# you name the trick is one whose difficulty lies in FINDING the insight, which is
+# what this corpus is for.
+#
+# G9's `pass` folds (a) the three-arm diagnostic, (b) that retired gate, and (c) the
+# size/effort caps into one flag. Only (c) still gates, so recompute it from the
+# measured numbers rather than trust a flag that may still encode the retired rule.
+g9key = next((k for k in gates if k.startswith("G9")), None)
+if g9key:
+    g9 = gates[g9key]
+    caps = g9.get("caps") if isinstance(g9.get("caps"), dict) else {}
+    def _num(d, k):
+        v = d.get(k)
+        return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+    over = []
+    for field, capkey, default in (("answer_chars", "chars", 2000),
+                                   ("answer_elements", "elements", 256),
+                                   ("intended_route_operations", "operations", 300)):
+        got = _num(g9, field)
+        cap = _num(caps, capkey)
+        cap = default if cap is None else cap
+        if got is not None and got > cap:
+            over.append(f"{field}={got} > {cap}")
+    gates[g9key] = {**g9, "pass": not over}
+    if over:
+        print("ERROR: G9(c) size/effort caps exceeded: " + "; ".join(over))
+        print("       (G9(b), the hinted-oracle gate, is a diagnostic and no longer blocks.)")
+        sys.exit(1)
+
 failed = [k for k, v in sorted(gates.items())
           if not (isinstance(v, dict) and v.get("pass"))]
 if failed:
     print("ERROR: gates not passing in selftest_report.json: " + ", ".join(failed)); sys.exit(1)
-if rep.get("all_passed") is False:
-    print("ERROR: selftest_report.json says all_passed=false"); sys.exit(1)
+# `all_passed` is the BUILDER's summary and still folds in G9(b), so a module that
+# only failed the retired gate reports all_passed=false. Trusting it here would
+# re-block exactly the papers this change is meant to release; the per-gate check
+# above is authoritative.
+if rep.get("all_passed") is False and not failed:
+    print("  note: builder reported all_passed=false, but every gate that still gates"
+          " passes (G9(b) is retired).")
 g5 = next((v for k, v in gates.items() if k.startswith("G5")), None)
 if isinstance(g5, dict):
     import re as _re

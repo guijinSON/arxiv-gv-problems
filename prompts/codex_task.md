@@ -608,7 +608,7 @@ pass at the difficulty you ship** — except where a part is explicitly marked
 | **G6 adversary panel** | ≥4 attacks in `attacks`, each FAILING across ≥8 seeds. Track A: three cheap probes **plus the standard algorithm for the problem class**. Track B: three cheap probes plus an in-context attack, with the standard algorithm reported separately under `reference_algorithm`. See TWO TRACKS and below. |
 | **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
 | **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
-| **G9 no-tool suitability** | Two gated parts — the family still defeats the oracle pool **with** its structural hint, and the answer and route fit the caps — plus a three-arm diagnostic (bare / hinted / placebo) that is **recorded, never gated**. See below. |
+| **G9 no-tool suitability** | **One** gated part — the answer and route fit the caps (G9c). The three-arm diagnostic (bare / hinted / placebo) is **recorded, never gated**; the hinted arm G9(b) was a gate until 2026-09-05 and is now diagnostic too. See below. |
 
 ### G4: measure P(guess) against a solver, not against noise
 
@@ -816,16 +816,37 @@ finding, not a failure. Record the three numbers and say what you conclude in th
 README. **It does not block the ship** — this arm exists so the corpus knows what it is
 measuring, and gating on it would let a builder tune the hint instead of the family.
 
-#### (b) The polarity-flipped gate — this part IS gated
+#### (b) The hinted arm — RECORDED, NOT GATED (retired 2026-09-05)
 
-> The family must still defeat the oracle pool **when it is given its one-sentence
-> structural hint.**
+> Run the shipping preset with `STRUCTURAL_HINT` appended and record solved/attempts.
+> **This does not block the ship.**
 
-This is strictly stronger than today's bar and it contradicts nothing: STEP 4 already
-requires the pool to fail on the bare statement; this requires it to fail on an easier
-version of the same statement. A family that survives bare but dissolves the moment you
-name the trick was never testing whether a model can *find* the structure — it was
-testing whether the model had already memorised it.
+**This used to be a gate**, requiring the family to defeat the pool even when handed its
+hint. It was retired because the premise was backwards and the cost was enormous.
+
+The premise: "a family that dissolves the moment you name the trick was never testing
+whether a model can *find* the structure — it had already memorised it." That does not
+follow. A model that had memorised the trick would solve the **bare** statement, and
+STEP 4 proves it does not. What dissolving-on-hint actually shows is that the difficulty
+sits in *finding* the insight — which is precisely what this corpus is for, and what
+G9's own preamble contrasts against families that merely measure patience. As a gate it
+kept families that stay hard *even when handed the insight* — hard for reasons other
+than insight — and deleted the rest.
+
+The cost: 8 rejections and 23 papers blocked at submit, **six of which had already
+defeated the four-vendor no-tool pool at their shipping preset**. Three more were
+`cap_bound`/`budget_bound`, which made the gate unsatisfiable in principle — it asked
+for a family that could not be escalated at all to be escalated. Against 100 accepted
+problems that was the single largest loss mechanism in the pipeline.
+
+It also had the exact defect G9(a) is explicitly protected against: gating on a hinted
+arm lets a builder tune the *hint* instead of the family. Measured over the 17 modules
+carrying a hint, 4 of 9 rejected papers had handed the solver a procedure rather than an
+invariant.
+
+Record `hinted − placebo` and say what you conclude in the README. If the hint makes the
+family easy, that is a **good** sign about where its difficulty lives — note it and
+ship.
 
 Run it with the harness, not by hand:
 
@@ -874,13 +895,9 @@ do with that is left to the solver.
 "there are three ..."). Rewrite the hint to name only the invariant, re-run the G9(b)
 arm, and reject only if the family still dissolves.
 
-Read the verdict with the polarity flipped: `hardened` means the hint did not break the
-family and G9(b) passes. `too_easy` means the hint broke it, and the family fails G9(b).
-You may then move **one** rung up the `DIFFICULTY` ladder and re-run STEP 4 bare *and*
-this arm at the new level, **once**. If the hint still breaks it, write `REJECTED.md`
-citing G9(b) and stop. This is not hand-tuning past a verdict — the bare verdict was
-`hardened` and the whole loop is re-run at the new level — but the cap of one is there
-so that it cannot become hand-tuning.
+Record the verdict. `hardened` means the hint did not break the family; `too_easy` means
+it did. **Neither blocks the ship** — put the number in the README and move on. Do not
+write `REJECTED.md` citing G9(b); `submit.sh --reject` will refuse it.
 
 #### (c) The size and effort caps — gated
 

@@ -1,4 +1,14 @@
-# G9(b) may be inverted — a decision for the project owner, not a bug fix
+# G9(b) was inverted — RESOLVED 2026-09-05: retired to a diagnostic
+
+**Decision taken: option 1.** G9(b) no longer gates. The hinted arm is recorded and
+reported; it cannot block a ship or justify a rejection. G9(a) and G9(c) are unchanged —
+the size and effort caps still gate, and `submit.sh` now recomputes them from the
+measured numbers instead of trusting the builder's combined `pass` flag, which still
+folds in the retired rule.
+
+The 23 blocked papers were re-opened and the 8 G9 rejections voided.
+
+The analysis that led here is kept below.
 
 **Every rejection whose family survived the oracle was rejected on G9(b).** Eight of
 eight. These papers passed `G`, passed `V`, and defeated a four-vendor frontier pool
