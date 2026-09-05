@@ -1,0 +1,165 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "literal_demo_group_products": 3,
+    "pass": true,
+    "prime_checks": {
+      "large": true,
+      "toy": true
+    }
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "missing field: scale",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "unexpected field: scale_copy",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer object must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "scale is outside 0 <= scale < p",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "index is outside 1 <= index <= 262144",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 604462909807314587090944,
+    "candidate_space_bits": 79,
+    "exact_density": "1/2305843009213693951",
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "total": 200000,
+    "wall_clock_sec": 3.952424
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 256,
+    "baseline_attack_name": "random_restart_256",
+    "baseline_attack_wall_clock_sec": 0.006859,
+    "demo_exact_solution_count": 4,
+    "pass": true,
+    "reference_operation_count": 1310761,
+    "reference_wall_clock_sec": 1.1951,
+    "shipping_exact_candidate_count": 604462909807314587090944,
+    "shipping_exact_density": "1/2305843009213693951",
+    "shipping_exact_valid_answers": 262144,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_small_scalar_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000421
+      },
+      "greedy_linearized_geometric_sum": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 3.7e-05
+      },
+      "outlier_endpoint_coefficient": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 6.4e-05
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.054869
+      }
+    },
+    "intended_compact_route": {
+      "measured_max_operations": 70,
+      "name": "geometric telescoping plus one modular inverse",
+      "operations_upper_bound": 168,
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m) modular operations for the displayed rank-one formula; O(m*d) on explicitly expanded group vectors",
+      "euclidean_divisions": 39,
+      "expanded_coefficients": 262144,
+      "name": "Section 4.1 prefix-product and weighted-coefficient summation",
+      "operations": 1310761,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 1.1951
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_doubled": 2,
+    "answer_atoms_shipping": 2,
+    "candidate_space_bits_doubled": 80,
+    "candidate_space_bits_shipping": 79,
+    "doubled_build_sec": 5.3e-05,
+    "doubled_m": 524288,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_m": 262144
+  },
+  "G8_canonical_key": {
+    "invariant_relabellings": 140,
+    "pass": true,
+    "real_transformations_verified": 140,
+    "scope": "complete for the GL(d,p) orbit of the nonzero direction v; ordered noncommuting factors are intentionally not freely permuted",
+    "transformations": [
+      "coordinate permutation",
+      "invertible diagonal coordinate scaling",
+      "invertible coordinate shear",
+      "all nonempty compositions of those three"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 43,
+    "answer_elements": 2,
+    "answer_tokens": 11,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "blocked_by_openrouter_key_limit",
+    "intended_route_operations": 168,
+    "measured_compact_operations_max": 70,
+    "pass": true,
+    "worst_case_answer_chars": 44,
+    "worst_case_answer_tokens": 11
+  },
+  "all_passed": true
+}
