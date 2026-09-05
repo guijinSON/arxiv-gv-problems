@@ -1,0 +1,150 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "json_native_roundtrips": 16,
+    "pass": true,
+    "verified": 16
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "wrong length: expected 192, got 191"
+      },
+      "duplicate_one_label": {
+        "accepted": false,
+        "reason": "wrong multiplicity for source 0: expected 24, got 25"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "source index out of range at target position 0: 8"
+      },
+      "swap_two_positions": {
+        "accepted": false,
+        "reason": "symbol mismatch at target position 0: source 1 contributes 'c', target requires 'a'"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_attempts": 4,
+    "garbage_rejected": 4,
+    "pass": true,
+    "realistic_response_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 16165125050409302556593036566544800190328811940788599864248818541871320185985375724489680738948979562231638510144429005082698450487513131073821910612995100000000000000,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "structure_aware_constraints": "length n and exact multiplicity n/k for every source index",
+    "total": 200000,
+    "wall_clock_sec": 70.152507
+  },
+  "G5_density_and_baseline": {
+    "baseline_instances_solved": 8,
+    "baseline_max_nodes_one_instance": 469299,
+    "baseline_nodes": 1381309,
+    "baseline_wall_clock_sec": 9.144238,
+    "demo_candidate_count": 70,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_solution_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_least_advanced": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_round_block_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_transition_priority": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "intended_operations": 232,
+      "mechanical_projection_scan_operations": 53184,
+      "name": "alternating binary coordinate projection plus prefix signatures",
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(k*(m+1)^k) time and O((m+1)^k) states",
+      "max_operations_one_instance": 469299,
+      "name": "memoized fixed-k multidimensional Shuffle Product DP",
+      "operations": 1381309,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 9.144238
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 384,
+    "doubled_reason": "ok",
+    "doubled_search_space_bits": 1125,
+    "doubled_verifies": true,
+    "pass": true,
+    "shipping_n": 192,
+    "shipping_search_space_bits": 553
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 80,
+    "carried_witnesses_verified": 80,
+    "distinct_unrelated_keys": 20,
+    "invariance_attempts": 80,
+    "invariance_passed": 80,
+    "pass": true,
+    "transformations": [
+      "source-word reordering with source-index relabelling",
+      "global alphabet permutation",
+      "simultaneous reversal of every source and the target",
+      "composition of all three"
+    ],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 576,
+    "answer_elements": 192,
+    "answer_tokens": 385,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 232,
+    "pass": true
+  },
+  "all_passed": true
+}
