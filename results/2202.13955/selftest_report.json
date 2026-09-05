@@ -1,0 +1,158 @@
+{
+  "G1_planted_verifies": {
+    "checks": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "wrong coefficient count: expected 20, got 19",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "too many coefficients: expected 20, got 21",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "coefficient 0 is not exactly 0 or 1",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "source edge e0=(v9,v10) is not crossed",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_planted": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 9.5367431640625e-07,
+    "exact_probability_fraction": "1/1048576",
+    "hits": 2,
+    "language_size": 1048576,
+    "observed_probability": 1e-05,
+    "pass": true,
+    "prior": "uniform over all d-bit coefficient vectors",
+    "sampling_seconds": 1.0196456708945334,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "additional_exact_demo_count": {
+      "dimension": 8,
+      "language_size": 256,
+      "valid_answers": 1
+    },
+    "baseline_restart_iterations": 256,
+    "baseline_wall_clock_seconds": 0.0017223230097442865,
+    "pass": true,
+    "shipping_density": {
+      "exact_fraction_from_full_rank": "1/1048576",
+      "hits": 2,
+      "kind": "sampled",
+      "observed_fraction": 1e-05,
+      "samples": 200000
+    },
+    "shipping_density_fraction": 1e-05,
+    "shipping_density_hits": 2,
+    "shipping_density_samples": 200000,
+    "strongest_failing_attack": {
+      "candidates": 256,
+      "name": "random_restart_256",
+      "wall_clock_sec": 0.0017223230097442865
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_coordinate_ascent": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_coordinate_majority": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_best_single_coordinate": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m*d^2) single-bit operations",
+      "name": "dense GF(2) Gauss-Jordan elimination",
+      "operations_max": 8148,
+      "operations_median": 8066,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.00010507996194064617,
+      "wall_clock_sec_median": 9.88298561424017e-05
+    }
+  },
+  "G7_scales": {
+    "build_seconds": 0.006848501972854137,
+    "doubled_dimension": 40,
+    "doubled_source_vertices": 48,
+    "expanded_permutation_vertices": 13727760,
+    "pass": true,
+    "shipping_dimension": 20,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witnesses_total": 100,
+    "carried_witnesses_verified": 100,
+    "distinct_unrelated_keys": 20,
+    "invariance_checks_passed": 100,
+    "invariance_checks_total": 100,
+    "pass": true,
+    "symmetries": [
+      "source-vertex identifier renaming with block order carried",
+      "edge identifier renaming with block order carried",
+      "edge-endpoint reversal",
+      "invertible affine GF(2) relabelling with certificate carried",
+      "composition of all listed relabellings"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 41,
+    "answer_elements": 20,
+    "answer_tokens": 11,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "caps_only_are_gated": true,
+    "compact_route_verifies": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 188,
+    "pass": true
+  },
+  "all_pass": true,
+  "paper": "2202.13955",
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
