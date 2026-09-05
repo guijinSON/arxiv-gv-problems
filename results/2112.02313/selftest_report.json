@@ -1,0 +1,172 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "too few moves: got 15, expected exactly 16",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "too many moves: got 17, expected exactly 16",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "move 1 vertex 0 is outside 1..100",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "move 8 is trivial because vertex 23 already has color 2",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 6553600000000000000000000000000000000,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "total": 200000,
+    "wall_clock_sec": 190.527167
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_budget_hits": 8,
+    "baseline_attack_expanded_states": 4215,
+    "baseline_attack_generated_successors": 220001,
+    "baseline_attack_name": "bidirectional component BFS (node-limited)",
+    "baseline_attack_stored_states": 92389,
+    "baseline_attack_wall_clock_sec": 2.173486,
+    "demo_exact_solution_count": 42,
+    "demo_n": 9,
+    "pass": true,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "bidirectional_component_beam": {
+        "attempts": 8,
+        "budget_hits": 0,
+        "expanded_states": 25401,
+        "generated_successors": 1371118,
+        "node_budget_per_instance": 220000,
+        "successes": 0,
+        "wall_clock_sec": 28.591907,
+        "width": 256
+      },
+      "bidirectional_component_bfs_node_limited": {
+        "attempts": 8,
+        "budget_hits": 8,
+        "expanded_states": 33722,
+        "generated_successors": 1760008,
+        "max_backward_depth": 3,
+        "max_forward_depth": 3,
+        "node_budget_per_instance": 220000,
+        "standard_algorithm": true,
+        "stored_states_sum": 739119,
+        "successes": 0,
+        "wall_clock_sec": 17.387888
+      },
+      "endpoint_discrepancy_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.10754
+      },
+      "greedy_hamming_forward": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.14773
+      },
+      "greedy_hamming_reverse": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.12808
+      },
+      "random_restart_32": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 3.883557
+      }
+    },
+    "pass": true
+  },
+  "G7_scales": {
+    "doubled_build_sec": 1.731489,
+    "doubled_candidate_space": 429496729600000000000000000000000000000000,
+    "doubled_n": 200,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_candidate_space": 6553600000000000000000000000000000000,
+    "shipping_n": 100
+  },
+  "G8_canonical_key": {
+    "invariant_relabellings": 140,
+    "pass": true,
+    "real_transformations_verified": 140,
+    "transformations": [
+      "arbitrary vertex permutation",
+      "global color permutation",
+      "edge-list reordering",
+      "all compositions"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 111,
+    "answer_elements": 32,
+    "answer_tokens": 28,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "oracle_unreachable",
+    "intended_route_note": "No sub-300-operation recovery route is known; 225 operations only replay the planted witness after it has already been supplied.",
+    "intended_route_operations": 220001,
+    "pass": false
+  },
+  "all_passed": false,
+  "certificate_language": {
+    "bounds": {
+      "atoms_per_move": 2,
+      "colors": 3,
+      "max_atomic_elements": 32,
+      "max_vertex": 400,
+      "moves": 16
+    },
+    "description": "Exactly s ordered pairs [v,c]. At each step v is in 1..n and c is one of the two colors different from v's current color; the pair swaps the current bichromatic component containing v."
+  },
+  "shipping_difficulty": "hard",
+  "track": "A"
+}
