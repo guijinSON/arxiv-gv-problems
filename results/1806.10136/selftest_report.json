@@ -1,0 +1,197 @@
+{
+  "G1_planted_verifies": {
+    "checks": 20,
+    "construction": "inverse generation from equation (1.2) and an exact integer orthogonal image of a Pythagorean triple",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop_one": {
+        "reason": "answer must contain exactly three coordinates",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "the three coordinates must be pairwise distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be a JSON list",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "a coordinate lies outside its inclusive bound",
+        "rejected": true
+      },
+      "swap_two_digits": {
+        "reason": "the exact floor sum does not equal the target",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true,
+    "surrounding_prose_and_markdown": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 2331748922056068403,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over triples already satisfying the displayed integer, bound, and pairwise-distinct constraints",
+    "total": 200000,
+    "wall_clock_sec": 1.026559
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_iterations": 256,
+    "baseline_success": false,
+    "baseline_wall_clock_sec": 0.000873,
+    "demo_candidate_space": 1033360,
+    "demo_count_wall_clock_sec": 0.000957,
+    "demo_exact_solution_count": 446,
+    "pass": true,
+    "reference_operation_count": 564131,
+    "reference_pair_comparisons": 112820,
+    "reference_wall_clock_sec": 0.028381,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_solution_count": null,
+    "shipping_sampled_solution_fraction": 0.0,
+    "shipping_seed": 271828,
+    "strongest_failing_attack": "256 structure-aware uniform restarts"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_residual_largest_first": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 2.1e-05
+      },
+      "in_context_zero_residue_orthogonal_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 2.1e-05
+      },
+      "largest_denominator_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 2.6e-05
+      },
+      "uniform_random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.010117
+      }
+    },
+    "intended_compact_route": {
+      "name": "common-core extraction and orthogonal Pythagorean identity",
+      "operations": [
+        111,
+        111,
+        111,
+        111,
+        110,
+        112,
+        110,
+        111
+      ],
+      "operations_max": 112,
+      "solves": "8/8",
+      "wall_clock_sec": 0.000183
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(U^2) exact pair comparisons and O(1) auxiliary memory, where U=floor(sqrt(m(N+1)-1))",
+      "name": "square-factor normalization plus monotone two-pointer 3SUM",
+      "operation_unit": "exact integer arithmetic/comparison steps across eight instances",
+      "operations": 8362194,
+      "pair_comparisons": 1672391,
+      "paper_basis": "equation (1.2) and Corollary 1.1",
+      "per_instance_operations": [
+        433840,
+        569705,
+        889070,
+        228915,
+        2388089,
+        2413021,
+        536169,
+        903385
+      ],
+      "per_instance_pair_comparisons": [
+        86762,
+        113935,
+        177808,
+        45777,
+        477612,
+        482598,
+        107228,
+        180671
+      ],
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.4299
+    }
+  },
+  "G7_scales": {
+    "doubled_candidate_space": 275776227411686133930,
+    "doubled_n": 80,
+    "doubled_target": 811085950602,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_candidate_space": 2331748922056068403,
+    "shipping_n": 40,
+    "shipping_target": 10931866854
+  },
+  "G8_canonical_key": {
+    "caveat": "canonical only for summand permutations, the full evident instance symmetry",
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 60,
+    "pass": true,
+    "real_transformation_checks": 60,
+    "transformations": [
+      "swap the first two summands",
+      "cycle the last two summands",
+      "composition giving a three-cycle"
+    ],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 23,
+    "answer_elements": 3,
+    "answer_tokens": 6,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 112,
+    "pass": true,
+    "representative_compact_solution_verified": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "profile_measurements": {
+    "declared_max_answer_tokens": 7,
+    "shipping_answer_chars_max_over_64_seeds": 26,
+    "shipping_answer_tokens_max_over_64_seeds": 7
+  }
+}
