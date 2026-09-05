@@ -1,0 +1,146 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "answer has too few bicliques: 12 < 13",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "answer has too many bicliques: 14 > 13",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "left bitstring in biclique 0 has length 27, not 26",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "biclique 0 contains a missing X-Y edge",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_native": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_language_size": 4263209390215699914542048329185778953019392,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "public_sampler_language_cross_checks": "32/32",
+    "sampling_wall_sec": 3.102034,
+    "structure_aware_language": "ordered 13-tuples sampled uniformly from 1902 maximal bicliques",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_max_wall_clock_sec": 4.371263,
+    "baseline_mean_nodes": 2000001,
+    "baseline_mean_wall_clock_sec": 3.181518,
+    "baseline_name": "maximal-biclique DPLL",
+    "baseline_node_cap": 2000000,
+    "demo_exact_valid_answer_count": 2,
+    "pass": true,
+    "shipping_density_fraction": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "degree_star_closures": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "dpll_maximal_biclique_2000000": {
+        "attempts": 8,
+        "max_wall_clock_sec": 4.371263,
+        "maximal_bicliques_range": [
+          934,
+          1408
+        ],
+        "mean_nodes": 2000001,
+        "mean_wall_clock_sec": 3.181518,
+        "node_cap": 2000000,
+        "successes": 0
+      },
+      "greedy_max_uncovered": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "largest_area_concepts": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_planted_size_profile": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "randomized_greedy_64": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "domain_standard_attack": "exact set-cover DPLL over all inclusion-maximal bicliques",
+    "pass": true
+  },
+  "G7_scales": {
+    "answer_atomic_strings_after": 26,
+    "answer_atomic_strings_before": 26,
+    "doubled_n": 52,
+    "original_n": 26,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "canonicalization_caveat": "1-WL is a strong invariant, not a complete bipartite-isomorphism test",
+    "invariance_checks_attempted": 120,
+    "invariance_checks_passed": 120,
+    "pass": true,
+    "transformed_witnesses_attempted": 20,
+    "transformed_witnesses_verified": 20,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 806,
+    "answer_elements": 26,
+    "answer_tokens": 202,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "arms_complete": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 182,
+    "operation_definition": "one membership placement per selected X/Y incidence plus one rectangle-union operation per biclique after the decomposition insight",
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "2010.05733",
+  "shipping_difficulty": "medium",
+  "track": "A"
+}
