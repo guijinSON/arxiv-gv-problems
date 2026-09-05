@@ -350,7 +350,35 @@ def _reduction_kind(reduction):
     return "convenience"
 
 
-def profile_for_module(m, inst=None, family=None):
+_BACKFILL_CACHE = {}
+
+
+def backfilled_profiles(root=None):
+    """Hand-read profiles for the modules that predate ``PROBLEM_PROFILE``.
+
+    A THIRD provenance tier, between NATIVE and derived.  It exists because
+    ``derive_core`` can only ever answer with a discrete core -- so for the 45
+    older accepted modules the report showed 0% non-discrete and 16 ``unknown``,
+    and that was an artefact of the inference, not a property of the corpus.
+    Reading those modules found 4 ``linear_algebra`` and 1 ``polynomial_identity``
+    among them, which no amount of key-matching could ever have surfaced.
+
+    These are NOT self-declared: ``core_provenance`` reports ``backfilled`` so they
+    are never mistaken for a builder's own claim.  See audit/backfilled_profiles.json.
+    """
+    global _BACKFILL_CACHE
+    if _BACKFILL_CACHE:
+        return _BACKFILL_CACHE
+    here = root or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+    try:
+        with open(os.path.join(here, "audit", "backfilled_profiles.json")) as fh:
+            _BACKFILL_CACHE = json.load(fh).get("profiles", {}) or {}
+    except (OSError, ValueError):
+        _BACKFILL_CACHE = {}
+    return _BACKFILL_CACHE
+
+
+def profile_for_module(m, inst=None, family=None, arxiv_id=None):
     """The full profile for one generator module.
 
     Precedence: PROBLEM_PROFILE, then NATIVE, then derived from `inst`.
@@ -378,7 +406,9 @@ def profile_for_module(m, inst=None, family=None):
     nat = nat if isinstance(nat, dict) else None
     cl = cl if isinstance(cl, dict) else None
 
-    provenance = "profile" if prof else ("native" if nat else "derived")
+    back = backfilled_profiles().get(arxiv_id or "") or {}
+    provenance = ("profile" if prof else "native" if nat
+                  else "backfilled" if back else "derived")
 
     def p(*names):
         for n in names:
@@ -390,6 +420,8 @@ def profile_for_module(m, inst=None, family=None):
     domain = p("native_domain", "domain")
     if domain is None and nat:
         domain = nat.get("domain")
+    if domain is None and back:
+        domain = back.get("native_domain")
     if domain is None:
         domain = family or UNKNOWN
 
@@ -397,6 +429,8 @@ def profile_for_module(m, inst=None, family=None):
     core = p("computational_core", "core")
     if core is None and nat:
         core = nat.get("core")
+    if core is None and back:
+        core = back.get("computational_core")
     if core is None:
         shown = ""
         if inst is not None:
@@ -426,6 +460,9 @@ def profile_for_module(m, inst=None, family=None):
                         " ; ".join(map(str, nat.get("objects") or [])), None)
     if regime is None and cl:
         regime = _match(REGIME_PATTERNS, str(cl.get("description", "")), None)
+    # backfilled sits below every self-declared source and above inference
+    if regime is None and back:
+        regime = back.get("object_regime")
     if regime is None:
         regime = _regime_from_instance(inst)
     regime = regime or UNKNOWN
@@ -556,7 +593,7 @@ def collect(statuses=("done", "in_progress")):
             prof["intuition_type"] = UNCLASSIFIED
             prof["intuition_raw"] = ""
         else:
-            prof = profile_for_module(m, inst, family=family_for(pid))
+            prof = profile_for_module(m, inst, family=family_for(pid), arxiv_id=pid)
         # measured certificate shape -- what the module actually returns, which
         # can differ from the CERTIFICATE_LANGUAGE it declares
         try:
