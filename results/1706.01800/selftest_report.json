@@ -1,0 +1,155 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "json_native_checks": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "expected exactly 48 coordinates, got 47",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "zero-row equation x=31 has residue 36342",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer list is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "coordinate 0 is outside 0..65536",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "fixed coordinate 11 does not match",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_entries": 48,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler_constraints": "shape, field range, and fixed coordinate enforced",
+    "structure_aware_space": 23706541317892026757344408485484298305033040598834366352665816373134418001067328122931606159564463584851541113363536580284293226744619415800835826910493087698715833213731831319564121884073019967860935128283332543415849313042433,
+    "total": 200000,
+    "wall_clock_sec": 14.904345
+  },
+  "G5_density_and_baseline": {
+    "baseline_field_operations": 116184,
+    "baseline_iterations": 47,
+    "baseline_verified": true,
+    "baseline_wall_clock_sec": 0.016456,
+    "demo_candidate_count": 14641,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sampled_density": 0.0,
+    "shipping_theorem_exact_density": 4.218245026090206e-227
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "constant_coordinate_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_one_row_repair": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_scale_rank": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(f^3) exact field operations",
+      "mean_field_operations": 116184,
+      "name": "Gauss-Jordan elimination over F_q",
+      "operations_total": 929472,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.074125
+    }
+  },
+  "G7_scales": {
+    "candidate_space_bits_by_preset": [
+      [
+        "demo",
+        14
+      ],
+      [
+        "easy",
+        249
+      ],
+      [
+        "medium",
+        421
+      ],
+      [
+        "hard",
+        753
+      ]
+    ],
+    "doubled_build_and_verify": true,
+    "doubled_n": 96,
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 100,
+    "pass": true,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 332,
+    "answer_elements": 48,
+    "answer_tokens": 83,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 239,
+    "intended_route_verified_instances": 20,
+    "operation_unit": "one exact F_q addition, multiplication, or division",
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "1706.01800",
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
