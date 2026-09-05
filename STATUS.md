@@ -1,12 +1,12 @@
 # Status
 
-`█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **483 / 12,167** resolved (3.97%)
+`█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **484 / 12,167** resolved (3.98%)
 
 | state | count |
 |---|---:|
-| ✅ done | 284 |
+| ✅ done | 285 |
 | 🚫 rejected (documented) | 199 |
-| 🔄 in progress | 129 |
+| 🔄 in progress | 128 |
 | ⚪ free | 11,554 |
 | **total** | **12,167** |
 
@@ -16,7 +16,6 @@
 |---|---|---|
 | `1011.6021` | GUIJIN SON | 2026-09-05T00:24 |
 | `2601.05272` | GUIJIN SON | 2026-09-05T00:24 |
-| `2504.06573` | GUIJIN SON | 2026-09-05T02:07 |
 | `2312.10599` | GUIJIN SON | 2026-09-05T02:45 |
 | `2209.15396` | GUIJIN SON | 2026-09-05T03:07 |
 | `2505.18885` | GUIJIN SON | 2026-09-05T03:07 |
@@ -54,7 +53,8 @@
 | `0809.3476` | GUIJIN SON | 2026-09-05T04:54 |
 | `1005.0488` | GUIJIN SON | 2026-09-05T04:55 |
 | `2307.00704` | GUIJIN SON | 2026-09-05T04:55 |
-| … 89 more | | |
+| `1804.06328` | GUIJIN SON | 2026-09-05T04:57 |
+| … 88 more | | |
 
 ## By family
 
@@ -64,7 +64,7 @@
 | designs and codes | 48 | 1,022 |
 | algebraic decomposition | 39 | 804 |
 | integer equations | 23 | 607 |
-| reconfiguration | 27 | 551 |
+| reconfiguration | 28 | 551 |
 | geometric configurations | 21 | 533 |
 | constraint satisfaction | 21 | 508 |
 | algebraic identity solutions | 12 | 398 |
