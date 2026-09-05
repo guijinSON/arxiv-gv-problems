@@ -1,0 +1,170 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "each equation row must contain exactly four entries"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "the two equation rows are duplicated and not independent"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "a free entry lies outside the inclusive range [-1024,1024]"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "the equation rows are swapped; pivot order must be 0 then 1"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 17626570956801,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over all four bounded integer entries in the required affine chart",
+    "total": 200000,
+    "wall_clock_sec": 7.431573
+  },
+  "G5_density_and_baseline": {
+    "demo_candidate_count": 83521,
+    "demo_degree": 3,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(binomial(d+3,3)) exact coefficient operations",
+      "name": "full triangular Waring deflation over Q",
+      "operations": 184696,
+      "scanned_terms": 23400,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.400933
+    },
+    "shipping_candidate_space": 17626570956801,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "small_integer_waring_ansatz",
+    "strongest_failing_attack_operations": 5000,
+    "strongest_failing_attack_wall_clock_sec": 0.146416
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_endpoint_cancellation": {
+        "attempts": 8,
+        "operations": 3136,
+        "successes": 0,
+        "wall_clock_sec": 0.001192
+      },
+      "outlier_pure_coefficient": {
+        "attempts": 8,
+        "operations": 32,
+        "successes": 0,
+        "wall_clock_sec": 0.009736
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "operations": 2048,
+        "successes": 0,
+        "wall_clock_sec": 0.079591
+      },
+      "small_integer_waring_ansatz": {
+        "attempts": 8,
+        "operations": 5000,
+        "successes": 0,
+        "wall_clock_sec": 0.146416
+      }
+    },
+    "in_context_attack": "small_integer_waring_ansatz",
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(binomial(d+3,3)) exact coefficient operations",
+      "name": "full triangular Waring deflation over Q",
+      "operations": 184696,
+      "scanned_terms": 23400,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.400933
+    }
+  },
+  "G7_scales": {
+    "answer_shape_unchanged": true,
+    "doubled_params": {
+      "answer_bound": 2048,
+      "coeff_bound": 15,
+      "n": 47
+    },
+    "doubled_polynomial_terms": 19600,
+    "doubled_reason": "ok",
+    "doubled_reference_terms": 20825,
+    "doubled_verifies": true,
+    "pass": true,
+    "shipping_degree": 23,
+    "shipping_polynomial_terms": 2600,
+    "shipping_reference_terms": 2925
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "key_caveat": "construction invariant, not a complete projective-equivalence algorithm",
+    "pass": true,
+    "transformations": [
+      "coefficient-row reordering",
+      "negative global polynomial scaling",
+      "upper-unipotent projective coordinate change",
+      "composition of coordinate change, scaling, and row reordering"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 29,
+    "answer_elements": 8,
+    "answer_tokens": 8,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_coefficient_lookups": 10,
+    "intended_route_operations": 86,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "answer_bound": 1024,
+    "coeff_bound": 15,
+    "n": 23
+  },
+  "track": "B"
+}
