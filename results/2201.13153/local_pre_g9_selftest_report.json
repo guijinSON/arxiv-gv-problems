@@ -1,0 +1,146 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "json_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_container": {
+        "reason": "answer must be a JSON list",
+        "rejected": true
+      },
+      "duplicate_factor": {
+        "reason": "answer must contain exactly one factor",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer list is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "the factor lies outside the required alpha-bit range",
+        "rejected": true
+      },
+      "swap_to_larger_factor": {
+        "reason": "the candidate divisor is not the smaller factor",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed": [
+      1497761302553846867
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform alpha-bit integers surviving the small-prime wheel",
+    "structure_aware_space": 221139789095419201,
+    "total": 200000,
+    "wall_clock_sec": 0.660361
+  },
+  "G5_density_and_baseline": {
+    "baseline_iterations": 32768,
+    "baseline_restarts": 8,
+    "baseline_wall_seconds": 0.036713,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "shipping_density_samples": 200000,
+    "shipping_exact_valid_answers": 1,
+    "shipping_observed_solution_fraction": 0.0,
+    "shipping_valid_hits": 0,
+    "strongest_failing_attack": "Pollard rho with deterministic restart budget"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_fermat_4096": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_small_k_through_31": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_base_digit_as_factor": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "pollard_rho_8x4096": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "small_prime_trial_division_10000": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "max_operations": 60,
+      "median_operations": 46,
+      "name": "carry-free base-T decomposition"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(K*(alpha+c)^3*2^(2c)) bit operations",
+      "max_coefficient_iterations": 2254289,
+      "max_wall_clock_sec": 1.510932,
+      "median_coefficient_iterations": 1363490,
+      "median_counted_operations": 10908436,
+      "median_wall_clock_sec": 0.918395,
+      "name": "Cesati Section 4.2 SSB recovery scan",
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "answer_elements_after": 1,
+    "answer_elements_before": 1,
+    "doubled_K": 502,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_K": 251
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 20,
+    "distinct_unrelated_keys": 20,
+    "invariance_checks": 20,
+    "pass": true,
+    "symmetry": "swap the two hidden factor labels"
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 21,
+    "answer_elements": 1,
+    "answer_tokens": 6,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 48,
+    "pass": false,
+    "within_caps": true
+  },
+  "all_passed": false
+}
