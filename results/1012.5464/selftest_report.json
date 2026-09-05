@@ -1,0 +1,202 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "bruteforce_weight_enumerator_checks": {
+      "decoy_0": true,
+      "decoy_1": true,
+      "decoy_2": true,
+      "decoy_3": true,
+      "decoy_4": true,
+      "figure1": true
+    },
+    "codewords_enumerated_per_base_code": 262144,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer must contain exactly seven integers",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "coordinate indices must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "block index is out of range",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "coordinate indices must be strictly increasing",
+        "rejected": true
+      }
+    },
+    "distinct_reason_count": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "expected": [
+      3,
+      5,
+      8,
+      10,
+      18,
+      33,
+      34
+    ],
+    "parsed": [
+      3,
+      5,
+      8,
+      10,
+      18,
+      33,
+      34
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 15582336,
+    "exact_fraction": 7.701027625126296e-07,
+    "exact_solution_count": 12,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_constraints": [
+      "a valid displayed block index",
+      "exactly six distinct coordinates from 0 through 35",
+      "coordinates already sorted increasingly"
+    ],
+    "total": 200000,
+    "wall_clock_sec": 2.123718
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_combinations": 10944,
+    "baseline_successes": 0,
+    "baseline_wall_clock_sec": 0.081885,
+    "demo_candidate_space": 1947792,
+    "demo_enumeration_wall_clock_sec": 0.685887,
+    "demo_exact_solution_count_by_enumeration": 12,
+    "pass": true,
+    "reference_operations_max": 63098,
+    "reference_wall_clock_sec_max": 0.02468,
+    "shipping_candidate_space": 15582336,
+    "shipping_exact_density": 7.701027625126296e-07,
+    "shipping_exact_solution_count": 12,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "strongest_failing_attack": "basis_sums_of_at_most_two_rows"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_sums_of_at_most_two_rows": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.159826
+      },
+      "greedy_row_cancellation": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.096023
+      },
+      "outlier_lightest_basis_block": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.097219
+      },
+      "random_row_combination_32": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.153893
+      }
+    },
+    "intended_compact_route": {
+      "complexity": "17 exact vector XORs plus one weight test per block",
+      "name": "scan the XOR of each complete 18-row displayed basis",
+      "operations": 144,
+      "solves": "8/8",
+      "wall_clock_sec": 0.000427,
+      "worst_case_operations_at_preset": 144
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(b*36^3) exact time and O(36^3) stored triples",
+      "name": "pair-syndrome weight-4 prefilter, then meet-in-the-middle collision search on 3-column syndromes",
+      "operations": 63098,
+      "pair_syndromes": 3366,
+      "prefilter_survivors": 5,
+      "solves": "8/8, as expected",
+      "triple_syndromes": 29897,
+      "wall_clock_sec": 0.012182,
+      "wall_clock_sec_max": 0.02468
+    }
+  },
+  "G7_scales": {
+    "answer_elements_doubled": 7,
+    "answer_elements_shipping": 7,
+    "doubled_blocks": 16,
+    "doubled_build_and_verify_sec": 0.022902,
+    "doubled_verify_reason": "ok",
+    "escalation_after_shipping": {
+      "mix_rounds": 220,
+      "n": 12,
+      "permute": true,
+      "plant_mode": "row_sum"
+    },
+    "pass": true,
+    "shipping_blocks": 8
+  },
+  "G8_canonical_key": {
+    "canonical_invariant": "multiset of full block weight enumerators",
+    "failures": [],
+    "invariant_relabellings": 100,
+    "pass": true,
+    "real_transformations_verified": 100,
+    "transformations": [
+      "row reordering in every generator matrix",
+      "invertible row-basis change in every generator matrix",
+      "coordinate permutation within every code block",
+      "reordering the list of code blocks",
+      "composition of all four"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 25,
+    "answer_elements": 7,
+    "answer_tokens": 7,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 0
+      }
+    },
+    "diagnostic_complete": true,
+    "diagnostic_is_not_a_gate": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 144,
+    "pass": true,
+    "within_caps": true,
+    "worst_case_answer_chars": 28,
+    "worst_case_answer_tokens": 7
+  },
+  "all_passed": true
+}
