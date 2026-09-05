@@ -1,0 +1,189 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "inverse generation plus composition of cyclic XOR identities",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_element": {
+        "reason": "answer has too few core bits: expected 59, got 58",
+        "rejected": true
+      },
+      "duplicate_one_element": {
+        "reason": "answer has too many core bits: expected 59, got 60",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "entry 1 is not an integer bit 0 or 1",
+        "rejected": true
+      },
+      "swap_two_elements": {
+        "reason": "parity constraint on [X_299,X_339,X_510] is violated",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 59,
+    "exact_fraction": 1.734723475976807e-18,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_constraints": [
+      "exactly one normalized bit for each listed core variable",
+      "every sampled entry is already an integer in {0,1}",
+      "frequency-two auxiliary bits are deterministically expanded, not guessed"
+    ],
+    "total": 200000,
+    "wall_clock_sec": 9.646087
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_nodes": 2048,
+    "baseline_attack_restarts": 2048,
+    "baseline_attack_successes": 0,
+    "baseline_attack_wall_clock_sec": 0.077627,
+    "demo_candidate_space": 32,
+    "demo_exact_solution_count": 1,
+    "demo_exact_solution_fraction": 0.03125,
+    "pass": true,
+    "reference_operation_count": 33763,
+    "reference_wall_clock_sec": 0.000451,
+    "shipping_exact_solution_count": 1,
+    "shipping_exact_solution_fraction": 1.734723475976807e-18,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density_estimate": 0.0,
+    "strongest_failing_attack": "random_restart_2048"
+  },
+  "G6_adversary_panel": {
+    "additional_reference_algorithm": {
+      "complexity": "exponential worst case",
+      "max_literal_operations": 63453,
+      "max_nodes": 7,
+      "name": "plain DPLL with unit propagation on the decoded ordinary 3-CNF",
+      "solves": "8/8, as expected for Track B",
+      "wall_clock_sec": 0.02153,
+      "wall_clock_sec_total_8": 0.17224
+    },
+    "attacks": {
+      "by_hand_period_three_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.017661
+      },
+      "greedy_completed_equations": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.04548
+      },
+      "outlier_literal_sign_balance": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.002511
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.074982
+      }
+    },
+    "intended_compact_route": {
+      "name": "tight-overlap-cycle recurrence",
+      "operations": 298,
+      "solves": "8/8",
+      "wall_clock_sec": 0.001193,
+      "wall_clock_sec_total_8": 0.009546
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(C + n^3) exact Boolean operations",
+      "name": "NAE-pair recovery plus Gauss-Jordan elimination over GF(2)",
+      "operations": 39881,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.001555,
+      "wall_clock_sec_total_8": 0.012443
+    }
+  },
+  "G7_scales": {
+    "doubled_build_and_verify_sec": 0.067887,
+    "doubled_clauses": 1888,
+    "doubled_formula_variables": 1063,
+    "doubled_n": 118,
+    "doubled_verify_reason": "ok",
+    "escalation_after_shipping": {
+      "copies": 3,
+      "n": 59
+    },
+    "escalation_from_medium": {
+      "copies": 2,
+      "n": 59
+    },
+    "fixed_witness_axis": "copies raises clause and auxiliary crowding at n=59",
+    "pass": true,
+    "shipping_clauses": 944,
+    "shipping_copies": 2,
+    "shipping_formula_variables": 532,
+    "shipping_n": 59
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariant_relabellings": 100,
+    "method": "12-round signed occurrence-incidence Weisfeiler-Lehman invariant",
+    "pass": true,
+    "real_transformations_verified": 100,
+    "transformations": [
+      "arbitrary formula-variable renaming",
+      "NAE-clause reordering",
+      "literal reordering inside every NAE clause",
+      "core-output reordering with carried witness",
+      "composition of all preceding relabellings"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 119,
+    "answer_elements": 59,
+    "answer_tokens": 120,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "oracle_unreachable_http_403",
+    "intended_route_operations": 298,
+    "oracle_evidence_ready": false,
+    "pass": true,
+    "planted_answer_chars": 119,
+    "within_caps": true
+  },
+  "all_passed": true
+}
