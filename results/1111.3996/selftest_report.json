@@ -1,0 +1,178 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer has too few hexadecimal digits",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "answer has too many hexadecimal digits",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "answer value is outside the n-bit range",
+        "rejected": true
+      },
+      "swap_two_unequal_digits": {
+        "reason": "clause layer Q0015 has no compatible occurrence",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_length": 32,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability_from_unique_solution": 5.877471754111438e-39,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform over all n-bit masks after enforcing exactly one vertex in every variable layer; clause-layer choices are the stated deterministic first-compatible occurrences",
+    "structure_aware_space": 170141183460469231731687303715884105728,
+    "total": 200000,
+    "wall_clock_sec": 13.377656
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_trial_evaluations_upper_bound_total_8": 65536,
+    "attack_wall_clock_sec_total_8": 2.054354,
+    "candidate_space": 170141183460469231731687303715884105728,
+    "construction_proven_exact_solution_count": 1,
+    "demo_exact_valid_answers": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "pass": true,
+    "reference_algorithm_operations_mean": 155060,
+    "reference_algorithm_wall_clock_sec_mean": 0.0165379,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_exact": 5.877471754111438e-39,
+    "shipping_density_exact_expression": "1/2^127",
+    "strongest_failing_attack": "random_restart_8192",
+    "uniqueness_reason": "the homogeneous recurrence has period three, and n is not divisible by three"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "all_zero_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000119
+      },
+      "greedy_bit_flip": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 1.329073
+      },
+      "incidence_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.074259
+      },
+      "public_order_recurrence": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.107477
+      },
+      "random_restart_8192": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 2.054354
+      }
+    },
+    "compact_route": {
+      "exact_operations_total": 223,
+      "exact_wide_word_operations": 96,
+      "name": "hidden-cycle parallel-prefix XOR",
+      "parity_extraction_operations": 127,
+      "solves": "8/8, as expected"
+    },
+    "domain_standard_sat_reference": {
+      "complexity": "O(2^n M) worst case; measured directly on the generated distribution",
+      "decisions_mean": 3.875,
+      "literal_evaluations_max": 14178,
+      "literal_evaluations_mean": 10956,
+      "literal_evaluations_min": 8017,
+      "name": "DPLL with unit propagation and minimum-residual-clause branching",
+      "nodes_mean": 4.875,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.00773876,
+      "wall_clock_sec_total_8": 0.06191
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) scalar bit operations for the recovered square parity system",
+      "name": "Gauss-Jordan elimination over GF(2) after public clause grouping",
+      "operations_max": 169886,
+      "operations_mean": 155060,
+      "operations_min": 146324,
+      "row_xors_mean": 1059,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.0165379,
+      "wall_clock_sec_total_8": 0.132303
+    }
+  },
+  "G7_scales": {
+    "doubled_graph_vertices": 3558,
+    "doubled_n": 254,
+    "pass": true,
+    "shipping_graph_vertices": 1780,
+    "shipping_n": 127,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "canonical_numbering": "topological distance from s fixes layer ranks; the key uses only the resulting unsigned variable-to-clause incidence sequence",
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "permutation of the three occurrence vertices within every clause layer",
+      "independent swap of T/F endpoints with all incident occurrence endpoints",
+      "renaming of public parity-block grouping labels",
+      "composition of all three relabellings"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 34,
+    "answer_elements": 127,
+    "answer_tokens": 9,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 223,
+    "pass": true
+  },
+  "paper": "arXiv:1111.3996",
+  "pass": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "copies": 1,
+    "n": 127
+  },
+  "track": "B"
+}
