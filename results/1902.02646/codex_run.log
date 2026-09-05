@@ -1,0 +1,2962 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/1902.02646
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a070dd-8efa-7b90-8a85-28ef4d2768d3
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know a certificate for it by
+  construction*. Four routes count:
+  - **inverse generation** — sample the answer first and build the problem around it;
+  - **theorem-backed construction** — a theorem in the paper guarantees the object you
+    just assembled has the property, and the certificate is what its proof produces;
+  - **transformation of a known instance** — apply a structure-preserving map to an
+    instance whose certificate you hold, and carry the certificate through the map;
+  - **composition of identities** — build the instance from pieces whose certificates
+    compose: a product of telescoping terms, a sum of squares assembled from known
+    squares, a substitution chain with a known inverse.
+
+  What is forbidden is shipping a family whose answer you obtained by *solving* the
+  instance. If you had to search for it, so will your generator, and the family will
+  not scale.
+- **H — hard.** Hard in the sense your `TRACK` declares — see **TWO TRACKS** below.
+  Under either track the answer space must be far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+## The witness rule
+
+The answer must be a **witness**: a concrete object whose validity is decided by
+inspecting only the object and the instance. No search, no oracle, no appeal to a
+theorem the checker cannot execute.
+
+That is a statement about the *checker*, not about the answer's type. So certified
+negatives, certified optima and numeric answers **are admissible** — provided the
+certificate is itself such an object:
+
+| the claim | the certificate that makes it admissible |
+|---|---|
+| no solution exists | a Farkas certificate, a Nullstellensatz or Positivstellensatz certificate, a bounded-length refutation |
+| this is the optimum | a primal–dual pair with complementary slackness, or a feasible point plus a dual bound that meets it |
+| this real number | an algebraic number as (minimal polynomial, isolating interval with rational endpoints) |
+| this quantity lies here | a rigorous enclosure with **exact rational** endpoints |
+| this system is stable | a Lyapunov or barrier certificate with rational coefficients |
+
+**But — the discriminating test, and it is the one that matters:**
+
+> If the certificate is simply the output of a polynomial-time algorithm run on the
+> instance, you have not found a way past H. You have found the reason the family
+> fails it.
+
+An LP dual, a Gram matrix read off by coefficient matching, an SOS certificate that an
+SDP returns, a Lyapunov function that a linear solve produces, a root isolation — each
+is a perfectly good *witness* and a disqualifying *family*. The witness rule and the
+hardness rule are separate gates, and a certificate can clear the first while failing
+the second.
+
+Ask this at **STEP 0, before you write any code.** It is one question — *what algorithm
+produces this certificate, and what does it cost?* — and the paper's own theorem
+statements usually answer it in a line.
+
+The five algebraic papers rejected most recently were all rejected on exactly this
+point, and every one of them cost a full builder run first:
+
+| paper | what produces the certificate |
+|---|---|
+| `2605.28674` | disjunctive SOS: the paper reduces certificate search to an SDP, with SOCP and LP refinements |
+| `2504.18110` | the Gram matrix and the switching root are written out explicitly in Section 2 |
+| `2211.12582` | a necessary-and-sufficient spectral characterisation; the dimension is read off an eigenvalue multiplicity |
+| `1910.13133` | the witness is given by an explicit matrix formula |
+| `2512.19313` | the witness is a direct evaluation of a displayed trinomial construction — found after reading all 31 pages and the LaTeX source |
+
+One sentence applied at triage would have stopped all five. Instead each was claimed,
+read end to end, and rejected: five builder runs, roughly 90 minutes and 1.5M tokens, to
+rediscover a fact stated in each paper's own main theorem.
+
+---
+
+## TWO TRACKS — say which hardness you are claiming
+
+Declare `TRACK = "A"` or `TRACK = "B"` at module level. Required.
+
+**Track A — structural hardness.** No known efficient general method for the
+distribution you generate. Note *distribution*, not *worst case*: worst-case NP-hardness
+is a different claim and does not imply this one. `2503.01929` sat exactly inside the
+strongly NP-hard 3-PARTITION band and fell to Algorithm X in under five seconds, because
+random instances in that band are not hard. `PROBLEM_PROFILE["hardness_basis"]` must
+name the theorem *and* the parameter regime; G5's baseline cost is the evidence.
+
+**Track B — no-tool compression.** An efficient algorithm exists, and you say so. The
+claim is narrower and different: the evaluated model has no sandbox, no CAS and no
+solver, so it must find and execute a compact route unaided. The difficulty is the gap
+between the mechanical route (10⁶ operations — fine for a solver, impossible by hand)
+and the compact one (a change of variables, an invariant, a symmetry — a dozen
+operations, if you see it).
+
+**Track B families must be honest about the algorithm that exists.** In
+`hardness_basis`, name it, give its complexity, and give its measured cost at the
+shipping preset. A Track B family that hides the algorithm is a Track A claim, and a
+false one.
+
+The track also changes what G6 means:
+
+- **Track A** — every entry in `attacks` must have `successes == 0`, the domain-standard
+  algorithm included. Unchanged from today.
+- **Track B** — the domain-standard algorithm is *expected* to succeed. Report it under
+  a separate key `reference_algorithm` (name, complexity, wall-clock, operation count),
+  **not** inside `attacks`; that number is your `hardness_basis`, not a failure.
+  `attacks` still needs its ≥4 failing entries, and for Track B the fourth is an attack a
+  solver could actually run *in context, without tools* — the by-hand heuristic, the
+  greedy route, the obvious ansatz. If you cannot find a fourth in-context attack that
+  fails, the family is guessable by hand and you should reject it.
+
+Why the label is mandatory: without it the project drifts silently between
+complexity-theoretic hardness and practical model difficulty. Both are defensible
+benchmarks. They are not the same benchmark, and a corpus that mixes them unlabelled can
+support neither claim. Every family shipped so far is an unlabelled Track A claim, and
+`AUDIT.md` records five where that claim was simply false.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the four things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+4. **What produces the certificate.** Find the theorem that hands you the witness and
+   ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
+   characterisation", "an explicit formula" or "a classification table", then **the
+   family fails H on Track A** — not the witness rule, and *not necessarily at all*.
+   The certificate is a perfectly good witness; what it is not is hard to obtain on
+   Track A. Those are separate gates (see the discriminating test above).
+
+   **This is the single most expensive mistake made on this project so far, so do it
+   in this order.** An independent audit re-read 12 rejected papers against their
+   actual arXiv text: **7 of the 12 should have been built.** Every miss came from
+   stopping at "a method exists" without asking the next question. One rejected paper
+   was dismissed because "Theorem 1 gives u by a short linear formula" — while the
+   paper's own mechanical route was enumerating **16,689,170 dual-lattice vectors,
+   788 seconds and 4.6 GB in Magma**. A fifteen-step shortcut against 16.7 million
+   enumerations is not a non-family. It is the definition of Track B.
+
+   **FIRST ask whether it is Track B. Only then consider rejecting.**
+
+   Write down two numbers before you decide:
+
+   | | what to record |
+   |---|---|
+   | **mechanical cost** | operations the standard method needs at your shipping size — the paper often states it, or you can measure it |
+   | **compact route** | steps a solver needs who sees the structure: the invariant, symmetry, or change of variable |
+
+   - **`TRACK = "B"`** when the mechanical cost is out of reach by hand and the compact
+     route is short. Name the algorithm and both numbers in `hardness_basis`. An SDP
+     over a 40×40 Gram matrix is not something a model does in its head; a 2×2 linear
+     solve is.
+   - **Reject** only when the compact route is *no shorter* than the mechanical one —
+     that is, when there is nothing to see, so the question tests nothing. Say both
+     numbers in `REJECTED.md` and show they are comparable. "An algorithm exists" on
+     its own is **not a sufficient reason to reject** and will be sent back.
+
+   What is never acceptable is declaring Track A while knowing the algorithm exists.
+
+### Build in the paper's own objects first
+
+Before you reduce anything, write down the problem **in the objects the theorem and
+proof actually use** — vectors, Gram matrices, polynomials over ℚ or ℚ(i),
+coordinates, functions, trajectories, group elements. Ask whether a finite exact
+certificate exists *for that* object: a Gram or Seidel matrix, a rational SOS
+decomposition, a minimal polynomial with an isolating interval, a telescoping
+certificate, an antiderivative, a coordinate/sign construction checked by exact
+inner products, a dual witness. Verification stays exact — the *object* may be
+continuous even when its *certificate* is a finite symbolic thing.
+
+Only after that may you consider a discrete reduction.
+
+**Do not replace a problem over ℝ, ℂ, manifolds, functions or trajectories with a
+graph, SAT/CSP, finite field or integer-coordinate surrogate unless that reduction
+is central to the source paper.** If you do reduce, name the theorem or section that
+licenses it. If you reduce for convenience, the result is a *discretised analogue*:
+declare `reduction_kind="convenience"` in `PROBLEM_PROFILE` (and mirror the citation
+text in `NATIVE["reduction"]`), and do not present it as coverage of the paper's native
+domain. Such a family is archived, never counted in the native release — see
+PROBLEM_PROFILE in STEP 1.
+
+This has gone wrong repeatedly and silently. Real examples from this corpus:
+
+- An equiangular-lines paper (Gram matrices, Seidel matrices, eigenvalue
+  interlacing) shipped as a 720-vertex adjacency matrix with `verify` documented as
+  *"check any size-k clique"*. **The instance contained no vectors at all.**
+- A quantum-satisfiability paper about complex polynomial systems shipped as an
+  assignment problem over 𝔽₁₁.
+- A kissing-number paper with explicit real coordinates and sign patterns shipped as
+  a conflict graph.
+
+In each case the paper's mathematics was discarded before the solver saw anything,
+every gate passed, and the row was counted as geometric or algebraic coverage.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, deterministic given `(n, seed)`. No file IO, no network, no printing at
+import. Use `random.Random(seed)`, never global `random`.
+
+**What you may import.** The standard library, and `gvlib/` from the repo root. `gvlib`
+is standard-library-only itself, so importing it keeps the module dependency-free: it
+carries exact rationals with JSON encoding (`gvlib.rationals`), multivariate polynomials
+over ℚ (`gvlib.sparse_poly`), rational matrices with Bareiss determinant, rank, solve,
+Gram and LDL/PSD (`gvlib.exact_matrices`), and Sturm sequences and real-root isolation
+(`gvlib.roots`). Use it — a certificate that is a polynomial identity, a Gram matrix or
+an isolating interval should not cost you a day of writing `Fraction` row reduction for
+the fifth time. Nothing else may be imported.
+
+`gvlib` sits at the repo root and your module sits in `results/<id>/`, so the import
+needs the root on `sys.path` — `emit.sh` and `submit.sh` run from the root and find it,
+but `harden.py` is invoked from your own directory and will not. Do it once, at the top,
+and degrade gracefully:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals
+except ImportError:                 # not present: stay standard-library-only
+    exact_matrices = rationals = None
+```
+
+If it does not import, stay standard-library-only and say so in the README rather than
+adding a dependency. Do not let a missing helper library become the reason a family
+ships as a graph.
+
+**`inst["answer"]` must be JSON-native.** `emit.sh` writes it straight into
+`artifacts/<id>.jsonl` with `json.dumps`, so a `Fraction`, a `complex` or a custom class
+does not fail your selftest — it fails the emit, after the expensive part is paid for.
+Serialise: **rationals as `[num, den]`**, **monomials as exponent lists**, polynomials as
+lists of `[[num, den], [e1, e2, ...]]`, matrices as lists of lists. `json.loads(
+json.dumps(a)) == a` must hold for every answer the family produces, and whatever
+`verify` accepts, `parse_answer` must be able to return.
+
+```python
+TRACK: str                  # "A" or "B" -- see TWO TRACKS.  Required.
+    # scripts/corpus_report.py reads this straight into its `track` column; anything
+    # that is not "A" or "B" is recorded as "unknown", which is what every family
+    # shipped before this prompt reads as today.
+
+PROBLEM_PROFILE: dict       # what this family really is, on a controlled vocabulary.
+    # PREFERRED.  NATIVE (below) is the LEGACY form and is still what submit.sh reads,
+    # so declare BOTH and keep them consistent.  Seven shipped modules declare only
+    # NATIVE; they stay valid and nothing here orphans them.
+    #
+    # The token spellings below are the ones scripts/corpus_report.py reads.  Inventing
+    # a synonym does not produce a warning -- it silently drops your row out of the
+    # coverage counts, which is the exact failure mode this schema exists to stop.
+    #
+    # {"native_domain":  combinatorics|algebra|geometry|analysis|dynamics|
+    #                    optimization|number_theory|logic
+    #                    -- what the SOLVER reasons about, NOT the arXiv category.
+    #
+    #  "object_regime":  what kind of object the solver actually manipulates:
+    #      finite_discrete     finite, exactly representable as ints and structures
+    #      finite_field        elements of GF(q)
+    #      integer_lattice     integer vectors / lattice points
+    #      rational_exact      rationals, polynomials, matrices over Q; exact
+    #                          arithmetic end to end, no approximation anywhere
+    #      real_algebraic      the object is a real number, but the certificate is a
+    #                          finite exact symbolic thing -- (minimal polynomial,
+    #                          isolating interval with rational endpoints)
+    #      continuous_analytic the object lives in R, C, a manifold, a function space
+    #                          or a trajectory.  Then the certificate MUST be exact:
+    #                          a rational SOS, a Lyapunov function over Q, or a
+    #                          rigorous enclosure with exact rational endpoints
+    #                          (declare certificate_form="interval" for that last one).
+    #                          A float anywhere in verify() is a bug, not a regime.
+    #
+    #  "computational_core":  what the solver actually searches, one of
+    #                    graph|csp_sat|exact_cover|subset_sum|permutation|
+    #                    linear_algebra|polynomial_identity|sos|telescoping|
+    #                    symbolic_integration|interval_bound|other
+    #
+    #  "certificate_form":  the shape of the answer, one of
+    #                    sos|telescoping|symbolic_integral|algebraic_number|
+    #                    matrix_certificate|interval|polynomial|rational|exact_symbolic
+    #                        -- these count toward the release quota on symbolic
+    #                           certificates
+    #                    integer_tuple
+    #                        -- this one does not, and it is what the corpus already
+    #                           has far too much of.  Do not reach for it by reflex:
+    #                           an answer that IS a tuple of small ints is one thing,
+    #                           an answer flattened into one to make G4 easy to report
+    #                           is the collapse this schema exists to measure.
+    #  "native_objects": the objects the solver is HANDED, e.g.
+    #                    ["Gram matrix over Q", "unit vectors"].  If the honest answer
+    #                    is ["adjacency matrix"], write that and take the consequence.
+    #  "verification_operations": the exact operations verify() performs, e.g.
+    #                    ["exact rational inner product", "PSD check via LDL",
+    #                     "sign comparison"].  If this list is nothing but set
+    #                    membership and integer comparison, your core is discrete
+    #                    whatever native_domain says.
+    #
+    #  "domain_essentiality":  how load-bearing the paper's mathematics is:
+    #      native               ESSENTIAL -- the paper's objects are handed to the
+    #                           solver AND verify() operates on them; delete the domain
+    #                           structure and the problem is gone
+    #      licensed_reduction   REPRESENTATIONAL -- a reduction the paper itself
+    #                           licenses; the native objects are visible but the search
+    #                           is carried by the surrogate
+    #      discretised_analogue ANALOGUE -- the paper's mathematics was compiled away
+    #                           before the solver saw anything
+    #
+    #  "reduction_kind":  none | paper_licensed | convenience
+    #  "reduction":       None when reduction_kind == "none" -- it MUST be falsy then,
+    #                     or the report labels a native family a discretised analogue.
+    #                     Otherwise the citation string: "Section 5, Lemma 5 (...)".
+    #  "reduction_source": paper_central | external_standard | benchmark_convenience
+    #                     -- the finer distinction reduction_kind cannot spell.
+    #                     paper_central     -> reduction_kind "paper_licensed"
+    #                     external_standard -> reduction_kind "convenience": a textbook
+    #                                          reduction is not this paper's
+    #                                          mathematics and must not buy coverage
+    #                     benchmark_convenience -> reduction_kind "convenience"
+    #
+    #  "intuition_type":  one of, and write it with SPACES, not underscores --
+    #                     "symmetry" | "invariant" | "duality" |
+    #                     "change of variables" | "ansatz" | "extremal bound" |
+    #                     "decomposition" | "constraint propagation" |
+    #                     "reduction recognition" | "search pruning".
+    #                     The reporter matches this as prose: "change_of_variables"
+    #                     with underscores does NOT match and lands as
+    #                     "unclassified".  All ten match when written with spaces.
+    #  "intuition_description": one sentence: the insight, and what a solver who does
+    #                     not have it must do instead.
+    #  "hardness_basis":  one sentence, and it must match TRACK.  Track A: the theorem
+    #                     and the parameter regime.  Track B: the algorithm that
+    #                     exists, its complexity, its measured cost at the shipping
+    #                     preset, and why the compact route is not mechanically
+    #                     executable in context.
+    #  "max_answer_tokens": your MEASURED worst-case serialised answer length at the
+    #                     shipping preset, in tokens.  See G9(c) for the cap.}
+    #
+    # **Only `domain_essentiality == "native"` together with `reduction_kind` in
+    # {none, paper_licensed} counts toward native-domain coverage.**  Everything else
+    # is recorded honestly and reported separately, and `benchmark_convenience` is
+    # archived and excluded from the native release entirely.  Declaring
+    # `discretised_analogue` costs you a coverage row.  Declaring `native` when the
+    # solver is handed an adjacency matrix costs the corpus its credibility, which is
+    # the failure this schema exists to prevent.
+
+NATIVE: dict                # LEGACY form.  Still REQUIRED: submit.sh reads this one.
+    # {"domain":    one of combinatorics|algebra|geometry|analysis|dynamics|
+    #                       optimization|number_theory|logic
+    #  "core":      what a solver actually searches, one of
+    #               graph|csp_sat|exact_cover|subset_sum|permutation|
+    #               linear_algebra|polynomial_identity|sos|telescoping|
+    #               symbolic_integration|interval_bound|other
+    #  "objects":   the mathematical objects the solver is handed, e.g.
+    #               ["adjacency matrix"] or ["Gram matrix over Q", "unit vectors"]
+    #  "intuition": the insight the problem is meant to test, e.g. "symmetry",
+    #               "invariant", "change of variables", "ansatz", "duality"
+    #  "reduction": None if the family is stated in the paper's own objects;
+    #               otherwise the section/theorem that licenses the surrogate.}
+    # Derive it from PROBLEM_PROFILE and keep the two consistent:
+    #   domain    <- native_domain        core      <- computational_core
+    #   objects   <- native_objects       reduction <- reduction  (same value)
+    #   intuition <- intuition_type + ": " + intuition_description
+    # `domain` is NOT the arXiv category -- it is what the solver reasons about.
+    # A geometry paper rendered as an adjacency matrix has domain="combinatorics"
+    # and core="graph".  Labelling it "geometry" is the failure this field exists
+    # to prevent.
+
+DIFFICULTY: dict            # exactly four presets, named "demo", "easy", "medium"
+                            # and "hard", in that order -- harden.py walks the dict
+                            # in insertion order, so it is the ladder, ascending.
+                            # Each maps to kwargs for make_instance.
+                            # "demo" is the smallest setting the family supports:
+                            # a person must be able to solve it and check the
+                            # answer on paper.  It is an illustration, not a
+                            # difficulty level -- harden.py skips it, and
+                            # SHIPPING_DIFFICULTY must never name it.
+
+def make_instance(n, seed=0, **params) -> dict
+    """Build an instance whose certificate you know BY CONSTRUCTION -- by inverse
+    generation, theorem-backed construction, transformation of a known instance, or
+    composition of identities (see G above). Never by solving the instance you just
+    built. Returns a dict containing key "answer" (the certificate, JSON-native)
+    plus all data the solver needs. `n` is the size parameter; larger n must mean
+    harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT.
+
+    Hint modes, for G9: when os.environ.get("GV_HINT_MODE") is "structural" append
+    STRUCTURAL_HINT, when it is "placebo" append PLACEBO_HINT, and otherwise append
+    NOTHING. The default MUST be no hint -- emit.sh, submit.sh and the STEP 4
+    hardening run all call render(), and a hint leaking into artifacts/ would
+    silently change what the dataset is."""
+
+STRUCTURAL_HINT: str        # ONE sentence naming the structural insight -- the thing
+                            # intuition_description says this family tests.  Required.
+                            # "The columns of the Gram matrix repeat with period 7."
+PLACEBO_HINT: str           # ONE sentence of the same length and register carrying no
+                            # structural information.  Required.  "This problem
+                            # rewards being careful with the indexing."  See G9(a).
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+### The answer format is collapsing too — pick from this menu
+
+Measured across the 55 shipped modules: **82% of answers are plain integers or lists
+of integers**, 65% are literally `list[int]`, and `search_space()` returned an `int`
+**55 times out of 55**. There is not one rational, polynomial, matrix or symbolic
+answer in the corpus.
+
+Nothing forbids those. The gates just happen to be *cheapest* to satisfy with a tuple
+of small integers — `search_space` is easy to count, `random_candidate` is easy to
+sample, G4 is easy to measure. So every builder lands in the same place. Do not let
+the path of least resistance choose your certificate for you.
+
+`gvlib/` exists so the richer options cost about the same: exact rationals, sparse
+multivariate polynomials over ℚ, exact matrices with Bareiss determinant and LDL
+PSD-testing, and Sturm root isolation. Standard library only, already tested. Import
+it rather than hand-rolling arithmetic.
+
+| certificate | JSON-native form | `search_space` | `random_candidate` |
+|---|---|---|---|
+| tuple of indices | `[3, 17, 42]` | C(n,k) | sample k of n |
+| **rational vector** | `[[num, den], ...]` | bound heights: (2H+1)^d | sample numerators/denominators in range |
+| **polynomial** | `[[coef, [e1,e2,...]], ...]` | #monomials under the degree bound, coefficients bounded | sample a support set, then coefficients |
+| **matrix over ℚ or F_q** | `[[...],[...]]` | q^(mn), or bounded heights | sample entries |
+| **SOS decomposition** | list of polynomials | as polynomial, times the number of squares | sample squares, sum them |
+| **primal–dual pair** | `{"x": [...], "y": [...]}` | product of the two spaces | sample both |
+| **algebraic number** | `{"minpoly": [...], "interval": [[a,b],[c,d]]}` | #polynomials under degree+height bound | sample a squarefree minpoly, isolate |
+| **group element / word** | `["a","b","a^-1", ...]` | (2g)^L for length L | sample a reduced word |
+| **permutation / ordering** | `[2, 0, 1, ...]` | n! | Fisher–Yates |
+| **set system / partition** | `[[...],[...]]` | Bell or Stirling number | sample a random partition |
+
+`search_space` may return `None` when the declared language is genuinely uncountable —
+then G5 carries a **sampled density estimate** instead. That path exists and has never
+been used; if your certificate is naturally continuous-but-certified, use it rather
+than discretising the answer to keep the counter happy.
+
+**Before you settle on `list[int]`, write down what the paper's own objects are.** If
+the theorem is about polynomials, the answer should probably be a polynomial. Reducing
+it to indices is the same failure as reducing geometry to a graph — it survives the
+gates and loses the mathematics.
+
+CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
+    # {"description": a human-readable grammar/bounds statement, e.g.
+    #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed
+    #                  monomial basis, rational coefficients with |num|,|den| < 2^32"
+    #  "bounds":      the numeric bounds that make it finite, e.g.
+    #                 {"n_squares": 6, "max_degree": 4, "basis": 45, "coeff_bits": 32}}
+    #
+    # This field exists because requiring an integer `search_space` silently forces
+    # every family to be a tuple of small integers.  Measured over the first 40
+    # shipped generators: search_space returned an int 40/40 and None 0/40, and not
+    # one answer was a rational, a polynomial or a symbolic expression -- because a
+    # symbolic answer has no uniformly-sampleable candidate set, so G4 could not be
+    # reported and the family was never built.
+    #
+    # Declaring bounds fixes that.  An antiderivative is infinite; an antiderivative
+    # over a fixed operator set with depth <= 4 and coefficients under 2^16 is a
+    # finite, countable, samplable space.  Bound the language and the continuous
+    # families become expressible without weakening exact verification at all.
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of CERTIFICATE_LANGUAGE at these parameters -- the space
+    `random_candidate` samples from, not a looser superset. Return None ONLY if
+    the declared language is genuinely uncountable; then G5 must carry a sampled
+    density estimate instead."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | str | None
+    """Parameters strictly harder than `params`.
+
+    GROW THE HAYSTACK, NOT THE NEEDLE.  This is the rule, and 61% of shipped
+    modules break it: they escalate by raising `n`, which lengthens the ANSWER,
+    which hits the output cap, at which point they return None and the harness
+    calls the family `too_easy` and the paper is thrown away.  Ten papers have
+    been discarded that way -- judged un-writable rather than unsuitable.
+
+    Difficulty should scale with the SPACE THE ANSWER IS DRAWN FROM, not with the
+    NUMBER OF THINGS IN THE ANSWER.  A planted clique is the model: n goes from
+    512 to 4096 while k stays 16, so the search explodes and the answer stays
+    sixteen numbers long.
+
+    Axes that raise difficulty at FIXED answer length -- reach for these first:
+      - enlarge the ground set / ambient space, keeping the witness size fixed
+      - raise the modulus, field size or coefficient range, so each answer
+        element carries more entropy without taking more characters
+      - raise decoy density or crowding: more near-misses per real element
+      - move the plant closer to the feasibility boundary
+      - delete redundant clues from the instance -- less given, same answer
+      - tighten the constraints, shrinking the solution set
+
+    Only after those are exhausted should you consider a longer answer.
+
+    RETURN VALUES, and the distinction matters:
+      dict          -- harder parameters. Preferred.
+      "cap_bound"   -- the family CAN be made harder, but only by pushing the
+                       answer past the output cap.  Say this instead of None.
+                       It parks the paper rather than condemning it: the limit
+                       is our answer format, not the paper's mathematics.
+      None          -- genuinely nothing left on ANY axis.  Rare.  If you are
+                       returning None because the answer got too long, you mean
+                       "cap_bound"."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+- **Keep the answer writable.** The solver has to type it out, by hand, with no
+  scratchpad. An answer running to thousands of elements measures transcription
+  stamina, not intuition, and the failures it produces tell you nothing. G9(c) puts a
+  hard cap on this.
+- **Serialise rationals and polynomials the way `parse_answer` reads them back**, and
+  say so in the statement: rationals as `num/den`, monomials as exponent lists. The
+  rendered form and the JSON form must agree.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship** — except where a part is explicitly marked
+*recorded, not gated*, which is true of G9(a) and of nothing else.
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples drawn from `CERTIFICATE_LANGUAGE`, measured **structure-aware** (see below). Report hits/total. |
+| **G5 density + baseline cost** | A real number, never "not feasible": an exact solution count where enumeration works at any preset, otherwise a sampled density estimate — **plus** the measured cost of your strongest attack. See below. |
+| **G6 adversary panel** | ≥4 attacks in `attacks`, each FAILING across ≥8 seeds. Track A: three cheap probes **plus the standard algorithm for the problem class**. Track B: three cheap probes plus an in-context attack, with the standard algorithm reported separately under `reference_algorithm`. See TWO TRACKS and below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+| **G9 no-tool suitability** | **One** gated part — the answer and route fit the caps (G9c). The three-arm diagnostic (bare / hinted / placebo) is **recorded, never gated**; the hinted arm G9(b) was a gate until 2026-09-05 and is now diagnostic too. See below. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G5: measure difficulty, do not infer it from cardinality
+
+Across the first 40 shipped generators, `enumerate_all` returned `None` at the
+**shipping** preset **40/40**. G5 was therefore measured on a reduced instance
+(n = 4–40, against shipping n up to 512) or carried no number at all (7/40). It
+never described the instance that actually ships — and a density at n=4 says
+nothing about n=32.
+
+Worse, a reduced-preset number can be passed while being alarming: `2104.04330`
+reported a solution fraction of **5.7e-4** at n=18 — roughly one candidate in 1768
+is valid — and passed G5 anyway.
+
+A large space is not difficulty. `2503.01929` reported a 1536-bit candidate space
+and fell to Algorithm X in under five seconds. Report both of these, as numbers,
+**at the shipping preset**:
+
+1. **Density at the shipping preset.** Exact count if `enumerate_all` terminates
+   there; otherwise sample `random_candidate` and report the observed fraction of
+   valid answers with the sample size. A count from a smaller preset may be given
+   in addition, labelled with its `n` — never instead. `None` is not an answer.
+2. **Baseline cost.** Run your strongest G6 attack at the *shipping* preset and
+   record what it actually cost: wall-clock seconds, and nodes/restarts/iterations.
+   A family whose best attack fails in 0.2 s is not obviously hard — it may simply
+   be unsatisfiable-looking to that attack. Cost is the honest difficulty signal.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+- **The standard algorithm for the problem class — REQUIRED, not optional.** The
+  three above are generic and they are *not sufficient*; they probe how you built
+  the instance, not what is known about the problem. Ask what a specialist would
+  reach for first and run *that*:
+
+  | the problem is about | run at least |
+  |---|---|
+  | satisfiability / CSP | a SAT or SMT solver, or DPLL with unit propagation |
+  | covering, packing, assignment, scheduling | an ILP/LP relaxation, or matching |
+  | a planted subgraph, colouring, partition, or community | **a spectral method** — top eigenvectors of the adjacency/Laplacian, and an SDP or nuclear-norm relaxation if the paper mentions one |
+  | subset sum, knapsack, lattice, or small-coefficient integer relations | LLL / lattice reduction |
+  | exact cover, tiling, set partition | Algorithm X / DLX, or a CP solver |
+  | paths, cycles, flows, connectivity | the classical polynomial algorithm for the relaxed version, then repair |
+  | permutations, words, group elements | normal forms and the natural rewriting/canonicalisation |
+
+  If no library is available, implement the cheap version — power iteration is a
+  dozen lines and breaks most planted-subgraph constructions. If you genuinely
+  cannot run the standard attack, say so explicitly in the README caveats and name
+  the attack you could not run. Never silently omit it.
+
+**Report G6 in this shape**, so the panel can be checked mechanically rather than
+read prose-by-prose:
+
+```python
+report["G6_adversary_panel"] = {
+    "pass": all_failed,
+    "attacks": {                      # one entry per attack, name -> result
+        "outlier_degree":     {"successes": 0, "attempts": 8},
+        "greedy_largest_first":{"successes": 0, "attempts": 8},
+        "random_restart_256": {"successes": 0, "attempts": 8},
+        "spectral_top_eigenvector": {"successes": 0, "attempts": 8},   # the domain attack
+    },
+}
+```
+
+Extra keys alongside `attacks` are fine. `submit.sh` requires `attacks` to be
+present with **at least 4 entries** — three generic probes plus the domain attack — and
+it **recomputes `pass` from the `successes` on disk**: a panel that records a solved
+attack is refused no matter what `pass` says. `2410.07666` logged walksat at 8/8 and
+honestly set `pass=false`; nothing else would have caught it.
+
+That recomputation is exactly why a **Track B** family must not put its
+domain-standard algorithm in `attacks`. On Track B that algorithm is *supposed* to
+succeed — it is the `hardness_basis`, not a failure — so it goes in a sibling key and
+`attacks` keeps its meaning:
+
+```python
+report["G6_adversary_panel"]["reference_algorithm"] = {   # Track B only
+    "name": "Bareiss elimination over Q",
+    "complexity": "O(n^3) exact",
+    "wall_clock_sec": 0.4,
+    "operations": 1_240_000,      # this number IS the Track B hardness claim
+    "solves": "8/8, as expected",
+}
+```
+
+Track B still needs four *failing* entries in `attacks`, and its fourth is an attack a
+solver could actually run in context without tools — the by-hand heuristic, the greedy
+route, the obvious ansatz. If you cannot find one that fails, the family is guessable by
+hand and you should reject it.
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+- **A bounded Token Jumping family (arXiv:2408.04743) passed every gate, and the
+  four-vendor oracle pool returned `hardened`.** A construction-aware spectral
+  attack then recovered a verified witness on **20/20 shipping instances in
+  polynomial time** — the planted colour classes formed an exact −3 eigenvector.
+  The generic outlier/greedy/restart panel saw nothing. This is why the domain
+  attack is mandatory: gates passing and the oracle failing to solve are jointly
+  *not* evidence of hardness, and this family would have shipped on that evidence.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+### G9: is the failure informative? — measured, mostly not gated
+
+Every family here is built so that a model fails it. That makes "the model failed"
+almost uninformative on its own: a model also fails a question whose answer is forty
+thousand tokens long, and one that needs ten thousand exact multiplications. Those
+failures say nothing about mathematical intuition, and a corpus full of them measures
+patience.
+
+G9 separates the two. **It is not a "the model must succeed" gate.** That would be the
+exact negation of STEP 4, which holds a level only when all three oracles fail, and it
+would delete every family that survives the hardening loop. Three parts, and only two of
+them are gates.
+
+#### (a) The three-arm diagnostic — recorded, never gated
+
+Run the shipping preset three times and record solved/attempts for each arm:
+
+| arm | prompt |
+|---|---|
+| bare | `render(inst)` as shipped |
+| hinted | `render(inst)` + `STRUCTURAL_HINT` |
+| placebo | `render(inst)` + `PLACEBO_HINT` |
+
+**Why the placebo arm exists.** Appending *any* sentence changes the prompt — its
+length, its register, and the signal that the asker thought a hint was warranted.
+Comparing hinted against bare confounds all of that with the hint's actual content. The
+placebo holds everything fixed except the structural information, so **hinted − placebo**
+is the estimate of real structural help; hinted − bare is contaminated by prompt leakage
+and is not.
+
+If hinted ≈ placebo, your hint carried no information: either it is badly written, or
+the family does not respond to the intuition you claimed in `intuition_type`. That is a
+finding, not a failure. Record the three numbers and say what you conclude in the
+README. **It does not block the ship** — this arm exists so the corpus knows what it is
+measuring, and gating on it would let a builder tune the hint instead of the family.
+
+#### (b) The hinted arm — RECORDED, NOT GATED (retired 2026-09-05)
+
+> Run the shipping preset with `STRUCTURAL_HINT` appended and record solved/attempts.
+> **This does not block the ship.**
+
+**This used to be a gate**, requiring the family to defeat the pool even when handed its
+hint. It was retired because the premise was backwards and the cost was enormous.
+
+The premise: "a family that dissolves the moment you name the trick was never testing
+whether a model can *find* the structure — it had already memorised it." That does not
+follow. A model that had memorised the trick would solve the **bare** statement, and
+STEP 4 proves it does not. What dissolving-on-hint actually shows is that the difficulty
+sits in *finding* the insight — which is precisely what this corpus is for, and what
+G9's own preamble contrasts against families that merely measure patience. As a gate it
+kept families that stay hard *even when handed the insight* — hard for reasons other
+than insight — and deleted the rest.
+
+The cost: 8 rejections and 23 papers blocked at submit, **six of which had already
+defeated the four-vendor no-tool pool at their shipping preset**. Three more were
+`cap_bound`/`budget_bound`, which made the gate unsatisfiable in principle — it asked
+for a family that could not be escalated at all to be escalated. Against 100 accepted
+problems that was the single largest loss mechanism in the pipeline.
+
+It also had the exact defect G9(a) is explicitly protected against: gating on a hinted
+arm lets a builder tune the *hint* instead of the family. Measured over the 17 modules
+carrying a hint, 4 of 9 rejected papers had handed the solver a procedure rather than an
+invariant.
+
+Record `hinted − placebo` and say what you conclude in the README. If the hint makes the
+family easy, that is a **good** sign about where its difficulty lives — note it and
+ship.
+
+Run it with the harness, not by hand:
+
+```bash
+mkdir -p g9_hinted && cp gen_<arxiv_id>.py g9_hinted/
+# in the COPY, cut DIFFICULTY down to the shipping preset alone, so the ladder
+# has one rung and the verdict is about that rung
+cd g9_hinted && GV_HINT_MODE=structural python3 ../../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+`harden.py` opens `llm_loop_transcript.jsonl` and `.meta.json` with mode `"w"` — it
+**overwrites**. Run every G9 arm in its own scratch directory, never in the result
+directory, or you will destroy the STEP 4 evidence you already paid for. Copy the
+finished transcripts back as `g9_<arm>_transcript.jsonl`.
+
+#### What a structural hint may contain — read this before you write one
+
+G9(b) rejects a paper when the hinted oracle solves it. That inference is only valid if
+the hint carries **the insight and nothing else**. If you hand over the algorithm, the
+oracle solving it measures your hint, not the paper — and the paper is discarded for it.
+
+A structural hint **names the invariant a solver has to notice**. It says what to look
+at. It does not say what to do next, it does not chain a second step, and it does not
+state a quantity the solver was supposed to derive.
+
+Measured over the 17 modules on disk carrying a `STRUCTURAL_HINT`: 4 of 9 rejected
+papers handed over a procedure, against 1 of 8 accepted. Real examples, all four from
+rejected papers:
+
+| hint | why it is a procedure |
+|---|---|
+| "Among target-one vertices, keep edges whose endpoints have equal eligible degree; **the result is three even cycles, so take alternating edges on each**." | states the derived count *and* the final step — the whole algorithm |
+| "Subtract the displayed center modulo p, **then** enumerate the two named exponent cosets by repeated multiplication" | chains a second step |
+| "Link repeated-letter word patterns **first, then** propagate one bijection across every occurrence **before using** ordinary letter frequencies" | a three-step method |
+
+Contrast one that is fine, from a paper whose G9(b) rejection stands on other grounds:
+
+> "Reduce every magnitude modulo 997: each four-element residue bucket contains two
+> complementary pairs with identical sums."
+
+It names the invariant — residue buckets carry complementary pairs — and stops. What to
+do with that is left to the solver.
+
+`submit.sh --reject` refuses a G9-citing rejection whose hint chains steps ("then",
+"; ...", "so take", "first,") or hands over a derived fact ("the result is ...",
+"there are three ..."). Rewrite the hint to name only the invariant, re-run the G9(b)
+arm, and reject only if the family still dissolves.
+
+Record the verdict. `hardened` means the hint did not break the family; `too_easy` means
+it did. **Neither blocks the ship** — put the number in the README and move on. Do not
+write `REJECTED.md` citing G9(b); `submit.sh --reject` will refuse it.
+
+#### (c) The size and effort caps — gated
+
+| cap | limit at the shipping preset |
+|---|---|
+| serialised answer | ≤ **2,000 characters** (≈ **500 tokens**) and ≤ **256 atomic elements** |
+| intended route | ≤ **300 exact arithmetic operations** |
+
+Measure both, put the numbers in the gate dict, and put the token figure in
+`PROBLEM_PROFILE["max_answer_tokens"]`.
+
+"Intended route" means the operations left **after** the insight — the compact route the
+family claims to test, not the search it replaces. A family over the answer cap is a
+transcription test. A family whose intended method needs thousands of arithmetic
+operations is a calculator test, and the evaluated model has no calculator; that is a
+fact about the harness, not a property of the mathematics.
+
+If you are genuinely over a cap and believe the family should ship anyway, say so in the
+README caveats with the measured number and expect to be argued with. Do not quietly
+round it down.
+
+Report the gate like this:
+
+```python
+report["G9_no_tool_suitability"] = {
+    "pass": hinted_still_hardened and within_caps,     # (b) and (c) only
+    "arms": {                                          # (a): recorded, not gated
+        "bare":    {"solved": 0, "attempts": 3},
+        "hinted":  {"solved": 0, "attempts": 3},
+        "placebo": {"solved": 0, "attempts": 3},
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",                      # (b)
+    "answer_chars": 412, "answer_tokens": 104, "answer_elements": 32,   # (c)
+    "intended_route_operations": 47,                   # (c)
+}
+```
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- The ladder starts at `easy`. `demo` is skipped: it is built to be solvable, so
+  starting there would spend an escalation proving exactly that.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+- It opens both files with mode `"w"`. **A second run in the same directory overwrites
+  the evidence from the first.** This run — bare, no hint — is the one that ships, so
+  G9's extra arms run in their own scratch directories. See G9(b).
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, the four names are already taken, so
+  **slide the ladder up**: drop the rung the oracle solved, keep the survivors in
+  ascending order, and put the escalated level in as the new `hard`, leaving
+  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+  whichever name now carries the level that held, then re-run STEP 3's gates at it.
+  `demo` never moves: it stays the hand-solvable rung.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results,
+   G9's three arms and its measured answer size and operation count).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. `g9_hinted_transcript.jsonl` and `g9_placebo_transcript.jsonl` — the G9 arms,
+   produced by `harden.py` in scratch directories and copied back. See G9(b).
+5. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+6. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **The profile up front**: `TRACK`, native domain, object regime, computational core,
+  certificate form, intended intuition and `domain_essentiality` — copied from
+  `PROBLEM_PROFILE`. If `reduction_kind` is anything but `none` or `paper_licensed`,
+  say plainly that this is **not** native coverage of the paper's domain, and name what
+  was discarded.
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard**, in the sense your `TRACK` declares. Track A: the specific theorem
+  and parameter regime you are inside, and — just as important — the easy regimes you
+  had to avoid and the results that identify them. Track B: **name the algorithm that
+  solves it**, its complexity and its measured cost, then say why the compact route is
+  not something a model can execute in context. A Track B README that reads like a
+  Track A README is the failure mode here. Cite sections by number either way. This is
+  the part only you know.
+- **A worked example.** A rendered instance small enough to read in full — use the
+  `demo` preset, which exists for this — its answer, `verify` returning True on it,
+  and `verify` returning False with its reason on a corrupted variant. Say plainly
+  whether a person can actually solve it by hand, and if not, why the family's
+  smallest supported setting still is not hand-scale.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **The G9 arms**, as a table: bare / hinted / placebo solved-out-of-attempts, the
+  hinted − placebo difference, and what you conclude. If the structural hint bought the
+  oracle nothing, say so — that is evidence about your `intuition_type`, and this
+  README is the only place it will ever be written down. Give the measured answer size
+  and intended-route operation count here too.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+### `cap_bound` is not a rejection
+
+If the harness returns `cap_bound`, **do not write `REJECTED.md`.** The family is
+fine and the paper is fine; the answer simply cannot be written out at the size that
+would make it hard. Say so in your report and stop. The paper goes back to the pool
+for a future run under a larger cap, not into the reject pile.
+
+You should reach `cap_bound` only after trying the fixed-length axes in
+`escalate()`. If you reached it by raising `n` alone, you have not finished the job.
+
+## Writing `REJECTED.md`
+
+A rejection is a real result and costs nothing — but a *wrong* rejection throws away a
+paper someone already paid to read, and an audit found 7 of 12 rejections were wrong.
+So `REJECTED.md` must answer the question that was skipped:
+
+- Which of G, H, V fails, and **which track** — a family can fail H on Track A and
+  still be a perfectly good Track B family.
+- If you are rejecting because an efficient method exists, state the **mechanical
+  cost** and the **compact route length**, and show the gap is too small to test
+  anything. Without those two numbers the rejection is not reviewable, and
+  `submit.sh --reject` will refuse it.
+- Which theorem or section you are relying on, by number.
+
+Do not reject on the abstract. Do not reject because the paper "gives a construction" —
+that describes almost every paper in this pool.
+
+### If you built a module, KEEP it
+
+If you got as far as writing a generator and are now rejecting, **rename it to
+`rejected_gen_<id>.py` and leave it in place. Do not delete it.** `REJECTED.md` is
+what `submit.sh` reads, so a retained module cannot be mistaken for a shipped one —
+deleting it does not protect anything, and it destroys the only evidence that can
+re-open the decision later.
+
+This is not hypothetical. `harden.py` used to take `escalate() -> None` at face value
+and record `too_easy` when the real obstacle was the 256-atom answer cap. Replaying
+the fixed detector over past rejections recovered five papers that should have been
+parked, not rejected — and it could only do that for rejections that still had a
+module. `2411.12911` and `2601.05272` deleted theirs, so their rejections cannot be
+re-checked at all: both had to be parked on suspicion instead of measurement.
+
+Keep the module, and keep `.meta.json` and `llm_loop_transcript.jsonl` with it.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 1902.02646
+url: https://arxiv.org/abs/1902.02646
+title: All Ramsey $(C_n,K_6)$ critical graphs for large $n$
+categories: math.CO
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: graph structures
+  method: structural scan
+  candidate generator: choose parameters with a known Ramsey critical coloring graph
+  candidate verifier: check forbidden red cycle and blue clique by subgraph search
+codex
+I’ll begin with the required Step 0 triage: read the full paper, identify the exact critical-graph definition, hard/easy regimes, and—most importantly—the algorithm and cost that would produce a witness. I’ll only build a module if the paper supports a genuinely generatable, verifiable Track A or Track B family.
+  → Read the full paper and decide G/H/V plus Track A vs Track B
+  • Design and implement the generator or write a fully evidenced rejection
+  • Run self-tests, adversary measurements, and hardening/G9 loops if applicable
+  • Write the required reports and verify all deliverables
+web search: 
+web search: https://arxiv.org/abs/1902.02646
+web search: 
+web search: site:arxiv.org 1902.02646 "All Ramsey"
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!artifacts'"' -g '"'!*.pyc'"' | head -50" in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+/home/gson/gvrepo/results/1902.02646
+
+exec
+/bin/bash -lc 'ls -la && ls -la ../../scripts | head -50 && ls -la ../../gvlib | head -50' in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+total 172
+drwxrwxr-x   2 gson gson  4096 Sep  5 09:19 .
+drwxrwxr-x 688 gson gson 20480 Sep  5 09:19 ..
+-rw-rw-r--   1 gson gson   161 Sep  5 09:19 .meta.json
+-rw-rw-r--   1 gson gson   529 Sep  5 09:19 .runner.sh
+-rw-rw-r--   1 gson gson 66383 Sep  5 09:19 .task.md
+-rw-rw-r--   1 gson gson 67430 Sep  5 09:19 codex_run.log
+total 280
+drwxr-xr-x  3 gson gson  4096 Sep  5 02:42 .
+drwxrwxr-x 13 gson gson  4096 Sep  5 08:00 ..
+drwxrwxr-x  2 gson gson  4096 Sep  5 06:29 __pycache__
+-rwxr-xr-x  1 gson gson  2782 Sep  4 07:39 claim.sh
+-rw-r--r--  1 gson gson 64928 Sep  4 19:34 codex_task.md
+-rwxr-xr-x  1 gson gson 42131 Sep  4 17:50 corpus_report.py
+-rwxr-xr-x  1 gson gson  6083 Sep  3 17:09 emit.sh
+-rwxr-xr-x  1 gson gson   812 Sep  1 13:16 fetch_paper.sh
+-rwxr-xr-x  1 gson gson 25408 Sep  5 06:47 harden.py
+-rw-r--r--  1 gson gson  6202 Sep  3 04:39 make_xlsx.py
+-rwxr-xr-x  1 gson gson  2818 Sep  5 02:42 park.sh
+-rwxr-xr-x  1 gson gson  9232 Sep  4 17:38 pick_paper.py
+-rwxr-xr-x  1 gson gson  4394 Sep  1 16:16 run_codex.sh
+-rw-r--r--  1 gson gson  4673 Sep  3 04:37 samples.py
+-rw-r--r--  1 gson gson 24704 Sep  3 17:02 score_hardness.py
+-rwxr-xr-x  1 gson gson  7802 Sep  4 12:29 solver_prior.py
+-rwxr-xr-x  1 gson gson  2994 Sep  1 13:16 status.sh
+-rwxr-xr-x  1 gson gson 34206 Sep  5 06:47 submit.sh
+total 128
+drwxr-xr-x  3 gson gson  4096 Sep  3 17:13 .
+drwxrwxr-x 13 gson gson  4096 Sep  5 08:00 ..
+-rw-r--r--  1 gson gson 13447 Sep  3 17:10 README.md
+-rw-r--r--  1 gson gson  1076 Sep  3 16:58 __init__.py
+drwxrwxr-x  2 gson gson  4096 Sep  4 18:15 __pycache__
+-rw-r--r--  1 gson gson 16113 Sep  3 17:06 exact_matrices.py
+-rw-r--r--  1 gson gson  6737 Sep  3 16:58 rationals.py
+-rw-r--r--  1 gson gson 12438 Sep  3 17:10 roots.py
+-rw-r--r--  1 gson gson 18169 Sep  3 17:06 sparse_poly.py
+-rw-r--r--  1 gson gson 36839 Sep  3 17:10 test_gvlib.py
+
+exec
+/bin/bash -lc 'curl -L --fail --silent --show-error https://arxiv.org/e-print/1902.02646 | tar -tzf - | head -100' in /home/gson/gvrepo/results/1902.02646
+ succeeded in 561ms:
+e-jc.sty
+graph1b.tex
+graph1.tex
+graph7.tex
+graph81.tex
+graph82.tex
+graph83.tex
+graph84.tex
+graph85.tex
+graph86.tex
+graph8.tex
+graph910.tex
+graph91.tex
+graph92.tex
+graph93.tex
+graph94.tex
+graph95.tex
+graph96.tex
+graph97.tex
+graph98.tex
+graph99.tex
+New_Star_critical_Ramsey_numbers_cycles_vs_K6_new_April_1.tex
+
+exec
+/bin/bash -lc 'curl -L --fail --silent --show-error https://arxiv.org/e-print/1902.02646 | tar -xOzf - New_Star_critical_Ramsey_numbers_cycles_vs_K6_new_April_1.tex' in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+\documentclass[12pt]{article}
+\usepackage{pgf,tikz}
+\usetikzlibrary{arrows}
+\usepackage{amsmath}%
+\usepackage{amsfonts}%
+\usepackage{amssymb}%
+\usepackage{graphicx}%
+\pagestyle{plain}
+\setlength{\textwidth}{6.0in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\textheight}{8.25in}
+\setlength{\topmargin}{0in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{20pt}
+\setlength{\medskipamount}{3ex}
+\setlength{\smallskipamount}{1.5ex}
+\def\binom#1#2{{#1\choose#2}}
+\def\eprf{\rule{1ex}{1em}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{problem}{Problem}
+\begin{document}
+\title{All Ramsey $(C_n,K_6)$ critical  graphs for large $n$}
+\author{C. J. Jayawardene \\
+Department of Mathematics\\
+University of Colombo \\
+Sri Lanka\\
+email: c\_jayawardene@maths.cmb.ac.lk\\
+\\
+W. C. W. Navaratna  and J.N. Senadheera \\
+Department of Mathematics \\
+The Open University of Sri Lanka \\
+Sri Lanka\\
+email: wcper@ou.ac.lk, jnsen@ou.ac.lk \\
+}
+
+
+\maketitle
+\begin{abstract} Let $G$ and $H$ be finite graphs without loops or multiple edges. If for any two-coloring of the edges of a complete graph $K_n$, there is a copy of $G$ in the first color, red, or a copy of $H$ in the second color, blue, we will say $K_n\rightarrow (G,H)$. The Ramsey number $r(G, H)$ is defined as the smallest positive integer $n$ such that $K_{n} \rightarrow (G, H)$. A two-coloring of $K_{r(G, H)-1}$ such that $K_{r(G, H)-1} \not \rightarrow (G,H)$ is called a critical coloring. A  Ramsey critical $r(G, H)$ graph is a graph induced by the first color of a critical coloring. In this paper, when $n \geq 15$, we show that there exist exactly  sixty eight non-isomorphic Ramsey critical $r(C_n, K_6)$ graphs.  
+\end{abstract}
+
+\noindent Keywords: Graph theory, Ramsey theory, Ramsey critical graphs\\
+\noindent Mathematics Subject Classification: 05C55, 05C38, 05D10  \\
+
+\section{Introduction}
+\noindent For any two graphs $G$ and $H$, the \textit{Ramsey number} $r(G,H)$ is the smallest positive integer $n$ such that $K_n\rightarrow (G,H)$.   The \textit{classical Ramsey number} $r(s, t)$ is defined as $r(K_s,K_t)$ and the \textit{diagonal Ramsey number} is defined as  $r(K_n,K_n)$.  These numbers have been studied extensively in the last five decades. The difficulty in exact determination of \textit{diagonal Ramsey number} $r(n, n)$, swifts expeditiously from the apparent $r(3,3)=6$ to the unmanageable $r(5,5)$. Currently, the best known lower and upper bounds for $r(5,5)$ are  43 and 48 (see \cite{Ra}). Many interesting variations of the basic problem of finding  classical Ramsey numbers have emerged. One such variation  is the calculation of the number of \textit{Ramsey critical  $(G,H)$ graphs}, for any pair of graphs $(G,H)$. In this paper,  we show that there are exactly 68  Ramsey critical $r(C_n, K_6)$   graphs, for all $n$ exceeding fourteen.  
+
+
+\vspace{14pt}
+
+\section{Notation}
+\noindent The \textit{complete graph} on $n$ vertices, a \textit{cycle} on  $n$ vertices and a \textit{Star} on $n+1$ (see \cite{JaSa}) vertices are denoted by $K_n$, $C_n$  and $K_{1,n}$ respectively. Given a graph $G$ and a vertex $v \in V(G)$, we define the \textit{neighbourhood of $v$ in $G$},  $\Gamma(v)$, as the set of vertices adjacent to $v$ in $G$. The \textit{degree} of a vertex $v$, $d(v)$, is defined as the cardinality of  $ $ $\Gamma(v)$, $ $ i.e. $d(v)=| \Gamma(v)|$. The minimum degree of a graph $G(V,E)$ denoted by $\delta(G)$ is defined as  $ $ $ \min\{ d(v) | v\in V  \}$. 
+
+\vspace{8pt}
+
+
+
+
+\noindent Given a graph $G$, we say $I \subseteq V(G)$ is an \textit{independent set}, if no pair  of  vertices of $I$ is adjacent to each other in $G$. Equivalently, $I$ forms a clique in $G^c$.  Given a graph $G=(V,E)$, we define \textit{the independence number}, $\alpha(G)$, as the size of the largest independent set. Thus, $\alpha(G)=\max \{ \left| I\right| : I$ is an independent set of $G \}$. In the special case of $H=K_m$, alternatively $r(G,K_m)$ can be viewed as the smallest positive integer $n$ such that every graph  of order $n$ either contains $G$ as a subgraph or else satisfies $\alpha(G) \geq m$. For a non-empty subset $S$ of $V$, \textit{the induced subgraph of $S$ in $G$} denoted by $G[S]$ is defined as the  subgraph obtained by deleting all the vertices of $S^c$ from $G$. For two disjoint subgraphs $H$ and $K$ of $G$, we denote the set of edges between $H$ and $K$ by $E(H,K)$.  
+
+
+
+\vspace{10pt}
+
+
+\section{Lemmas used to generate  Ramsey critical $(C_n,K_6)$  graphs for $n \geq 15$}
+
+In an attempt to prove Bondy and Erd{\"o}s conjecture  $r(C_n,K_m) = (n-1)(m-1)+1$, for all $(n,m)\neq(3,3)$ satisfying $n \geq m \geq 3$ under certain restrictions, Schiermeyer has proved that  $r(C_n,K_6) = 5(n - 1)+1$, for $n \geq 6$  (see \cite{Ra,Sc}). Characterizing all  Ramsey critical $(C_n,K_6)$ graphs boils down to  finding all (red/blue) colorings of $K_{r(C_n,K_6)-1}$ such that there is no red $C_n$ or a blue $K_6$. This is achieved by finding all $C_n$-free graphs on $K_{r(C_n,K_6)-1}$ vertices such that $\alpha(G)<6$. We first  prove that any $C_n$ -free graph (where $n \geq 15$) of order $5(n-1)$ with $\alpha(G) \leq 5$  contains a $5K_{n-1}$. To prove this, we use seven lemmas of which the first three are already proven results. For ease of reference, we reiterate Lemma \ref{l1a} from \cite{JaRo1}, Lemma  \ref{l1b} from \cite{Ja} and Lemma  \ref{l2}  by Bollob{\'a}s et al from \cite{BoJaSh}.
+\vspace{10pt}
+
+
+\begin{lemma}
+\label{l1a}
+\noindent (\cite{JaRo1}, Lemma 2; \cite{JaRo1}). A $C_n$- free graph $G$ of order $N$  with independent number  less than or equal to $m$ has minimal degree  greater than or equal to $N-r(C_n,K_{m})$.
+\end{lemma}
+
+\vspace{2pt}
+
+\begin{lemma}
+\label{l1b}
+\noindent (\cite{Ja}, Lemma 8).  A $C_n$- free graph (where $n \geq 7$) of order $4(n-1)$ with no independent set of 5 vertices  contains a  $4K_{n-1}$.
+\end{lemma}
+
+
+
+\vspace{2pt}
+
+\begin{lemma} (\cite{BoJaSh}, Lemma 5)
+\label{l2}
+\noindent Suppose $G$ contains the cycle $(u_1, u_2, ... , u_{n-1}, u_1)$ of length $n - 1$ but
+no cycle of length $n$. Let $Y = V(G) \setminus \{u_1, u_2, ... , u_{n-1}\}$. Then,
+
+\vspace{8pt}
+\noindent \textbf{(a)} No vertex $x \in Y$ is adjacent to two consecutive vertices on the cycle.
+
+\vspace{8pt}
+\noindent \textbf{(b)} If $x \in Y$ is adjacent to $u_i$ and $u_j$ then $u_{i+1}u_{j+1} \notin E(G)$.
+
+\vspace{8pt}
+\noindent \textbf{(c)} If $x \in Y$ is adjacent to $u_i$ and $u_j$ then no vertex $x' \in Y$ is adjacent to both
+$u_{i+1}$ and $u_{j+2}$.
+
+\vspace{8pt}
+\noindent \textbf{(d)} Suppose $\alpha(G) = m - 1$ where $m \leq  \frac {n + 2}{2}$ and $\{x_1, x_2, ... ,x_{m -1} \} \subseteq Y$ is an $(m - 1)$-element independent set. Then, no member of this set is adjacent to $m -2$ or more vertices on the cycle (We have taken the liberty of making a slight correction to the inequality $m \leq \frac {n + 2}{2}$ of the original \cite{BoJaSh}, Lemma 5(d)).
+\end{lemma}
+
+\vspace{12pt}
+
+
+
+
+\noindent The next lemma plays a pivotal role in proving the main results of this paper. 
+
+\vspace{4pt}
+\begin{lemma}
+\label{l3}
+\noindent A $C_n$ -free graph (where $n \geq 15$) of order $5(n-1)$ with no independent set of 6 vertices contains a $5K_{n-1}$.
+\end{lemma}
+
+\noindent {\bf Proof.} We shall assume that in each of the three cases  $n = 15$, $n = 16$ and $n \geq 17$ we consider,  $G$ as a  graph on $5(n-1)$ vertices  satisfying $C_n \not \subseteq G$ and $\alpha(G) \leq 5$. Since  $r(C_{n-1}, K_6)=5n-9 \leq 5(n-1)$ (see \cite{BoJaSh,Ra}), there exists a cycle $C=(u_1, u_2, ... , u_{n-1}, u_1)$ of length $n - 1$ in $G$. In consistent with the notation of \cite{BoJaSh}, define $H$  as the induced subgraph of $G$ not containing the vertices of the cycle $C$. Then, $|V(C)|=n-1$ and $|V(H)|=4(n-1)$. 
+
+\vspace{6pt}
+
+
+
+
+\noindent Suppose  there exists an independent set $Y=\{y_1, y_2,y_3, y_4, y_5 \}$ of size 5 in $H$, so that $\alpha(G)=5$. From  Lemma \ref{l2} (as $5\leq \frac{n+2}{2}$), it follows that no vertex of $Y$ is adjacent to four or more vertices of the $C_{n-1}$. Thus, $\left| E(Y,V(C)) \right| \le 15$.  For ease of reference, we define such a graph structure as a  \textbf{Standard Configuration ($n$)}.
+
+\vspace{10pt}
+
+
+\noindent \textbf{Case 1: $n \geq 17$}
+
+\vspace{6pt}
+\noindent  Now, $\left| E(Y,V(C)) \right| \le 15 < n-1$. Thus, there exists a vertex $x\in V(C)$ adjacent to no vertex of $Y$. This gives, an independent set $Y \cup \{x\}$ of size 6, a contradiction. 
+
+
+
+\vspace{10pt}
+\noindent \textbf{Case 2: $n = 16$}
+
+\vspace{6pt}  
+\noindent In this case as $n-1=15$, in order to avoid an independent set of size 6, each vertex of $V(C)$ must be adjacent to at least one vertex of $Y$. Thus, we get that for each  $1\leq i\leq 5$,  $\left|\Gamma (y_i) \cap V(C) \right|=3$ and for each $1\leq j  < j' \leq 5$, $\Gamma (y_j) \cap \Gamma (y_{j'}) \cap V(C)=\phi$.
+
+\vspace{10pt}
+
+\noindent By Lemma \ref{l1a}, as $\delta(G) \geq 14$,  $\left|\Gamma (y_i) \cap V(H \setminus Y)\right| \geq 11$ for  $i=1,2$. Since $r(P_3,K_6)=11$ and $\alpha(G) < 6$, each of $G[\Gamma (y_1) \cap V(H \setminus Y)]$ and  $G[\Gamma (y_2) \cap V(H \setminus Y)]$ contains a copy of $P_3$. Thus, $P_3 \subseteq \Gamma (y_1) \cap V(H \setminus Y)$, where the $P_3$ is induced by  $\{x,y,z\}$ such that $(x,y), (y,z) \in E(G)$ and $P_3 \subseteq \Gamma (y_2) \cap V(H \setminus Y)$,  where this $P_3$ is induced by  $\{p,q,r\}$ such that $(p,q), (q,r) \in E(G)$.
+
+\vspace{10pt}
+
+\noindent Suppose that $x$ is not adjacent to any vertex of $\{y_2,y_3,y_4,y_5\}$ and $p$ is not adjacent to any vertex of $\{y_1,y_3,y_4,y_5\}$. Re-order the vertices of the cycle such that $y_1\in Y$ is adjacent to $u_1$. In this ordering, let $y_1$ be also adjacent to $u_t$ where $2 \leq t \leq 15$. 
+
+
+
+\begin{center}
+\input{graph1.tex} %14.2 6.2.
+\end{center}
+\begin{center}
+Figure 1. Configuration for $n=16$
+\end{center}
+
+
+
+\noindent By Lemma \ref{l2}(a), $t \neq 2$. In order to avoid an independent set of size 6, induced by $\{x,u_t,y_2,y_3,y_4,y_5\}$, we get that $(x,u_t) \in E(G)$. However, $t \neq 3$, in order to avoid a  $C_{16}$ comprising $(u_1,y_1,x, u_3,...,u_{15},u_1)$. Also, $t \neq 4$ in order to avoid a $C_{16}$ comprising  $(u_1,y_1,y,x,u_4,...,u_{15},u_1)$  and $t \neq 5$ in order to avoid a $C_{16}$ comprising  $(u_1,y_1,z,y,x, u_5,...,u_{15},u_1)$.
+
+
+\vspace{8pt}
+\noindent Thus, any pair of vertices adjacent to $y_1$ in $C$ cannot be separated by a path of length 1, 2, 3 or 4  along $C$. Thus, $\Gamma (y_1) \cap C =\{u_1,u_6,u_{11}\}$. In this scenario, we use the prerogative that $(y_2,u_2)\in E(G)$. Then,  by the previous argument $\Gamma (y_2) \cap C =\{u_2,u_7,u_{12}\}$. But by Lemma \ref{l2}(b),  $(u_2,u_7)\notin E(G)$. Henceforth, we will get that $\{u_2,u_7,y_1,y_3,y_4,y_6\}$  is an independent set of size 6, a contradiction. 
+\vspace{10pt}
+
+
+\noindent This implies that there is a vertex of $X=\{x,y,z\}$ adjacent to some vertex of $\{y_2,y_3,y_4,y_5\}$ or there is a vertex of $\{p,q,r\}$ adjacent to some vertex of $\{y_1,y_3,y_4,y_5\}$. Therefore, without loss of generality, we may assume that $y_1$ is adjacent to $X=\{x,y,z\} \subseteq V(H \setminus Y)$ and $y_1$ is adjacent to $X'=\{x',y',z'\} \subseteq V(C)$ where $X'$ induces a  $P_3$  and $y_2$ is adjacent to $x$. Next since $C$ has 15 points without loss of generality, $\{x',y',z'\}=\{u_1,u_3,u_5\}$ or $\{x',y',z'\}=\{u_1,u_3,u_6\}$ or $\{x',y',z'\}=\{u_1,u_3,u_7\}$  or  $\{x',y',z'\}=\{u_1,u_3,u_8\}$ or  $\{x',y',z'\}=\{u_1,u_3,u_9\}$ or $\{x',y',z'\}=\{u_1,u_4,u_7\}$ or $\{x',y',z'\}=\{u_1,u_4,u_8\}$ or $\{x',y',z'\}=\{u_1,u_4,u_9\}$ or $\{x',y',z'\}=\{u_1,u_4,u_{10}\}$ or $\{x',y',z'\}=\{u_1,u_5,u_9\}$ or $\{x',y',z'\}=\{u_1,u_5,u_{10}\}$ or $\{x',y',z'\}=\{u_1,u_6,u_{11}\}$. Moreover, as $y_1$ and $y_2$ are connected by paths of lengths 2, 3 and 4 in $H$, no pair of vertices selected from  $\Gamma (y_1) \cap V(C)$ and  $\Gamma (y_2) \cap V(C)$ can be separated by a path of length 3, 4 or 5 along the cycle $C$. Using this  we argue that when $\{x',y',z'\}=\{u_1,u_3,u_5\}$, $\Gamma (y_2) \cap V(C) = \phi$,  when $\{x',y',z'\}=\{u_1,u_3,u_6\}$, $\Gamma (y_2) \cap V(C) = \phi$ and when  $\{x',y',z'\}=\{u_1,u_3,u_7\}$, $\Gamma (y_2) \cap V(C) \subseteq \{u_9\}$.  Similarly, when $\{x',y',z'\}=\{u_1,u_3,u_8\}$, $\Gamma (y_2) \cap V(C) \subseteq \{u_2,u_9,u_{10}\}$, when $\{x',y',z'\}=\{u_1,u_3,u_9\}$, $\Gamma (y_2) \cap V(C) \subseteq \{u_2,u_{10}\}$, when $\{x',y',z'\}=\{u_1,u_4,u_7\}$, $\Gamma (y_2) \cap V(C) = \phi$ and when $\{x',y',z'\}=\{u_1,u_4,u_8\}$, $\Gamma (y_2) \cap V(C) \subseteq \{u_2,u_{10}\}$. When $\{x',y',z'\}=\{u_1,u_4,u_9\}$, $\Gamma (y_2) \cap V(C) \subseteq \{u_2,u_3,u_{10}\}$, when $\{x',y',z'\}=\{u_1,u_4,u_{10}\}$, $\Gamma (y_2) \cap V(C) \subseteq \{u_2,u_3\}$,  when $\{x',y',z'\}=\{u_1,u_5,u_9\}$, $\Gamma (y_2) \cap V(C) \subseteq \{u_3,u_7\}$ and when $\{x',y',z'\}=\{u_1,u_5,u_{10}\}$, $\Gamma (y_2) \cap V(C) \subseteq \{u_{3}\}$ and  when $\{x',y',z'\}=\{u_1,u_6,u_{11}\}$, $\Gamma (y_2) \cap V(C) =\phi$. Since none of these give a viable configuration, we get a contradiction.  
+
+\vspace{8pt}
+\noindent \textbf{Case 3: $n = 15$}
+
+\vspace{8pt}
+
+\noindent To deal with the case $n = 15$, we first prove three Lemmas. Lemma $\ref{l31}$, deals with the possible scenarios generated by the Standard Configuration ($15$). Lemmas $\ref{l32}$ and $\ref{l33}$ deal with showing that none of the scenarios generated by Lemma $\ref{l31}$ give viable configurations.
+
+
+\vspace{4pt}  
+
+\begin{lemma}
+\label{l31}
+\noindent In the Standard Configuration $(n=15)$, one of the following three scenarios $(a)$, $(b)$ and $(c)$ will occur:
+
+
+\vspace{8pt}
+\noindent \textbf{(a)} $y_1 \in Y$ is a vertex of the subgraph $K_4$ (see Figure 2(a)) in $H$.\vspace{8pt}
+
+
+
+\vspace{8pt}
+\noindent \textbf{(b)} $y_1,y_2\in Y$ are vertices of the subgraph $K$ (see Figure 2(b1)) or subgraph $K'$ (see Figure 2(b2)) in $H$.
+
+\vspace{8pt}
+\noindent \textbf{(c)} $y_1,y_2\in Y$ are vertices of the subgraph $L$ (see Figure 2(c)) in $H$.
+\end{lemma}
+
+\begin{center}
+\input{graph1b.tex} %14.8 4.5.
+\end{center}
+\hspace{20pt} \textit{scenario (a)}                 \hspace{85pt}           \textit{scenario (b)}  \hspace{88pt}     \textit{scenario (c)}
+\vspace{8pt}
+\begin{center}
+Figure 2: (a),(b1), (b2) and (c). The first three scenarios, \textit{scenario} (a),  \textit{scenario} (b) and \textit{scenario} (c) of the Standard Configuration $(n=15)$.
+\end{center}
+
+
+\noindent {\bf Proof.} 
+\noindent As in the case of $n=16$, we get that without loss of generality $1\leq i\leq 4$, $\left|\Gamma (y_i) \cap V(C)\right| =3$ and for each $1\leq j  < j' \leq 4$, $\Gamma (y_j) \cap \Gamma (y_{j'}) \cap V(C)=\phi$.
+Also $\left|\Gamma (y_5) \cap V(C)\right| \in \{ 2,3\}$. In particular, if $\left|\Gamma (y_5) \cap V(C)  \right|=2$ then, for each $1\leq j  < j' \leq 5$, $\Gamma (y_j) \cap \Gamma (y_{j'}) \cap V(C)=\phi$ and if  $\left|\Gamma (y_5) \cap V(C)\right| =3$ then, for each $1\leq j < j' \leq 5$, 
+\[
+\left|\Gamma (y_j) \cap \Gamma (y_{j'}) \cap V(C)\right|=
+\begin{cases} 
+$ $ 1 & \text{if }  j,j' \in \{4,5\}, \\
+\hspace{20pt} & \\
+$ $ 0 & \text{otherwise. }    \\
+\end{cases}
+\]
+
+
+
+\vspace{8pt}
+
+\noindent By Lemma \ref{l1a}, as $\delta(G) \geq 13$, we get that $\left|\Gamma (y_i) \cap V(H \setminus Y)\right| \geq 10$.  Suppose that there is some $1\leq i\leq 3$ (say $i=1$) such that $\left|\Gamma (y_i) \cap V(H \setminus Y)\right|\geq 11$. Then as $r(P_3,K_6)=11$ we get scenario $(a)$. Next, assume that for all $1\leq i\leq 3$,  $\left|\Gamma (y_i) \cap V(H \setminus Y)\right|=10$.  By the classification of the Ramsey critical $(P_3,K_6)$ graphs, we get that for all $1\leq i\leq 3$, $G[\Gamma (y_i) \cap V(H \setminus Y)] \supseteq 5K_2$. 
+
+\vspace{8pt}
+
+\noindent This gives  two possibilities. The first possibility is $\left|{\cup}_{i=1}^3 \Gamma (y_i) \cap V(H \setminus Y)\right|=10$. In this case, as for all $1\leq i\leq 3$, $5K_2 \subseteq G[\Gamma (y_i) \cap V(H \setminus Y)]$ we get scenario $(c)$.
+The second possibility if $\left|{\cup}_{i=1}^3 \Gamma (y_i) \cup V(H \setminus Y)\right|\geq 11$. Without loss of generality, we may assume that $\left| \Gamma (y_1) \cup  \Gamma (y_2) \cup V(H \setminus Y)\right|\geq 11$.  Let $x_{11}$ be any vertex of $\Gamma (y_2)   \cap (\Gamma (y_1))^c \cup V(H \setminus Y)$. Since  $r(P_3,K_6)=11$, we get that $G[\Gamma (y_1) \cup V(H \setminus Y) \cup \{x_{11}\}]$ contains a subgraph $P$ isomorphic to a $P_3$. If  $P$ is contained in $G[\Gamma (y_1) \cup V(H \setminus Y)]$ we  get scenario $(a)$. Otherwise, $x_{11} \in P$. However, $x_{11}$ is an element of $5K_2 \subseteq G[\Gamma (y_2) \cap V(H \setminus Y)]$ and therefore, $x_{11}$ is adjacent to some other vertex say $w$ in $G[\Gamma (y_2) \cap V(H \setminus Y)]$. Depending on whether or not $w$ belongs to $V(P)$,  we get scenarios $(b2)$ or $(b1)$ respectively. Hence the Lemma.  
+\vspace{4pt}
+
+\begin{lemma}
+\label{l32}
+\noindent In the Standard Configuration $(n=15)$,  $y_1\in Y$ can not be a vertex of a  $K_4$  in $H$ (see Figure 2(a)).
+\end{lemma}
+
+\noindent {\bf Proof.} As indicated in Figure 2(a), let  $x \in \Gamma (y_1) \cap V(H \setminus Y)$. 
+Then we get two possibilities depending on whether or not  $x$ is  adjacent to a vertex of $\{y_2,y_3,y_4,y_5\}$. In the first possibility,  $x$ is adjacent to some vertex of  $Y$ (say $y_2$). Then, as $y_1$ and $y_2$ are connected by paths of lengths 2, 3 and 4 in $H$, no pair of vertices selected from of $\Gamma (y_1) \cap V(C)$ and  $\Gamma (y_2) \cap V(C)$ can be separated by a path of length 3, 4 or 5 along the cycle $C$. However, as argued in $n=16$, we get that $\left|\Gamma (y_2) \cap V(C)\right| \leq 2$ and $\left|\Gamma (y_2) \cap V(C)\right| = 2$ only when $\{x',y',z'\}=\{u_1,u_3,u_{8}\}$, $\{x',y',z'\}=\{u_1,u_4,u_{9}\}$ or $\{x',y',z'\}=\{u_1,u_5,u_{9}\}$. This gives a contradiction. In the second possibility, re order the vertices of the cycle such that $y_1\in X$ is adjacent to $u_1$. In this ordering, suppose further that $y_1$ is also adjacent to $u_t$ where $2 \leq t \leq 14$.  By the argument used in $n=16$, we get that any pair of vertices adjacent to $y_1$ in $C$ cannot be separated by a path of length 1, 2, 3 or 4  along  $C$. However, this again leads to a contradiction.  
+\vspace{14pt}
+
+\begin{lemma}
+\label{l33}
+\noindent In the Standard Configuration $(n=15)$, the vertices $y_1,y_2\in Y$ can not be  vertices of the  subgraph $K$, $K'$ or $L$ in $H$ (see Figure 2).
+\end{lemma}
+
+
+\noindent {\bf Proof.} In the case $y_1,y_2 \in K$, since $y_1$ and $y_2$ are connected by paths of lengths 3, 4 and 5 in $H$, no pair of vertices selected from of $\Gamma (y_1) \cap V(C)$ and  $\Gamma (y_2) \cap V(C)$ can be separated by a path of length 4, 5 or 6 along the cycle $C$. The cardinality of the possible vertex sets of  $\Gamma (y_i) \cap V(C)$ ($i=1,2$), subject to this condition, are presented in Table 1. 
+
+\begin{center}
+\begin{tabular}{ ||p{1.89cm}||p{4.55cm}||p{6.8cm}|| } 
+ \hline
+\begin{center}$\{x',y',z'\}$ equals \end{center}
+  & 
+	\begin{center}$\Gamma (y_2) \cap V(C)$ is contained in \end{center}	 
+	& 
+	\begin{center}Cardinality of $\Gamma (y_2) \cap V(C)$ \end{center} \\
+
+ \hline
+$\{u_1,u_3,u_5\}$     &   $\{u_2,u_4\}$   &  $\left|\Gamma (y_2) \cap V(C)\right| \leq 2$  \\
+ \hline 
+$\{u_1,u_3,u_6\}$     &   $\{u_4\}$   &  $\left|\Gamma (y_2) \cap V(C)\right|  \leq  1$  \\
+ \hline 
+$\{u_1,u_3,u_7\}$     &   $\{u_4,u_{14}\}$  &  $\left|\Gamma (y_2) \cap V(C)\right|  \leq 2$  \\
+ \hline 
+$\{u_1,u_3,u_8\}$     &   $ $  $  $ $\phi$     &  $\left|\Gamma (y_2) \cap V(C)\right| = 0$  \\
+ \hline 
+$\{u_1,u_3,u_9\}$     &   $\{u_{2}\}$    &  $\left|\Gamma (y_2) \cap V(C)\right| \leq  1$  \\
+ \hline 
+$\{u_1,u_4,u_7\}$     &   $ $  $  $ $\phi$   &  $\left|\Gamma (y_2) \cap V(C)\right| =0$   \\
+ \hline 
+$\{u_1,u_4,u_8\}$     &   $ $  $  $ $\phi$  &  $\left|\Gamma (y_2) \cap V(C)\right| =0$  \\
+ \hline 
+$\{u_1,u_4,u_9\}$     &   $\{u_2\}$   &  $\left|\Gamma (y_2) \cap V(C)\right|  \leq 1$  \\
+ \hline 
+$\{u_1,u_5,u_9\}$     &   $\{u_2,u_8,u_{12}\}$  & $\left|\Gamma (y_2) \cap V(C)\right|  \leq  3$ \\
+\hline 
+$\{u_1,u_5,u_{10}\}$  &   $\{u_3,u_8,u_{12}\}$  & $\left|\Gamma (y_2) \cap V(C)\right|  \leq  3$ \\
+ \hline 
+\end{tabular}
+\end{center}
+\begin{center}
+Table 1: Cardinality of $\Gamma (y_2) \cap V(C)$: Graph $K$.
+\end{center}
+
+
+\vspace{8pt}
+
+\noindent Because  $\Gamma (y_2) \cap V(C)=3$, we are only left to deal with the last two possibilities of Table 1 for $\Gamma (y_2) \cap V(C)$. In both possibilities, $\Gamma (y_1) \cap V(C)$ will induce a $C_3$ by Lemma \ref{l2}(b). In the first possibility, $\Gamma (y_1) \cap V(C)=\{u_1,u_5,u_9\}$  gives rise to the 15-cycle given by  $(u_1,u_5,...,u_8,y_2,y,x,y_1, u_9,...,u_{14},u_1)$, a contradiction.  In the second possibility, $\Gamma (y_1) \cap V(C)=\{u_1,u_5,u_{10}\}$  gives rise to the 15-cycle given by $ (u_1,u_5,u_6,...,u_8,y_2,z,y,x,y_1,u_{10},...,u_{14},u_1)$, a contradiction. 
+
+
+
+\vspace{8pt}
+
+\noindent In the case $y_1,y_2 \in K'$, since $y_1$ and $y_2$ are connected by paths of lengths 2, 3 or 4 in $H$, no pair of vertices selected from of $\Gamma (y_1) \cap V(C)$ and  $\Gamma (y_2) \cap V(C)$ can be separated by a path of length 3, 4 or 5 along the cycle $C$. The cardinality of the possible vertex set of  $\Gamma (y_1) \cap V(C)$ is presented in Table 2 and each of these leads to a contradiction as $\Gamma (y_2) \cap V(C)<3$
+
+\vspace{10pt}
+
+\begin{center}
+\begin{tabular}{ ||p{1.9cm}||p{2.7cm}||p{4.7cm}|| }
+ \hline
+\begin{center}$\{x',y',z'\}$ equals \end{center}
+  & 
+	\begin{center}$\Gamma (y_2) \cap V(C)$ is contained in \end{center}
+	  & 
+	\begin{center}Cardinality of $\Gamma (y_2) \cap V(C)$ \end{center}
+		\\
+ \hline
+$\{u_1,u_3,u_5\}$     &   $ $  $  $ $\phi$   &  $\left|\Gamma (y_2) \cap V(C)\right| =0$    \\
+$\{u_1,u_3,u_6\}$     &   $ $  $  $ $\phi$   &  $\left|\Gamma (y_2) \cap V(C)\right| =0$   \\
+$\{u_1,u_3,u_7\}$     &   $\{u_9\}$ &  $\left|\Gamma (y_2) \cap V(C)\right| \leq 1$   \\
+$\{u_1,u_3,u_8\}$     &   $\{u_2,u_9\}$  &  $\left|\Gamma (y_2) \cap V(C)\right| \leq 2$    \\
+$\{u_1,u_3,u_9\}$     &   $\{u_2\}$  &  $\left|\Gamma (y_2) \cap V(C)\right| \leq 1$    \\
+$\{u_1,u_4,u_7\}$     &   $ $  $  $ $\phi$  &  $\left|\Gamma (y_2) \cap V(C)\right| =0$    \\
+$\{u_1,u_4,u_8\}$     &   $\{u_2\}$ &  $\left|\Gamma (y_2) \cap V(C)\right| \leq 1$    \\
+$\{u_1,u_4,u_9\}$     &   $\{u_2,u_3\}$ &  $\left|\Gamma (y_2) \cap V(C)\right| \leq 2$   \\
+$\{u_1,u_5,u_9\}$     &   $\{u_3,u_7\}$  &  $\left|\Gamma (y_2) \cap V(C)\right| \leq 2$   \\
+$\{u_1,u_5,u_{10}\}$  &   $\{u_3\}$  &  $\left|\Gamma (y_2) \cap V(C)\right| \leq 1$     \\
+ \hline
+\end{tabular}
+\end{center}
+\begin{center}
+Table 2: Cardinality of $\Gamma (y_2) \cap V(C)$: Graph $K'$.
+\end{center}
+\vspace{4pt}
+
+\noindent In the case $y_1,y_2 \in K'$, since  $y_1$ and $y_2$ are connected by paths of lengths 2, 3, 4 and 5 in $H$, no pair of vertices selected from of $\Gamma (y_1) \cap V(C)$ and  $\Gamma (y_2) \cap V(C)$ can be separated by  paths of length 3, 4, 5 or 6 along the cycle $C$. Thus, Table 2 will give us the required contradiction. Similarly,  in the case $y_1,y_2 \in L$, since  $y_1$ and $y_2$ are connected by paths of lengths 2, 3, 4, 5 and 6 in $H$, no pair of vertices selected from of $\Gamma (y_1) \cap V(C)$ and  $\Gamma (y_2) \cap V(C)$ can be separated by  paths of length 3, 4, 5, 6 or 7 along the cycle $C$. As before, for all possibilities  $\left|\Gamma (y_2) \cap V(C)\right| <3$, a contradiction. Thus, lemmas 5, 6 and 7 imply that $H$ cannot have an independent set of size 5.
+
+
+\vspace{8pt}
+\noindent Having proved that  $H$ cannot have an independent set of size 5 in all three cases $n=15,16$ and 17,  we next continue with the main proof. Since, $H$  satisfies all conditions of Lemma  \ref{l1b}, $H$ contains a $4K_{n-1}$. 
+
+
+
+\vspace{8pt}
+\noindent Next we show that $V(C_{n-1})$ induced a $K_{n-1}$. Suppose that there exists two vertices  of $V(C)$, say $v$ and $w$, such that $(v,w) \not \in E(G)$. In order to avoid a $C_n$ both $v$ and $w$ will have to be adjacent to at most one vertex of each of the four copies of $K_{n-1}$ in $H$. Moreover, any vertex of any copy of $K_{n-1}$ in $H$ will have to be adjacent to at most one vertex of another copy of a $K_{n-1}$ in $H$. Thus, each copy of a $K_{n-1}$  will have at most 5 vertices adjacent to some vertex outside that of $K_{n-1}$, in $V(H) \cup \{v,w\}$. Since $(n-1)-5 \geq 1$, we can select $x_1$ in the first $K_{n-1}$, $x_2$ in the second $K_{n-1}$, $x_3$ in the third $K_{n-1}$ and $x_4$ in the fourth $K_{n-1}$ such that $\{x_1, x_2, x_3, x_4\}$ is an independent set of size four and no vertex of $\{x_1, x_2, x_3, x_4\}$ is adjacent to any vertex of $\{v, w\}$. Hence $\{x_1, x_2, x_3, x_4, v, w\}$ is an independent set of size 6, a contradiction. Therefore, we get that any two pair of vertices of $V(C)$ are  connected by an edge. Hence, $G[V(C_{n-1})]=K_{n-1}$ as required. This $K_{n-1}$ along with the $4K_{n-1}$ contained in $H$  gives the required result. 
+
+\section{ All Ramsey $(C_n,K_6)$ critical graphs for $n \geq 15$}
+
+\noindent We have already observed that any Ramsey $(C_n,K_6)$ critical graph will consist of a red graph containing $5K_{n-1}$, with respect to the red/blue coloring. Let $\{V_i : $ $ i \in \{1,2,...,5\} \}$ be the vertex set of  the five $K_{n-1}$ graphs.  We notice that there are two types of Ramsey $(C_n,K_6)$ critical graphs. The first type (Type1) of Ramsey $(C_n,K_6)$ critical graphs will satisfy the condition that at most one vertex of each $V_i$ is adjacent to any other vertex in $V_i^c$. The second type (Type2) of Ramsey $(C_n,K_6)$ critical graphs  will satisfy the condition that there exists a  $V_k$ for some $1 \leq k \leq 5$ such that at least two vertices of $V_k$ have neighbors in  $V_k^c$. Moreover, it is  worth noting that a  Type1 critical graph is completely determined by the structure of the external edges between $V_i$'s and not by the $\binom{n}{2}$ edges inside each of the five $V_i$'s. This fact is taken into consideration when representing the Ramsey $(C_n,K_6)$ critical graphs.
+\vspace{10pt}
+
+\noindent Each subgraph of $K_5$ generates a unique Ramsey $(C_n,K_6)$ critical graph of Type1. Thus, as illustrated in the following figure, there are 34 critical graphs ($R_i$,$ $  $1 \leq i \leq 34$) of Type1 generated by the 34 subgraphs of $K_5$. 
+\vspace{2pt}
+
+\begin{center}
+\input{graph81.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph82.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph83.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph84.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph85.tex} %15.0 3.0..
+\vspace{4pt}
+\input{graph86.tex} %15.0 3.0.
+\vspace{12pt}
+
+Figure 3. Ramsey $(C_n,K_6)$ critical graphs of Type1, $R_i$ ($1 \leq i \leq 34$) 
+\end{center}
+\vspace{8pt}
+
+
+\noindent First note that each and every Type2 critical graph is obtained by an appropriate vertex splitting of some Type1 critical graph. As illustrated in the Figure 4, there are exactly 34 Type2 critical graphs (labeled $S_i$ where $1 \leq i \leq 34$) generated by 18 critical graphs of Type1, since exactly sixteen Type1 critical graphs do not generate  Type2 critical graphs. 
+
+\vspace{2pt}
+
+\begin{center}
+\input{graph91.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph92.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph93.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph94.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph95.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph96.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph97.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph98.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph99.tex} %15.0 3.0.
+\vspace{4pt}
+\input{graph910.tex} %15.0 3.0.
+\vspace{12pt}
+
+Figure 4. Ramsey $(C_n,K_6)$ critical graphs of Type2 ($S_i$,  $1 \leq i \leq 34$)
+\end{center}
+\vspace{8pt}
+
+
+
+\noindent Henceforth, we conclude that there are exactly 68  Ramsey $(C_n,K_6)$ critical graphs out of which 34 are  categorized as Type1 critical graphs (labeled $R_i$, $1 \leq i \leq 34$ ) and the balance 34 are categorized as Type2 critical graphs (labeled $S_i$, $1 \leq i \leq 34$).
+
+
+
+
+
+
+
+
+\begin{thebibliography}{99}
+
+\bibitem{BoEr} J. A. Bondy and P. Erd{\"o}s, Ramsey number for cycles in graphs, {\it Journal of Combinatorial Theory Series B}, {\bf 14}, (1973), 46-54.
+	
+\bibitem{BaSuBr}	E.T. Baskoro,  H. Surahmat and H.J. Broersma,  The Ramsey numbers of fans versus $K_4$, {\it Bulletin of the Institute of Combinatorial Applications}, {\bf 43}, (2005), 96-102.
+
+\bibitem{BoJaSh}  B. Bollob{\'a}s, C. J. Jayawardene, Yang Jian Sheng, Huang Yi Ru, C. C. Rousseau and Zhang Ke Min, On a conjecture involving cycle-complete graph Ramsey numbers,  {\it The Australasian Journal},  {\bf 22}, (2000), 63-71.
+
+
+
+\bibitem{Ho}	J. Hook, The Classification of Critical Graphs and Star-Critical Ramsey
+Numbers, {\it Ph.D. Thesis, Lehigh University}, (2010).
+
+\bibitem{HoIs}	J. Hook and G. Isaak, Star-critical Ramsey numbers, {\it Discrete Applied Mathematics}, {\bf 159}, (2011), 328-334.
+
+
+\bibitem{Ja} C.J. Jayawardene, The Star-critical Ramsey Number for any Cycle  vs. a $K_5$, arXiv:1901.04802.
+
+\bibitem{JaRo}  C. J. Jayawardene and C. C. Rousseau, An upper bound for the Ramsey number of a quadrilateral versus a complete graph on seven vertices,  {\it Congressus Numerantium}, (1998), 175-188.
+
+\bibitem{JaRo1}  C. J. Jayawardene and C. C. Rousseau, The Ramsey number for a quadrilateral vs. a complete graph on six vertices,  {\it Congressus Numerantium},  (1997), 97-108.
+
+
+\bibitem{JaSa} C.J. Jayawardene and B.L. Samarasekara, Size multipartite Ramsey numbers for  $K_4 -e$ verses all graphs  up to 4 vertices, {\it Annals of Pure and Applied Mathematics} {\bf 13(1)} (2017), 9-26.
+
+
+\bibitem{Ra} S.P. Radziszowski, Small Ramsey numbers, {\it Electronic Journal of Combinatorics}, {\bf 14}, (2014), DS1.
+
+\bibitem{Sc} I. Schiermeyer, All cycle-Complete Graph Ramsey Number $r(C_m,K_6)$,  {\it Journal of Graph Theory}, {\bf 44} (2003), 251-260.
+
+\bibitem{YaYoRa} Wu Yali, Sun Yongqi and S.P. Radziszowski, Wheel and star-critical Ramsey numbers for quadrilaterals, {\it Discrete Applied Mathematics}, {\bf 185}, (2015), 260-271.
+
+\end{thebibliography}
+\end{document}
+
+
+codex
+Step 0 exposes the decisive issue: the paper’s main result is a complete, constant-size classification, not a hard search theorem. Section 4 says every large-\(n\) critical graph contains five \(K_{n-1}\) blocks; Type 1 is generated by a subgraph of \(K_5\), and Type 2 by a listed vertex split. I’m checking whether this can honestly support Track B before finalizing a rejection.
+exec
+/bin/bash -lc 'rg -n "REJECTED|mechanical cost|compact route|Track" ../../scripts/submit.sh | head -100' in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+11:  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+31:rj = os.path.join(d, "REJECTED.md")
+111:    print("       more levels available.  PARK it -- delete REJECTED.md and re-run with")
+125:print("       PARK it -- delete REJECTED.md and leave the claim in_progress.  Harden")
+134:  # buildable on Track B. One was dismissed for having "a short linear formula" while
+137:  python3 - "$D/REJECTED.md" <<'PYREJ' || exit 6
+150:has_compact = re.search(r"compact route|shortcut|by hand|no shorter|"
+174:    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+390:                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+
+exec
+/bin/bash -lc 'find ../ -maxdepth 2 -name REJECTED.md -print | head -20' in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+../2505.09165/REJECTED.md
+../1610.03115/REJECTED.md
+../2103.00306/REJECTED.md
+../1106.1258/REJECTED.md
+../2509.07282/REJECTED.md
+../2401.02846/REJECTED.md
+../2110.12933/REJECTED.md
+../1806.09562/REJECTED.md
+../1802.09981/REJECTED.md
+../2009.14171/REJECTED.md
+../1608.06944/REJECTED.md
+../1305.0539/REJECTED.md
+../2505.00298/REJECTED.md
+../2603.30009/REJECTED.md
+../1209.0315/REJECTED.md
+../2604.19140/REJECTED.md
+../1804.09638/REJECTED.md
+../2306.00850/REJECTED.md
+../2006.14813/REJECTED.md
+../1806.03426/REJECTED.md
+
+exec
+/bin/bash -lc 'curl -L --fail --silent --show-error https://export.arxiv.org/api/query?id_list=1902.02646' in /home/gson/gvrepo/results/1902.02646
+ succeeded in 256ms:
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/xtaQqaUkcZbJSnm6wpK4ELErOaQ</id>
+  <title>arXiv Query: search_query=&amp;id_list=1902.02646&amp;start=0&amp;max_results=10</title>
+  <updated>2026-09-05T09:20:42Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=10&amp;id_list=1902.02646" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>10</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/1902.02646v3</id>
+    <title>All Ramsey $(C_n,K_6)$ critical graphs for large $n$</title>
+    <updated>2020-09-15T11:54:49Z</updated>
+    <link href="https://arxiv.org/abs/1902.02646v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1902.02646v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Let $G$ and $H$ be finite graphs. If for any two-coloring of the edges of a complete graph $K_n$, there is a copy of $G$ in the first color, red, or a copy of $H$ in the second color, blue, we will say $K_n\rightarrow (G,H)$. The Ramsey number $r(G, H)$ is defined as the smallest positive integer $n$ such that $K_{n} \rightarrow (G, H)$. A two-coloring of $K_{r(G, H)-1}$ such that $K_{r(G, H)-1} \not \rightarrow (G,H)$ is called a critical coloring. A Ramsey critical $r(G, H)$ graph is a graph induced by the first color of a critical coloring. In this paper, when $n \geq 15$, we show that there exist exactly sixty eight non-isomorphic Ramsey critical $r(C_n, K_6)$ graphs.</summary>
+    <category term="math.CO" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2019-02-05T20:34:12Z</published>
+    <arxiv:comment>14 pages, 4 figures</arxiv:comment>
+    <arxiv:primary_category term="math.CO"/>
+    <author>
+      <name>Chula J. Jayawardene</name>
+    </author>
+    <author>
+      <name>W. Chandanie W. Navaratna</name>
+    </author>
+    <author>
+      <name>J. N. Senadheera</name>
+    </author>
+  </entry>
+</feed>
+
+exec
+/bin/bash -lc "sed -n '1,240p' ../1610.03115/REJECTED.md" in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+# Rejected: arXiv:1610.03115
+
+This paper does not yield an acceptable native problem family under the stated
+gates.  The attempted necklace family passes **G** and **V**, but fails **H** on
+both tracks and fails G9(c).  The retained implementation is
+`rejected_gen_1610_03115.py`; its corrected `selftest_report.json` records the
+failure rather than claiming that the family ships.
+
+## Paper facts used at Step 0
+
+Section 1 of Benson et al., [*Note on Nordhaus-Gaddum problems for power
+domination*](https://arxiv.org/abs/1610.03115), defines the executable two-stage
+power-domination process.  The paragraph before Theorem 2.17 defines the
+necklace graph `N_r` from `r` copies of `K4-e`; Theorem 2.17 states the cubic
+upper bound and that necklaces attain it; Remark 2.16 supplies the local
+obstruction used to certify that every minimum witness meets every diamond.
+Theorem 3.13 extends the cubic bound componentwise.  These results license the
+retained composition generator and make exact verification straightforward.
+
+The same paper also identifies the easy constructions.  Lemma 2.18 gives an
+explicit two-vertex solution for the complement of a necklace.  Theorem 2.12
+constrains the extremal `n/3` case to visibly foliated components (plus
+`K3,3`), and Lemma 2.13 gives a one-vertex solution in the relevant complement.
+The tight examples `rK3`, paths, combs, and the order-8/order-11 graphs are
+likewise explicit or fixed-size.  No theorem in the paper establishes
+algorithmic or distributional hardness.
+
+## Gate decision
+
+| gate | result |
+|---|---|
+| G | passes for the attempted family: sample one vertex in each necklace diamond before relabelling; no generated instance is solved during construction |
+| V | passes: the checker validates shape, simulates domination and forcing exactly, and accepts any valid size-`r` set |
+| H, Track A | fails: arbitrary relabelling does not hide the true-twin signature distribution from an efficient construction-aware scan, and the paper supplies no hard parameter regime for this distribution |
+| H, Track B | fails: the alleged compact route is the same full closed-neighborhood signature scan as the mechanical algorithm, so there is no compression gap |
+| G9(c) | fails at the attempted shipping preset: 15,936 exact signature operations exceed the 300-operation cap |
+
+## Mechanical cost versus compact route
+
+At the attempted 249-diamond preset the graph has 996 vertices and 1,494
+edges.  Sorting/hashing each four-element closed neighborhood recovers every
+true-twin pair and returns a verified answer on 8/8 seeds.  The retained
+measurement is 15,936 counted primitive signature operations and 0.00166 s
+mean wall-clock time (0.00363 s maximum in the latest run).
+
+There is no shorter executable route after noticing the paper's decomposition.
+Because labels are permuted arbitrarily, the solver must still locate the
+diamonds by constructing and grouping those same closed-neighborhood
+signatures.  Thus the compact route is also 15,936 counted operations, not the
+previously claimed 261.  Saying “choose one vertex per diamond” suppresses the
+entire cost of finding the diamonds and is not an executable route on the
+rendered instance.
+
+Shrinking does not open a valid window.  Under the declared structured prior,
+the exact guess density is `4^r / C(4r,r)`; it first drops below `1e-6` at
+`r=19`.  The identical signature route already costs `64r = 1,216` counted
+operations there.  Conversely, the largest size within the 300-operation cap
+is `r=4` (256 operations), where the exact valid-answer density is about
+0.14066.  Therefore no size in this construction can pass both G4 and G9(c).
+
+This is not a `cap_bound` case: the answer at `r=19` has only 19 atoms, while
+the binding failure is that the only reliable route is a linear scan rather
+than a compact insight.  The failed OpenRouter calls retained in the transcript
+were HTTP 403 errors and are not counted as hardness evidence or as a reason
+for rejection.
+
+exec
+/bin/bash -lc "sed -n '1,190p' ../../scripts/submit.sh" in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+#!/usr/bin/env bash
+# Submit a finished paper.  Usage: scripts/submit.sh <arxiv_id>
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
+D="results/$ID"
+[ -d "$D" ] || { echo "ERROR: $D missing."; exit 1; }
+
+if [ -n "$REJECT" ]; then
+  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+
+  # A cap_bound paper must not be rejected.  scripts/harden.py now DETECTS this
+  # rather than waiting for escalate() to declare it: if the ladder stopped with the
+  # answer near the output cap, or never moved more than one dial, the binding
+  # constraint was our answer FORMAT, not the paper.  2601.05272 climbed n=64..84,
+  # stopped at 249 atoms against a 256 cap, reported "cannot be made harder", and was
+  # rejected.  Instruction alone did not prevent that; this guard does.
+  # A G9(b) rejection blames the PAPER for a result produced by the builder's own
+  # hint.  Measured over the 17 modules on disk that carry a STRUCTURAL_HINT: 4 of 9
+  # rejected papers hand the solver a procedure, against 1 of 8 accepted.  This gate
+  # only ever runs on --reject, so that one accepted paper is never touched by it.
+  #
+  # 1904.00563 is the pattern: "Among target-one vertices, keep edges whose endpoints
+  # have equal eligible degree; the result is three even cycles, so take alternating
+  # edges on each."  That is the whole algorithm, including the derived count and the
+  # final step.  The hinted oracle solving it says nothing about the paper.
+  python3 - "$D" <<'PYHINT' || exit 6
+import ast, glob, re, sys, os
+d = sys.argv[1]
+rj = os.path.join(d, "REJECTED.md")
+try:
+    note = open(rj, encoding="utf-8", errors="ignore").read()
+except OSError:
+    sys.exit(0)
+# only gate rejections that actually turn on G9
+if not re.search(r"G9\(b\)|G9\b", note):
+    sys.exit(0)
+# G9(b) stopped being a gate on 2026-09-05, so a rejection that turns on it is no
+# longer a valid rejection at all -- regardless of how the hint was written. Refuse
+# it outright when G9(b) is named as the deciding reason.
+if re.search(r"fails?\s+\*{0,2}(H|hardness)?\*{0,2}[^.]{0,60}G9\(b\)|G9\(b\)[^.]{0,40}(gate|fail)"
+             r"|rejected?[^.]{0,60}G9\(b\)", note, re.I):
+    print("ERROR: this rejection turns on G9(b), the polarity-flipped hinted-oracle gate.")
+    print("       G9(b) was retired to a DIAGNOSTIC on 2026-09-05: a family that")
+    print("       dissolves when you name the trick is one whose difficulty lies in")
+    print("       FINDING the insight, which is what this corpus is for. It cost 8")
+    print("       rejections and 23 blocked papers, 6 of which had already defeated")
+    print("       the four-vendor no-tool pool.")
+    print("       If the family passed G, V and STEP 4, SHIP IT. Record the hinted arm")
+    print("       in the README as a diagnostic. See prompts/codex_task.md G9(b).")
+    sys.exit(1)
+
+hint = None
+for f in glob.glob(os.path.join(d, "*gen_*.py")):
+    try:
+        tree = ast.parse(open(f, encoding="utf-8", errors="ignore").read())
+    except Exception:
+        continue
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign):
+            for t in n.targets:
+                if isinstance(t, ast.Name) and t.id == "STRUCTURAL_HINT":
+                    try:
+                        hint = " ".join(str(ast.literal_eval(n.value)).split())
+                    except Exception:
+                        pass
+    if hint:
+        break
+if not hint:
+    sys.exit(0)                      # no module or no hint kept: cannot check
+CHAIN = re.compile(r";\s*(the\s+)?\w+|,\s*then\b|\bthen\b|\bso (take|use|apply|read|pick|choose)\b"
+                   r"|\bbefore using\b|\bfirst,|\bnext,|\bfinally\b", re.I)
+DERIVED = re.compile(r"\bthe result is\b|\bthis (gives|yields|produces)\b|\byou (get|obtain)\b"
+                     r"|\bthere are (two|three|four|five|\d+)\b|\bexactly (two|three|four|\d+)\b", re.I)
+bad = []
+if CHAIN.search(hint):
+    bad.append("it chains a SECOND step (\"then\" / \"; ...\" / \"so take\" / \"first,\")")
+if DERIVED.search(hint):
+    bad.append("it hands over a DERIVED FACT the solver was supposed to find "
+               "(\"the result is ...\", \"there are three ...\")")
+if not bad:
+    sys.exit(0)
+print("ERROR: this rejection cites G9, but the STRUCTURAL_HINT is a PROCEDURE, not a")
+print("       structural hint, so G9(b) measured your hint and not the paper.")
+print(f"       hint: {hint[:200]}")
+for b in bad:
+    print(f"       - {b}")
+print("       A structural hint names the INVARIANT a solver has to notice -- the thing")
+print("       to look at. It does not say what to do with it, does not chain steps, and")
+print("       does not state a quantity the solver was supposed to derive.")
+print("       Rewrite the hint to name only the invariant, re-run the G9(b) arm, and")
+print("       reject only if the family still dissolves. See prompts/codex_task.md G9(b).")
+sys.exit(1)
+PYHINT
+
+  python3 - "$D/.meta.json" <<'PYCAP' || exit 6
+import json, sys
+try:
+    v = (json.load(open(sys.argv[1])) or {}).get("harden_verdict") or {}
+except Exception:
+    sys.exit(0)                       # no verdict recorded; nothing to contradict
+if v.get("verdict") not in ("cap_bound", "budget_bound"):
+    sys.exit(0)
+if v.get("verdict") == "budget_bound":
+    print("ERROR: the oracle harness recorded verdict=budget_bound for this paper.")
+    print("       The ladder ran out of ESCALATIONS while escalate() was still willing")
+    print(f"       to climb ({v.get('escalate_says')}); the binding constraint was this")
+    print("       harness's budget, not the paper.  7 of 13 too_easy verdicts on disk")
+    print("       were this, including 1612.03280, which stopped at n=149 with five")
+    print("       more levels available.  PARK it -- delete REJECTED.md and re-run with")
+    print("       ORACLE_MAX_ESCALATIONS raised, or ship at a higher preset.")
+    sys.exit(1)
+print("ERROR: the oracle harness recorded verdict=cap_bound for this paper, which")
+print("       means the ANSWER CAP stopped the ladder, not the mathematics.")
+a, c = v.get("answer_atoms"), v.get("answer_chars")
+if a is not None:
+    print(f"       answer at the last level: {a} atoms / {c} chars "
+          f"(cap {v.get('atom_cap')} atoms / {v.get('char_cap')} chars)")
+print(f"       dials the ladder ever moved: {v.get('axes_moved') or 'none'}")
+sig = v.get("signal", "")
+if "single_axis" in sig and "answer_cap" not in sig:
+    print("       signal=single_axis: the answer is still small -- this family was never")
+    print("       explored, not exhausted. Turn a SECOND dial before giving it up.")
+print("       PARK it -- delete REJECTED.md and leave the claim in_progress.  Harden")
+print("       at FIXED ANSWER LENGTH instead: grow the haystack, not the needle.")
+print("       Bigger ground set with the same witness size, larger modulus, denser")
+print("       decoys, tighter constraints.  See prompts/codex_task.md, escalate().")
+sys.exit(1)
+PYCAP
+
+  # A rejection that says only "an efficient method exists" is not reviewable, and an
+  # independent audit found 7 of 12 such rejections were WRONG -- the papers were
+  # buildable on Track B. One was dismissed for having "a short linear formula" while
+  # its mechanical alternative was 16,689,170 lattice-vector enumerations. If the note
+  # rests on a method existing, it must quantify the gap it is claiming is too small.
+  python3 - "$D/REJECTED.md" <<'PYREJ' || exit 6
+import re, sys
+t = open(sys.argv[1], encoding="utf-8", errors="ignore").read()
+low = t.lower()
+METHOD_EXISTS = re.compile(
+    r"polynomial[- ]time|explicit (construction|formula)|closed[- ]form|"
+    r"constructive (solution|procedure|algorithm)|efficient algorithm|"
+    r"linear solve|spectral characteri|classification (table|of)|is in p|"
+    r"algorithm (exists|is given)|buchberger|gaussian elimination|sdp", re.I)
+if not METHOD_EXISTS.search(low):
+    sys.exit(0)                       # rejected for some other reason; nothing to check
+has_mech = re.search(r"mechanical|brute[- ]force cost|operations|enumerat|seconds|"
+                     r"cost|running time", low)
+has_compact = re.search(r"compact route|shortcut|by hand|no shorter|"
+                        r"same length|nothing to see|track b", low)
+if has_mech and has_compact:
+    sys.exit(0)
+print("ERROR: this rejection rests on 'an efficient method exists', which is NOT by")
+print("       itself a reason to reject -- that is what TRACK B is for.  State the")
+print("       MECHANICAL COST (operations the standard method needs at shipping size)")
+print("       and the COMPACT ROUTE length, and show the gap is too small to test")
+print("       anything.  7 of 12 audited rejections of this shape were wrong.")
+print("       See prompts/codex_task.md, STEP 0 item 4.")
+sys.exit(1)
+PYREJ
+  python3 -c "
+import json,datetime,os
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='rejected'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d,open(p,'w'))"
+  rm -f "$D/.orkey" "$D/.task.md" "$D/.runner.sh"; rm -rf "$D/__pycache__"
+  bash scripts/status.sh --write >/dev/null
+  git add "$D" "claims/$ID.json" STATUS.md
+  git commit -q -m "reject $ID"
+  git pull -q --rebase origin main && bash scripts/status.sh --write >/dev/null && git add STATUS.md \
+    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+    echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+  exit 0
+fi
+
+MOD="$(ls "$D"/gen_*.py 2>/dev/null | head -1)"
+[ -n "$MOD" ] || { echo "ERROR: no gen_*.py in $D — nothing to submit."; exit 2; }
+
+# The builder writes these; a result nobody can read or re-check is not a result.
+for f in README.md selftest_report.json llm_loop_transcript.jsonl; do
+  [ -s "$D/$f" ] || { echo "ERROR: $D/$f missing or empty — see prompts/codex_task.md STEP 5."; exit 7; }
+done
+if [ "$(wc -l < "$D/README.md")" -lt 25 ]; then
+  echo "ERROR: $D/README.md is too short to explain the task — see STEP 5."; exit 7
+fi
+
+# Gate results are the builder's to produce, but "the file exists" is not evidence
+
+exec
+/bin/bash -lc "sed -n '1,240p' ../2509.07282/REJECTED.md" in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+# Rejected: arXiv 2509.07282
+
+Paper: Jeff Shen and Lindsay M. Smith,
+[*ALICE: An Interpretable Neural Architecture for Generalization in Substitution
+Ciphers*](https://arxiv.org/abs/2509.07282) (2025).
+
+## Decision
+
+No family from this paper met **G, H, and V** simultaneously. The strongest
+native candidate passed inverse generation and exact witness verification, and
+it had a genuine Track B mechanical/compact cost gap. It nevertheless failed the
+mandatory bare oracle loop: at the maximum permitted escalation, Grok 4.6
+returned a complete inverse substitution key that `verify` accepted. The
+script-owned verdict is `too_easy`, so the rules forbid further hand tuning or
+shipping the family.
+
+The experimental module and `llm_loop_transcript.jsonl` are retained as rejection
+evidence. There is deliberately no shipping `README.md`, `selftest_report.json`,
+or G9 hinted/placebo transcript: STEP 4 failed first and requires stopping.
+
+## What the paper actually defines
+
+Section 1.1 defines a one-to-one monoalphabetic substitution cipher. For a finite
+alphabet `Sigma`, the key is a permutation `f` in the symmetric group; plaintext
+characters `x_i` produce ciphertext characters `c_i=f(x_i)`. At inference the
+solver receives ciphertext, not `f` or the plaintext, and must infer `f^-1` and
+decrypt the text. This exact point invalidates the prior-triage suggestion to
+show both plaintext and ciphertext: with a known plaintext, every used key entry
+is recovered by one linear scan, so the mechanical cost and compact route are
+both about `L` character comparisons. There is no Track B compression gap and no
+Track A hardness claim.
+
+The paper is empirical, not a complexity result. Its easy regimes are explicit:
+
+- Section 3.2 says ciphertext length strongly controls difficulty. Below about
+  30 characters, unicity is a problem; around 75 characters, over 90% of examples
+  have at most one ALICE error; around 150 characters, about 95% are error-free.
+- Appendix A surveys frequency/dictionary search, generalized Viterbi,
+  compression, and beam search. Reported historical runtimes range from hours to
+  seconds as those methods improve.
+- Appendix H reports that the paper's own 85M-parameter ALICE-Base solver uses a
+  single forward pass and processes 5,431 letters/s on one CPU core or 1.2 million
+  letters/s on an H100. ALICE-Bijective additionally solves a linear assignment
+  problem and directly exposes the inverse permutation (Sections 2.1 and 5).
+- Appendix I is the reason Track B was worth testing rather than dismissing:
+  the authors record then-current large language models failing short
+  cryptograms even while their specialized model solves the task.
+
+These results rule out an honest Track A claim for the generated distribution.
+The paper supplies neither an average-case hardness theorem nor a parameter
+regime in which its own inference methods cease to work.
+
+## Witness and verifier problem
+
+Ciphertext-only cryptogram solving is not directly an exact witness problem.
+Given a candidate key, a checker can test bijectivity and decrypt, but deciding
+whether the resulting text is the intended English plaintext requires a language
+oracle or hidden ground truth. Reading `inst["answer"]` would violate the task.
+
+The tested family retained the native ciphertext and inverse-permutation answer,
+but added a SHA-256 commitment to the planted plaintext. Verification then used
+only executable operations on the instance and candidate:
+
+1. require a 26-character permutation of `A` through `Z`;
+2. check every published ciphertext-to-plaintext crib;
+3. substitute the key into the ciphertext exactly; and
+4. compare the decrypted ASCII string's SHA-256 digest with the commitment.
+
+Unused ciphertext letters remain harmless: the verifier accepts every bijective
+completion that yields the committed plaintext, not only the planted completion.
+The digest is validation metadata and gives the solver no plaintext characters.
+This cleared V without replacing the cipher by a graph, SAT instance, or other
+surrogate.
+
+## Track B candidate that was tested
+
+The generator sampled a grammatical plaintext and random encryption permutation
+first, then derived the ciphertext, inverse key, cribs, and digest. Thus G held by
+inverse construction; the generator never deciphered an instance to obtain its
+certificate.
+
+Difficulty used two fixed-witness axes:
+
+| rung | hidden inverse entries | text variant | intended effect |
+|---|---:|---:|---|
+| demo | 5 | long | hand-checkable illustration |
+| easy | 14 | long | 12 cribs remain |
+| medium | 20 | long | 6 cribs remain |
+| hard | 26 | medium | no cribs; less context |
+| maximum escalation | 26 | short | no cribs; 44–45 characters |
+
+For fixed text, hiding `n` entries grows the structure-aware certificate language
+to exactly `n!`, while the answer remains 26 letters. After `n=26`, shortening the
+text follows Section 3.2's measured hard direction. Two independent axes moved,
+and neither lengthened the answer.
+
+The intended compact route mirrors Section 5's interpretation: use repeated-word
+and repeated-letter patterns, propagate one global bijection, then use ordinary
+letter frequencies. At the final rung, scanning, propagating, and checking the
+44–45-character text was conservatively counted as 114–116 exact character
+operations, below the 300-operation cap. The serialized key is 28 JSON characters
+(26 atomic letters, approximately 7 tokens).
+
+## Mechanical cost and local checks
+
+The Track B gap was real enough to test. From Table 3's 12 layers, model dimension
+768, and feed-forward dimension 2,048, a standard dense forward-pass count for
+the final 44–45-character inputs is about **3.77–3.86 billion
+multiply-accumulates**. Appendix H's CPU throughput corresponds to roughly
+0.0081–0.0083 seconds per text once the trained ALICE model is available. This is
+mechanically easy but impossible to execute by hand; it is why this was Track B,
+not Track A.
+
+For an independently executable exact reference, the module also enumerated the
+finite generated-text grammar, compared plaintext commitments, and derived a
+consistent substitution key. On eight final-rung seeds it solved **8/8**, tested
+**3,203,970** candidates in total (maximum **722,639** for one instance), and took
+**1.604 seconds** locally. Its bounded-distribution complexity is
+`Theta(T * 12^5 * L)`. This is the certificate-producing algorithm disclosed for
+the tested distribution; it was never placed among the failing attacks.
+
+Local evidence at the final rung was:
+
+| measurement | result |
+|---|---:|
+| exact reference solver | 8/8 solved |
+| structure-aware random keys | 0/200,000 valid |
+| structure-aware language size | `26! = 403291461126605635584000000` |
+| valid completions at measured seed | `9! = 362880` |
+| ETAOIN frequency/outlier attack | 0/8 |
+| first-occurrence ordering | 0/8 |
+| greedy three-letter-word-as-`THE` | 0/8 |
+| 4,096 random restarts per seed | 0/8 |
+| in-context modal-template ansatz | 0/8 |
+
+The `9!` valid completions are all assignments of unused letters and therefore
+all represent the same committed decryption. The exact structure-aware success
+probability is `9!/26!`, about `9.0e-22`; the zero sampled hits are consistent
+with that value but do not estimate such a tiny probability precisely.
+
+## Mandatory oracle result
+
+The bare `scripts/harden.py` run used the required fresh four-vendor pool at
+medium reasoning effort. Any verified solve defeats a rung.
+
+| round | rung and parameters | normal solved / attempts | outcome |
+|---:|---|---:|---|
+| 0 | easy, `n=14, variant=0` | 2/3 | defeated |
+| 1 | medium, `n=20, variant=0` | 2/3 | defeated |
+| 2 | hard, `n=26, variant=1` | 1/3 | defeated |
+| 3 | escalated, `n=26, variant=2` | 1/3 | **defeated** |
+
+At the maximum escalation, an initial Grok call hit the 900-second hard deadline
+and was correctly recorded as an API error rather than a model failure. Its
+redraw then solved seed `510693196` in 668.94 seconds. The ciphertext was
+
+```text
+LHF XMIFL JRWFA DRAWFT LHF TIBLRSL SCLFJCCW.
+```
+
+Grok returned
+
+```text
+<answer>RSOMCEFHIBGTUJLPVANDWXKQYZ</answer>
+```
+
+which exactly decrypted to `THE QUIET BAKER MARKED THE DISTANT NOTEBOOK.` and
+passed the digest and permutation checks. This was not a parser accident, an
+answer leak, or a lucky uniform guess. The other two final-rung vendors produced
+no valid witness, but one valid witness is sufficient under the protocol.
+
+The script-owned metadata records:
+
+```json
+{
+  "verdict": "too_easy",
+  "escalations_used": 3,
+  "axes_moved": ["n", "variant"],
+  "reason": "escalate() returned None — the family cannot be made harder, and the oracle pool still solves it"
+}
+```
+
+The mechanical/compact gap is therefore **not** the rejection reason; it is
+large, and justified trying Track B. The rejection reason is that a no-tool
+oracle actually executed the compact route at the shortest permissible rung.
+Making sentences still shorter would increasingly test underdetermination and
+the hidden digest rather than language-and-bijection reasoning, and tuning after
+the maximum escalation would violate STEP 4.
+
+## Other variants considered
+
+| candidate | failed gate | reason |
+|---|---|---|
+| Show plaintext and ask for the key (prior triage) | H on A and B | A linear scan produces the key; mechanical and compact costs are both about `L`. |
+| Ciphertext only, accept any English-looking decryption | V | Exact validity needs a language oracle and does not identify the planted plaintext. |
+| Ciphertext plus hidden expected plaintext in the instance | witness rule | A checker reading it would merely compare with a disguised answer. |
+| Ciphertext plus SHA-256 plaintext commitment | **STEP 4** | Exact and native, but the oracle solved every allowed difficulty rung. |
+| Ask for ALICE's assignment permutation from public logits | H | Section 2.1 reduces inference-time extraction to a polynomial linear-assignment problem. |
+| Turn training/generalization into the answer | G/V | Training discovers weights by optimization, and held-out linguistic accuracy is not a compact exact witness. |
+
+## Final gate outcome
+
+| requirement | result |
+|---|---|
+| G — generatable | Pass for the tested family: sample plaintext and key first, then encrypt. |
+| V — exact witness checking | Pass: bijection, substitution, cribs, and digest are exact. |
+| H — Track A | Fail: no distributional hardness theorem, and the paper supplies fast successful solvers. |
+| H — Track B | **Fail at STEP 4:** a no-tool oracle returned a verified key at the maximum escalation. |
+| Overall | **Rejected.** |
+
+G9 hinted/placebo arms were not run because the stronger prerequisite—the bare
+hardening loop—already failed. Fabricating zeroes for those arms or emitting a
+passing self-test after `too_easy` would misstate the evidence.
+
+exec
+/bin/bash -lc "sed -n '1,240p' ../2505.09165/REJECTED.md" in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+# Rejected: arXiv 2505.09165
+
+## Decision
+
+This attempted family is rejected on **H for Track B**, specifically mandatory gate
+**G9(b)**.  Generatability (G) and exact witness verification (V) pass: the generator
+samples the path partition first, constructs path lengths around it, and `verify`
+checks a submitted partition by exact integer sums plus compressed replay of the
+paper's BusOut transitions.  This is not a Track A rejection and no distributional
+hardness claim is made.
+
+The source basis is Section 2's transition definition and Section 3, Theorem 2 of
+[Ishibashi, Yoshinaka, and Shinohara, *BusOut is NP-complete*](https://arxiv.org/abs/2505.09165).
+Theorem 2 supplies the native one-spot, two-colour, unit-capacity, disjoint-directed-
+path regime.  Theorem 1 (one colour), Theorem 6 (edgeless graphs with all relevant
+parameters fixed), and Theorem 7 (at least as many spots as colours in the edgeless
+case) are the easy regimes that the construction avoided.
+
+## Costs and the failed hint gate
+
+At the final shipping candidate (`n=82`, 246 paths), the successful mechanical
+algorithm builds 30,135 pair sums, makes 20,172 target/path probes, and uses **100,860
+exact arithmetic/lookup operations** in total.  It is
+`O(m^2 + bm + z)` and took under 0.02 seconds locally.  The intended compact route is
+**246 exact remainder operations**: reduce every displayed path length modulo
+500000003 and group equal residues.  The answer is 246 atoms / 1,039 characters, so
+neither answer length nor the 300-operation cap caused the rejection.
+
+The bare harness first held `n=56` at 0/3.  The structural hint then produced a
+verified solution, so the protocol's single upward move was used.  In the final bare
+rerun, `n=80` was solved by one oracle and the harness itself escalated to `n=82`,
+where bare held **0/3**.  The one-sentence hint at that exact held rung was:
+
+> Modulo 500000003, the three path lengths assigned to one passenger block share a residue.
+
+It names only the invariant and contains no procedure or derived answer.  With it,
+the pool solved **2/3** instances.  Therefore the family fails the polarity-flipped
+G9(b) gate after its one allowed higher-level rerun: the compact route is executable
+in context once the claimed insight is named.  A placebo arm was not run after this
+decisive gated failure.
+
+## Retained evidence
+
+- `rejected_gen_2505_09165.py`: complete deterministic generator and local gates.
+- `llm_loop_transcript.jsonl` and `.meta.json`: harness-owned final bare run.
+- `g9_hinted_transcript.jsonl`: three shipping-level hinted calls (2/3 solved).
+
+The family should not be reopened merely by increasing `n`: 84 groups already use
+252 of the 256 allowed answer atoms.  A viable new attempt would need a different,
+fixed-length native dispatch certificate or a different structural compression, not
+another transcription-heavy escalation.
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+import random, time, statistics
+
+def build(n, seed):
+    rng = random.Random(seed)
+    groups = [list(range(i*(n-1),(i+1)*(n-1))) for i in range(5)]
+    adj = [set() for _ in range(5*(n-1))]
+    for g in groups:
+        for i, u in enumerate(g):
+            for v in g[i+1:]:
+                adj[u].add(v); adj[v].add(u)
+    connectors = [rng.choice(g) for g in groups]
+    for i in range(5):
+        for j in range(i+1,5):
+            if rng.randrange(2):
+                u,v=connectors[i],connectors[j]
+                adj[u].add(v); adj[v].add(u)
+    p=list(range(len(adj))); rng.shuffle(p)
+    out=[set() for _ in adj]
+    for u in range(len(adj)):
+        for v in adj[u]: out[p[u]].add(p[v])
+    return out
+
+def recover(adj,n):
+    used=set(); blocks=[]; ops=0
+    for v in range(len(adj)):
+        ops += 1
+        if v in used or len(adj[v]) "'!= n-2: continue
+        block={v}|adj[v]
+        ops += len(block)
+        if len(block) != n-1 or block & used: continue
+        if any((block-{u}) - adj[u] for u in block): continue
+        blocks.append(block); used |= block
+        if len(blocks)==5: break
+    return blocks,ops
+
+n=31
+rows=[]
+for seed in range(8):
+    adj=build(n,seed)
+    start=time.perf_counter_ns()
+    loops=2000
+    got=None; ops=None
+    for _ in range(loops): got,ops=recover(adj,n)
+    elapsed=(time.perf_counter_ns()-start)/1e9/loops
+    assert len(got)==5 and len(set().union(*got))==5*(n-1)
+    rows.append((seed,ops,elapsed))
+print(rows)
+print('"'mean_sec',statistics.mean(x[2] for x in rows),'max_sec',max(x[2] for x in rows),'mean_ops',statistics.mean(x[1] for x in rows),'max_ops',max(x[1] for x in rows))
+PY" in /home/gson/gvrepo/results/1902.02646
+ succeeded in 443ms:
+[(0, 180, 3.54884115e-05), (1, 160, 3.5382301499999996e-05), (2, 171, 3.61632925e-05), (3, 164, 3.5652717e-05), (4, 157, 3.5625631999999994e-05), (5, 160, 3.66886825e-05), (6, 162, 3.6763853e-05), (7, 160, 3.7085113000000004e-05)]
+mean_sec 3.6106250375e-05 max_sec 3.7085113000000004e-05 mean_ops 164.25 max_ops 180
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+import random, statistics
+
+def build(n, seed):
+    rng=random.Random(seed); N=5*(n-1); groups=[list(range(i*(n-1),(i+1)*(n-1))) for i in range(5)]; adj=[set() for _ in range(N)]
+    for g in groups:
+        for i,u in enumerate(g):
+            for v in g[i+1:]: adj[u].add(v); adj[v].add(u)
+    c=[rng.choice(g) for g in groups]
+    for i in range(5):
+        for j in range(i+1,5):
+            if rng.randrange(2): adj[c[i]].add(c[j]); adj[c[j]].add(c[i])
+    p=list(range(N)); rng.shuffle(p); out=[set() for _ in range(N)]
+    for u in range(N):
+        for v in adj[u]: out[p[u]].add(p[v])
+    return out
+
+def recover(a,n):
+    used=set(); blocks=[]; ops=0
+    for v in range(len(a)):
+        ops+=1
+        if v in used or len(a[v])"'!=n-2: continue
+        b={v}|a[v]; ops+=len(b); blocks.append(b); used |= b
+        if len(blocks)==5: return blocks,ops
+    return blocks,ops
+for n in (31,51):
+    vals=[]
+    for seed in range(1000):
+        b,o=recover(build(n,seed),n); assert len(b)==5; vals.append(o)
+    print(n, min(vals), statistics.mean(vals), max(vals), sorted(vals)[949])
+PY' in /home/gson/gvrepo/results/1902.02646
+ succeeded in 831ms:
+31 155 161.48 191 171
+51 255 261.396 287 271
+
+codex
+Track B also fails. I benchmarked the strongest plausible hidden-witness variant: randomly relabel a classified Type 1 graph and ask for its five clique blocks. At a near-cap 150-vertex setting, the paper’s own structure yields a degree/neighborhood scan that succeeds on 8/8 seeds in about \(3.6\times10^{-5}\) seconds, with 157–180 primitive scan/copy operations. The “compact” route is that same scan, so there is no mechanical-versus-insight gap.
+exec
+/bin/bash -lc "sed -n '1,160p' .meta.json && git status --short -- ." in /home/gson/gvrepo/results/1902.02646
+ exited 128 in 0ms:
+{
+ "paper": "1902.02646",
+ "schema_version": 2,
+ "model": "gpt-5.6-sol",
+ "effort": "xhigh",
+ "codex_version": "0.150.1",
+ "started_at": "2026-09-05T09:19:23Z"
+}fatal: not a git repository (or any of the parent directories): .git
+
+apply patch
+patch: completed
+/home/gson/gvrepo/results/1902.02646/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..baafcaac77527f9963ac7aebf4d115a8da68945c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,96 @@
++# Rejected: arXiv 1902.02646
++
++Paper: C. J. Jayawardene, W. C. W. Navaratna, and J. N. Senadheera,
++[*All Ramsey \((C_n,K_6)\) critical graphs for large \(n\)*](https://arxiv.org/abs/1902.02646v3).
++
++## Decision
++
++No native family from this paper passes **H on either track**.  A hidden
++five-clique-partition family would pass G by theorem-backed construction and V by
++exact edge inspection, but a construction-aware degree/neighborhood scan recovers
++the witness directly.  The paper proves a complete classification, not a hard
++parameter regime.  Randomly relabelling one of its classified graphs does not change
++that.
++
++This is not a `cap_bound` rejection and it does not rely on an oracle or on G9(b).
++The failure occurs at Step 0, before a generator should be built.  Consequently there
++is no `gen_1902_02646.py`, self-test report, or hardening transcript to retain.
++
++## Exact paper facts used at Step 0
++
++Section 2 defines a Ramsey critical red graph exactly: on
++\(r(C_n,K_6)-1=5(n-1)\) vertices it has no \(C_n\), and its independence number is
++at most five (equivalently, the blue complement has no \(K_6\)).
++
++The decisive result is Section 3, Lemma 4.  For every \(n\geq15\), every such graph
++contains \(5K_{n-1}\).  Because those five cliques already contain all
++\(5(n-1)\) vertices, they are a spanning five-block partition.  The end of its proof
++also shows how the blocks arise: first four copies of \(K_{n-1}\) are found outside
++an \((n-1)\)-cycle, and the cycle's vertex set is proved to induce the fifth clique.
++
++Section 4 then removes any remaining search.  Type 1 graphs have at most one vertex
++in each block incident with external edges, and **every subgraph of \(K_5\)** gives
++one of the 34 non-isomorphic Type 1 graphs.  Every Type 2 graph is an indicated
++vertex split of a Type 1 graph; Figures 3 and 4 list the 34 types of each kind.  Thus
++there are exactly 68 non-isomorphic graphs, independent of \(n\) once \(n\geq15\).
++This explicit 68-template classification is what produces the certificate.
++
++The easy regime is therefore the entire regime covered by the paper, rather than a
++small exceptional parameter range that a generator could avoid.  The variable
++\(n\) only enlarges five homogeneous cliques; it does not enlarge the external
++template search beyond the fixed classified list.
++
++## Candidate families and failed gates
++
++| candidate posed to the solver | outcome |
++|---|---|
++| Given \(n\), construct any critical graph | Trivial explicit formula: output five disjoint copies of \(K_{n-1}\).  It has no \(C_n\), and an independent set contains at most one vertex from each clique. |
++| Identify the isomorphism type | The answer has only 68 possibilities, so even a uniform structure-aware guess succeeds with probability at least \(1/68\), far above G4's \(10^{-6}\) limit.  This is also a fixed classification-table lookup. |
++| Given a randomly relabelled classified graph, return its five \(K_{n-1}\) blocks | G and V are sound, and the partition language is large, but the degree/neighborhood attack below succeeds on every instance.  H and mandatory G6 fail. |
++| Return the whole red graph or coloring | An explicit adjacency matrix already exceeds the 256-atom and 2,000-character answer caps at the smallest \(n=15\).  Compressing it to a five-block template returns to the first trivial candidate. |
++| Verify criticality by searching for a red \(C_n\) and blue \(K_6\) | The proposed negative-cycle check is exponential in the scalable parameter and is not a cheap witness verifier.  Checking membership in one of Section 4's templates is cheap, but makes the classification itself the certificate and again fails H. |
++
++## Mechanical cost versus compact route
++
++The strongest plausible candidate was the hidden partition.  I benchmarked the
++near-cap setting \(n=31\), so the graph has 150 vertices and a partition answer has
++150 atomic vertex labels.  For each of eight seeds I chose a random Type 1 subgraph
++of \(K_5\), built its five 30-vertex cliques, and uniformly permuted all vertex
++labels.
++
++The standard promise-aware algorithm scans adjacency rows for an unused vertex of
++red degree \(n-2\).  Such a vertex has no external edge, so its closed red
++neighborhood is exactly one complete block.  Mark that block and repeat five times.
++Section 4 guarantees many such non-external vertices; the fixed Type 2 splits do not
++remove them.  This is an \(O(N+E)\) degree/neighborhood scan, not clique search.
++
++On seeds 0 through 7 it recovered and verified all five blocks **8/8** times.  With
++one operation charged for each adjacency-row degree/membership probe and one for
++each copied block label, it used 157--180 operations (mean 164.25).  Repeated timing
++of each materialized instance gave 0.0000354--0.0000371 seconds per recovery (mean
++0.0000361 seconds).  If parsing every serialized adjacency entry is charged instead,
++both methods additionally pay about 2,175 edge-entry inspections at this size.
++
++There is no shorter Track B method hiding behind this mechanical one.  The proposed
++compact route is precisely: notice the five near-cliques, locate a degree-\(n-2\)
++row, and copy its closed neighborhood five times.  It uses the same 157--180
++random-access operations (or the same input-reading cost) as the standard algorithm.
++The mechanical cost and compact-route length are therefore equal, not separated by
++the orders-of-magnitude gap Track B requires.  At larger \(n\), both grow together;
++only transcription and input scanning get longer.
++
++## Final gate assessment
++
++| requirement | result |
++|---|---|
++| G -- generatable | Passes for the hidden-partition candidate via Section 3, Lemma 4 and the Section 4 templates. |
++| V -- exact witness checking | Passes for a submitted partition by checking five equal, disjoint blocks covering all vertices and every within-block edge. |
++| H -- Track A | **Fails.** No distributional hardness theorem is given, the support has only 68 structural templates, and the natural scan succeeds 8/8. |
++| H -- Track B | **Fails.** The certificate-producing algorithm and the supposed compact insight are the same 157--180-operation scan. |
++| G4/G6 for classification or partition variants | **Fail.** Classification has guess probability at least \(1/68\); hidden partition is solved by the required construction-aware outlier/degree attack. |
++| Overall | **Rejected at Step 0.** |
++
++The paper remains a useful extremal classification result, but its scalable parameter
++only repeats vertices inside already identified clique blocks.  Turning that repetition
++into a benchmark would measure input scanning or output transcription, not discovery
++of a mathematical invariant.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..baafcaac77527f9963ac7aebf4d115a8da68945c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,96 @@
++# Rejected: arXiv 1902.02646
++
++Paper: C. J. Jayawardene, W. C. W. Navaratna, and J. N. Senadheera,
++[*All Ramsey \((C_n,K_6)\) critical graphs for large \(n\)*](https://arxiv.org/abs/1902.02646v3).
++
++## Decision
++
++No native family from this paper passes **H on either track**.  A hidden
++five-clique-partition family would pass G by theorem-backed construction and V by
++exact edge inspection, but a construction-aware degree/neighborhood scan recovers
++the witness directly.  The paper proves a complete classification, not a hard
++parameter regime.  Randomly relabelling one of its classified graphs does not change
++that.
++
++This is not a `cap_bound` rejection and it does not rely on an oracle or on G9(b).
++The failure occurs at Step 0, before a generator should be built.  Consequently there
++is no `gen_1902_02646.py`, self-test report, or hardening transcript to retain.
++
++## Exact paper facts used at Step 0
++
++Section 2 defines a Ramsey critical red graph exactly: on
++\(r(C_n,K_6)-1=5(n-1)\) vertices it has no \(C_n\), and its independence number is
++at most five (equivalently, the blue complement has no \(K_6\)).
++
++The decisive result is Section 3, Lemma 4.  For every \(n\geq15\), every such graph
++contains \(5K_{n-1}\).  Because those five cliques already contain all
++\(5(n-1)\) vertices, they are a spanning five-block partition.  The end of its proof
++also shows how the blocks arise: first four copies of \(K_{n-1}\) are found outside
++an \((n-1)\)-cycle, and the cycle's vertex set is proved to induce the fifth clique.
++
++Section 4 then removes any remaining search.  Type 1 graphs have at most one vertex
++in each block incident with external edges, and **every subgraph of \(K_5\)** gives
++one of the 34 non-isomorphic Type 1 graphs.  Every Type 2 graph is an indicated
++vertex split of a Type 1 graph; Figures 3 and 4 list the 34 types of each kind.  Thus
++there are exactly 68 non-isomorphic graphs, independent of \(n\) once \(n\geq15\).
++This explicit 68-template classification is what produces the certificate.
++
++The easy regime is therefore the entire regime covered by the paper, rather than a
++small exceptional parameter range that a generator could avoid.  The variable
++\(n\) only enlarges five homogeneous cliques; it does not enlarge the external
++template search beyond the fixed classified list.
++
++## Candidate families and failed gates
++
++| candidate posed to the solver | outcome |
++|---|---|
++| Given \(n\), construct any critical graph | Trivial explicit formula: output five disjoint copies of \(K_{n-1}\).  It has no \(C_n\), and an independent set contains at most one vertex from each clique. |
++| Identify the isomorphism type | The answer has only 68 possibilities, so even a uniform structure-aware guess succeeds with probability at least \(1/68\), far above G4's \(10^{-6}\) limit.  This is also a fixed classification-table lookup. |
++| Given a randomly relabelled classified graph, return its five \(K_{n-1}\) blocks | G and V are sound, and the partition language is large, but the degree/neighborhood attack below succeeds on every instance.  H and mandatory G6 fail. |
++| Return the whole red graph or coloring | An explicit adjacency matrix already exceeds the 256-atom and 2,000-character answer caps at the smallest \(n=15\).  Compressing it to a five-block template returns to the first trivial candidate. |
++| Verify criticality by searching for a red \(C_n\) and blue \(K_6\) | The proposed negative-cycle check is exponential in the scalable parameter and is not a cheap witness verifier.  Checking membership in one of Section 4's templates is cheap, but makes the classification itself the certificate and again fails H. |
++
++## Mechanical cost versus compact route
++
++The strongest plausible candidate was the hidden partition.  I benchmarked the
++near-cap setting \(n=31\), so the graph has 150 vertices and a partition answer has
++150 atomic vertex labels.  For each of eight seeds I chose a random Type 1 subgraph
++of \(K_5\), built its five 30-vertex cliques, and uniformly permuted all vertex
++labels.
++
++The standard promise-aware algorithm scans adjacency rows for an unused vertex of
++red degree \(n-2\).  Such a vertex has no external edge, so its closed red
++neighborhood is exactly one complete block.  Mark that block and repeat five times.
++Section 4 guarantees many such non-external vertices; the fixed Type 2 splits do not
++remove them.  This is an \(O(N+E)\) degree/neighborhood scan, not clique search.
++
++On seeds 0 through 7 it recovered and verified all five blocks **8/8** times.  With
++one operation charged for each adjacency-row degree/membership probe and one for
++each copied block label, it used 157--180 operations (mean 164.25).  Repeated timing
++of each materialized instance gave 0.0000354--0.0000371 seconds per recovery (mean
++0.0000361 seconds).  If parsing every serialized adjacency entry is charged instead,
++both methods additionally pay about 2,175 edge-entry inspections at this size.
++
++There is no shorter Track B method hiding behind this mechanical one.  The proposed
++compact route is precisely: notice the five near-cliques, locate a degree-\(n-2\)
++row, and copy its closed neighborhood five times.  It uses the same 157--180
++random-access operations (or the same input-reading cost) as the standard algorithm.
++The mechanical cost and compact-route length are therefore equal, not separated by
++the orders-of-magnitude gap Track B requires.  At larger \(n\), both grow together;
++only transcription and input scanning get longer.
++
++## Final gate assessment
++
++| requirement | result |
++|---|---|
++| G -- generatable | Passes for the hidden-partition candidate via Section 3, Lemma 4 and the Section 4 templates. |
++| V -- exact witness checking | Passes for a submitted partition by checking five equal, disjoint blocks covering all vertices and every within-block edge. |
++| H -- Track A | **Fails.** No distributional hardness theorem is given, the support has only 68 structural templates, and the natural scan succeeds 8/8. |
++| H -- Track B | **Fails.** The certificate-producing algorithm and the supposed compact insight are the same 157--180-operation scan. |
++| G4/G6 for classification or partition variants | **Fail.** Classification has guess probability at least \(1/68\); hidden partition is solved by the required construction-aware outlier/degree attack. |
++| Overall | **Rejected at Step 0.** |
++
++The paper remains a useful extremal classification result, but its scalable parameter
++only repeats vertices inside already identified clique blocks.  Turning that repetition
++into a benchmark would measure input scanning or output transcription, not discovery
++of a mathematical invariant.
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+from pathlib import Path
+import re
+p=Path('REJECTED.md')
+t=p.read_text()
+checks={
+ 'names_failed_gate': bool(re.search(r'fails?["'^'"\\n]{0,80}H|H["'^'"\\n]{0,80}fails?',t,re.I)),
+ 'names_both_tracks': 'Track A' in t and 'Track B' in t,
+ 'mechanical_cost': bool(re.search(r'mechanical cost|operations|seconds',t,re.I)),
+ 'compact_route': bool(re.search(r'compact route|Track B',t,re.I)),
+ 'paper_section': 'Section 3, Lemma 4' in t and 'Section 4' in t,
+ 'not_g9_rejection': not bool(re.search(r'fails?["'^.]{0,60}G9'"\\(b\\)',t,re.I)),
+}
+print(checks)
+print('lines',len(t.splitlines()),'bytes',len(t.encode()))
+print('files',sorted(x.name for x in Path('.').iterdir()))
+assert all(checks.values())
+PY" in /home/gson/gvrepo/results/1902.02646
+ succeeded in 0ms:
+{'names_failed_gate': True, 'names_both_tracks': True, 'mechanical_cost': True, 'compact_route': True, 'paper_section': True, 'not_g9_rejection': True}
+lines 96 bytes 6639
+files ['.meta.json', '.runner.sh', '.task.md', 'REJECTED.md', 'codex_run.log']
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..baafcaac77527f9963ac7aebf4d115a8da68945c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,96 @@
++# Rejected: arXiv 1902.02646
++
++Paper: C. J. Jayawardene, W. C. W. Navaratna, and J. N. Senadheera,
++[*All Ramsey \((C_n,K_6)\) critical graphs for large \(n\)*](https://arxiv.org/abs/1902.02646v3).
++
++## Decision
++
++No native family from this paper passes **H on either track**.  A hidden
++five-clique-partition family would pass G by theorem-backed construction and V by
++exact edge inspection, but a construction-aware degree/neighborhood scan recovers
++the witness directly.  The paper proves a complete classification, not a hard
++parameter regime.  Randomly relabelling one of its classified graphs does not change
++that.
++
++This is not a `cap_bound` rejection and it does not rely on an oracle or on G9(b).
++The failure occurs at Step 0, before a generator should be built.  Consequently there
++is no `gen_1902_02646.py`, self-test report, or hardening transcript to retain.
++
++## Exact paper facts used at Step 0
++
++Section 2 defines a Ramsey critical red graph exactly: on
++\(r(C_n,K_6)-1=5(n-1)\) vertices it has no \(C_n\), and its independence number is
++at most five (equivalently, the blue complement has no \(K_6\)).
++
++The decisive result is Section 3, Lemma 4.  For every \(n\geq15\), every such graph
++contains \(5K_{n-1}\).  Because those five cliques already contain all
++\(5(n-1)\) vertices, they are a spanning five-block partition.  The end of its proof
++also shows how the blocks arise: first four copies of \(K_{n-1}\) are found outside
++an \((n-1)\)-cycle, and the cycle's vertex set is proved to induce the fifth clique.
++
++Section 4 then removes any remaining search.  Type 1 graphs have at most one vertex
++in each block incident with external edges, and **every subgraph of \(K_5\)** gives
++one of the 34 non-isomorphic Type 1 graphs.  Every Type 2 graph is an indicated
++vertex split of a Type 1 graph; Figures 3 and 4 list the 34 types of each kind.  Thus
++there are exactly 68 non-isomorphic graphs, independent of \(n\) once \(n\geq15\).
++This explicit 68-template classification is what produces the certificate.
++
++The easy regime is therefore the entire regime covered by the paper, rather than a
++small exceptional parameter range that a generator could avoid.  The variable
++\(n\) only enlarges five homogeneous cliques; it does not enlarge the external
++template search beyond the fixed classified list.
++
++## Candidate families and failed gates
++
++| candidate posed to the solver | outcome |
++|---|---|
++| Given \(n\), construct any critical graph | Trivial explicit formula: output five disjoint copies of \(K_{n-1}\).  It has no \(C_n\), and an independent set contains at most one vertex from each clique. |
++| Identify the isomorphism type | The answer has only 68 possibilities, so even a uniform structure-aware guess succeeds with probability at least \(1/68\), far above G4's \(10^{-6}\) limit.  This is also a fixed classification-table lookup. |
++| Given a randomly relabelled classified graph, return its five \(K_{n-1}\) blocks | G and V are sound, and the partition language is large, but the degree/neighborhood attack below succeeds on every instance.  H and mandatory G6 fail. |
++| Return the whole red graph or coloring | An explicit adjacency matrix already exceeds the 256-atom and 2,000-character answer caps at the smallest \(n=15\).  Compressing it to a five-block template returns to the first trivial candidate. |
++| Verify criticality by searching for a red \(C_n\) and blue \(K_6\) | The proposed negative-cycle check is exponential in the scalable parameter and is not a cheap witness verifier.  Checking membership in one of Section 4's templates is cheap, but makes the classification itself the certificate and again fails H. |
++
++## Mechanical cost versus compact route
++
++The strongest plausible candidate was the hidden partition.  I benchmarked the
++near-cap setting \(n=31\), so the graph has 150 vertices and a partition answer has
++150 atomic vertex labels.  For each of eight seeds I chose a random Type 1 subgraph
++of \(K_5\), built its five 30-vertex cliques, and uniformly permuted all vertex
++labels.
++
++The standard promise-aware algorithm scans adjacency rows for an unused vertex of
++red degree \(n-2\).  Such a vertex has no external edge, so its closed red
++neighborhood is exactly one complete block.  Mark that block and repeat five times.
++Section 4 guarantees many such non-external vertices; the fixed Type 2 splits do not
++remove them.  This is an \(O(N+E)\) degree/neighborhood scan, not clique search.
++
++On seeds 0 through 7 it recovered and verified all five blocks **8/8** times.  With
++one operation charged for each adjacency-row degree/membership probe and one for
++each copied block label, it used 157--180 operations (mean 164.25).  Repeated timing
++of each materialized instance gave 0.0000354--0.0000371 seconds per recovery (mean
++0.0000361 seconds).  If parsing every serialized adjacency entry is charged instead,
++both methods additionally pay about 2,175 edge-entry inspections at this size.
++
++There is no shorter Track B method hiding behind this mechanical one.  The proposed
++compact route is precisely: notice the five near-cliques, locate a degree-\(n-2\)
++row, and copy its closed neighborhood five times.  It uses the same 157--180
++random-access operations (or the same input-reading cost) as the standard algorithm.
++The mechanical cost and compact-route length are therefore equal, not separated by
++the orders-of-magnitude gap Track B requires.  At larger \(n\), both grow together;
++only transcription and input scanning get longer.
++
++## Final gate assessment
++
++| requirement | result |
++|---|---|
++| G -- generatable | Passes for the hidden-partition candidate via Section 3, Lemma 4 and the Section 4 templates. |
++| V -- exact witness checking | Passes for a submitted partition by checking five equal, disjoint blocks covering all vertices and every within-block edge. |
++| H -- Track A | **Fails.** No distributional hardness theorem is given, the support has only 68 structural templates, and the natural scan succeeds 8/8. |
++| H -- Track B | **Fails.** The certificate-producing algorithm and the supposed compact insight are the same 157--180-operation scan. |
++| G4/G6 for classification or partition variants | **Fail.** Classification has guess probability at least \(1/68\); hidden partition is solved by the required construction-aware outlier/degree attack. |
++| Overall | **Rejected at Step 0.** |
++
++The paper remains a useful extremal classification result, but its scalable parameter
++only repeats vertices inside already identified clique blocks.  Turning that repetition
++into a benchmark would measure input scanning or output transcription, not discovery
++of a mathematical invariant.
+
+Step 0 showed that every natural native formulation is either a constant 68-template lookup/construction or a hidden five-clique partition recovered by the same cheap scan as its compact route. Per the instructions, I stopped before building a module and documented the rejection with measured costs.
+  ✓ Read the full paper and decide G/H/V plus Track A vs Track B
+  ✓ Design and implement the generator or write a fully evidenced rejection
+  ✓ Run self-tests, adversary measurements, and hardening/G9 loops if applicable
+  ✓ Write the required reports and verify all deliverables
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..baafcaac77527f9963ac7aebf4d115a8da68945c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,96 @@
++# Rejected: arXiv 1902.02646
++
++Paper: C. J. Jayawardene, W. C. W. Navaratna, and J. N. Senadheera,
++[*All Ramsey \((C_n,K_6)\) critical graphs for large \(n\)*](https://arxiv.org/abs/1902.02646v3).
++
++## Decision
++
++No native family from this paper passes **H on either track**.  A hidden
++five-clique-partition family would pass G by theorem-backed construction and V by
++exact edge inspection, but a construction-aware degree/neighborhood scan recovers
++the witness directly.  The paper proves a complete classification, not a hard
++parameter regime.  Randomly relabelling one of its classified graphs does not change
++that.
++
++This is not a `cap_bound` rejection and it does not rely on an oracle or on G9(b).
++The failure occurs at Step 0, before a generator should be built.  Consequently there
++is no `gen_1902_02646.py`, self-test report, or hardening transcript to retain.
++
++## Exact paper facts used at Step 0
++
++Section 2 defines a Ramsey critical red graph exactly: on
++\(r(C_n,K_6)-1=5(n-1)\) vertices it has no \(C_n\), and its independence number is
++at most five (equivalently, the blue complement has no \(K_6\)).
++
++The decisive result is Section 3, Lemma 4.  For every \(n\geq15\), every such graph
++contains \(5K_{n-1}\).  Because those five cliques already contain all
++\(5(n-1)\) vertices, they are a spanning five-block partition.  The end of its proof
++also shows how the blocks arise: first four copies of \(K_{n-1}\) are found outside
++an \((n-1)\)-cycle, and the cycle's vertex set is proved to induce the fifth clique.
++
++Section 4 then removes any remaining search.  Type 1 graphs have at most one vertex
++in each block incident with external edges, and **every subgraph of \(K_5\)** gives
++one of the 34 non-isomorphic Type 1 graphs.  Every Type 2 graph is an indicated
++vertex split of a Type 1 graph; Figures 3 and 4 list the 34 types of each kind.  Thus
++there are exactly 68 non-isomorphic graphs, independent of \(n\) once \(n\geq15\).
++This explicit 68-template classification is what produces the certificate.
++
++The easy regime is therefore the entire regime covered by the paper, rather than a
++small exceptional parameter range that a generator could avoid.  The variable
++\(n\) only enlarges five homogeneous cliques; it does not enlarge the external
++template search beyond the fixed classified list.
++
++## Candidate families and failed gates
++
++| candidate posed to the solver | outcome |
++|---|---|
++| Given \(n\), construct any critical graph | Trivial explicit formula: output five disjoint copies of \(K_{n-1}\).  It has no \(C_n\), and an independent set contains at most one vertex from each clique. |
++| Identify the isomorphism type | The answer has only 68 possibilities, so even a uniform structure-aware guess succeeds with probability at least \(1/68\), far above G4's \(10^{-6}\) limit.  This is also a fixed classification-table lookup. |
++| Given a randomly relabelled classified graph, return its five \(K_{n-1}\) blocks | G and V are sound, and the partition language is large, but the degree/neighborhood attack below succeeds on every instance.  H and mandatory G6 fail. |
++| Return the whole red graph or coloring | An explicit adjacency matrix already exceeds the 256-atom and 2,000-character answer caps at the smallest \(n=15\).  Compressing it to a five-block template returns to the first trivial candidate. |
++| Verify criticality by searching for a red \(C_n\) and blue \(K_6\) | The proposed negative-cycle check is exponential in the scalable parameter and is not a cheap witness verifier.  Checking membership in one of Section 4's templates is cheap, but makes the classification itself the certificate and again fails H. |
++
++## Mechanical cost versus compact route
++
++The strongest plausible candidate was the hidden partition.  I benchmarked the
++near-cap setting \(n=31\), so the graph has 150 vertices and a partition answer has
++150 atomic vertex labels.  For each of eight seeds I chose a random Type 1 subgraph
++of \(K_5\), built its five 30-vertex cliques, and uniformly permuted all vertex
++labels.
++
++The standard promise-aware algorithm scans adjacency rows for an unused vertex of
++red degree \(n-2\).  Such a vertex has no external edge, so its closed red
++neighborhood is exactly one complete block.  Mark that block and repeat five times.
++Section 4 guarantees many such non-external vertices; the fixed Type 2 splits do not
++remove them.  This is an \(O(N+E)\) degree/neighborhood scan, not clique search.
++
++On seeds 0 through 7 it recovered and verified all five blocks **8/8** times.  With
++one operation charged for each adjacency-row degree/membership probe and one for
++each copied block label, it used 157--180 operations (mean 164.25).  Repeated timing
++of each materialized instance gave 0.0000354--0.0000371 seconds per recovery (mean
++0.0000361 seconds).  If parsing every serialized adjacency entry is charged instead,
++both methods additionally pay about 2,175 edge-entry inspections at this size.
++
++There is no shorter Track B method hiding behind this mechanical one.  The proposed
++compact route is precisely: notice the five near-cliques, locate a degree-\(n-2\)
++row, and copy its closed neighborhood five times.  It uses the same 157--180
++random-access operations (or the same input-reading cost) as the standard algorithm.
++The mechanical cost and compact-route length are therefore equal, not separated by
++the orders-of-magnitude gap Track B requires.  At larger \(n\), both grow together;
++only transcription and input scanning get longer.
++
++## Final gate assessment
++
++| requirement | result |
++|---|---|
++| G -- generatable | Passes for the hidden-partition candidate via Section 3, Lemma 4 and the Section 4 templates. |
++| V -- exact witness checking | Passes for a submitted partition by checking five equal, disjoint blocks covering all vertices and every within-block edge. |
++| H -- Track A | **Fails.** No distributional hardness theorem is given, the support has only 68 structural templates, and the natural scan succeeds 8/8. |
++| H -- Track B | **Fails.** The certificate-producing algorithm and the supposed compact insight are the same 157--180-operation scan. |
++| G4/G6 for classification or partition variants | **Fail.** Classification has guess probability at least \(1/68\); hidden partition is solved by the required construction-aware outlier/degree attack. |
++| Overall | **Rejected at Step 0.** |
++
++The paper remains a useful extremal classification result, but its scalable parameter
++only repeats vertices inside already identified clique blocks.  Turning that repetition
++into a benchmark would measure input scanning or output transcription, not discovery
++of a mathematical invariant.
+
+codex
+Rejected at Step 0 after reading the full [paper](https://arxiv.org/abs/1902.02646v3).
+
+- Section 3, Lemma 4 forces a spanning partition into five \(K_{n-1}\) blocks.
+- Section 4 reduces every graph to one of 68 fixed templates.
+- Classification has guess probability at least \(1/68\).
+- A hidden-partition variant was recovered on 8/8 relabelled instances in 157–180 operations, averaging 0.0000361 seconds.
+- The Track B compact route is the same scan, so there is no compression gap.
+- Exhaustive forbidden-cycle verification would also fail cheap verifiability at scale.
+
+The evidenced rejection is in [REJECTED.md](/home/gson/gvrepo/results/1902.02646/REJECTED.md). Per the task instructions, no generator or hardening artifacts were created after Step 0 failed.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..baafcaac77527f9963ac7aebf4d115a8da68945c
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,96 @@
++# Rejected: arXiv 1902.02646
++
++Paper: C. J. Jayawardene, W. C. W. Navaratna, and J. N. Senadheera,
++[*All Ramsey \((C_n,K_6)\) critical graphs for large \(n\)*](https://arxiv.org/abs/1902.02646v3).
++
++## Decision
++
++No native family from this paper passes **H on either track**.  A hidden
++five-clique-partition family would pass G by theorem-backed construction and V by
++exact edge inspection, but a construction-aware degree/neighborhood scan recovers
++the witness directly.  The paper proves a complete classification, not a hard
++parameter regime.  Randomly relabelling one of its classified graphs does not change
++that.
++
++This is not a `cap_bound` rejection and it does not rely on an oracle or on G9(b).
++The failure occurs at Step 0, before a generator should be built.  Consequently there
++is no `gen_1902_02646.py`, self-test report, or hardening transcript to retain.
++
++## Exact paper facts used at Step 0
++
++Section 2 defines a Ramsey critical red graph exactly: on
++\(r(C_n,K_6)-1=5(n-1)\) vertices it has no \(C_n\), and its independence number is
++at most five (equivalently, the blue complement has no \(K_6\)).
++
++The decisive result is Section 3, Lemma 4.  For every \(n\geq15\), every such graph
++contains \(5K_{n-1}\).  Because those five cliques already contain all
++\(5(n-1)\) vertices, they are a spanning five-block partition.  The end of its proof
++also shows how the blocks arise: first four copies of \(K_{n-1}\) are found outside
++an \((n-1)\)-cycle, and the cycle's vertex set is proved to induce the fifth clique.
++
++Section 4 then removes any remaining search.  Type 1 graphs have at most one vertex
++in each block incident with external edges, and **every subgraph of \(K_5\)** gives
++one of the 34 non-isomorphic Type 1 graphs.  Every Type 2 graph is an indicated
++vertex split of a Type 1 graph; Figures 3 and 4 list the 34 types of each kind.  Thus
++there are exactly 68 non-isomorphic graphs, independent of \(n\) once \(n\geq15\).
++This explicit 68-template classification is what produces the certificate.
++
++The easy regime is therefore the entire regime covered by the paper, rather than a
++small exceptional parameter range that a generator could avoid.  The variable
++\(n\) only enlarges five homogeneous cliques; it does not enlarge the external
++template search beyond the fixed classified list.
++
++## Candidate families and failed gates
++
++| candidate posed to the solver | outcome |
++|---|---|
++| Given \(n\), construct any critical graph | Trivial explicit formula: output five disjoint copies of \(K_{n-1}\).  It has no \(C_n\), and an independent set contains at most one vertex from each clique. |
++| Identify the isomorphism type | The answer has only 68 possibilities, so even a uniform structure-aware guess succeeds with probability at least \(1/68\), far above G4's \(10^{-6}\) limit.  This is also a fixed classification-table lookup. |
++| Given a randomly relabelled classified graph, return its five \(K_{n-1}\) blocks | G and V are sound, and the partition language is large, but the degree/neighborhood attack below succeeds on every instance.  H and mandatory G6 fail. |
++| Return the whole red graph or coloring | An explicit adjacency matrix already exceeds the 256-atom and 2,000-character answer caps at the smallest \(n=15\).  Compressing it to a five-block template returns to the first trivial candidate. |
++| Verify criticality by searching for a red \(C_n\) and blue \(K_6\) | The proposed negative-cycle check is exponential in the scalable parameter and is not a cheap witness verifier.  Checking membership in one of Section 4's templates is cheap, but makes the classification itself the certificate and again fails H. |
++
++## Mechanical cost versus compact route
++
++The strongest plausible candidate was the hidden partition.  I benchmarked the
++near-cap setting \(n=31\), so the graph has 150 vertices and a partition answer has
++150 atomic vertex labels.  For each of eight seeds I chose a random Type 1 subgraph
++of \(K_5\), built its five 30-vertex cliques, and uniformly permuted all vertex
++labels.
++
++The standard promise-aware algorithm scans adjacency rows for an unused vertex of
++red degree \(n-2\).  Such a vertex has no external edge, so its closed red
++neighborhood is exactly one complete block.  Mark that block and repeat five times.
++Section 4 guarantees many such non-external vertices; the fixed Type 2 splits do not
++remove them.  This is an \(O(N+E)\) degree/neighborhood scan, not clique search.
++
++On seeds 0 through 7 it recovered and verified all five blocks **8/8** times.  With
++one operation charged for each adjacency-row degree/membership probe and one for
++each copied block label, it used 157--180 operations (mean 164.25).  Repeated timing
++of each materialized instance gave 0.0000354--0.0000371 seconds per recovery (mean
++0.0000361 seconds).  If parsing every serialized adjacency entry is charged instead,
++both methods additionally pay about 2,175 edge-entry inspections at this size.
++
++There is no shorter Track B method hiding behind this mechanical one.  The proposed
++compact route is precisely: notice the five near-cliques, locate a degree-\(n-2\)
++row, and copy its closed neighborhood five times.  It uses the same 157--180
++random-access operations (or the same input-reading cost) as the standard algorithm.
++The mechanical cost and compact-route length are therefore equal, not separated by
++the orders-of-magnitude gap Track B requires.  At larger \(n\), both grow together;
++only transcription and input scanning get longer.
++
++## Final gate assessment
++
++| requirement | result |
++|---|---|
++| G -- generatable | Passes for the hidden-partition candidate via Section 3, Lemma 4 and the Section 4 templates. |
++| V -- exact witness checking | Passes for a submitted partition by checking five equal, disjoint blocks covering all vertices and every within-block edge. |
++| H -- Track A | **Fails.** No distributional hardness theorem is given, the support has only 68 structural templates, and the natural scan succeeds 8/8. |
++| H -- Track B | **Fails.** The certificate-producing algorithm and the supposed compact insight are the same 157--180-operation scan. |
++| G4/G6 for classification or partition variants | **Fail.** Classification has guess probability at least \(1/68\); hidden partition is solved by the required construction-aware outlier/degree attack. |
++| Overall | **Rejected at Step 0.** |
++
++The paper remains a useful extremal classification result, but its scalable parameter
++only repeats vertices inside already identified clique blocks.  Turning that repetition
++into a benchmark would measure input scanning or output transcription, not discovery
++of a mathematical invariant.
+
+tokens used
+69,432
+Rejected at Step 0 after reading the full [paper](https://arxiv.org/abs/1902.02646v3).
+
+- Section 3, Lemma 4 forces a spanning partition into five \(K_{n-1}\) blocks.
+- Section 4 reduces every graph to one of 68 fixed templates.
+- Classification has guess probability at least \(1/68\).
+- A hidden-partition variant was recovered on 8/8 relabelled instances in 157–180 operations, averaging 0.0000361 seconds.
+- The Track B compact route is the same scan, so there is no compression gap.
+- Exhaustive forbidden-cycle verification would also fail cheap verifiability at scale.
+
+The evidenced rejection is in [REJECTED.md](/home/gson/gvrepo/results/1902.02646/REJECTED.md). Per the task instructions, no generator or hardening artifacts were created after Step 0 failed.
