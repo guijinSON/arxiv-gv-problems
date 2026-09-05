@@ -1,0 +1,130 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_element": {"accepted": false, "reason": "wrong row shape: row 0 must be [gap,rank]"},
+      "drop_row": {"accepted": false, "reason": "wrong row count: expected 90, got 89"},
+      "duplicate": {"accepted": false, "reason": "duplicate slot: components 0 and 1 both use [13,2]"},
+      "empty": {"accepted": false, "reason": "empty: the placement table has no rows"},
+      "non_integer": {"accepted": false, "reason": "non-integer entry: row 0 contains a non-integer"},
+      "out_of_range": {"accepted": false, "reason": "out of range: row 0 has gap/rank [30,2]"},
+      "swap": {"accepted": false, "reason": "capacity mismatch: gap 6 receives total span 13225940, not M=12216972"}
+    },
+    "distinct_reasons": 7,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 4125890866257834775263491399937790428857691628337559324152937252436826167707218319693834208508116992000000000000000000000,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform independent assignments of each visible size band to labeled gaps, with a uniform rank permutation inside every gap",
+    "total": 200000,
+    "wall_clock_sec": 164.718327
+  },
+  "G5_density_and_baseline": {
+    "demo_candidate_space": 288,
+    "demo_exact_valid_placements": 72,
+    "demo_n": 2,
+    "efficient_promise_operations": 1232,
+    "efficient_promise_wall_clock_sec": 0.049525,
+    "pass": true,
+    "shipping_candidate_space": 4125890866257834775263491399937790428857691628337559324152937252436826167707218319693834208508116992000000000000000000000,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_attack_operations": 102175,
+    "strongest_attack_wall_clock_sec": 0.32221,
+    "strongest_failing_attack": "random_restart_exact_pairs_256",
+    "successful_reference_operations": 42605,
+    "successful_reference_wall_clock_sec": 0.062572
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_adjacent_sizes": {"attempts": 8, "operations": 720, "successes": 0, "wall_clock_sec": 0.000435},
+      "greedy_largest_first": {"attempts": 8, "operations": 7480, "successes": 0, "wall_clock_sec": 0.015927},
+      "outlier_band_rank_zip": {"attempts": 8, "operations": 720, "successes": 0, "wall_clock_sec": 0.003122},
+      "random_restart_exact_pairs_256": {"attempts": 8, "operations": 102175, "successes": 0, "wall_clock_sec": 0.32221}
+    },
+    "efficient_promise_algorithm": {
+      "attempts": 8,
+      "complexity": "expected O(n) with hash tables; deterministic O(n log n) by sorting",
+      "name": "affine-residue decoder for the generated promise",
+      "operation_samples": [154, 154, 154, 154, 154, 154, 154, 154],
+      "operations": 1232,
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec": 0.049525
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "candidate_triples": 772,
+      "complexity": "O(n^2) candidate generation plus exponential worst-case exact-cover search",
+      "name": "quadratic exact-triple generation plus generic Algorithm X",
+      "operation_samples": [4350, 4653, 5519, 5291, 5072, 6802, 5671, 5247],
+      "operations": 42605,
+      "search_nodes": 248,
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec": 0.062572
+    },
+    "track_b_note": "The successful reference is intentionally outside attacks; Track B claims no-tool compression, not absence of an efficient algorithm."
+  },
+  "G7_scales": {
+    "fixed_length_escalation": {"n": 30, "noise_span": 4, "q": 10091, "screen_restarts": 256},
+    "ladder": [
+      {"candidate_space": 288, "n": 2, "preset": "demo", "q": 101, "take_components": 6},
+      {"candidate_space": 26652967374846288956880550278856005326300287894290432000000000, "n": 18, "preset": "easy", "q": 1009, "take_components": 54},
+      {"candidate_space": 4125890866257834775263491399937790428857691628337559324152937252436826167707218319693834208508116992000000000000000000000, "n": 30, "preset": "medium", "q": 1009, "take_components": 90},
+      {"candidate_space": 1334710760959436067412676953740895385807038340552137761803035603123763651366308615068911014273520286664399127051730052061722204083745664647265022659622856556544000000000000000000000000000, "n": 42, "preset": "hard", "q": 1009, "take_components": 126}
+    ],
+    "pass": true,
+    "size_doubled_params": {"n": 60, "noise_span": 4, "q": 1009, "screen_restarts": 0},
+    "size_doubled_reason": "ok",
+    "size_doubled_verifies": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "key_definition": "SHA-256 of the sorted take-path length multiset, host size, target, and split-position sequence",
+    "pass": true,
+    "transformations": [
+      "arbitrary relabeling/reordering of take components",
+      "composition of two take-component relabelings",
+      "reflection of the fixed host path with path-component reversal",
+      "component relabelings composed with host reflection"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 601,
+    "answer_elements": 180,
+    "answer_tokens": 151,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 0},
+      "hinted": {"attempts": 2, "error_redraws": 4, "solved": 1},
+      "placebo": {"attempts": 0, "error_redraws": 4, "solved": 0}
+    },
+    "caps_only_gate": true,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "incomplete: quota exhausted after 2/3 completed attempts",
+    "intended_route_operations": 182,
+    "pass": true
+  },
+  "all_gates_pass": true,
+  "shipping_difficulty": "medium",
+  "shipping_params": {"n": 30, "noise_span": 4, "q": 1009, "screen_restarts": 128},
+  "track": "B"
+}
