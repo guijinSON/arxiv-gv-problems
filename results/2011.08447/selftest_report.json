@@ -1,0 +1,124 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "expected exactly 6 vertices", "rejected": true},
+      "duplicate": {"reason": "vertex IDs must be distinct", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "vertex ID outside 0..15", "rejected": true},
+      "replace_one": {"reason": "vertices 0 and 1 are not adjacent", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed": [0, 3, 4, 5, 6, 11],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 598191506203970835856150766731728,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over all k-element vertex subsets",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "exact_small_count": {
+      "candidate_space": 8008,
+      "k": 6,
+      "n": 16,
+      "preset": "demo",
+      "valid_answers": 1
+    },
+    "pass": true,
+    "shipping_density": {
+      "hits": 0,
+      "k": 16,
+      "n": 768,
+      "observed_fraction": 0.0,
+      "preset": "easy",
+      "samples": 200000
+    },
+    "strongest_attack": {
+      "attempts": 8,
+      "name": "greedy-color upper-bound exact clique search",
+      "node_cap": 100000,
+      "nodes_per_seed": [100001, 100001, 100001, 100001, 100001, 100001, 100001, 100001],
+      "successes": 0,
+      "total_wall_clock_sec": 54.583571,
+      "wall_clock_sec_per_seed": [11.067454, 9.814267, 8.474904, 7.390507, 3.853765, 3.513232, 4.591747, 5.877695]
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "centered_spectral_rounding": {
+        "attempts": 8,
+        "iterations": 48,
+        "max_estimated_operations": 14445408,
+        "successes": 0
+      },
+      "exact_color_bound_100k": {
+        "attempts": 8,
+        "exhausted_attempts": 8,
+        "max_nodes": 100001,
+        "node_cap": 100000,
+        "successes": 0
+      },
+      "greedy_residual_degree": {"attempts": 8, "successes": 0},
+      "outlier_top_degree": {"attempts": 8, "successes": 0},
+      "random_restart_256": {"attempts": 8, "restarts_per_attempt": 256, "successes": 0}
+    },
+    "paper_sdp_not_run": "No standard-library SDP solver is available; centered spectral rounding and exact color-bound maximum-clique search were run instead.",
+    "pass": true
+  },
+  "G7_scales": {
+    "doubled": {
+      "candidate_space": 140032709301619690761593708058048265714378780160,
+      "k": 21,
+      "n": 1536,
+      "verify_reason": "ok"
+    },
+    "pass": true,
+    "shipping": {
+      "candidate_space": 598191506203970835856150766731728,
+      "k": 16,
+      "n": 768
+    }
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated": 20,
+    "failures": [],
+    "invariance_checks": 60,
+    "key_kind": "8-round color-refinement quotient; strong invariant, not complete GI",
+    "nontrivial_transformations": 60,
+    "pass": true,
+    "real_transform_verify_checks": 60,
+    "transformations": ["vertex permutation A", "vertex permutation B", "A composed with B"],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 65,
+    "answer_elements": 16,
+    "answer_tokens": 33,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"atomic_elements": 256, "chars": 2000, "operations": 300, "tokens": 500},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 100001,
+    "operation_definition": "minimum measured nodes of the strongest branch search; the paper supplies no shorter post-insight answer-producing route",
+    "pass": false
+  },
+  "all_passed": false,
+  "shipping_difficulty": "easy",
+  "track": "A"
+}
