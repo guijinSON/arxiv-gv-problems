@@ -1,0 +1,160 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "json_roundtrips": 16,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "wrong length: expected 3 integers, got 2",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "duplicate multiplier fields: the required unit is non-involutory",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "empty answer: expected target index, multiplier, and inverse",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "target index out of range: expected 0..2",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "signature mismatch: the multiplier does not map the source multiset to the selected target",
+        "rejected": true
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed": [
+      2,
+      501307,
+      410355
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform target index and uniform odd non-involutory unit; the inverse is filled in because the statement makes it free",
+    "structure_aware_space": 1572852,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_candidates_tested": 1299221,
+    "baseline_modular_products": 1299237,
+    "baseline_wall_seconds": 0.162579,
+    "enumeration_wall_seconds": 0.341091,
+    "pass": true,
+    "shipping_candidate_count": 1572852,
+    "shipping_exact_solution_count": 1,
+    "shipping_solution_fraction": 6.357877282795838e-07,
+    "strongest_attack": "exhaustive unit-action search"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_small_unit_scan_4095": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_smallest_modular_gap": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_single_sum_lift": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_2adic_rank_alignment": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "standard_unit_anchor_normalization": {
+        "attempts": 8,
+        "successes": 8
+      }
+    },
+    "compact_route": {
+      "complexity": "O(h*r^2) with h<=3 and r=8",
+      "median_wall_clock_sec": 1.239e-05,
+      "name": "modular signature-sum invariant and eight lifts",
+      "operation_definition": "exact additions, gcd/inverse, lift formation, and modular products until a mismatch",
+      "operations": 40,
+      "solves": "8/8, as expected",
+      "worst_case_operation_bound": 247
+    },
+    "pass": false,
+    "reference_algorithm": {
+      "complexity": "O(h*2^n*r) exact modular products, h<=3 and r=8",
+      "median_candidates": 374323,
+      "median_modular_products": 374334,
+      "median_wall_clock_sec": 0.045057,
+      "name": "exhaustive unit-action search",
+      "operation_definition": "one product/reduction for every tested source entry, stopping a candidate at its first miss",
+      "operations": 374334,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.045057
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 40,
+    "doubled_search_space": 1649267441652,
+    "doubled_verify_reason": "ok",
+    "fixed_answer_elements": 3,
+    "pass": true,
+    "shipping_n": 20,
+    "shipping_search_space": 1572852
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "key_basis": "minimum unit-normalized source/target form; never the seed or rendered text",
+    "pass": true,
+    "symmetries": "reordering either multiset, permuting target signatures, a global unit automorphism, and their compositions",
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 19,
+    "answer_elements": 3,
+    "answer_tokens": 5,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 247,
+    "pass": true
+  },
+  "all_passed": false,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
