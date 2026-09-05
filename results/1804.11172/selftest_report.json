@@ -1,0 +1,119 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "inverse determinant generation via det(L+1*v^T)=1+sum(v)",
+    "field_modulus_irreducible": true,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {"reason": "polynomial is not the determinant orbit invariant", "rejected": true},
+      "duplicate": {"reason": "the sparse polynomial contains a duplicate exponent", "rejected": true},
+      "empty": {"reason": "zero polynomial is not a valid orbit label", "rejected": true},
+      "out_of_range": {"reason": "an exponent is outside the inclusive range 0..127", "rejected": true},
+      "swap": {"reason": "exponents are not in strictly increasing order", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_native": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 340282366920938463463374607431768211455,
+    "candidate_space_bits": 128,
+    "exact_probability": 2.938735877055719e-39,
+    "exact_valid_answers": 1,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over all nonzero degree-below-128 polynomials over GF(2)",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack": "column backgrounds XORed without the rank-one correction",
+    "baseline_attack_iterations": 1681,
+    "baseline_attack_successes": 0,
+    "baseline_attack_wall_clock_seconds": 0.000281,
+    "pass": true,
+    "reference_algorithm": "exact Gaussian determinant over GF(2^128)",
+    "reference_operations": {
+      "field_additions": 3242,
+      "field_inversions": 41,
+      "field_multiplications": 13808,
+      "pivot_tests": 310,
+      "row_swaps": 35,
+      "shift_xor_steps": 555217
+    },
+    "reference_wall_clock_seconds": 0.084438,
+    "shipping_density_fraction": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_enumeration": null,
+    "shipping_exact_valid_answers": 1
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "column_background_without_rank_one_correction": {"attempts": 8, "successes": 0},
+      "displayed_trace_ansatz": {"attempts": 8, "successes": 0},
+      "greedy_displayed_diagonal_product": {"attempts": 8, "successes": 0},
+      "outlier_most_frequent_entry": {"attempts": 8, "successes": 0},
+      "random_restart_256": {"attempts": 8, "successes": 0}
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(s^3) finite-field operations",
+      "field_operations_max": 19445,
+      "field_operations_mean": 16267,
+      "name": "exact Gaussian determinant over GF(2^128)",
+      "shift_xor_steps_max": 498345,
+      "shift_xor_steps_mean": 418229,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.072444,
+      "wall_clock_sec_mean": 0.061269
+    }
+  },
+  "G7_scales": {
+    "answer_language_bits_at_both_sizes": 128,
+    "doubled_matrix_order": 81,
+    "doubled_n": 40,
+    "doubled_planted_verifies": true,
+    "doubled_reference_field_operations": 41685,
+    "pass": true,
+    "shipping_matrix_order": 41,
+    "shipping_n": 20,
+    "shipping_reference_field_operations": 17091
+  },
+  "G8_canonical_key": {
+    "attempts_each": 20,
+    "canonicalization": "unordered row and column multisets plus the full entry multiset",
+    "composed_relabellings_invariant": 20,
+    "original_witnesses_valid_after_relabelling": 20,
+    "pass": true,
+    "transformations": "independent row/column permutations, transpose, and compositions",
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 245,
+    "answer_elements": 77,
+    "answer_tokens": 62,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "diagnostic_status": "OpenRouter returned HTTP 403 key-limit errors on every redraw",
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "api_blocked_no_scored_attempts",
+    "intended_route_operations": 41,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {"n": 20},
+  "track": "B"
+}
