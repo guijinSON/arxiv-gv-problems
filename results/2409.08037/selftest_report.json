@@ -1,0 +1,185 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "inverse generation plus composition of cyclic XOR identities",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_element": {
+        "reason": "answer has too few row indices: expected 12, got 11",
+        "rejected": true
+      },
+      "duplicate_one_element": {
+        "reason": "chosen vectors leave 7 coordinate(s) uncovered; first is clause c114",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "row index for A_1 is out of range: expected 0..31, got 32",
+        "rejected": true
+      },
+      "swap_two_elements": {
+        "reason": "chosen vectors leave 15 coordinate(s) uncovered; first is clause c4",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 59,
+    "exact_fraction": 1.734723475976807e-18,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_constraints": [
+      "exactly one row from every displayed set",
+      "every row index already satisfies its group-specific range",
+      "rows jointly sample the full Boolean assignment space uniformly"
+    ],
+    "total": 200000,
+    "wall_clock_sec": 8.492485
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_nodes": 2048,
+    "baseline_attack_restarts": 2048,
+    "baseline_attack_successes": 0,
+    "baseline_attack_wall_clock_sec": 0.176069,
+    "demo_candidate_space": 32,
+    "demo_exact_solution_count": 1,
+    "demo_exact_solution_fraction": 0.03125,
+    "pass": true,
+    "reference_operation_count": 29041,
+    "reference_wall_clock_sec": 0.00086,
+    "shipping_exact_solution_count": 1,
+    "shipping_exact_solution_fraction": 1.734723475976807e-18,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density_estimate": 0.0,
+    "strongest_failing_attack": "random_restart_2048"
+  },
+  "G6_adversary_panel": {
+    "additional_reference_algorithm": {
+      "complexity": "exponential worst case",
+      "max_literal_operations": 808167,
+      "max_nodes": 445,
+      "name": "plain DPLL with unit propagation on the displayed 3-CNF",
+      "solves": "8/8, as expected for a Track B reference",
+      "wall_clock_sec": 0.279143,
+      "wall_clock_sec_total_8": 2.233146
+    },
+    "attacks": {
+      "by_hand_literal_majority": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.036833
+      },
+      "greedy_group_coverage": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000643
+      },
+      "outlier_min_vector_weight": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.008689
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.089419
+      }
+    },
+    "intended_compact_route": {
+      "name": "tight-cycle recovery and cyclic XOR recurrence",
+      "operations": 298,
+      "solves": "8/8",
+      "wall_clock_sec": 0.003836
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(C log C + n^3) exact Boolean operations",
+      "name": "XOR-quartet recovery plus Gauss-Jordan elimination over GF(2)",
+      "operations": 33001,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.004576,
+      "wall_clock_sec_total_8": 0.036612
+    }
+  },
+  "G7_scales": {
+    "cap_reason": "5n+3 exact bit operations would exceed G9(c) above n=59",
+    "doubled_build_and_verify_sec": 0.211898,
+    "doubled_coordinates": 472,
+    "doubled_n": 118,
+    "doubled_sets": 24,
+    "doubled_verify_reason": "ok",
+    "escalation_after_shipping": "cap_bound",
+    "escalation_from_medium": {
+      "block_bits": 5,
+      "copies": 1,
+      "n": 59
+    },
+    "pass": true,
+    "shipping_coordinates": 236,
+    "shipping_n": 59,
+    "shipping_sets": 12
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariant_relabellings": 120,
+    "pass": true,
+    "real_transformations_verified": 120,
+    "transformations": [
+      "candidate-row reordering with carried witness",
+      "coordinate/literal ordering plus arbitrary variable renaming",
+      "vector-set reordering with carried witness",
+      "independent Boolean value complementation with carried semantics",
+      "within-set variable-coordinate reordering",
+      "composition of all preceding transformations"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 37,
+    "answer_elements": 12,
+    "answer_tokens": 26,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "oracle_unreachable_http_403",
+    "intended_route_operations": 298,
+    "oracle_evidence_ready": false,
+    "pass": true,
+    "planted_answer_chars": 32,
+    "within_caps": true
+  },
+  "all_passed": true
+}
