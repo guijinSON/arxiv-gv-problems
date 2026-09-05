@@ -1,0 +1,126 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_element": {"accepted": false, "reason": "placement 0 must be a three-integer JSON list"},
+      "drop_one": {"accepted": false, "reason": "wrong tile count: expected 48, got 47"},
+      "duplicate": {"accepted": false, "reason": "duplicate placement"},
+      "empty": {"accepted": false, "reason": "answer is empty"},
+      "out_of_range": {"accepted": false, "reason": "placement 0 has omitted-corner code outside 0..3"},
+      "swap_coordinates": {"accepted": false, "reason": "placement 0 covers a defect or lies outside the diamond"}
+    },
+    "distinct_reasons": 6,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": "1152644072430357592751388623601511977221420962808575",
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform n-subset of all distinct legal L placements wholly inside the free cells; shape, tile count, in-region placement, and duplicate exclusion are enforced",
+    "total": 200000,
+    "wall_clock_sec": 23.500473
+  },
+  "G5_density_and_baseline": {
+    "demo_exact_solution_count": 2,
+    "demo_n": 6,
+    "pass": true,
+    "reference_nodes": 1113,
+    "reference_operations": 213057,
+    "reference_wall_clock_sec": 0.265692,
+    "shipping_candidate_space": "1152644072430357592751388623601511977221420962808575",
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_attack_attempts": 8,
+    "strongest_attack_wall_clock_sec": 8.401245,
+    "strongest_failing_attack": "random_restart_most_constrained"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_bounding_box_parity": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.000782},
+      "greedy_lexicographic": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.007658},
+      "outlier_low_cell_frequency": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.224726},
+      "random_restart_most_constrained": {"attempts": 8, "successes": 0, "wall_clock_sec": 8.401245}
+    },
+    "compact_route": {
+      "attempts": 8,
+      "complexity": "linear scan plus exponential search only in the fixed-size fringe",
+      "name": "dominant 2-by-2 anchor-parity decomposition plus bounded residual exact cover",
+      "operation_samples": [992, 1050, 1084, 1180, 986, 1042, 1096, 1113],
+      "operations": 8543,
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec": 0.011286
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "exponential worst case after O(P) placement enumeration",
+      "legal_placements": 1973,
+      "name": "minimum-column Algorithm X on all legal L placements",
+      "nodes": 1113,
+      "operations": 213057,
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec": 0.265692
+    },
+    "track_b_note": "The successful domain-standard algorithm is intentionally outside attacks."
+  },
+  "G7_scales": {
+    "doubled_n": 96,
+    "doubled_search_space_bits": 343,
+    "doubled_verification": "ok",
+    "ladder": [
+      {"free_cells": 18, "legal_placements": 23, "n": 6, "preset": "demo", "search_space_bits": 17},
+      {"free_cells": 108, "legal_placements": 190, "n": 36, "preset": "easy", "search_space_bits": 130},
+      {"free_cells": 144, "legal_placements": 244, "n": 48, "preset": "medium", "search_space_bits": 171},
+      {"free_cells": 180, "legal_placements": 314, "n": 60, "preset": "hard", "search_space_bits": 217}
+    ],
+    "pass": true,
+    "shipping_n": 48,
+    "shipping_search_space_bits": 170
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 40,
+    "distinct_keys": 20,
+    "failures": [],
+    "invariance_checks": 40,
+    "pass": true,
+    "transformations": [
+      "arbitrary input-cell reordering",
+      "all eight square-lattice dihedral symmetries",
+      "global integer translation",
+      "compositions of these maps"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 475,
+    "answer_elements": 144,
+    "answer_tokens": 119,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 0},
+      "hinted": {"attempts": 3, "solved": 0},
+      "placebo": {"attempts": 3, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 228,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "shipping_params": {"compactness": 2, "exceptions": 6, "n": 48, "screen_restarts": 48},
+  "track": "B"
+}
