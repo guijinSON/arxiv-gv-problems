@@ -1,0 +1,192 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "generation_route": "inverse generation plus certificate-preserving vertex relabelling",
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_vertex": {
+        "reason": "expected exactly 8 vertices",
+        "rejected": true
+      },
+      "duplicate_vertex": {
+        "reason": "vertices must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "vertex outside the inclusive range 0..215",
+        "rejected": true
+      },
+      "swap_two_vertices": {
+        "reason": "vertices must be in strictly increasing order",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      23,
+      28,
+      81,
+      117,
+      129,
+      158,
+      159,
+      174
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform k-subset after enforcing exact length, distinctness, sorted order, range, and the obvious degree >= k-1 condition",
+    "structure_aware_space": 88535640906570,
+    "total": 200000,
+    "wall_clock_sec": 42.802536
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_operation_budget_per_instance": 1866240,
+    "attack_operation_budget_total_8": 14929920,
+    "attack_wall_clock_sec_mean": 0.907319,
+    "attack_wall_clock_sec_total_8": 7.258549,
+    "candidate_space": 88535640906570,
+    "construction_proven_solution_count_lower_bound": 1,
+    "demo_exact_valid_answers": 2,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "paper_candidate_subsets": 103073959989495,
+    "pass": true,
+    "reference_algorithm_nodes_mean": 1959,
+    "reference_algorithm_wall_clock_sec_mean": 0.016318,
+    "shipping_density_estimate": 0.0,
+    "strongest_failing_attack": "spectral_centered_power"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_max_common_degree": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.537365
+      },
+      "marker_common_neighbor_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.002918
+      },
+      "outlier_high_degree": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000643
+      },
+      "random_restart_16": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.154302
+      },
+      "spectral_centered_power": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 7.258549
+      }
+    },
+    "compact_route": {
+      "name": "identify twin neighborhood and XOR its adjacency rows over GF(2)",
+      "operations": 174,
+      "solves": "8/8, as expected"
+    },
+    "paper_mechanical_route": {
+      "candidate_subsets": 103073959989495,
+      "grover_iterations_if_one_solution_approx": 10152534,
+      "name": "Sections 4.2 and 5 enumerate all graph-vertex k-subsets",
+      "pair_tests_per_full_candidate": 28
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N^k) for fixed k (O(N^8) at shipping k=8); exponential when k is part of the input",
+      "intersections_mean": 1959,
+      "name": "exact increasing-order k-clique branch-and-bound with bitset intersections",
+      "nodes_max": 5344,
+      "nodes_mean": 1959,
+      "nodes_min": 51,
+      "operations": 1959,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.016318,
+      "wall_clock_sec_total_8": 0.130547
+    }
+  },
+  "G7_scales": {
+    "answer_elements_after": 8,
+    "answer_elements_before": 8,
+    "candidate_space_after": 22456752200702820,
+    "candidate_space_before": 88535640906570,
+    "doubled_core_vertices": 416,
+    "pass": true,
+    "shipping_core_vertices": 208,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_failures": [],
+    "key_method": "degree-seeded 1-WL stable quotient with class-pair edge counts",
+    "pass": true,
+    "symmetries_tested": [
+      "arbitrary vertex permutation",
+      "vertex-order reversal",
+      "composition of two arbitrary vertex permutations"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "actual_planted_answer_chars": 30,
+    "actual_planted_answer_tokens": 8,
+    "answer_chars": 33,
+    "answer_elements": 8,
+    "answer_tokens": 9,
+    "arms": {
+      "bare": {
+        "attempts": 1,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "blocked_by_api_quota",
+    "intended_route_operations": 174,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:2004.10596",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "edge_den": 4,
+    "edge_num": 1,
+    "k": 8,
+    "marker_count": 4,
+    "n": 208,
+    "witness_count": 4
+  },
+  "track": "B"
+}
