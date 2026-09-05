@@ -1,0 +1,203 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_mandatory_reasons": 5,
+    "pass": true,
+    "rejections": {
+      "drop_one": {
+        "reason": "answer must contain exactly 14 vertices",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "vertex IDs must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "a vertex ID is outside the allowed range",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "vertex IDs must be strictly increasing",
+        "rejected": true
+      },
+      "valid_shape_wrong_set": {
+        "reason": "the induced set is connected in only 6 layers, fewer than the required 13",
+        "rejected": true
+      }
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "empirical_probability": 0.0,
+    "fast_predicate_matches_verify": "100/100",
+    "hits": 0,
+    "pass": true,
+    "prior": "uniform h-subset of non-hub vertices; the hub is included for free",
+    "sampling_wall_seconds": 1.2672960800118744,
+    "structure_aware_space": 2389501662813006112000,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_algorithm": "exact balanced-biclique branch and bound",
+    "baseline_cap_reached": true,
+    "baseline_node_cap": 20000000,
+    "baseline_nodes": 20000000,
+    "baseline_successes": 0,
+    "baseline_wall_seconds": 5.3555468949489295,
+    "demo_exact_valid_count": 20,
+    "pass": true,
+    "shipping_candidate_space": 2389501662813006112000,
+    "shipping_density_sample_count": 200000,
+    "shipping_exact_valid_count": null,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_valid_hits": 0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "exact_balanced_biclique_branch_20m": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_maximum_common_layers": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_incidence_degree_extremes": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "pair_common_neighborhood_outlier": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256_greedy": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "spectral_centered_biadjacency": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "standard_attack_cost": {
+      "caps_reached": 8,
+      "complexity": "O(binomial(n,h)) worst case with common-row pruning",
+      "name": "capped exact balanced-biclique branch and bound",
+      "nodes_mean": 20000000.0,
+      "nodes_total": 160000000,
+      "wall_clock_sec_mean": 5.043574988550972,
+      "wall_clock_sec_total": 40.34859990840778
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 512,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "escalated_params": {
+      "h": 15,
+      "n": 384
+    },
+    "named_candidate_spaces": [
+      2389501662813006112000,
+      629498843449501998439382160,
+      378571300602284181123270931555800
+    ],
+    "pass": true,
+    "shipping_n": 256
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 60,
+    "key_kind": "five-round bipartite Weisfeiler-Leman invariant",
+    "pass": true,
+    "real_transformation_verify_checks": 60,
+    "symmetries": [
+      "arbitrary common-vertex relabelling",
+      "arbitrary layer permutation",
+      "incidence-row reordering",
+      "compositions of these transformations"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 52,
+    "answer_elements": 14,
+    "answer_tokens": 13,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 14,
+    "pass": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "entries": "distinct integers in [0, vertex_count)",
+      "length": "instance k = required_layers + 1",
+      "order": "strictly increasing",
+      "required_member": "the displayed shared hub"
+    },
+    "description": "A strictly increasing JSON list of exactly k distinct vertex IDs from 0 through vertex_count-1.  The list must contain the displayed shared hub; the remaining ell IDs are sampled uniformly from all non-hub vertices."
+  },
+  "problem_profile": {
+    "certificate_form": "integer_tuple",
+    "computational_core": "graph",
+    "domain_essentiality": "native",
+    "hardness_basis": "Track A: Section 4, Theorem 1 proves W[1]-hardness for combined selected-vertex/layer parameters via Balanced Biclique; the presets use k=ell+1 with ell growing from 13 to 17 in degree-preserving dense planted-biclique instances, above the logarithmic accidental-biclique scale and below the square-root spectral scale, and G5 measures the capped exact-search cost at the shipping preset.",
+    "intuition_description": "The vertex-by-layer incidence table is a bipartite graph, and a connected set in many shared-hub star layers is exactly one shore of a balanced biclique; without this recognition one searches raw subsets of the common vertex set.",
+    "intuition_type": "reduction recognition",
+    "max_answer_tokens": 13,
+    "native_domain": "combinatorics",
+    "native_objects": [
+      "multi-layer graph whose layers are stars on a shared vertex set",
+      "vertex set inducing a connected graph in many layers"
+    ],
+    "object_regime": "finite_discrete",
+    "reduction": "Section 4, Theorem 1 and Corollary 5: the central reduction from Balanced Biclique to Connectivity-ML-Subgraph using star layers",
+    "reduction_kind": "paper_licensed",
+    "reduction_source": "paper_central",
+    "verification_operations": [
+      "exact layer-incidence bitset intersection",
+      "bit population count",
+      "induced-star connectivity check"
+    ]
+  },
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "h": 13,
+    "n": 256
+  },
+  "track": "A"
+}
