@@ -1,0 +1,171 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true,
+    "verified": 16
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong edge count: expected 151, got 150",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "duplicate edge ID",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "edge ID outside the inclusive range 0..2113",
+        "rejected": true
+      },
+      "replace_one": {
+        "reason": "right vertex 104 is covered more than once",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_attempts": 4,
+    "garbage_rejected": 4,
+    "model_style_round_trip": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 116234054552797114527260423996022826628585296080380272945051872446221542764062813456968252519374126309659760862093735286805678862873367863536821697065289927978678923783307264,
+    "candidate_space_bits": 575,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform one-incident-edge choice independently at each left vertex",
+    "total": 200000,
+    "wall_clock_sec": 1.830025
+  },
+  "G5_density_and_baseline": {
+    "baseline_restarts": 256,
+    "baseline_wall_clock_sec": 0.022667,
+    "demo_candidate_space": 128,
+    "demo_exact_valid_answers": 2,
+    "pass": true,
+    "reference_cost": {
+      "edge_scans": 5132,
+      "name": "Hopcroft-Karp",
+      "phases": 3,
+      "verified": true,
+      "wall_clock_sec": 0.000711
+    },
+    "reference_edge_scans": 5132,
+    "reference_wall_clock_sec": 0.000711,
+    "shipping_density": {
+      "hits": 0,
+      "observed_fraction": 0.0,
+      "samples": 200000
+    },
+    "shipping_density_fraction": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "strongest_failing_attack": {
+      "name": "structure-aware random restart",
+      "restarts": 256,
+      "success": false,
+      "wall_clock_sec": 0.022667
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_smallest_integer_gap": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_smallest_unused_right": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_lowest_edge_id": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(|E| sqrt(|V|))",
+      "edge_scans_mean": 5008.5,
+      "name": "Hopcroft-Karp bipartite matching",
+      "operations": 40068,
+      "phases_mean": 3.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.000592,
+      "wall_clock_sec_mean": 0.0005
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 302,
+    "doubled_planted_verifies": true,
+    "doubled_space_bits": 1150,
+    "pass": true,
+    "shipping_n": 151,
+    "shipping_space_bits": 575
+  },
+  "G8_canonical_key": {
+    "carried_certificate_verifies": 60,
+    "distinct_keys": 20,
+    "invariant_relabellings": 60,
+    "invariant_successes": 60,
+    "key_strength": "exact pairwise-neighborhood intersections plus the normalized finite-field multiplier-layer pattern; not a complete GI canonical form",
+    "pass": true,
+    "transformations": [
+      "left-vertex input reordering",
+      "right-vertex input reordering",
+      "edge-ID reordering",
+      "threefold compositions of all three"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 693,
+    "answer_elements": 151,
+    "answer_tokens": 174,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 152,
+    "pass": true
+  },
+  "paper": "2311.00466",
+  "pass": true,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "degree": 14,
+    "n": 151,
+    "q": 2147483647
+  },
+  "track": "B"
+}
