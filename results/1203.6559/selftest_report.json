@@ -1,0 +1,110 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "results": {
+      "drop": {"reason": "too few entries: expected 192, got 191", "rejected": true},
+      "duplicate": {"reason": "too many entries: expected 192, got 193", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "entry 0 is outside 0..2", "rejected": true},
+      "swap": {
+        "reason": "chosen pairings create a directed precedence cycle (residual nodes [0, 1, 2, 3, 8, 9], candidate 5b5a4716)",
+        "rejected": true
+      }
+    },
+    "swap_note": "chosen pairings create a directed precedence cycle (residual nodes [0, 1, 2, 3, 8, 9], candidate 5b5a4716)"
+  },
+  "G3_round_trip": {"parsed_matches": true, "pass": true},
+  "G4_guess_resistance": {
+    "candidate_space": "40483766022843281411184472189571654752207506882090305742200116101065766026718820758174775041",
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over all three locally legal pairings per group",
+    "total": 200000,
+    "wall_clock_sec": 95.401427
+  },
+  "G5_density_and_baseline_cost": {
+    "demo_candidate_space": 729,
+    "demo_exact_valid_answers": 96,
+    "paper_pairing_search_cost": {
+      "node_cap_per_seed": 256,
+      "nodes": 2048,
+      "wall_clock_sec": 98.793654
+    },
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "shipping_density": {"hits": 0, "observed_fraction": 0.0, "total": 200000},
+    "strongest_attack": {
+      "iteration_cap_per_seed": 3000,
+      "name": "depth-outlier-seeded cycle-score repair hill-climber",
+      "operations": 48705,
+      "seeds": 8,
+      "wall_clock_sec": 14.264509
+    },
+    "strongest_attack_operations": 48705,
+    "strongest_attack_wall_clock_sec": 14.264509
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "depth_outlier_repair_hillclimb_3000": {"attempts": 8, "successes": 0},
+      "greedy_exposed_lexicographic": {"attempts": 8, "successes": 0},
+      "outlier_minimum_depth_gap": {"attempts": 8, "successes": 0},
+      "paper_group_pairing_dfs_256": {"attempts": 8, "successes": 0},
+      "random_restart_32": {"attempts": 8, "successes": 0}
+    },
+    "outlier_entries": {"matches": 1103, "total": 1536},
+    "outlier_entry_accuracy": 0.7180989583333334,
+    "pass": true,
+    "random_restart_trials_executed": 256,
+    "standard_algorithm_note": "The paper_group_pairing attack is the paper's natural ternary group-pairing recursion with exact cycle pruning and a critical-group proxy."
+  },
+  "G7_scales": {
+    "doubled_build_sec": 0.022757,
+    "doubled_n": 384,
+    "doubled_verifies": true,
+    "pass": true,
+    "reason": "ok",
+    "search_spaces_strictly_increase": true
+  },
+  "G8_canonical_key": {
+    "distinct_keys": 20,
+    "invariance_checks": 140,
+    "invariance_failure": null,
+    "pass": true,
+    "transformations": [
+      "tile renaming",
+      "group renaming",
+      "stack permutation",
+      "tile+group",
+      "tile+stack",
+      "group+stack",
+      "tile+group+stack"
+    ],
+    "transformed_answer_verifies": 140,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 385,
+    "answer_elements": 192,
+    "answer_tokens": 97,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 0},
+      "hinted": {"attempts": 3, "solved": 0},
+      "placebo": {"attempts": 3, "solved": 0}
+    },
+    "arms_note": "measured by harden.py; see the three transcript files",
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 192,
+    "pass": true
+  },
+  "pass": true,
+  "shipping_difficulty": "easy",
+  "track": "A"
+}
