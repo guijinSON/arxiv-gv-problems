@@ -1,0 +1,176 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "too few labels: expected 240, got 239"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "too many labels: expected 240, got 241"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "vertex 1 has forbidden label 10"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "arc 1 (4->17) has endpoint labels less than 2 apart"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 565979942426669522969304346937735406331501291897547203309844867615795582708546889020041735912578634188142192276769431693061699419373083058857901245215560592792611970000,
+    "candidate_space_log2": 557.263,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over all onto vectors of n entries from the q allowed even labels; shape, range, coverage, and nonemptiness are enforced",
+    "total": 200000,
+    "wall_clock_sec": 7.715491
+  },
+  "G5_density_and_baseline": {
+    "demo_candidate_count": 40824,
+    "demo_exact_valid_solution_count": 384,
+    "pass": true,
+    "shipping_candidate_space_log2": 557.263,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_attack_attempts": 8,
+    "strongest_attack_node_budget_per_seed": 100000,
+    "strongest_attack_nodes": 800008,
+    "strongest_attack_wall_clock_sec": 43.150242
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "dsatur_dpll_symmetry_normalized_100000_nodes": {
+        "attempts": 8,
+        "operations": 800008,
+        "successes": 0,
+        "wall_clock_sec": 43.150242
+      },
+      "greedy_largest_degree_first": {
+        "attempts": 8,
+        "operations": 10374,
+        "successes": 0,
+        "wall_clock_sec": 0.003187
+      },
+      "min_conflicts_16x200n": {
+        "attempts": 8,
+        "operations": 40705589,
+        "successes": 0,
+        "wall_clock_sec": 19.023863
+      },
+      "nonbacktracking_spectral_kmeans": {
+        "attempts": 8,
+        "operations": 129893440,
+        "successes": 0,
+        "wall_clock_sec": 7.951878
+      },
+      "outlier_orientation_imbalance": {
+        "attempts": 8,
+        "operations": 15372,
+        "successes": 0,
+        "wall_clock_sec": 0.001773
+      },
+      "random_greedy_64_restarts": {
+        "attempts": 8,
+        "operations": 653348,
+        "successes": 0,
+        "wall_clock_sec": 0.059011
+      },
+      "spectral_bottom_subspace_kmeans": {
+        "attempts": 8,
+        "operations": 9077760,
+        "successes": 0,
+        "wall_clock_sec": 0.66925
+      }
+    },
+    "construction_aware_attack": "nonbacktracking spectral subspace plus k-means",
+    "domain_standard_attack": "symmetry-normalized exact DSATUR/DPLL with propagation",
+    "pass": true
+  },
+  "G7_scales": {
+    "build_and_verify_wall_clock_sec": 0.009433,
+    "doubled_arcs": 3429,
+    "doubled_search_log2": 1114.525,
+    "doubled_verify_reason": "ok",
+    "doubled_vertices": 480,
+    "pass": true,
+    "shipping_arcs": 1697,
+    "shipping_search_log2": 557.263,
+    "shipping_vertices": 240
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 100,
+    "pass": true,
+    "real_transform_checks": 100,
+    "transformations": [
+      "arc-list reorder",
+      "global arc reversal",
+      "independent reversal of alternating arcs",
+      "vertex relabeling",
+      "composed relabeling, per-arc reorientation, and reorder"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 720,
+    "answer_elements": 240,
+    "answer_tokens": 180,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unreachable_openrouter_key_limit",
+    "intended_route_operations": 240,
+    "pass": true,
+    "route_measurement": "one propagated class assignment per vertex after search"
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "avg_degree": 14,
+    "colors": 5,
+    "n": 240
+  },
+  "track": "A"
+}
