@@ -1,0 +1,149 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "empty": {
+        "rejected": true,
+        "reason": "answer list is empty"
+      },
+      "drop_one": {
+        "rejected": true,
+        "reason": "expected exactly 74 exponents, got 73"
+      },
+      "swap_two": {
+        "rejected": true,
+        "reason": "coordinate 0 mismatch: product log is 3693, target log is 5634"
+      },
+      "duplicate_entry": {
+        "rejected": true,
+        "reason": "coordinate 0 mismatch: product log is 514, target log is 5634"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "entry 0=10007 is outside the inclusive range 0..10006"
+      }
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "surrounding_prose_and_fence": true,
+    "json_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "exact_probability": "1/105314600362664621159717053201829482411996633554613750297127377969085624515442921180377200249002083876685899709799709579118320690552181551773435401583800512988683930009681294283285071022879072245763299396304722060047594917458665785608595155491231097951821798491773598882767681018638592770282016849",
+    "prior": "uniform over all n-tuples in F_q^n, exactly the stated language",
+    "candidate_space_bits": 984,
+    "sampling_wall_seconds": 6.744135888991877
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "reference_wall_seconds": 0.022070307983085513,
+    "reference_operation_count": 418877,
+    "reference_success_count": 1,
+    "strongest_failing_attack_budget": 4588,
+    "strongest_failing_attack_wall_seconds": 0.0011283939238637686,
+    "demo_exact_solution_count": 1,
+    "shipping_candidate_space_bits": 984,
+    "enumerate_all_shipping": null
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_repeated_column_value": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "target_as_exponents": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_diagonal_only": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_forward_substitution": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_64_scalar_shifts": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "in_context_average_shift_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "strongest_failing_attack_operations": 37888,
+    "strongest_failing_attack_wall_seconds": 0.008846926968544722,
+    "reference_algorithm": {
+      "name": "dense Gauss-Jordan elimination over F_q",
+      "complexity": "O(n^3) exact field operations",
+      "wall_clock_sec": 0.18959371210075915,
+      "mean_wall_clock_sec": 0.023699214012594894,
+      "operations": 3351016,
+      "mean_operations": 418877,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 74,
+    "doubled_n": 148,
+    "doubled_verify": "ok",
+    "dense_elimination_cost_ratio": 8
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 120,
+    "transformed_witness_checks": 120,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "arbitrary CRT-coordinate relabelling, arbitrary generator reordering, coordinate-root changes of basis, and independent compositions of these transformations"
+  },
+  "G9_no_tool_suitability": {
+    "pass": false,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "pending",
+    "answer_chars": 444,
+    "answer_tokens": 111,
+    "answer_elements": 74,
+    "answer_size_sample_count": 256,
+    "intended_route_operations": 296
+  },
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 74,
+    "q": 10007,
+    "cofactor_start": 8000
+  },
+  "all_passed": false
+}
