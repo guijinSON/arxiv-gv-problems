@@ -1,0 +1,156 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": [],
+    "generation_route": "composition of factor identities plus Lemmas 2.5 and 3.1"
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop_one": {
+        "rejected": true,
+        "reason": "x generator must have exactly two terms"
+      },
+      "swap_one": {
+        "rejected": true,
+        "reason": "x generator must be exactly the monic polynomial x-r"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "generators must contain exactly two polynomials"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "answer must be a JSON object"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "x root is outside the inclusive bound"
+      }
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "surrounding_prose_and_fence": true,
+    "json_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "exact_probability": 1.8204201720945755e-07,
+    "exact_valid_answers": 4096,
+    "prior": "uniform over normalized integer root pairs in the stated inclusive bound; polynomial shape, generator order, and power are enforced",
+    "search_space": 22500300001,
+    "sampling_wall_seconds": 24.86952206888236
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_exact_valid_fraction": 1.8204201720945755e-07,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "shipping_exact_valid_answers_by_construction": 4096,
+    "shipping_candidate_space": 22500300001,
+    "baseline_wall_seconds": 1.4535065749660134,
+    "baseline_operation_count": 99544,
+    "baseline_success_count": 1,
+    "demo_exact_solution_count_by_bruteforce": 16,
+    "demo_candidate_space": 1681,
+    "enumerate_all_shipping": null
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_vieta_mean_neighborhood_16": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_small_integer_roots_32": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256_normalized_pairs": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "in_context_unit_spacing_progression_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "exact Sturm-sequence isolation of one integer root per polynomial",
+      "complexity": "O(n^3 + n^2 log B) exact rational operations per polynomial",
+      "wall_clock_sec": 13.420215614838526,
+      "mean_wall_clock_sec": 1.6775269518548157,
+      "operations": 946502,
+      "mean_operations": 118312.75,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 64,
+    "doubled_n": 128,
+    "base_root_bound": 75000,
+    "doubled_root_bound": 150000,
+    "doubled_verify": "ok",
+    "reference_operation_growth": "approximately 4x",
+    "answer_shape_growth": "none"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 100,
+    "invariance_attempts": 100,
+    "transformed_witness_checks": 100,
+    "transformed_witness_attempts": 100,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "independent integer translations, independent reflections, x/y interchange, arbitrary term-table reorder, and their composition"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "blocked_external_403",
+    "answer_chars": 96,
+    "answer_tokens": 24,
+    "answer_elements": 17,
+    "answer_size_sample_count": 1000,
+    "intended_route_operations": 296,
+    "intended_route_endpoint_checks": true,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 64,
+    "root_bound": 75000,
+    "tensor_power": 5
+  },
+  "all_passed": true
+}
