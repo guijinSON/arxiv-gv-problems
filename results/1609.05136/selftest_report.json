@@ -1,0 +1,167 @@
+{
+  "G1_planted_verifies": {
+    "json_round_trips": 12,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "wrong number of coordinates: expected 96",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "agent 1 is not balanced (exact discrepancy 7/257)",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "coordinate 0 is outside the open interval (-1,1)",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "agent 80 is not balanced (exact discrepancy 191/257)",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_coordinates": 96,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "pass": true,
+    "probability": 0.0,
+    "structure_aware_space": 148342997628886908744261103912952065146996588067043173455223864226264448814746063959243960000719746257357319957425134806500624235150815120238805203367568282128595285180501241732628340373466372367806042256031780724843504745404487873647457884846682947613137879041,
+    "total": 200000,
+    "wall_clock_sec": 19.746496
+  },
+  "G5_density_and_baseline": {
+    "baseline_iterations": 512.0,
+    "baseline_wall_clock_sec": 0.049612,
+    "demo_candidate_count": 25,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "shipping_density_samples": 200000,
+    "shipping_sampled_density": 0.0,
+    "shipping_solution_hits": 0,
+    "strongest_failing_attack": "random_restart_512"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "common_offset_ansatz": {
+        "attempts": 8,
+        "median_iterations": 96.0,
+        "median_wall_clock_sec": 0.004433,
+        "successes": 0
+      },
+      "direct_target_without_background": {
+        "attempts": 8,
+        "median_iterations": 96.0,
+        "median_wall_clock_sec": 0.000321,
+        "successes": 0
+      },
+      "greedy_one_pass": {
+        "attempts": 8,
+        "median_iterations": 96.0,
+        "median_wall_clock_sec": 0.000557,
+        "successes": 0
+      },
+      "outlier_local_exception_only": {
+        "attempts": 8,
+        "median_iterations": 96.0,
+        "median_wall_clock_sec": 0.000389,
+        "successes": 0
+      },
+      "random_restart_512": {
+        "attempts": 8,
+        "median_iterations": 512.0,
+        "median_wall_clock_sec": 0.049612,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "O(n^3) rational field operations",
+      "name": "dense exact Gauss-Jordan elimination",
+      "operations": 54819,
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec": 0.015949
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 192,
+    "doubled_reason": "ok",
+    "doubled_space_bits": 1728.54,
+    "doubled_verifies": true,
+    "pass": true,
+    "shipping_n": 96,
+    "shipping_space_bits": 864.27
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "carried_witness_total": 80,
+    "distinct_unrelated_keys": 20,
+    "distinctness_total": 20,
+    "invariance_checks": 80,
+    "invariance_total": 80,
+    "pass": true,
+    "symmetries": [
+      "agent reorder",
+      "positive per-agent scaling",
+      "global interval reflection",
+      "reflection composed with scaling"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 988,
+    "answer_elements": 192,
+    "answer_tokens": 247,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 288,
+    "pass": false
+  },
+  "all_passed": false,
+  "hardening_status": {
+    "max_attempted_answer_chars": 1876,
+    "max_attempted_attempts": 3,
+    "max_attempted_params": {
+      "n": 96,
+      "q": 16847121
+    },
+    "max_attempted_solved": 1,
+    "next_answer_chars_sampled_max": 2138,
+    "next_params": {
+      "n": 96,
+      "q": 269553937
+    },
+    "reason": "One oracle still solved the largest in-cap fixed-length grid; the next grid escalation exceeds the 2000-character answer cap.",
+    "verdict": "cap_bound"
+  },
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
+
