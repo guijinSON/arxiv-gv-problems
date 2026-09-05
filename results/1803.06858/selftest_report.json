@@ -1,0 +1,138 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "instances": 16,
+    "generation_route": "inverse generation: sample C1,C2, then publish their conjugates and retain T=C2*C1^-1"
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "empty": "answer matrix must have 2 rows, got 0",
+      "drop_one": "answer matrix must have 2 rows, got 1",
+      "out_of_range": "entry (0,0) is outside 0..8388616",
+      "swap_two": "matrix does not preserve the projective cycle edges",
+      "duplicate": "projective matrix must be invertible"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "json_native": true,
+    "answer_elements": 4
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "exact_valid_answers": 16777234,
+    "structure_aware_space": 70368886784072,
+    "exact_probability": {
+      "numerator": 2,
+      "denominator": 8388616
+    },
+    "exact_log10_probability": -6.622660318782882,
+    "prior": "uniform normalized projectivities mapping A's unique hub to B's; shape, invertibility, normalization, and the free hub constraint are already enforced"
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sample_fraction": 0.0,
+    "shipping_exact_solution_count": 16777234,
+    "shipping_exact_density": {
+      "numerator": 2,
+      "denominator": 8388616
+    },
+    "shipping_exact_log10_density": -6.622660318782882,
+    "demo_exact_solution_count": 14,
+    "demo_candidate_count": 42,
+    "reference_max_wall_seconds": 337.5389425109606,
+    "reference_mean_wall_seconds": 80.26746401732089,
+    "reference_max_exact_operations": 209693940,
+    "reference_attempts": 8,
+    "failing_restart_wall_seconds": 0.1405870916787535,
+    "failing_restart_candidates": 2048
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_coefficient_ratio": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_align_fixed_and_small_labels": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_affine_shift_only": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "explicit materialization plus cycle traversal/canonization",
+      "complexity": "O(N log p) bit time and O(p) stored successors",
+      "wall_clock_sec_max": 337.5389425109606,
+      "wall_clock_sec_mean": 80.26746401732089,
+      "operations": 209693940,
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "parabolic fixed points plus three-point projective conjugacy",
+      "operations": 65,
+      "solves": "8/8"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 8388607,
+    "base_prime": 8388617,
+    "doubled_n": 16777214,
+    "doubled_prime": 16777259,
+    "base_graph_order": 23724177,
+    "doubled_graph_order": 41365667,
+    "planted_verifies": true,
+    "fixed_length_axis": "prime/projective-line size; answer remains four residues"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 120,
+    "real_transform_checks": 120,
+    "distinct_unrelated": 20,
+    "unrelated_total": 20,
+    "symmetries": "independent projective vertex relabellings, edge-generator reversal, side swap, projective matrix rescaling, and compositions",
+    "key_invariant": "rim length, pendant-leaf count, and tree width"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 2,
+        "errors": 4
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unmeasured: OpenRouter HTTP 403 total-limit exhaustion",
+    "answer_chars": 31,
+    "answer_tokens": 8,
+    "answer_elements": 4,
+    "intended_route_operations": 65,
+    "token_measure": "ceil(compact JSON characters / 4)"
+  },
+  "all_passed": true
+}
