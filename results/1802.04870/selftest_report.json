@@ -1,0 +1,189 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "attempts": 5,
+    "cases": {
+      "drop_one": {
+        "reason": "rational must contain exactly two integers",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "rational must be reduced",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "numerator is outside the declared inclusive bound",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "this certificate language requires denominator 1",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true,
+    "surrounding_prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 4865804016420388801,
+    "exact_probability": 2.0551588116277378e-19,
+    "exact_valid_answers": 1,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over every reduced denominator-one rational in [-B,B]",
+    "total": 200000,
+    "wall_clock_sec": 0.133063
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_shares_used": 10,
+    "baseline_wall_clock_sec": 6.5e-05,
+    "demo_candidate_space": 1009,
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "reference_edge_iterations": 327680,
+    "reference_feistel_round_evaluations": 2621440,
+    "reference_wall_clock_sec": 0.725686,
+    "shipping_candidate_space": 4865804016420388801,
+    "shipping_exact_valid_answers": 1,
+    "shipping_sample_density": 0.0,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_seed": 271828,
+    "shipping_solution_density": 2.0551588116277378e-19,
+    "strongest_failing_attack": "in-context truncated interpolation"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_modal_factor_count": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 6.1e-05
+      },
+      "in_context_truncated_interpolation": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 6.8e-05
+      },
+      "outlier_extreme_noncommuting_step": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 5.6e-05
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.075707
+      }
+    },
+    "intended_compact_route": {
+      "exact_operations": [
+        127,
+        125,
+        123,
+        125,
+        119,
+        121,
+        121,
+        121
+      ],
+      "maximum_exact_operations": 127,
+      "name": "Feistel-invariant lowest-set-bit counts plus interpolation",
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(sum rounds*N_i + N_i*alpha(N_i)) exact operations",
+      "edge_iterations": 2621440,
+      "feistel_round_evaluations": 20971520,
+      "name": "Proposition 4.2 complement-edge union-find after Feistel evaluation",
+      "operation_unit": "edge iterations plus Feistel round evaluations across eight instances",
+      "operations": 23592960,
+      "per_instance_edge_iterations": [
+        327680,
+        327680,
+        327680,
+        327680,
+        327680,
+        327680,
+        327680,
+        327680
+      ],
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 5.805115
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_doubled": 2,
+    "answer_atoms_shipping": 2,
+    "doubled_n": 16,
+    "doubled_reference_edge_iterations": 1310720,
+    "doubled_reference_operations": 17039360,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 14,
+    "shipping_reference_edge_iterations": 327680,
+    "shipping_reference_operations": 2949120
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariance_checks": 80,
+    "pass": true,
+    "real_transformations_verified": 80,
+    "scope": "complete for line reordering, Feistel rekeying, and every odd-unit/reflection relabelling; keyed by cycle-component isomorphism type",
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 23,
+    "answer_elements": 2,
+    "answer_tokens": 6,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 127,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "family": "RAAG direct-product factor secret sharing",
+  "paper": "arXiv:1802.04870",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "degree": 20,
+    "n": 14,
+    "rounds": 4,
+    "variations": 20
+  },
+  "track": "B"
+}
