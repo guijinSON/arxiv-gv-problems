@@ -1,0 +1,157 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop_one": {
+        "rejected": true,
+        "reason": "answer must contain exactly 96 vertex IDs"
+      },
+      "swap_two": {
+        "rejected": true,
+        "reason": "vertex IDs must be in strictly increasing order"
+      },
+      "duplicate_one": {
+        "rejected": true,
+        "reason": "deleted vertex IDs must be distinct"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "answer contains no deleted vertices"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "vertex ID outside the inclusive range 0 through N-1"
+      }
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "surrounding_prose_and_markdown_fence": true,
+    "json_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "candidate_space": 12313676437930831044535990531087950908832493810129928036240100,
+    "prior": "uniform over exact-k subsets of E12 endpoints; safe-only reservoir vertices are excluded as a statement-aware solver would exclude them",
+    "sampling_wall_seconds": 86.14629724202678
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "shipping_construction_solution_count": 1,
+    "strongest_failing_attack_wall_seconds": 0.02552302787080407,
+    "strongest_failing_attack_operations": 18680,
+    "strongest_failing_attack_name": "dynamic maximum-uncovered-degree greedy",
+    "strongest_failing_attack_success_count": 0,
+    "reference_wall_seconds": 0.0006380870472639799,
+    "reference_operation_count": 1645,
+    "reference_obstruction_edges_scanned": 192,
+    "full_expansion_wall_seconds": 1.737822593189776,
+    "full_expansion_operation_count": 12607981,
+    "full_expansion_edges_scanned": 4201248,
+    "demo_exact_solution_count": 1,
+    "demo_candidate_space": 3003,
+    "shipping_candidate_space": 12313676437930831044535990531087950908832493810129928036240100,
+    "enumerate_all_shipping": null
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_total_and_obstruction_degree": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_max_uncovered_degree": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256_structure_aware": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "in_context_single_target_side": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "block list-pair filter, Hopcroft-Karp, and Konig cover",
+      "complexity": "O(E*sqrt(V)) time and O(E+V) space",
+      "wall_clock_sec": 0.0006380870472639799,
+      "mean_wall_clock_sec": 0.0006006907497067004,
+      "measured_runs": 8,
+      "operations": 1649,
+      "total_operations": 13194,
+      "mean_operations": 1649,
+      "mean_obstruction_edges_scanned": 192,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 350000,
+    "doubled_n": 700000,
+    "base_safe_degree": 12,
+    "doubled_safe_degree": 14,
+    "answer_elements_unchanged": 96,
+    "doubled_verify": "ok",
+    "mechanical_edge_haystack_ratio": 2.333
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "transformed_witness_checks": 80,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "active-vertex renumbering and explicit-edge reordering; independent rotations and reflections of both reservoir coordinates; and a composition of active renumbering with reservoir rotation"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "answer_chars": 673,
+    "answer_tokens": 169,
+    "answer_elements": 96,
+    "answer_size_sample_count": 256,
+    "intended_route_operations": 236,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 350000,
+    "k": 96,
+    "safe_degree": 12,
+    "max_path_half": 9
+  },
+  "all_passed": true
+}
