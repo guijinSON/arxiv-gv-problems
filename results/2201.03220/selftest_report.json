@@ -1,0 +1,182 @@
+{
+  "G1_planted_verifies": {
+    "checks": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong number of vertices: expected 68, got 67",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "vertex labels must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "vertex label outside the inclusive range 0..119",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "vertex labels must be in strictly increasing order",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_native": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 33441638668669082660738803413858990,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform fixed-cardinality vertex subsets",
+    "total": 200000,
+    "wall_clock_sec": 6.491950702155009
+  },
+  "G5_density_and_baseline": {
+    "baseline_node_cap_each": 1000000,
+    "baseline_nodes_average": 1000001.0,
+    "baseline_nodes_total": 8000008,
+    "baseline_wall_clock_sec_average": 2.5107952537655365,
+    "baseline_wall_clock_sec_total": 20.086362030124292,
+    "demo_candidate_count": 210,
+    "demo_exact_valid_answer_count": 5,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_sampled_solution_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "cameron_line_square_branch_and_bound": {
+        "attempts": 8,
+        "complexity": "exponential MIS branch-and-bound on L(G)^2; Theorem 4 bounds the best cited MIS route by O(1.3139^n)",
+        "node_cap_each": 1000000,
+        "nodes_each": [
+          1000001,
+          1000001,
+          1000001,
+          1000001,
+          1000001,
+          1000001,
+          1000001,
+          1000001
+        ],
+        "successes": 0,
+        "wall_clock_sec_each": [
+          2.5331225590780377,
+          2.757809367030859,
+          2.5238868051674217,
+          2.464878402883187,
+          2.6058182229753584,
+          2.3190629209857434,
+          2.4374630979727954,
+          2.4443206540308893
+        ]
+      },
+      "greedy_left_to_right": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.008684171130880713
+      },
+      "radius_three_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.003792999777942896
+      },
+      "random_restart_min_conflict_256": {
+        "attempts": 8,
+        "best_edges": [
+          32,
+          31,
+          31,
+          31,
+          31,
+          31,
+          31,
+          31
+        ],
+        "successes": 0,
+        "wall_clock_sec": 2.479399103904143
+      },
+      "spectral_smallest_adjacency": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.044279874535277486
+      }
+    },
+    "construction_seeds": [
+      7000,
+      7001,
+      7002,
+      7003,
+      7004,
+      7005,
+      7006,
+      7007
+    ],
+    "pass": true
+  },
+  "G7_scales": {
+    "doubled_candidate_space_bits": 233,
+    "doubled_n": 240,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_candidate_space_bits": 115,
+    "shipping_n": 120
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 60,
+    "known_limit": "strong invariant, not a complete cubic-graph isomorphism test",
+    "pass": true,
+    "semantics_preserving_checks": 80,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 211,
+    "answer_elements": 68,
+    "answer_tokens": 53,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 2,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 204,
+    "operation_accounting": "after choosing the globally compatible set, inspect the three adjacency entries of each submitted vertex",
+    "oracle_evidence_scope": "pre-fix generator: the same parameters but before the triangle rejection predicate was corrected; exact replay requires a new funded oracle run",
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "2201.03220",
+  "shipping_difficulty": "easy",
+  "track": "A"
+}
