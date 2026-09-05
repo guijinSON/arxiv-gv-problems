@@ -1,0 +1,120 @@
+{
+  "G1_planted_verifies": {
+    "checks": 20,
+    "json_native_checks": 20,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "drop": "layer 0 map must be an object with exactly integer keys 'u' and 'b'",
+      "duplicate": "layer 0 b must be distinct from both 0 and u",
+      "empty": "answer must be an object with exactly the key 'maps'",
+      "out_of_range": "layer 0 b out of range [0,63]",
+      "swap": "layer 0 P(M+I) identity misses diagonal at 0"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "structure_aware_space": 804357000,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations": 387072.0,
+    "baseline_wall_clock_sec": 0.0012373676290735602,
+    "demo_exact_valid_answers": 1,
+    "demo_search_space": 15,
+    "pass": true,
+    "reference_average": {
+      "bitset_intersections": 6048.0,
+      "elementary_adjacency_comparisons": 387072.0,
+      "row_hash_lookups": 192.0,
+      "wall_clock_sec": 0.0012373676290735602
+    },
+    "shipping_density": {
+      "fraction": 0.0,
+      "hits": 0,
+      "total": 200000
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "anchor_then_lexicographic_linear_part": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "degree_tie_then_first_neighbor": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_lexicographic_transvection": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "reuse_first_layer_map": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "bitset_intersections": 6048.0,
+      "complexity": "O(sum over layers of v^3) elementary adjacency comparisons",
+      "name": "common-neighbour child reconstruction plus closed-row matching",
+      "operations": 387072.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.0012373676290735602
+    }
+  },
+  "G7_scales": {
+    "doubled_layers": 6,
+    "doubled_planted_verifies": true,
+    "pass": true,
+    "shipping_layers": 3
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 20,
+    "distinct_unrelated": 20,
+    "invariance_checks": 20,
+    "pass": true,
+    "symmetries": [
+      "neighbor-list reorder",
+      "layer reorder",
+      "common affine change of basis and translation"
+    ],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 58,
+    "answer_elements": 6,
+    "answer_tokens": 15,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "hinted_minus_placebo": 0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 90,
+    "pass": true
+  }
+}
