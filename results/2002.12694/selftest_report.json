@@ -1,0 +1,197 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 20,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong support size: expected exactly 30 bit positions",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "support contains a duplicate bit position",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer certificate is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "support position outside the inclusive range 0..59",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "support positions must be in strictly increasing order",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": {
+      "constant": 1,
+      "support": [
+        0,
+        2,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        30,
+        32,
+        36,
+        37,
+        38,
+        39,
+        42,
+        43,
+        48,
+        49,
+        50,
+        51,
+        53,
+        54
+      ]
+    },
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 236529163129722848,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over fixed-weight GF(2) linear polynomials",
+    "total": 250000
+  },
+  "G5_density_and_baseline": {
+    "demo_exact": {
+      "candidate_space": 12,
+      "n": 8,
+      "valid_certificates": 2
+    },
+    "pass": true,
+    "shipping_density": {
+      "hits": 0,
+      "n": 64,
+      "observed_fraction": 0.0,
+      "total": 250000
+    },
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 250000,
+    "strongest_attack": {
+      "name": "exact-two overlap propagation plus GF(2) Gaussian elimination",
+      "operations_max": 218950,
+      "operations_mean": 159978.25,
+      "solves": "8/8",
+      "wall_clock_sec_max": 0.0053926329128444195,
+      "wall_clock_sec_mean": 0.004551942722173408
+    },
+    "strongest_attack_operations_max": 218950,
+    "strongest_attack_wall_clock_sec_max": 0.0053926329128444195
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_balance_swap_8": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "linear_low_bits_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_bit_frequency": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "prefix_xor_constraints_8": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(B^2 + n*w^2) exact",
+      "name": "exact-two block-overlap propagation plus GF(2) Gaussian elimination",
+      "operations_max": 197510,
+      "operations_mean": 125184.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.005073952954262495,
+      "wall_clock_sec_mean": 0.004394081479404122
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_doubled": 31,
+    "answer_atoms_shipping": 31,
+    "doubled_blocks": 125,
+    "doubled_n": 128,
+    "doubled_reference_operations": 498299,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_blocks": 61,
+    "shipping_n": 64,
+    "shipping_reference_operations": 179494
+  },
+  "G8_canonical_key": {
+    "composed_transformation_checks": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "pass": true,
+    "real_transformation_checks": 20,
+    "transformations": [
+      "arbitrary positive/negative source-pair renumbering",
+      "variable-table reordering",
+      "block-row and within-block source reordering",
+      "composition of all listed transformations"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 110,
+    "answer_elements": 31,
+    "answer_tokens": 28,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 297,
+    "pass": true
+  },
+  "all_pass": true,
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
