@@ -1,143 +1,143 @@
 {
   "G1_planted_verifies": {
-    "attempts": 15,
+    "answers_json_native": true,
+    "checks": 16,
     "failures": [],
     "pass": true
   },
   "G2_rejects_corruption": {
-    "cases": {
-      "drop_one": {
-        "reason": "wrong token count: expected 192, got 191",
-        "rejected": true
-      },
-      "duplicate_index": {
-        "reason": "duplicate variable index 1",
-        "rejected": true
-      },
-      "empty": {
-        "reason": "answer is empty",
-        "rejected": true
-      },
-      "out_of_range": {
-        "reason": "variable index out of range at token 1: 193",
-        "rejected": true
-      },
-      "single_sign_swap": {
-        "reason": "clause C293 is monochromatic (0,0,0)",
-        "rejected": true
-      }
-    },
     "distinct_reasons": 5,
-    "pass": true
+    "pass": true,
+    "reasons": {
+      "drop": "matrix must have exactly 3 rows",
+      "duplicate": "matrix is singular modulo q",
+      "empty": "answer must contain matrix and offset",
+      "out_of_range": "matrix entry outside 0,...,10",
+      "swap": "illegal flip at step 252: flap 268 is still blocked by flap 8"
+    }
   },
   "G3_round_trip": {
-    "parsed_tokens": 192,
-    "pass": true
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response_parsed": true
   },
   "G4_guess_resistance": {
-    "empirical_probability": 0.0,
+    "candidate_space": 2827411356000,
     "hits": 0,
-    "naive_semantic_space": 6277101735386680763835789423207666416102355444464034512896,
     "pass": true,
-    "prior": "uniform over 2^n complete assignments; token syntax and uniqueness enforced",
+    "prior": "uniform over GL(3,q) times all q^3 offsets",
+    "sampled_probability": 0.0,
     "total": 200000
   },
-  "G5_sparse": {
-    "baseline_cost": {
-      "attack": "random_restart_walksat_32x200n",
-      "iteration_limit": 1228800,
-      "iterations": 438392,
-      "restart_limit": 32,
-      "restarts_started": 12,
-      "result": "verified witness",
-      "success": true,
-      "wall_seconds": 3.6501815889496356
-    },
-    "density": {
-      "exact_solution_count": null,
-      "hits": 0,
-      "method": "uniform random_candidate sampling",
-      "observed_fraction": 0.0,
-      "sample_size": 200000
-    },
-    "pass": false,
-    "shipping_degree": 7,
-    "shipping_instance_seed": 314159,
-    "shipping_n": 192,
-    "shipping_preset": "medium",
-    "small_exact_calibration": {
-      "degree": 8,
-      "fraction": 1.52587890625e-05,
-      "n": 18,
-      "search_space": 262144,
-      "solutions": 4
-    }
+  "G5_density_and_baseline": {
+    "baseline_comparisons": 78152,
+    "baseline_operations": 99544,
+    "baseline_wall_clock_sec": 0.04417754104360938,
+    "demo_candidate_space": 1344,
+    "demo_exact_valid_count": 1,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "strongest_baseline": "comparison-sort each geometric chain and fit its affine basis"
   },
   "G6_adversary_panel": {
     "attacks": {
-      "dpll_unit_propagation_5000": {
+      "greedy_numeric_label_identity": {
         "attempts": 8,
         "successes": 0
       },
-      "greedy_left_to_right": {
+      "in_context_diagonal_affine_ansatz": {
         "attempts": 8,
         "successes": 0
       },
-      "outlier_literal_imbalance": {
+      "outlier_first_presented_as_offset": {
         "attempts": 8,
         "successes": 0
       },
-      "random_restart_walksat_32x200n": {
+      "presentation_order_affine_fit": {
         "attempts": 8,
-        "successes": 8
+        "successes": 0
       },
-      "spectral_signed_cooccurrence": {
+      "random_affine_restart_256": {
         "attempts": 8,
         "successes": 0
       }
     },
-    "domain_standard_attack": "dpll_unit_propagation_5000",
-    "pass": false
-  },
-  "G7_scales": {
-    "base_clauses": 448,
-    "base_n": 192,
-    "doubled_clauses": 896,
-    "doubled_n": 384,
-    "doubled_planted_verify": "ok",
-    "pass": true
-  },
-  "G8_canonical_key": {
-    "determinism": {
-      "attempts": 20,
-      "passed": 20
-    },
-    "invariance": {
-      "attempts": 20,
-      "passed": 20
-    },
     "pass": true,
-    "real_transform_carried_witness": {
-      "attempts": 20,
-      "passed": 20
-    },
-    "transformations": [
-      "variable permutation",
-      "clause permutation",
-      "literal permutation",
-      "independent variable complementation",
-      "independent clause complementation",
-      "all composed"
-    ],
-    "unrelated_distinct": {
-      "attempts": 20,
-      "distinct": 20
+    "reference_algorithm": {
+      "comparisons": 78152,
+      "complexity": "O(n log n + d^2) exact record/comparison/field operations",
+      "mean_comparisons": 9769,
+      "mean_operations": 12443,
+      "mean_wall_clock_sec": 0.005522192630451173,
+      "name": "comparison-sort each geometric chain and fit its affine basis",
+      "operations": 99544,
+      "solves": "8/8, as expected on Track B",
+      "wall_clock_sec": 0.04417754104360938
     }
   },
-  "all_passed": false,
-  "shipping_difficulty": "medium",
+  "G7_scales": {
+    "answer_atomic_elements_unchanged": true,
+    "pass": true,
+    "scale_factor": 3.6912096168294517,
+    "scaled_build_sec": 0.028502963948994875,
+    "scaled_n": 4913,
+    "scaled_verify_reason": "ok",
+    "shipping_n": 1331
+  },
+  "G8_canonical_key": {
+    "invariance_attempts": 20,
+    "invariance_passed": 20,
+    "pass": true,
+    "transformations": [
+      "invertible affine relabelling over F_q",
+      "input-record permutation",
+      "permutation/translation of independent rows",
+      "independent row reflections with L/R swap",
+      "all transformations composed"
+    ],
+    "transformed_witness_attempts": 20,
+    "transformed_witnesses_valid": 20,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 53,
+    "answer_elements": 12,
+    "answer_tokens": 14,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 2,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps_pass": true,
+    "diagnostic_complete": false,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "incomplete: OpenRouter key limit after 2 scored attempts",
+    "intended_route_operations": 26,
+    "pass": true,
+    "placebo_verdict": "incomplete: OpenRouter key limit before a scored attempt"
+  },
+  "all_passed": true,
+  "paper": "2410.07666",
+  "shipping_difficulty": "hard",
   "shipping_params": {
-    "degree": 7,
-    "n": 192
-  }
+    "chains": 6,
+    "dimension": 3,
+    "modulus": 11,
+    "n": 1331,
+    "side": 1000003,
+    "spacing_span": 199999
+  },
+  "track": "B"
 }
