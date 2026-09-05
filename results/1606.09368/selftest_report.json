@@ -1,0 +1,114 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 20,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "attempts": 6,
+    "distinct_reasons": 6,
+    "pass": true,
+    "reasons": {
+      "drop_one": "answer is too short: expected 128 entries",
+      "duplicate_one": "answer is too long: expected 128 entries",
+      "empty": "answer is empty",
+      "out_of_range": "entry 0 is outside the +/-1 alphabet",
+      "swap_opposite": "candidate is not orthogonal to displayed column 1: inner product -4",
+      "violates_pin": "candidate violates prescribed sign at output label 5"
+    },
+    "rejected": 6
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_prior": "uniform over balanced sign vectors satisfying every pin",
+    "generator_balanced_quotient_table_space": 601080390,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "structure_aware_space": 6435067013866298908421603100,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_modular_operations": 1148263,
+    "baseline_name": "exact modular Gauss-Jordan elimination",
+    "baseline_solved": true,
+    "baseline_wall_seconds": 0.065874,
+    "demo_candidate_count": 20,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_density_wall_seconds": 7.908891,
+    "shipping_sampled_valid_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "paper_rvs_512": {"attempts": 8, "successes": 0},
+      "repaired_first_pair_product": {"attempts": 8, "successes": 0},
+      "repaired_visible_column": {"attempts": 8, "successes": 0},
+      "repeat_pins_without_modulation": {"attempts": 8, "successes": 0},
+      "residual_greedy": {"attempts": 8, "successes": 0},
+      "row_sum_outlier": {"attempts": 8, "successes": 0},
+      "single_missing_character_ansatz": {"attempts": 8, "successes": 0}
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) exact modular arithmetic",
+      "name": "exact modular Gauss-Jordan elimination",
+      "operations_max": 1093837,
+      "operations_mean": 1018271,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.061629,
+      "wall_clock_sec_mean": 0.057663
+    }
+  },
+  "G7_scales": {
+    "base_n": 128,
+    "doubled_block_bits": 6,
+    "doubled_n": 256,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 160,
+    "distinct_instances": 20,
+    "distinct_keys": 20,
+    "failures": [],
+    "invariance_checks": 160,
+    "pass": true,
+    "transformations": [
+      "row presentation permutation",
+      "column permutation",
+      "independent non-unity column negations",
+      "output-coordinate renumbering with carried witness",
+      "simultaneous primal/dual bit-basis permutation",
+      "global XOR translation of row tags",
+      "their compositions"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 321,
+    "answer_elements": 128,
+    "answer_tokens": 161,
+    "arms": {
+      "bare": {"attempts": 0, "errors": 4, "solved": 0},
+      "hinted": {"attempts": 0, "errors": 4, "solved": 0},
+      "placebo": {"attempts": 0, "errors": 4, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "compact_route_verifies": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unreachable_openrouter_key_limit",
+    "intended_route_operations": 64,
+    "operation_definition": "exact sign negations after recognizing the Walsh block",
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:1606.09368",
+  "shipping_difficulty": "hard",
+  "shipping_params": {"block_bits": 5, "n": 128},
+  "track": "B"
+}
