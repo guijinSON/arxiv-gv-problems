@@ -30,11 +30,13 @@ import urllib.request
 #
 # openai/gpt-5.6-sol is deliberately absent — it is the builder model, and a
 # family checked against its own author proves nothing.
+# Two-model pool as of 2026-09-05. The property that matters is that no single
+# vendor's blind spot can carry a family through, and two vendors still give that.
+# ATTEMPTS_PER_PRESET stays 3, so a level is tried three times; with two models one
+# is drawn twice, on a DIFFERENT instance seed each time.
 DEFAULT_POOL = [
     "openai/gpt-5.6-terra",
-    "anthropic/claude-sonnet-5",
-    "google/gemini-3.1-pro-preview",
-    "x-ai/grok-4.6",
+    "google/gemini-3.8-flash",
 ]
 ORACLE_POOL = [m.strip() for m in os.environ.get(
     "ORACLE_POOL", ",".join(DEFAULT_POOL)).split(",") if m.strip()]

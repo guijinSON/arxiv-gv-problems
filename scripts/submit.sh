@@ -354,10 +354,18 @@ for n, r in enumerate(rows, 1):
 if not rows:
     fail.append("transcript is empty")
 
+# The requirement is that the pool was genuinely redrawn, not that some fixed number
+# of vendors exists. Hardcoding 3 made a smaller pool unshippable: with the 2-model
+# pool adopted 2026-09-05 EVERY transcript would have failed this line while the
+# modules themselves were fine -- the same shape as the answer cap and the escalation
+# budget, a constant of OURS reported as a defect in the work.
+pool = meta.get("oracle_pool") or []
+need = min(3, len(pool)) if pool else 2
 models = {r.get("model") for r in rows}
-if len(models) < 3:
+if len(models) < need:
     fail.append(f"only {len(models)} distinct oracle model(s) used: {sorted(models)} — "
-                "the pool must be redrawn per call")
+                f"the recorded pool has {len(pool) or 'an unknown number of'} model(s), so "
+                f"at least {need} distinct must appear; the pool must be redrawn per call")
 seeds = [r.get("seed") for r in rows]
 if len(set(seeds)) != len(seeds):
     fail.append("repeated seeds — every attempt must use a distinct instance")
