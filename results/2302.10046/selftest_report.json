@@ -1,0 +1,188 @@
+{
+  "G1_planted_verifies": {
+    "checked_properties": "planted verification, JSON answer round-trip, passage-tree connectivity, public/private wall equality, marked endpoint incidence, connected Gamma(H), and maximum wall-vertex degree four",
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "attempts": 5,
+    "cases": {
+      "drop_one": {
+        "reason": "axis: segment 0 is not horizontal or vertical",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "zero-length: segment 0 has equal endpoints",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "shape: answer must be a list of at least two points",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "bounds: point 1 lies outside the closed frame",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "endpoints: the polyline must be ordered from S to T",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true,
+    "surrounding_prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 713741193243414165748806910508611387400688105227,
+    "candidate_space_bits": 158,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over endpoint- and port-correct, up-to-budget, alternating-axis nonzero integer walk bridges in the displayed frame",
+    "total": 200000,
+    "wall_clock_sec": 7.260878
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_nodes": 64,
+    "baseline_wall_clock_sec": 5.6e-05,
+    "demo_candidate_space": 160,
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "reference_operations": 7967,
+    "reference_wall_clock_sec": 0.002809,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_seed": 271828,
+    "shipping_solution_density": 0.0,
+    "strongest_failing_attack": "64-node depth-limited exact cell DFS"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_manhattan_no_backtracking": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 2.8e-05
+      },
+      "in_context_depth_limited_dfs_64": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000153
+      },
+      "outlier_highest_cell_degree_walk": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 8.9e-05
+      },
+      "random_restart_nonbacktracking_64": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000984
+      }
+    },
+    "intended_compact_route": {
+      "name": "single-gate block decomposition followed by endpoint-block DFS",
+      "operations_max": 178,
+      "per_instance_operations": [
+        164,
+        160,
+        166,
+        175,
+        167,
+        168,
+        178,
+        170
+      ],
+      "solves": "8/8 without reading the planted answer"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(R*C + |walls|)",
+      "name": "exact cell-adjacency construction followed by breadth-first search",
+      "operation_unit": "exact wall probes, queue/neighbor scans, and parent steps",
+      "operations": 65300,
+      "per_instance_operations": [
+        8194,
+        8289,
+        7948,
+        8173,
+        8233,
+        8116,
+        8495,
+        7852
+      ],
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.019845
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_doubled": 60,
+    "answer_atoms_shipping": 52,
+    "compact_operations_doubled": 277,
+    "compact_operations_shipping": 155,
+    "doubled_cells": 6400,
+    "doubled_decoy_blocks": 24,
+    "doubled_n": 16,
+    "doubled_search_space_bits": 195,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "scaling_axis": "n increases from 12 to 16 while decoy blocks more than double the total cell complex under the fixed answer cap",
+    "shipping_cells": 1872,
+    "shipping_decoy_blocks": 12,
+    "shipping_n": 12,
+    "shipping_search_space_bits": 146
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariance_checks": 320,
+    "pass": true,
+    "real_transformations_verified": 320,
+    "transformations": "all eight rectangle isometries, segment endpoint reversal, wall-list reordering, and reversal-invariant missing-edge endpoints",
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 202,
+    "answer_elements": 56,
+    "answer_tokens": 51,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "hinted_minus_placebo": 0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 120,
+    "pass": true,
+    "within_caps": true,
+    "worst_case_answer_chars": 991,
+    "worst_case_answer_elements": 220,
+    "worst_case_answer_tokens": 248,
+    "worst_case_intended_route_operations": 300
+  },
+  "all_passed": true,
+  "family": "single-edge bend-bounded orthogonal maze extension",
+  "paper": "arXiv:2302.10046",
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "decoy_blocks": 12,
+    "harden_attacks": true,
+    "max_answer_atoms": 220,
+    "min_route_cells": 36,
+    "n": 12
+  },
+  "track": "B"
+}
