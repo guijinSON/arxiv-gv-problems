@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **147 / 12,167** resolved (1.21%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **148 / 12,167** resolved (1.22%)
 
 | state | count |
 |---|---:|
-| ✅ done | 72 |
+| ✅ done | 73 |
 | 🚫 rejected (documented) | 75 |
-| 🔄 in progress | 44 |
+| 🔄 in progress | 43 |
 | ⚪ free | 11,976 |
 | **total** | **12,167** |
 
@@ -16,7 +16,6 @@
 |---|---|---|
 | `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
 | `1609.05136` | GUIJIN SON | 2026-09-04T19:53 |
-| `1604.01757` | GUIJIN SON | 2026-09-04T20:58 |
 | `1402.1813` | GUIJIN SON | 2026-09-04T21:15 |
 | `2601.07809` | GUIJIN SON | 2026-09-04T22:52 |
 | `1408.5515` | GUIJIN SON | 2026-09-04T23:24 |
@@ -54,7 +53,8 @@
 | `1209.1842` | GUIJIN SON | 2026-09-05T00:39 |
 | `2508.16963` | GUIJIN SON | 2026-09-05T00:39 |
 | `2306.00140` | GUIJIN SON | 2026-09-05T00:39 |
-| … 4 more | | |
+| `1609.01266` | GUIJIN SON | 2026-09-05T00:39 |
+| … 3 more | | |
 
 ## By family
 
@@ -62,7 +62,7 @@
 |---|---:|---:|
 | graph structures | 33 | 5,559 |
 | designs and codes | 15 | 1,022 |
-| algebraic decomposition | 17 | 804 |
+| algebraic decomposition | 18 | 804 |
 | integer equations | 5 | 607 |
 | reconfiguration | 7 | 551 |
 | geometric configurations | 8 | 533 |

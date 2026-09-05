@@ -1,0 +1,175 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction_audit": "compact recurrence recovered every planted word",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "wrong length: expected 100, got 99"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "a generator ID is repeated"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "generator index out of range: 200"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "wrong generator pair at word position 0"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_matches": true,
+    "pass": true,
+    "realistic_wrapper": true,
+    "untagged_fence_matches": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1267650600228229401496703205376,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over normalized words choosing one generator from each displayed pair",
+    "total": 200000,
+    "wall_clock_sec": 10.773411
+  },
+  "G5_density_and_baseline": {
+    "demo_bruteforce_solution_count": 1,
+    "demo_n": 5,
+    "pass": true,
+    "reference_algorithm_operations": 1322188,
+    "reference_algorithm_wall_clock_sec": 0.107389,
+    "reference_average_operations": 165273,
+    "shipping_certified_solution_count": 1,
+    "shipping_exact_solution_fraction": 7.888609052210118e-31,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "greedy_single_bit_clause_gain",
+    "strongest_failing_attack_steps": 2600,
+    "strongest_failing_attack_wall_clock_sec": 1.2892
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "generator_label_ansatz": {
+        "attempts": 8,
+        "steps": 40,
+        "successes": 0,
+        "wall_clock_sec": 0.001428
+      },
+      "greedy_single_bit_clause_gain": {
+        "attempts": 8,
+        "steps": 2600,
+        "successes": 0,
+        "wall_clock_sec": 1.2892
+      },
+      "outlier_literal_majority": {
+        "attempts": 8,
+        "steps": 33600,
+        "successes": 0,
+        "wall_clock_sec": 0.003315
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "steps": 2048,
+        "successes": 0,
+        "wall_clock_sec": 0.110293
+      }
+    },
+    "compact_route_audit": {
+      "average_operations_per_instance": 299,
+      "average_search_nodes": 119,
+      "complexity": "O(n) after recognizing the incidence invariant",
+      "name": "hidden-cycle adjacent-equation recurrence",
+      "operations": 2392,
+      "solves": "8/8, as expected",
+      "support_search_nodes": 953
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations_per_instance": 165273,
+      "complexity": "O(m*n^2) exact bit operations for m parity blocks",
+      "name": "parity-gadget decoding plus dense Gaussian elimination over GF(2)",
+      "operations": 1322188,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.107389
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 200,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "pass": true,
+    "preset_candidate_spaces": {
+      "demo": 32,
+      "easy": 70368744177664,
+      "hard": 1267650600228229401496703205376,
+      "medium": 9444732965739290427392
+    },
+    "preset_n": {
+      "demo": 5,
+      "easy": 46,
+      "hard": 100,
+      "medium": 73
+    }
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "distinct_keys": 20,
+    "invariance_checks": 100,
+    "invariance_failures": [],
+    "pass": true,
+    "transformations": [
+      "equation-block, clause, and literal reorder",
+      "arbitrary Boolean-variable renaming",
+      "arbitrary generator-ID renaming",
+      "independent Boolean-value complementation with generator-pair swaps",
+      "composition of all listed transformations"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 445,
+    "answer_elements": 100,
+    "answer_tokens": 112,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "hinted_minus_placebo": -0.3333333333333333,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 299,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "decoys": 250,
+    "n": 100
+  },
+  "track": "B"
+}
