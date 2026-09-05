@@ -1,0 +1,160 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "inverse generation plus Proposition 2's forward tree",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_element": {
+        "reason": "answer has too few bits: expected 95, got 94",
+        "rejected": true
+      },
+      "duplicate_one_element": {
+        "reason": "answer has too many bits: expected 95, got 96",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "bit 1 is not the integer 0 or 1",
+        "rejected": true
+      },
+      "swap_two_unequal_elements": {
+        "reason": "clause 7 is false under the certificate",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 95,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_constraints": [
+      "exactly n positions",
+      "every position is already a Boolean integer"
+    ],
+    "total": 200000,
+    "wall_clock_sec": 3.556492
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_restarts": 2048,
+    "baseline_attack_successes": 0,
+    "baseline_attack_wall_clock_sec": 0.040879,
+    "demo_candidate_space": 32,
+    "demo_exact_solution_count": 1,
+    "demo_exact_solution_fraction": 0.03125,
+    "pass": true,
+    "reference_operation_count_max": 38950,
+    "reference_wall_clock_sec_per_instance": 0.002638,
+    "reference_wall_clock_sec_total_8": 0.021108,
+    "shipping_exact_density_from_full_rank": 2.524354896707238e-29,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density_estimate": 0.0,
+    "strongest_failing_attack": "random_restart_256"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_visible_order_recurrence": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.02075
+      },
+      "greedy_one_pass_clause": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.013122
+      },
+      "outlier_literal_frequency": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.008202
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.043281
+      }
+    },
+    "intended_compact_route": {
+      "name": "overlap-cycle reconstruction and cyclic XOR recurrence",
+      "operations": 212,
+      "solves": "8/8",
+      "wall_clock_sec": 0.00209
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m log m + n^3) exact Boolean operations",
+      "name": "XOR-quartet recovery plus dense Gauss-Jordan over GF(2)",
+      "operations": 38950,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.002638,
+      "wall_clock_sec_total_8": 0.021108
+    }
+  },
+  "G7_scales": {
+    "doubled_build_and_verify_sec": 0.055273,
+    "doubled_graph_vertices": 25276,
+    "doubled_n": 190,
+    "doubled_verify_reason": "ok",
+    "escalation_after_shipping": {
+      "copies": 4,
+      "n": 95
+    },
+    "pass": true,
+    "shipping_graph_vertices": 12641,
+    "shipping_n": 95
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariant_relabellings": 80,
+    "pass": true,
+    "real_transformations_verified": 80,
+    "transformations": [
+      "variable renaming",
+      "indexed-clause reordering",
+      "global literal polarity with carried assignment",
+      "their composition"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 285,
+    "answer_elements": 95,
+    "answer_tokens": 143,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 212,
+    "oracle_evidence_ready": true,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true
+}
