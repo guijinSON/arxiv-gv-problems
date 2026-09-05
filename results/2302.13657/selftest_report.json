@@ -1,0 +1,168 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "json_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "answer is missing one or more affine coefficients",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "answer has extra fields",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "an affine coefficient is outside the canonical field range",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "the 2-by-2 linear part is singular",
+        "rejected": true
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed": [
+      1265811,
+      0,
+      46404,
+      0,
+      1265811,
+      0
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 1.9999360020479344e-07,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over all nonzero multipliers and all translations; coefficient ranges and the relation-forced affine shape are enforced before sampling",
+    "structure_aware_space": 25001605025760,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_candidate_multipliers": 44,
+    "baseline_exact_operations": 5389,
+    "baseline_wall_seconds": 0.0004492,
+    "demo_exact_solution_count": 11,
+    "pass": true,
+    "shipping_density_samples": 200000,
+    "shipping_exact_solution_fraction": 1.9999360020479344e-07,
+    "shipping_exact_valid_answer_count": 5000161,
+    "shipping_observed_solution_fraction": 0.0,
+    "shipping_valid_hits": 0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_sorted_alignment_mode": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_additive_translation_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_small_multiplier_pm16": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_minimum_residue_alignment": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_4096_affine_maps": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "complexity": "O(m) exact field operations",
+      "median_wall_clock_sec": 4e-06,
+      "name": "covariant nonzero step-set sum",
+      "operation_definition": "four relation-coefficient implications plus 2(m-1) modular additions; sum(S)=1 by construction",
+      "operations": 242,
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m^2) exact field operations with hashed set equality",
+      "median_candidate_multipliers": 44,
+      "median_step_transforms": 5340,
+      "median_wall_clock_sec": 0.0004492,
+      "name": "anchor-image enumeration for affine Cayley digraph isomorphism",
+      "operation_definition": "four relation-coefficient implications and one field inversion, then field multiplications used to form each candidate image",
+      "operations": 5389,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "answer_elements_unchanged": true,
+    "doubled_prime": 10001281,
+    "doubled_requested_n": 10000000,
+    "doubled_search_space": 100025611639680,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_prime": 5000161,
+    "shipping_requested_n": 5000000,
+    "shipping_search_space": 25001605025760
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 100,
+    "key_basis": "SHA-256 of p, m, and the lexicographically minimal multiplier-normal forms of both step sets; neither seed nor rendering is included",
+    "pass": true,
+    "symmetries": "independent affine relabellings of source and target vertices, input-list reordering, translations, reversal with the inverse map, and compositions",
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 31,
+    "answer_elements": 6,
+    "answer_tokens": 8,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "diagnostic_complete": false,
+    "hinted_minus_placebo": null,
+    "hinted_still_hardened": false,
+    "hinted_verdict": "infrastructure_blocked",
+    "infrastructure_errors": {
+      "bare": 4,
+      "hinted": 4,
+      "placebo": 4
+    },
+    "intended_route_operations": 242,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
