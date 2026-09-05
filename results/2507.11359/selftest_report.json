@@ -1,0 +1,190 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "wrong number of hyperedges: expected 40"
+      },
+      "duplicate_one": {
+        "accepted": false,
+        "reason": "duplicate hyperedge labels are forbidden"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty answer"
+      },
+      "swap_one_for_decoy": {
+        "accepted": false,
+        "reason": "vertex 14 has coverage 0, expected 1"
+      },
+      "unknown_label": {
+        "accepted": false,
+        "reason": "unknown hyperedge label"
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "json_native": true,
+    "model_style_parsed": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over all n-subsets of the displayed hyperedge labels",
+    "structure_aware_space": 2050157995198589154962348028592667411382810,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "affine_scan_operations": 683360,
+    "affine_scan_solved": true,
+    "affine_scan_wall_seconds": 0.071703,
+    "baseline_algorithm": "minimum-column Algorithm X exact-cover search",
+    "baseline_search_nodes": 203477,
+    "baseline_solved": true,
+    "baseline_wall_seconds": 2.065157,
+    "compact_route_operations": 81,
+    "compact_route_solved": true,
+    "demo_candidate_count": 495,
+    "demo_exact_solution_count": 5,
+    "pass": true,
+    "shipping_candidate_count": 2050157995198589154962348028592667411382810,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_solution_fraction_estimate": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_mrv_min_damage": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "local_intersection_outlier": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "numeric_gap_outlier": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "obvious_first_pair_progression": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_mrv_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "construction_aware_reference": {
+      "complexity": "O((degree*n)^2*n) exact modular operations",
+      "name": "full ordered-pair affine-progression scan",
+      "operations_max": 1042240,
+      "operations_mean": 394410,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.080022,
+      "wall_clock_sec_mean": 0.029579
+    },
+    "intended_compact_route": {
+      "complexity": "O(n) exact modular operations after recognizing the invariant",
+      "name": "two-anchor affine invariant",
+      "operations": 81,
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(degree^n) worst case with minimum-column branching",
+      "name": "minimum-column Algorithm X exact-cover search",
+      "nodes_max": 374923,
+      "nodes_total": 1395075,
+      "operations": 174384,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 3.946218,
+      "wall_clock_sec_mean": 1.511675
+    }
+  },
+  "G7_scales": {
+    "base_n": 40,
+    "doubled_n": 80,
+    "doubled_reason": "ok",
+    "escalated_params": {
+      "degree": 5,
+      "mixing": 32,
+      "n": 40
+    },
+    "escalated_verifies": true,
+    "fixed_answer_axis": "mixing, then degree",
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "caveat": "weighted color refinement is a strong cheap invariant, not a complete canonical form for 3-uniform hypergraph isomorphism",
+    "failures": [],
+    "invariance_checks": 40,
+    "pass": true,
+    "transformation_validity_checks": 40,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 318,
+    "answer_elements": 40,
+    "answer_tokens": 80,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 81,
+    "pass": true
+  },
+  "all_passed": true,
+  "problem_profile": {
+    "certificate_form": "integer_tuple",
+    "computational_core": "exact_cover",
+    "domain_essentiality": "native",
+    "hardness_basis": "Track B: Section 8 / Procedure 1 gives a polynomial-time lattice-based decision algorithm in the paper's dense-host sparsification regime, while the shipping instance is also solved by minimum-column Algorithm X and by an O((dn)^2 n) affine-progression scan (394,410 mean and 1,042,240 maximum modular steps over eight shipping seeds, 0.044 s mean); minimum-column Algorithm X used 174,384 nodes and 1.78 s mean, whereas the recognized two-anchor route uses 81 exact modular operations.",
+    "intuition_description": "The labels of one perfect matching form an affine progression encoded by the first two displayed labels; without recognizing it one must solve the hypergraph exact-cover instance.",
+    "intuition_type": "invariant",
+    "max_answer_tokens": 80,
+    "native_domain": "combinatorics",
+    "native_objects": [
+      "explicit labelled 3-uniform hypergraph",
+      "perfect matching as a set of hyperedge labels"
+    ],
+    "object_regime": "finite_discrete",
+    "reduction": null,
+    "reduction_kind": "none",
+    "reduction_source": "paper_central",
+    "verification_operations": [
+      "exact hyperedge-label lookup",
+      "exact vertex-incidence counting",
+      "integer equality comparison"
+    ]
+  },
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
