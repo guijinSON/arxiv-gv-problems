@@ -1,0 +1,176 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction_audit": "tight-cycle solver independently recovered a valid assignment",
+    "failures": [],
+    "json_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "assignment is missing one or more variables"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "a variable index is duplicated"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "assignment is empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "variable index is out of range"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "assignment entries are not in canonical variable order"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "fenced_matches": true,
+    "garbage_returns_none": true,
+    "pass": true,
+    "tagged_matches": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 9671406556917033397649408,
+    "exact_fraction": 1.0339757656912846e-25,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over canonical complete Boolean assignments",
+    "total": 200000,
+    "wall_clock_sec": 25.616353
+  },
+  "G5_density_and_baseline": {
+    "demo_bruteforce_solution_count": 1,
+    "demo_n": 5,
+    "pass": true,
+    "reference_algorithm_operations": 847161,
+    "reference_algorithm_wall_clock_sec": 0.130336,
+    "reference_average_operations": 105895,
+    "shipping_certified_solution_count": 1,
+    "shipping_exact_solution_fraction": 1.0339757656912846e-25,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "random_restart_hillclimb_32x2",
+    "strongest_failing_attack_steps": 12026368,
+    "strongest_failing_attack_wall_clock_sec": 3.523786
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_single_bit_clause_gain": {
+        "attempts": 8,
+        "steps": 681181,
+        "successes": 0,
+        "wall_clock_sec": 0.192874
+      },
+      "obvious_all_zero_ansatz": {
+        "attempts": 8,
+        "steps": 664,
+        "successes": 0,
+        "wall_clock_sec": 0.000132
+      },
+      "outlier_rhs_incidence_majority": {
+        "attempts": 8,
+        "steps": 6792,
+        "successes": 0,
+        "wall_clock_sec": 0.00052
+      },
+      "random_restart_hillclimb_32x2": {
+        "attempts": 8,
+        "steps": 12026368,
+        "successes": 0,
+        "wall_clock_sec": 3.523786
+      }
+    },
+    "compact_route_audit": {
+      "average_operations_per_instance": 248,
+      "average_search_nodes": 95,
+      "complexity": "O(n) exact XORs after support-cycle recognition",
+      "name": "spanning-tight-cycle recurrence",
+      "operations": 1984,
+      "solves": "8/8, as expected",
+      "support_search_nodes": 762
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations_per_instance": 105895,
+      "complexity": "O(m*n^2) exact cell-level bit XORs",
+      "name": "dense Gaussian elimination over GF(2)",
+      "operations": 847161,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.130336
+    }
+  },
+  "G7_scales": {
+    "doubled_constraints": 566,
+    "doubled_n": 166,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "pass": true,
+    "preset_constraint_count": {
+      "demo": 5,
+      "easy": 15,
+      "hard": 398,
+      "medium": 283
+    },
+    "preset_n": {
+      "demo": 5,
+      "easy": 11,
+      "hard": 98,
+      "medium": 83
+    }
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "pass": true,
+    "transformations": [
+      "constraint and within-support reorder",
+      "variable relabelling",
+      "Boolean-coordinate complementation",
+      "composition of relabelling and complementation"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 324,
+    "answer_elements": 83,
+    "answer_tokens": 81,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "blocked_api_limit",
+    "intended_route_operations": 248,
+    "pass": false
+  },
+  "all_passed": false,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "decoys": 200,
+    "n": 83
+  },
+  "track": "B"
+}
