@@ -1,0 +1,124 @@
+{
+  "paper": "2209.04762",
+  "track": "B",
+  "shipping": "hard",
+  "G1_planted_verifies": {
+    "pass": true,
+    "ok": 24,
+    "total": 24
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "distinct_reasons": 7,
+    "reasons": {
+      "drop_one": "answer has 3 entries, expected 4 (index plus 3 preimages)",
+      "swap_two": "T_4(x1) = 7815922419, but c1 = 11840261838",
+      "duplicate": "preimages are not distinct, but the targets are",
+      "empty": "answer has 0 entries, expected 4 (index plus 3 preimages)",
+      "out_of_range": "preimage x1 = 34359738368 is outside [1, 2^35)",
+      "bad_index": "candidate index 17 out of range [0, 17)",
+      "wrong_candidate": "T_5(x1) = 1233620455, but c1 = 11840261838"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "recovered": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 25000,
+    "hits_easy_preset": 0,
+    "total_easy_preset": 200000,
+    "empirical_p": 0.0,
+    "empirical_p_upper_95pct": 0.00012,
+    "analytic_p": 1.4501119583800829e-33,
+    "search_space": 689601926403736449107455861850010,
+    "search_space_bits": 110
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "exact_solution_count_demo_m9": 1,
+    "density_at_shipping": 1.4501119583800829e-33,
+    "density_sample_size": 25000,
+    "density_hits": 0,
+    "strongest_attack": "exhaustive_preimage_search",
+    "strongest_attack_evaluations_needed": 584115552256,
+    "measured_evaluations_per_second": 1069.9193695380757,
+    "projected_wall_clock_sec": 545943525.1725414,
+    "reference_algorithm_field_ops": 259,
+    "reference_algorithm_sec": 0.007456064224243164,
+    "reference_algorithm_correct": true
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_candidate_statistics": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_hamming_bitflip": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_5k": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "algebraic_linearised_solve": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "exhaustive_preimage_capped_2e4": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm_blind_exponent_sweep": {
+      "name": "sweep k' over [1, m], test the closed form for each",
+      "complexity": "O(D * m) shape tests, then O(m) field ops",
+      "shape_tests": 109,
+      "solves": "8/8, as expected"
+    },
+    "reference_algorithm": {
+      "name": "closed-form compositional inverse of Proposition 2.6 after undoing the QM twist of Definition 2.2",
+      "complexity": "O(m) field operations per target",
+      "wall_clock_sec": 0.03496411442756653,
+      "operations": 265,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "escalated": "m=37 n_decoys=24 ref_ops=260",
+    "escalated_params": {
+      "m": 37,
+      "n_targets": 3,
+      "n_decoys": 24,
+      "twist_level": 2
+    }
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_ok": 60,
+    "invariance_total": 60,
+    "distinct_keys": 20,
+    "distinct_of": 20
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": null,
+      "hinted": null,
+      "placebo": null
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not run in-process (needs scripts/harden.py)",
+    "answer_chars": 40,
+    "answer_tokens": 10,
+    "answer_elements": 4,
+    "intended_route_operations": 246
+  },
+  "all_pass": true,
+  "selftest_wall_clock_sec": 257.482714176178
+}
