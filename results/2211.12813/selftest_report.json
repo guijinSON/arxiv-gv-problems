@@ -1,0 +1,190 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "rejections": {
+      "drop_one": {
+        "reason": "expected 210 entries, got 209",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "expected 210 entries, got 211",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "expected 210 entries, got 0",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "vertex 0 color 60 is outside [0,59]",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "adjacent vertices 0 and 171 have colors differing by less than 2",
+        "rejected": true
+      }
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 25051791350368417733719656671418627554816940863049579333315436514589965310827820886855238327690729383766821515293259850451798515307832060851536013915421334781767461660889086758742407259641415582646433015537034412885512908083357619499988008356249799806628677190711533399439328982820421062344138256379741100391086651438958599734571329028450317835220261174683579994946434930599,
+    "empirical_probability": 0.0,
+    "hits": 0,
+    "pass": true,
+    "prior": "uniform bounded color vectors conditioned on containing color 0",
+    "sampling_wall_seconds": 50.909385316073895,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_iterations": 0,
+    "baseline_operations": 46563,
+    "baseline_successes": 8,
+    "baseline_wall_seconds": 0.004512042971327901,
+    "enumerate_all_shipping": null,
+    "pass": true,
+    "shipping_candidate_space": 25051791350368417733719656671418627554816940863049579333315436514589965310827820886855238327690729383766821515293259850451798515307832060851536013915421334781767461660889086758742407259641415582646433015537034412885512908083357619499988008356249799806628677190711533399439328982820421062344138256379741100391086651438958599734571329028450317835220261174683579994946434930599,
+    "shipping_density_sample_count": 200000,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_valid_hits": 0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_vertex_name_cyclic_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_numeric_vertex_order": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_incidence_degree_order": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_64_greedy_orders": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(total incidence plus deterministic sorting)",
+      "name": "incidence-matrix Cartesian-factor recovery plus Theorem 4.2 CRT diagonals",
+      "operations": 46563,
+      "operations_mean": 5820,
+      "pair_edge_tests": 0,
+      "solves": "8/8, as expected",
+      "two_step_tests": 0,
+      "wall_clock_sec": 0.004512042971327901,
+      "wall_clock_sec_mean": 0.0005640053714159876
+    }
+  },
+  "G7_scales": {
+    "doubled_build_and_verify_seconds": 1.1127308420836926,
+    "doubled_n": 30,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "doubled_vertices": 630,
+    "named_n_values": [
+      11,
+      13,
+      15
+    ],
+    "named_vertex_sizes": [
+      220,
+      234,
+      240
+    ],
+    "pass": true,
+    "shipping_n": 15,
+    "shipping_vertices": 210
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "invariance_checks": 60,
+    "pass": true,
+    "real_transformation_verify_checks": 60,
+    "symmetries": [
+      "edge and within-edge reordering",
+      "arbitrary vertex relabeling",
+      "their composition"
+    ],
+    "transformations_tested": 60,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 711,
+    "answer_elements": 240,
+    "answer_tokens": 178,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 180,
+    "pass": false
+  },
+  "all_passed": false,
+  "certificate_language": {
+    "bounds": {
+      "entries": "V (instance dependent, at most 256 at every shipping/escalated level)",
+      "maximum_color": "B=n*r-1 (instance dependent)",
+      "minimum_color": 0
+    },
+    "description": "A normalized integer L(2,1)-labeling: exactly V entries in displayed vertex order, every entry in the inclusive interval [0,B], with at least one zero."
+  },
+  "problem_profile": {
+    "certificate_form": "integer_tuple",
+    "computational_core": "csp_sat",
+    "domain_essentiality": "native",
+    "hardness_basis": "Rejected Track-B candidate: direct edge-size factor recovery followed by Theorem 4.2 is O(total incidence plus sorting), averaging 5,778 counted operations and 0.00042 seconds at the shipping preset; a no-tool solver needs the same recovery plus up to 180 CRT assignments and must write 210-240 labels, so there is no material compression gap.",
+    "intuition_description": "The two hyperedge sizes expose hidden Cartesian coordinates, and the noncentral product blocks split into diagonal distance-three color classes; without that decomposition one faces a large exact labeling CSP.",
+    "intuition_type": "decomposition",
+    "max_answer_tokens": 178,
+    "native_domain": "combinatorics",
+    "native_objects": [
+      "finite hypergraph",
+      "Cartesian product of hypergraphs",
+      "L(2,1)-vertex labeling"
+    ],
+    "object_regime": "finite_discrete",
+    "reduction": null,
+    "reduction_kind": "none",
+    "reduction_source": "paper_central",
+    "verification_operations": [
+      "exact hyperedge co-membership",
+      "exact graph-distance-two test in the 2-section",
+      "integer color-difference comparison"
+    ]
+  },
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "decoy_edges": 12,
+    "max_rank": 10,
+    "max_star_size": 17,
+    "min_petals": 6,
+    "min_star_size": 14,
+    "n": 15
+  },
+  "track": "B"
+}
