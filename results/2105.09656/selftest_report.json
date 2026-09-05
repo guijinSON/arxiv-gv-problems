@@ -1,0 +1,131 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "rejections": {
+      "drop_one": "answer must contain exactly 48 field elements",
+      "swap_two": "two field elements are transposed",
+      "duplicate_one": "the encoded values have wrong multiplicities",
+      "empty": "answer is empty",
+      "out_of_range": "row 0 has a coordinate outside [0,p-1]"
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed_matches": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "prior": "uniform independently over the two affine sign branches implied by the freely deducible identity L_i^2=1",
+    "candidate_space": 281474976710656,
+    "sampling_wall_seconds": 25.4983777559828
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "shipping_candidate_space": 281474976710656,
+    "baseline_wall_seconds": 0.5107730152085423,
+    "baseline_iterations": 4096,
+    "baseline_successes": 0,
+    "demo_exact_solution_count": 1,
+    "enumerate_all_shipping": null
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_smaller_encoded_branch": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_all_plus_branch": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256_pm_branches": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_root_sign_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "binary square-and-multiply in each quadratic field",
+      "complexity": "O(k b) exact F_(p^2) multiplications for b-bit exponents",
+      "wall_clock_sec": 0.040771480184048414,
+      "mean_wall_clock_sec": 0.005096435023006052,
+      "operations": 574944,
+      "field_multiplications": 71772,
+      "mean_exact_operations": 71868,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 63,
+    "doubled_n": 126,
+    "answer_rows_unchanged": true,
+    "doubled_verify": "ok",
+    "base_max_exponent_bits": 62,
+    "doubled_max_exponent_bits": 188,
+    "reference_exponent_bit_growth": 3.032258064516129
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 100,
+    "invariance_attempts": 100,
+    "transformed_witness_checks": 100,
+    "transformed_witness_attempts": 100,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "row permutation, independent H->-H conjugation, invertible affine output re-encoding, multiplicative-period exponent lift, and their composition"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 2,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.6666666666666666,
+    "hinted_verdict": "too_easy",
+    "answer_chars": 1143,
+    "answer_tokens": 472,
+    "answer_elements": 96,
+    "intended_route_operations": 144,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 63,
+    "k": 48
+  },
+  "all_passed": true
+}
+
