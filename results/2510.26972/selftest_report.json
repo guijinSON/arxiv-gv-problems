@@ -1,0 +1,148 @@
+{
+  "G1_planted_verifies": {
+    "failures": [],
+    "instances": 20,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "reasons": {
+      "drop_one": "expected exactly 10 polynomial terms",
+      "duplicate_one": "duplicate exponents are not allowed",
+      "empty": "answer is empty",
+      "out_of_range": "a coefficient is outside the canonical range 1..q-1",
+      "swap_two": "terms must be in strictly increasing exponent order"
+    },
+    "rejected": {
+      "drop_one": true,
+      "duplicate_one": true,
+      "empty": true,
+      "out_of_range": true,
+      "swap_two": true
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_prior": "uniform over canonical monic R-term degree-k polynomials with nonzero constant, distinct ordered exponents, and coefficient sum zero",
+    "exact_probability_unique_order": 2.659938494969494e-78,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_wall_clock_seconds": 2.429148,
+    "structure_aware_search_space": 375948542378408874295835214839507208411550493014220583282974120987985046016635,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "analytic_valid_solution_count": 1,
+    "baseline_attack": "Euclidean polynomial gcd: (x^N-1)/gcd(x^N-1,B_beta)",
+    "baseline_coefficient_operations": 105980792,
+    "baseline_wall_clock_seconds": 3.292926,
+    "demo_exact_solution_count": 1,
+    "failing_panel_random_trials": 2048,
+    "failing_panel_wall_clock_seconds": 0.027489,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_valid_fraction_exact": 2.659938494969494e-78,
+    "shipping_valid_fraction_observed": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_most_common_coordinate_gap": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_even_spacing_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_largest_centered_coefficients": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N^2) schoolbook field operations",
+      "max_operations_one_instance": 14422715,
+      "name": "Euclidean polynomial gcd: (x^N-1)/gcd(x^N-1,B_beta)",
+      "operations": 105980792,
+      "solves": "8/8",
+      "wall_clock_sec": 3.292926
+    }
+  },
+  "G7_scales": {
+    "answer_elements_after": 16,
+    "answer_elements_before": 16,
+    "extension_degree_after": 3584,
+    "extension_degree_before": 1792,
+    "n_after_doubling": 256,
+    "n_before": 128,
+    "pass": true,
+    "space_after": 424617836652319739694779435044999819121481701483373,
+    "space_before": 6557077737659018039421620844097874027922851915085
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "carried_witness_passed": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_passed": 60,
+    "pass": true,
+    "symmetries": [
+      "coordinate-pair reordering",
+      "nonzero base-field scalar multiplication",
+      "Frobenius/cyclic coordinate shift",
+      "composition of scalar, shift, and reordering"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 115,
+    "answer_elements": 20,
+    "answer_tokens": 29,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 218,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "paper": "2510.26972",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "disguise_degree": 15,
+    "field_bits": 23,
+    "n": 256,
+    "odd_factor": 9
+  },
+  "track": "B"
+}
