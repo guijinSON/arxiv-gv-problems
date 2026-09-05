@@ -1,0 +1,157 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "json_roundtrips": 16,
+    "pass": true,
+    "verified": 16
+  },
+  "G2_rejects_corruption": {
+    "attempts": 5,
+    "cases": {
+      "drop": {
+        "reason": "left must have length 90, got 89",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "right must have length 90, got 91",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be a nonempty JSON object",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "alpha is outside the nonzero range 1..996",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "rank-one factor is incompatible with A at left[1]",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true,
+    "rejected": 5
+  },
+  "G3_round_trip": {
+    "attempts": 3,
+    "garbage_rejected": true,
+    "parsed": 3,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": "1/488001972973124531057875031625477924596734692421472851745169455931904829580922585253678120974649260032883702250015561912281423708210753799413897515762015176556662943835012260479376896984477911155534914177478533401620618678539583389257545899926018713553610844865817542783397511297694881980457205215245343541239850143742390358697801518828108157573620584598620135281000120152446800911405980751213856725976049976548400065059110226246935296633288240755827851925816591302378524874075801651064200782540429907021806423852518374373748338910560256",
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over normalized all-nonzero rank-one factors with both stated normalization entries fixed",
+    "sampling_seconds": 12.03808,
+    "search_space": 488001972973124531057875031625477924596734692421472851745169455931904829580922585253678120974649260032883702250015561912281423708210753799413897515762015176556662943835012260479376896984477911155534914177478533401620618678539583389257545899926018713553610844865817542783397511297694881980457205215245343541239850143742390358697801518828108157573620584598620135281000120152446800911405980751213856725976049976548400065059110226246935296633288240755827851925816591302378524874075801651064200782540429907021806423852518374373748338910560256,
+    "total": 200000,
+    "valid_answers_by_normalization": 1
+  },
+  "G5_density_and_baseline": {
+    "baseline_average_operations": 24484.0,
+    "baseline_average_wall_seconds": 0.002078,
+    "baseline_solved": true,
+    "demo_exact_count_by_enumeration": 1,
+    "demo_search_space": 1000,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_count": null
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "first_order_neumann_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_transpose": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_top_left_only": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^2) exact field operations",
+      "name": "rank-one validation plus Sherman-Morrison inverse adjoint",
+      "operations": 24484.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.002078
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 180,
+    "doubled_verified": true,
+    "escalated_verified": true,
+    "fixed_length_escalation": {
+      "n": 90,
+      "p": 10007
+    },
+    "pass": true,
+    "shipping_n": 90
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 20,
+    "carried_witnesses_verified": 20,
+    "invariance_attempts": 20,
+    "invariance_passed": 20,
+    "pass": true,
+    "transformations": [
+      "simultaneous coordinate permutation",
+      "nonzero coordinate rescaling",
+      "elementary shear basis change",
+      "automorphism transposition",
+      "compositions of the preceding maps"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 750,
+    "answer_elements": 181,
+    "answer_tokens": 188,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 272,
+    "pass": true
+  },
+  "all_passed": true,
+  "oracle_evidence_complete": true,
+  "paper": "1804.06328",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 90,
+    "p": 997
+  },
+  "track": "B"
+}
