@@ -1,0 +1,334 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true,
+    "verified": 16
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "each matrix row must have exactly two entries",
+        "rejected": true
+      },
+      "duplicate_row": {
+        "reason": "matrix must have exactly two rows",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "matrix entries must lie in the inclusive range 0..1195978050",
+        "rejected": true
+      },
+      "swap_rows": {
+        "reason": "bottom-left entry c must equal 1",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_native": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1430363497277780550,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over nonsingular trace-zero c=1 matrices",
+    "total": 200000,
+    "wall_clock_sec": 10.771264
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations": 2405792,
+    "baseline_wall_clock_sec": 2.289811,
+    "count_justification": "Lemma 12 gives D_2k; odd-prime k leaves exactly its k reflections as involutions, all with c nonzero after an affine disguise.",
+    "demo_exact_bruteforce_count": 5,
+    "demo_p": 31,
+    "pass": true,
+    "shipping_sampled_density": {
+      "hits": 0,
+      "observed_probability": 0.0,
+      "total": 200000
+    },
+    "shipping_theorem_backed_count": 127,
+    "shipping_theorem_backed_density": 8.878861928572849e-17,
+    "strongest_baseline": {
+      "attempts": 8,
+      "candidates_mean": 9334.1,
+      "candidates_total": 74673,
+      "complexity": "O(k^3) candidate maps and O(k^4) field operations worst-case",
+      "name": "three-point PGL stabilizer enumeration",
+      "operations_mean": 300724.0,
+      "operations_total": 2405792,
+      "runs": [
+        {
+          "candidates": 14622,
+          "capped": false,
+          "field_operations": 469936,
+          "seed": 1000,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.766612
+        },
+        {
+          "candidates": 9887,
+          "capped": false,
+          "field_operations": 318416,
+          "seed": 1001,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.398128
+        },
+        {
+          "candidates": 13261,
+          "capped": false,
+          "field_operations": 426384,
+          "seed": 1002,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.591763
+        },
+        {
+          "candidates": 10488,
+          "capped": false,
+          "field_operations": 337648,
+          "seed": 1003,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.343774
+        },
+        {
+          "candidates": 15082,
+          "capped": false,
+          "field_operations": 484656,
+          "seed": 1004,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.10264
+        },
+        {
+          "candidates": 3767,
+          "capped": false,
+          "field_operations": 122576,
+          "seed": 1005,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.026356
+        },
+        {
+          "candidates": 1108,
+          "capped": false,
+          "field_operations": 37488,
+          "seed": 1006,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.006722
+        },
+        {
+          "candidates": 6458,
+          "capped": false,
+          "field_operations": 208688,
+          "seed": 1007,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.053816
+        }
+      ],
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec_mean": 0.286226,
+      "wall_clock_sec_total": 2.289811
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "first_pair_swap_fix_third": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_integer_barycenter": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "modular_barycenter_conjugated_inversion": {
+        "attempts": 8,
+        "mean_wall_clock_sec": 0.0000205,
+        "operations_per_instance": 135,
+        "successes": 8
+      },
+      "outlier_smallest_as_center": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_involution_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "three_point_reversal": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": false,
+    "reference_algorithm": {
+      "attempts": 8,
+      "candidates_mean": 9334.1,
+      "candidates_total": 74673,
+      "complexity": "O(k^3) candidate maps and O(k^4) field operations worst-case",
+      "name": "three-point PGL stabilizer enumeration",
+      "operations_mean": 300724.0,
+      "operations_total": 2405792,
+      "runs": [
+        {
+          "candidates": 14622,
+          "capped": false,
+          "field_operations": 469936,
+          "seed": 1000,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.766612
+        },
+        {
+          "candidates": 9887,
+          "capped": false,
+          "field_operations": 318416,
+          "seed": 1001,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.398128
+        },
+        {
+          "candidates": 13261,
+          "capped": false,
+          "field_operations": 426384,
+          "seed": 1002,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.591763
+        },
+        {
+          "candidates": 10488,
+          "capped": false,
+          "field_operations": 337648,
+          "seed": 1003,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.343774
+        },
+        {
+          "candidates": 15082,
+          "capped": false,
+          "field_operations": 484656,
+          "seed": 1004,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.10264
+        },
+        {
+          "candidates": 3767,
+          "capped": false,
+          "field_operations": 122576,
+          "seed": 1005,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.026356
+        },
+        {
+          "candidates": 1108,
+          "capped": false,
+          "field_operations": 37488,
+          "seed": 1006,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.006722
+        },
+        {
+          "candidates": 6458,
+          "capped": false,
+          "field_operations": 208688,
+          "seed": 1007,
+          "verified": true,
+          "verifier_calls": 2,
+          "wall_clock_sec": 0.053816
+        }
+      ],
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec_mean": 0.286226,
+      "wall_clock_sec_total": 2.289811
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_after": 4,
+    "answer_atoms_before": 4,
+    "doubled_candidate_space": 4258319818024593362,
+    "doubled_k": 257,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_candidate_space": 1430363497277780550,
+    "shipping_k": 127
+  },
+  "G8_canonical_key": {
+    "certificate_preservation_checks": 80,
+    "distinct_unrelated": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "pass": true,
+    "transformations": [
+      "block-list reordering",
+      "affine coordinate change",
+      "non-affine PGL coordinate change",
+      "projective change composed with reordering"
+    ],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 37,
+    "answer_elements": 4,
+    "answer_tokens": 10,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "blocked_api_403",
+    "intended_route_operations": 135,
+    "pass": true
+  },
+  "paper": "2408.14714",
+  "pass": false,
+  "rejection_audit": {
+    "deciding_gate": "G6 / H",
+    "mechanical_cost_operations": 135,
+    "compact_route_operations": 135,
+    "mean_wall_clock_sec": 0.0000205,
+    "reason": "The correct finite-field barycenter attack, omitted from the original panel, constructs a valid certificate on 8/8 shipping instances."
+  },
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
