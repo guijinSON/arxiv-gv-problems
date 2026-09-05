@@ -1,0 +1,179 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer has one coordinate; exactly two are required",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "answer has 3 coordinates; exactly two are required",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "x=66557868 is outside the inclusive interval [66307861,66557867]",
+        "rejected": true
+      },
+      "swap_coordinates": {
+        "reason": "x=270841453 is outside the inclusive interval [66307861,66557867]",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      66422046,
+      270841453
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 1.5999104037630594e-11,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "probability_basis": "exact enumeration of the shipping rectangle",
+    "sampling_rule": "uniform over both stated inclusive integer intervals",
+    "structure_aware_space": 62503500049,
+    "total": 200000,
+    "wall_clock_sec": 0.525598
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_candidate_evaluations_total_8": 65536,
+    "attack_wall_clock_sec_total_8": 0.103318,
+    "candidate_space": 62503500049,
+    "demo_exact_valid_answers": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_density_at_shipping": 1.5999104037630594e-11,
+    "exact_valid_answers_at_shipping": 1,
+    "pass": true,
+    "reference_algorithm_iterations_mean": 103400,
+    "reference_algorithm_operations_mean": 1344225,
+    "reference_algorithm_wall_clock_sec_mean": 0.070626,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "random_restart_8192"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "coarse_residual_greedy": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000864
+      },
+      "interval_midpoint_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 1.5e-05
+      },
+      "random_restart_8192": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.103318
+      },
+      "small_coordinate_square_root_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 8.1e-05
+      }
+    },
+    "compact_route": {
+      "count_model": "integer additions/products/quotients/remainders/isqrt in form recovery and box transport, five recurrence operations per level, seven inverse-coordinate operations per sign choice, and the final exact substitution",
+      "name": "recover affine two-shear Pell coordinates and iterate the Pell recurrence",
+      "recurrence_steps_max": 10,
+      "solves": "8/8, as expected",
+      "worst_case_exact_operations": 179
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(W) exact iterations and O(W log^2 C) bit operations",
+      "iterations_max": 160664,
+      "iterations_mean": 103400,
+      "iterations_min": 40716,
+      "name": "exact discriminant scan over the x interval",
+      "operations_max": 2088652,
+      "operations_mean": 1344225,
+      "operations_min": 529327,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.070626,
+      "wall_clock_sec_total_8": 0.565007
+    }
+  },
+  "G7_scales": {
+    "doubled_candidate_space": 250014000196,
+    "doubled_n": 500014,
+    "pass": true,
+    "shipping_candidate_space": 62503500049,
+    "shipping_n": 250007,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "integer translations of both coordinate origins",
+      "independent axis reflections",
+      "x/y variable renaming",
+      "compositions of translations, reflections, and variable renaming",
+      "global equation gcd/sign normalization"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 23,
+    "answer_elements": 2,
+    "answer_tokens": 6,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "error_reason": "OpenRouter HTTP 403 total key limit",
+        "errors": 4,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "error_reason": "OpenRouter HTTP 403 total key limit",
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "error_reason": "OpenRouter HTTP 403 total key limit",
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "compact_route_failures": [],
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unrun_api_quota",
+    "intended_route_operations": 189,
+    "pass": true,
+    "shipping_seeds_measured": 10000
+  },
+  "all_passed": true,
+  "paper": "arXiv:2303.07825",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 250007
+  },
+  "track": "B"
+}
