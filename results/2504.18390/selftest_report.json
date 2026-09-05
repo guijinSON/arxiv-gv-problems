@@ -1,0 +1,185 @@
+{
+  "G1_planted_verifies": {
+    "checks": 20,
+    "failures": [],
+    "json_native_roundtrips": 20,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_block": {
+        "reason": "panel 0 has wrong number of blocks: expected 4, got 3",
+        "rejected": true
+      },
+      "drop_panel": {
+        "reason": "wrong number of panels: expected 2, got 1",
+        "rejected": true
+      },
+      "drop_point": {
+        "reason": "panel 0 row A block must contain exactly 6 points",
+        "rejected": true
+      },
+      "duplicate_point": {
+        "reason": "panel 0 row A block repeats a point",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "panel 0 row A block contains a point outside 0..124",
+        "rejected": true
+      },
+      "swap_rows": {
+        "reason": "panel 0 row assignment mismatch: a row B block was placed in row A",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 7,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "one uniform advertised candidate from every row of every panel",
+    "sampling_seconds": 3.442944,
+    "search_space": 11019960576,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_difference_operations": 4320,
+    "baseline_nodes": 504,
+    "baseline_solved": true,
+    "baseline_total_operations": 4824,
+    "baseline_wall_seconds": 0.000506,
+    "pass": true,
+    "shipping_exact_solution_fraction": 9.074442627116708e-11,
+    "shipping_exact_valid_count": 1,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_search_space": 11019960576
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_low_difference_overlap": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_equal_raw_moment": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_minimum_block_sum": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_64": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "name": "centered C2/C4 affine-covariant match",
+      "operations_max": 98,
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(p*n^4) mask trials after O(p*n) block preprocessing",
+      "name": "row-constrained Algorithm X / exact-cover backtracking",
+      "nodes": 434,
+      "operations": 4754,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.000459
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_after": 96,
+    "answer_atoms_before": 48,
+    "candidate_blocks_after": 288,
+    "candidate_blocks_before": 144,
+    "doubled_axis": "panels",
+    "doubled_params": {
+      "n": 18,
+      "panels": 4
+    },
+    "doubled_verified": true,
+    "escalated_params": {
+      "n": 22,
+      "panels": 2
+    },
+    "escalated_verified": true,
+    "pass": true,
+    "shipping_params": {
+      "n": 18,
+      "panels": 2
+    }
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 40,
+    "failures": [],
+    "invariance_checks": 40,
+    "pass": true,
+    "transformations": [
+      "independent base-block translations",
+      "global unit multiplication per panel",
+      "candidate, row, and panel reorderings"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 175,
+    "answer_elements": 48,
+    "answer_tokens": 44,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 98,
+    "pass": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "blocks_per_panel": 4,
+      "choices_per_row": "n",
+      "max_choices_per_row": 25,
+      "max_panels": 10,
+      "point_max": 124,
+      "point_min": 0,
+      "points_per_block": 6
+    },
+    "description": "A JSON outer array with one entry per panel; every panel entry has exactly four six-point blocks, choosing one advertised block from each row in row order. Points are distinct integers in 0..124 and order inside a block is ignored."
+  },
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 18,
+    "panels": 2
+  },
+  "track": "B"
+}
