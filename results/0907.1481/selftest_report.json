@@ -1,0 +1,157 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true,
+    "small_latin_square_checked": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "support must contain exactly four cells"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "support repeats an occupied cell"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer must be a JSON list"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "support contains an out-of-range label"
+      },
+      "swap_one": {
+        "accepted": false,
+        "reason": "support does not contain the stated anchor"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "markdown_fence": true,
+    "pass": true,
+    "prose": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": "340282366920938463426481119284349108225",
+    "exact_probability": 2.938735877055719e-39,
+    "exact_valid_answers": 1,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform non-anchor row times uniform non-anchor column",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations": 23327,
+    "baseline_wall_clock_sec": 0.001983,
+    "pass": true,
+    "shipping_density": {
+      "hits": 0,
+      "observed_fraction": 0.0,
+      "preset": "medium",
+      "samples": 200000,
+      "seed": 314159,
+      "wall_clock_sec": 6.124899
+    },
+    "shipping_exact_fraction": 2.938735877055719e-39,
+    "shipping_exact_valid_answers": 1,
+    "small_unique_count_validation": {
+      "checks": 40,
+      "failures": []
+    },
+    "strongest_baseline": {
+      "counted_word_and_bit_operations": 23327,
+      "name": "bit-packed Gaussian elimination over GF(2)",
+      "seed": 271828,
+      "verify": "ok",
+      "wall_clock_sec": 0.001983
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_adjacent_labels": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_switch_coordinate": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "single_factor_inverse": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "visible_half_shift": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^2) bit-packed row operations; O(n^3) bit complexity",
+      "name": "bit-packed Gaussian elimination over GF(2)",
+      "operations": 184925,
+      "per_instance_operations": 23115,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.015933
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_each": 8,
+    "larger_bits": 128,
+    "larger_space_bits": 256,
+    "larger_verify": "ok",
+    "pass": true,
+    "shipping_bits": 64,
+    "shipping_space_bits": 128
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "distinct_unrelated": 20,
+    "failures": [],
+    "invariance_checks": 100,
+    "invariances": [
+      "independent public row/column/symbol XOR relabelling",
+      "common-odd-multiplier cyclic affine coordinate change",
+      "row/column transpose",
+      "compositions and switch-list reorderings"
+    ],
+    "pass": true,
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 173,
+    "answer_elements": 8,
+    "answer_tokens": 44,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps_only_are_gated": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 107,
+    "pass": true
+  },
+  "pass": true
+}
+
