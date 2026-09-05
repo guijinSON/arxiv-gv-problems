@@ -1,0 +1,145 @@
+{
+  "G1_planted_verifies": {
+    "cases": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop_one": {
+        "reason": "labels must contain exactly 32 entries",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "labels must not repeat",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be an object containing labels and scales",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "a label is outside the inclusive range 0..31",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "coefficient mismatch at divided-power monomial (0,0,0): got 576312, expected 170382",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_native": true,
+    "pass": true,
+    "prose_and_fence_tolerated": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 297374247044372190442247947156936148541718428415981104259397163417600000000000000,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "structure_aware": true,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "demo_candidate_space": 9216,
+    "demo_exact_solution_count": 24,
+    "guess_sampling_wall_sec": 4.812041,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "strongest_failing_attack_nodes": 2048,
+    "strongest_failing_attack_wall_sec": 20.13309
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "absolute_magnitude_order": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_display_order": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "obvious_gray_walsh_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_diagonal_rank": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "nodes": 2048,
+        "successes": 0,
+        "wall_clock_sec": 20.13309
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^4) exact arithmetic",
+      "name": "exact contraction matrices plus simultaneous matrix pencil",
+      "operations_median": 2297919,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_median": 2.539553,
+      "wall_clock_sec_total": 19.886722
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 64,
+    "doubled_terms": 45760,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 32,
+    "shipping_terms": 5984
+  },
+  "G8_canonical_key": {
+    "invariance_checks": 60,
+    "pass": true,
+    "transformations": [
+      "variable permutation",
+      "term reorder",
+      "composition"
+    ],
+    "transformed_instances_valid": 60,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 226,
+    "answer_elements": 64,
+    "answer_tokens": 57,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run_cap_bound",
+    "intended_route_operations": 255,
+    "pass": true
+  },
+  "all_passed": true,
+  "hardening_outcome": {
+    "verdict": "cap_bound",
+    "reason": "The n=32 hard preset was solved by 2 of 3 bare oracles; the next n=64 route requires 575 intended operations, above the 300-operation no-tool cap. The family is parked, not rejected or shipped."
+  }
+}
