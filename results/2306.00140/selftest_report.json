@@ -1,0 +1,144 @@
+{
+  "G1_planted_verifies": {
+    "direct_group_ring_checks": {
+      "11": true,
+      "7": true
+    },
+    "failures": [],
+    "instances_tested": 16,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop_one": {
+        "reason": "sigma image must be a two-coordinate list",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "tau generator image must equal [shear, 1]",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer object is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "scale must be an integer in 1..1000002",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "sigma generator image must equal [scale, 0]",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 500002500003,
+    "exact_probability": 1.999990000038e-12,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_wall_sec": 60.21264195791446,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations": 11856,
+    "baseline_rows_recovered": 152,
+    "baseline_wall_seconds": 0.0017361580394208431,
+    "candidate_space": 500002500003,
+    "constructed_unique_solution": 1,
+    "density_hits": 0,
+    "density_method": "shipping-preset structure-aware Monte Carlo",
+    "density_samples": 200000,
+    "exact_solution_count_by_enumeration": null,
+    "pass": true,
+    "sampled_solution_density": 0.0,
+    "solution_density_exact_by_construction": 1.999990000038e-12
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_zero_shear": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "raw_moment_outlier": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "scale_one_first_moment_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(d log p) exact finite-field operations for d observation rows",
+      "name": "independent centered-moment modular recovery for every row",
+      "operations": 11856,
+      "rows_recovered": 152,
+      "solves": "1/1, as expected for Track B",
+      "wall_clock_sec": 0.0017361580394208431
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_unchanged": true,
+    "doubled_planted_verifies": true,
+    "doubled_prime": 2000039,
+    "pass": true,
+    "preset_primes": [
+      7,
+      100003,
+      300007,
+      1000003
+    ]
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "invariance_checks": 80,
+    "pass": true,
+    "transformations": [
+      "arbitrary square-scale group automorphism",
+      "nonsquare-scale group automorphism plus stabilizer canonicalisation",
+      "composition with observation reordering",
+      "observation reordering alone"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 110,
+    "answer_elements": 7,
+    "answer_tokens": 28,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 230,
+    "pass": true,
+    "placebo_status": "0 completed attempts: OpenRouter HTTP 403 total key limit"
+  },
+  "all_passed": true
+}
