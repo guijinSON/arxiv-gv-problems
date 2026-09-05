@@ -1,0 +1,169 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "Section 3 norm condition plus exact dual trace identity",
+    "exact_norm_checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer is too short: expected 48 digits",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "answer is too long: expected 48 digits",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "answer contains a non-ternary digit",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "the proposed endpoint constraint is not trace-orthogonal",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_length": 48,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 1.2536600121886844e-23,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform over all nonzero n-coordinate GF(3) vectors",
+    "structure_aware_space": 79766443076872509863360,
+    "total": 200000,
+    "wall_clock_sec": 5.383371
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_candidate_evaluations_total_8": 2048,
+    "attack_wall_clock_sec_total_8": 0.043877,
+    "candidate_space": 79766443076872509863360,
+    "demo_exact_valid_answers": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_density_at_shipping": 1.2536600121886844e-23,
+    "exact_valid_answers": 1,
+    "pass": true,
+    "reference_algorithm_operations_mean": 1711839,
+    "reference_algorithm_wall_clock_sec_mean": 0.04966644,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "random_restart_256"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_negate_only": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 5.3e-05
+      },
+      "off_by_one_shift_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 5e-05
+      },
+      "outlier_copy_eta": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 5.9e-05
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.043877
+      },
+      "wrong_direction_frobenius": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 5e-05
+      }
+    },
+    "compact_route": {
+      "count_model": "n coordinate moves, n GF(3) negations, and eight setup/check operations",
+      "name": "inverse Frobenius under trace, then negate",
+      "solves": "8/8, as expected",
+      "worst_case_exact_operations": 104
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) GF(3) scalar operations after systematic block extraction; generic ambient nullspace is O(n^6)",
+      "name": "trace-Gram coordinate adjoint over GF(3)",
+      "operations_max": 1727376,
+      "operations_mean": 1711839,
+      "operations_min": 1693548,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.04966644,
+      "wall_clock_sec_total_8": 0.397332
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 96,
+    "doubled_space": 6362685441135942358474828762538534230890216320,
+    "pass": true,
+    "shipping_n": 48,
+    "shipping_space": 79766443076872509863360,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "cyclic normal-basis reindexing",
+      "non-monomial normal-basis change",
+      "field Frobenius automorphism",
+      "composition of a basis change with a field automorphism"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 50,
+    "answer_elements": 48,
+    "answer_tokens": 13,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unrun",
+    "intended_route_operations": 104,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:1504.01581",
+  "pass": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "k": 23,
+    "n": 48
+  },
+  "track": "B"
+}
