@@ -1,0 +1,163 @@
+{
+  "G1_planted_verifies": {
+    "failures": [],
+    "pass": true,
+    "tests": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_row": {
+        "reason": "rotation must be a 2 by 2 matrix",
+        "rejected": true
+      },
+      "duplicate_row": {
+        "reason": "rotation rows must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer matrix is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "rotation parameter is outside certificate bounds",
+        "rejected": true
+      },
+      "swap_one_entry": {
+        "reason": "matrix is not in orientation-preserving rotation form",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_native_parsed": true,
+    "model_style_parsed": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "certificate_language_size": 5221928631,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over primitive bounded rational rotations R(a,b)",
+    "total": 200000,
+    "wall_clock_sec": 68.994627
+  },
+  "G5_density_and_baseline": {
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "reference_operation_count": 12223.0,
+    "reference_wall_clock_sec": 0.150744,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_density_estimate": {
+      "hits": 0,
+      "observed_fraction": 0.0,
+      "samples": 200000
+    },
+    "shipping_reference_cost": {
+      "candidate_rotations_mean": 364.62,
+      "complexity": "O(n^2) exact rational operations in the worst case",
+      "name": "exact anchor-induced rotation enumeration",
+      "operations_max": 19656,
+      "operations_mean": 12223.0,
+      "point_transforms_max": 2356,
+      "point_transforms_mean": 1551.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.412411,
+      "wall_clock_sec_mean": 0.150744
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "axis_rotation_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "bounding_box_extrema": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_nearest_anchor": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_coordinate_height": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_anchor_restart_16": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "candidate_rotations_mean": 364.62,
+      "complexity": "O(n^2) exact rational operations in the worst case",
+      "name": "exact anchor-induced rotation enumeration",
+      "operations_max": 19656,
+      "operations_mean": 12223.0,
+      "point_transforms_max": 2356,
+      "point_transforms_mean": 1551.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.412411,
+      "wall_clock_sec_mean": 0.150744
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 1536,
+    "doubled_params": {
+      "circle_factors": 6,
+      "n": 1536,
+      "rotation_height": 131071
+    },
+    "pass": true,
+    "shipping_n": 768,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 40,
+    "carried_witness_passes": 40,
+    "distinct_unrelated": 20,
+    "invariance_attempts": 40,
+    "invariance_passes": 40,
+    "invariants": [
+      "site reordering and ID renaming",
+      "curve-order reversal for this rotation-certificate problem",
+      "common rational rotation",
+      "common reflection with conjugated witness"
+    ],
+    "pass": true,
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 111,
+    "answer_elements": 8,
+    "answer_tokens": 28,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps_only_gate": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unrun",
+    "intended_route_operations": 12,
+    "pass": true
+  },
+  "all_pass": true,
+  "paper": "1211.4559",
+  "shipping": "hard",
+  "track": "B"
+}
