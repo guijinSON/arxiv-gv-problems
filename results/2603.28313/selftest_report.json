@@ -1,0 +1,175 @@
+{
+  "G1_planted_verifies": {
+    "checks": 20,
+    "failures": [],
+    "inverse_generation": "sample [q,s1,s2] first, then encrypt",
+    "pass": true,
+    "public_uniqueness_certificate": "gcd of all four augmented 3x3 minors equals q"
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong length: expected 3 integers, got 2",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "wrong length: expected 3 integers, got 4",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range_modulus": {
+        "reason": "modulus is outside the stated half-open interval",
+        "rejected": true
+      },
+      "swap_secret_coordinates": {
+        "reason": "ciphertext mismatch at session 0, coordinate 0: got 94448521002475, expected 24365707196247",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "malformed_returns_none": true,
+    "pass": true,
+    "realistic_response": true
+  },
+  "G4_guess_resistance": {
+    "exact_unique_witness_probability": 2.0679515313825692e-25,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform q in the published interval and uniform bounded secret coordinates",
+    "structure_aware_space": 4835703278458516698824704,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_iterations": 2048,
+    "baseline_wall_clock_sec": 0.006315878126770258,
+    "demo_exact_enumeration": {
+      "candidate_space": 175,
+      "valid_answers": 1
+    },
+    "density_hits": 0,
+    "density_total": 200000,
+    "pass": true,
+    "shipping_density": {
+      "exact_fraction_from_uniqueness": "1/4835703278458516698824704",
+      "hits": 0,
+      "observed_fraction": 0.0,
+      "sampling_wall_clock_sec": 0.6052579639945179,
+      "total": 200000
+    },
+    "strongest_failing_attack": {
+      "iterations": 2048,
+      "name": "random candidate-modulus restart with exact first-system solve",
+      "successes": 0,
+      "wall_clock_sec_total_8": 0.006315878126770258
+    },
+    "successful_reference_cost": {
+      "candidate_moduli_tested": 4268172,
+      "wall_clock_sec_total_8": 11.102403902914375
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_no_wrap_integer_solve": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_lower_edge_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_max_public_plus_one": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_modulus_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "candidate_moduli_tested_mean": 533521.5,
+      "candidate_moduli_tested_total": 4268172,
+      "complexity": "O(n log q) exact arithmetic for fixed 2x2 systems",
+      "name": "Section V-B candidate-q consistency search",
+      "operation_unit": "one small modular-system consistency trial",
+      "operations": 4268172,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 1.3878004878642969,
+      "wall_clock_sec_total_8": 11.102403902914375
+    }
+  },
+  "G7_scales": {
+    "answer_length_doubled": 3,
+    "answer_length_shipping": 3,
+    "doubled_build_sec": 0.0003036400303244591,
+    "doubled_n": 2097152,
+    "doubled_space": 9671406556917033397649408,
+    "pass": true,
+    "shipping_n": 1048576,
+    "shipping_space": 4835703278458516698824704,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "canonicalization": "sort sessions and minimize over the two possible coordinate-name permutations",
+    "failures": [],
+    "invariance_checks": 60,
+    "pass": true,
+    "problem_preservation_checks": 60,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 38,
+    "answer_elements": 3,
+    "answer_tokens": 10,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "error_draws": 4,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "error_draws": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "error_draws": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unavailable: OpenRouter HTTP 403 key limit",
+    "intended_route_operation_range": [
+      138,
+      161
+    ],
+    "intended_route_operations": 161,
+    "pass": true,
+    "token_measure": "ceil(minified JSON characters / 4)"
+  },
+  "all_passed": true,
+  "paper": "2603.28313",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 1048576,
+    "q_min": 140737488355328,
+    "secret_bound": 2147483648
+  },
+  "track": "B"
+}
