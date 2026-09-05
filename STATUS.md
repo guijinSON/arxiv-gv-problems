@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **175 / 12,167** resolved (1.44%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **176 / 12,167** resolved (1.45%)
 
 | state | count |
 |---|---:|
 | ✅ done | 86 |
-| 🚫 rejected (documented) | 89 |
-| 🔄 in progress | 45 |
+| 🚫 rejected (documented) | 90 |
+| 🔄 in progress | 44 |
 | ⚪ free | 11,946 |
 | **total** | **12,167** |
 
@@ -14,7 +14,6 @@
 
 | paper | who | claimed |
 |---|---|---|
-| `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
 | `1609.05136` | GUIJIN SON | 2026-09-04T19:53 |
 | `1408.5515` | GUIJIN SON | 2026-09-04T23:24 |
 | `1206.2611` | GUIJIN SON | 2026-09-05T00:02 |
@@ -54,7 +53,8 @@
 | `0909.4692` | GUIJIN SON | 2026-09-05T02:16 |
 | `1703.00606` | GUIJIN SON | 2026-09-05T02:26 |
 | `1709.02873` | GUIJIN SON | 2026-09-05T02:26 |
-| … 5 more | | |
+| `1407.6556` | GUIJIN SON | 2026-09-05T02:26 |
+| … 4 more | | |
 
 ## By family
 
@@ -73,4 +73,4 @@
 | words and permutations | 6 | 237 |
 | finite field constructions | 12 | 235 |
 
-_regenerated 2026-09-05 02:41Z by `scripts/status.sh --write`_
+_regenerated 2026-09-05 02:45Z by `scripts/status.sh --write`_
