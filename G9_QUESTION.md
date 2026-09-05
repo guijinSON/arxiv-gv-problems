@@ -16,6 +16,30 @@ under — and were then discarded.
 | 1904.00563 | easy | 0 |
 | 1608.00931 | easy | 0 |
 
+## Update, later the same day: it is also blocking 23 papers at submit
+
+The eight above are the papers G9 caused to be *rejected*. Since then the pipeline has
+accumulated a second, larger pile: **23 papers set aside at submit, and every one of
+them fails on `G9_no_tool_suitability` and nothing else.** Not one is blocked by any
+other gate.
+
+| harden verdict | count | note |
+|---|---|---|
+| `hardened` | 6 | the family survived the four-vendor no-tool pool and still cannot ship |
+| `cap_bound` / `budget_bound` | 3 | parked mechanically — G9 can never pass because the family cannot be hardened further |
+| not recorded | 14 | mostly mid-rebuild at the time of counting |
+
+So the running total attributable to G9 is **8 rejected + 23 blocked = 31 papers**,
+against a corpus of 100 accepted. That is no longer a design question worth noting in
+passing; it is the single largest loss mechanism in the pipeline, larger than every
+harness bug found today combined.
+
+The three `cap_bound`/`budget_bound` cases are worth stating precisely, because they
+show the gate cannot be satisfied even in principle: G9 requires the family to defeat
+the pool *with* its hint, but these families cannot be escalated at all — the answer cap
+or the escalation ladder is already exhausted. There is no version of the paper that
+passes. `1402.1813`, `1011.3701` and `1609.05136` are parked for that reason.
+
 ## What G9(b) says
 
 > The family must still defeat the oracle pool **when it is given its one-sentence
