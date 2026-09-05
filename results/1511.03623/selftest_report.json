@@ -1,0 +1,179 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "json_round_trips": 12,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "wrong term count: expected 100",
+        "rejected": true
+      },
+      "duplicate_exponent": {
+        "reason": "duplicate exponent 0",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "coefficient at term 0 is outside GF(p)",
+        "rejected": true
+      },
+      "swap_coefficients": {
+        "reason": "inclusion-row sum mismatch at intersection size 1: got 56, expected 0",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 666,
+    "exact_density": "1/101^100",
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "sampling_prior": "uniform over every dense coefficient vector in GF(p)^(p-1)",
+    "total": 200000,
+    "wall_clock_sec": 11.187078
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.000551,
+    "demo_exact_solution_count_by_bruteforce": 1,
+    "pass": true,
+    "reference_operation_count": 1071216,
+    "reference_wall_clock_sec": 0.049464,
+    "shipping_exact_density": "1/101^100 (unique polynomial)",
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sampled_density": 0.0,
+    "strongest_failing_attack": "unscaled_fermat_ansatz"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_linear_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000317
+      },
+      "greedy_orbit_values_as_coefficients": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000347
+      },
+      "outlier_single_monomial": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000385
+      },
+      "random_sparse_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.08288
+      },
+      "unscaled_fermat_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.004407
+      }
+    },
+    "intended_compact_route": {
+      "name": "intersection-orbit recurrence and Fermat polynomial",
+      "operations_upper_bound": 151,
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(p^3) exact GF(p) operations",
+      "inversions": 100,
+      "name": "dense coefficient matching plus exact Gauss-Jordan elimination",
+      "operations": 1071216,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.049464
+    }
+  },
+  "G7_scales": {
+    "candidate_space_bits_doubled": 1622,
+    "candidate_space_bits_shipping": 666,
+    "doubled_build_sec": 0.000113,
+    "doubled_input_n": 202,
+    "doubled_p": 211,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_input_n": 101,
+    "shipping_p": 101
+  },
+  "G8_canonical_key": {
+    "invariant_is_complete_for": "a ground set with one distinguished subset plus the fixed field scalars",
+    "invariant_relabellings": 140,
+    "pass": true,
+    "real_transformations_verified_with_original_answer": 140,
+    "transformations": [
+      "ground-set reversal",
+      "cyclic ground-set relabelling",
+      "random ground-set relabelling",
+      "all four nontrivial compositions of those maps"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 981,
+    "answer_elements": 200,
+    "answer_tokens": 246,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 3
+      }
+    },
+    "caps": {
+      "answer_chars": 2000,
+      "answer_elements": 256,
+      "intended_route_operations": 300
+    },
+    "hinted_minus_placebo": -0.6666666666666667,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 151,
+    "pass": true,
+    "worst_case_answer_chars": 1091,
+    "worst_case_answer_tokens": 273
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "coefficient_count_formula": "p",
+      "hard_max_terms": 126,
+      "max_degree_formula": "p-2",
+      "n_polynomials": 1,
+      "shipping_p": 101,
+      "shipping_terms": 100,
+      "terms_formula": "p-1"
+    },
+    "description": "One dense univariate polynomial over GF(p): a JSON list containing exactly one [coefficient,[exponent]] term for every exponent 0 through p-2; coefficients are least residues 0,...,p-1 and term order is free."
+  },
+  "paper": "1511.03623",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 101
+  },
+  "track": "B"
+}
