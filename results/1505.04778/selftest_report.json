@@ -1,0 +1,123 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "reasons": {
+      "drop_one": "each cluster must contain exactly n point indices",
+      "duplicate": "point indices are duplicated rather than forming a partition",
+      "empty": "answer must be a JSON object with only the key 'clusters'",
+      "out_of_range": "a point index is outside the stated 0-based range",
+      "swap_memberships": "the three candidate centroids are not an arithmetic progression"
+    },
+    "rejected": 5
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_reply": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1577585295,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform unlabeled balanced 3-partitions",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attempts": 8,
+    "baseline_operations_mean": 23208.0,
+    "baseline_successes": 8,
+    "baseline_wall_clock_sec_max": 0.2544963259715587,
+    "baseline_wall_clock_sec_mean": 0.21529535483568907,
+    "demo_candidate_space": 15,
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_coordinate_sum_tertiles": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_nearest_seed": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_any_single_coordinate_tertiles": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_squared_norm_tertiles": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_balanced_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(Nm + N log N + N^3) exact",
+      "name": "mean-projection recovery followed by the paper's exact dual check",
+      "operations_mean": 23208.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.2544963259715587,
+      "wall_clock_sec_mean": 0.21529535483568907
+    }
+  },
+  "G7_scales": {
+    "doubled_points": 48,
+    "doubled_search_space": 225890910734335847055,
+    "pass": true,
+    "shipping_points": 24,
+    "shipping_search_space": 1577585295
+  },
+  "G8_canonical_key": {
+    "invariance_checks": 40,
+    "invariances": [
+      "point relabeling",
+      "coordinate permutation",
+      "coordinate sign changes",
+      "global translation",
+      "uniform scale normalization"
+    ],
+    "pass": true,
+    "real_transform_verifications": 40,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 82,
+    "answer_elements": 24,
+    "answer_tokens": 21,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "diagnostic_not_gated": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unavailable_openrouter_403",
+    "intended_route_operations": 264,
+    "pass": true
+  }
+}
