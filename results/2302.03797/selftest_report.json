@@ -1,0 +1,189 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "inverse reversal composition with a one-MNS increase certified at every step",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong length: the exact MNS lower bound is 10, got 9",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "repeat identifiers must be pairwise distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "unknown repeat identifier at index 0: 1049",
+        "rejected": true
+      },
+      "swap_one_for_decoy": {
+        "reason": "step 1: repeat 1 is not oppositely oriented",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      18,
+      21,
+      15,
+      20,
+      37,
+      16,
+      5,
+      11,
+      4,
+      3
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform ordered samples without replacement, already enforcing exact length, repeat-only entries, and distinctness",
+    "structure_aware_space": 11576551623436800,
+    "total": 200000,
+    "wall_clock_sec": 22.138868
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_wall_clock_sec_total_8": 0.309541,
+    "candidate_space": 11576551623436800,
+    "demo_candidate_space": 42,
+    "demo_exact_valid_answers": 2,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "pass": true,
+    "random_restart_candidates_total_8": 2048,
+    "reference_algorithm_operations_mean": 7651,
+    "reference_algorithm_wall_clock_sec_mean": 0.01650134,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "random_restart_256"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_leftmost_mismatch": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.064079
+      },
+      "outlier_shortest_spans": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.005365
+      },
+      "outlier_smallest_identifiers": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 2.1e-05
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.309541
+      },
+      "sign_parity_guess": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.00931
+      },
+      "static_boundary_left_to_right": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.016832
+      }
+    },
+    "compact_route": {
+      "name": "unique adjacency directions compressed to the signed boundary word",
+      "operations_max": 248,
+      "operations_mean": 232.5,
+      "operations_min": 216,
+      "solves": "8/8, as expected",
+      "worst_case_bound": 296
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(L^2) exact comparisons for chromosome length L",
+      "name": "Section 4 Algorithm 1: adjacency matching and proper-boundary reversals",
+      "operations_max": 7651,
+      "operations_mean": 7651,
+      "operations_min": 7651,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.01650134,
+      "wall_clock_sec_total_8": 0.132011
+    }
+  },
+  "G7_scales": {
+    "answer_elements_both": 10,
+    "doubled_chromosome_symbols": 186,
+    "doubled_n": 88,
+    "pass": true,
+    "shipping_chromosome_symbols": 94,
+    "shipping_n": 44,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "canonicalization": "first-occurrence role ranks, orientation normalization, and lexicographic minimization over direction/reversal",
+    "carried_witness_checks": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "repeat and gene renaming",
+      "independent symbol-orientation gauge flips",
+      "simultaneous whole-chromosome reverse-negation",
+      "composition of all preceding transformations"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 37,
+    "answer_elements": 10,
+    "answer_tokens": 10,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unrun",
+    "intended_route_operations": 296,
+    "measured_compact_operations_max_8": 248,
+    "oracle_status": "unrun or unavailable when attempts is zero",
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:2302.03797",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "distance": 10,
+    "genes": 4,
+    "n": 44
+  },
+  "track": "B"
+}
