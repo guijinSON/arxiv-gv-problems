@@ -1,0 +1,190 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "rejections": {
+      "drop_one": {
+        "reason": "correction list is one entry short",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "correction list is one entry too long",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer list must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "correction at row 0 is outside {-1,0}",
+        "rejected": true
+      },
+      "swap_one": {
+        "reason": "row 0 correction does not expose a factor",
+        "rejected": true
+      }
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 2704156,
+    "empirical_probability": 5e-07,
+    "exact_density_from_unique_row_witnesses": 3.698011505253395e-07,
+    "hits": 1,
+    "pass": true,
+    "prior": "uniform over balanced vectors with exactly 12 entries equal to -1",
+    "sampling_wall_seconds": 20.30076765595004,
+    "total": 2000000
+  },
+  "G5_density_and_baseline": {
+    "baseline_euclidean_remainders": 70874,
+    "baseline_gcd_calls": 3888,
+    "baseline_name": "full Rational Base Descent gcd window",
+    "baseline_operations": 75626,
+    "baseline_successes": 1,
+    "baseline_wall_seconds": 0.005455616861581802,
+    "demo_exact_solution_count": 1,
+    "enumerate_all_shipping": null,
+    "pass": true,
+    "shipping_candidate_space": 2704156,
+    "shipping_density_sample_count": 2000000,
+    "shipping_exact_density": 3.698011505253395e-07,
+    "shipping_exact_valid_count": 1,
+    "shipping_observed_valid_fraction": 5e-07,
+    "shipping_valid_hits": 1
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_last_digit_rounding_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_first_half_minus_one": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_semiprime_magnitude_rank": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256_binary_vectors": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O((a/(a-b)) log^3 N) bit operations",
+      "gcd_calls_mean": 3888,
+      "gcd_calls_total": 31104,
+      "name": "Section 2 Rational Base Descent with every gcd window",
+      "operations_mean": 75536,
+      "operations_total": 604289,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.005244441039394587,
+      "wall_clock_sec_total": 0.0419555283151567
+    }
+  },
+  "G7_scales": {
+    "answer_entries_fixed": 24,
+    "doubled_build_and_verify_seconds": 18.665349612943828,
+    "doubled_n": 36,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "named_max_operand_bits": [
+      219,
+      351,
+      461
+    ],
+    "pass": true,
+    "shipping_n": 18
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "invariance_checks": 60,
+    "pass": true,
+    "real_transformation_verify_checks": 60,
+    "symmetries": [
+      "row reversal",
+      "cyclic row rotation",
+      "composition"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 61,
+    "answer_elements": 24,
+    "answer_tokens": 16,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 240,
+    "pass": true,
+    "within_size_and_operation_caps": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "alphabet": [
+        -1,
+        0
+      ],
+      "entries": "instance rows (24 at every non-demo preset)",
+      "max_entries": 24
+    },
+    "description": "A JSON list with exactly one correction per displayed row, in row order; every correction is -1 or 0, with exactly floor(rows/2) entries equal to -1."
+  },
+  "problem_profile": {
+    "certificate_form": "integer_tuple",
+    "computational_core": "other",
+    "domain_essentiality": "native",
+    "hardness_basis": "Track B: Blake's Section 2 Rational Base Descent algorithm runs in O((a/(a-b)) log^3 N) bit operations by Section 5 and is expected to solve every row; at shipping n=18 it used 3,888 gcd calls, about 75,600 counted exact operations, and 0.005 seconds, while collapsing the integer-base descent at the supplied depth uses 240 high-level exact operations and must be executed without a big-integer tool.",
+    "intuition_description": "Unrolling the floor descent leaves a geometrically bounded sum of discarded fractions, forcing the target-depth correction to one of two integers; without that invariant one repeats a gcd window at every descent depth.",
+    "intuition_type": "invariant",
+    "max_answer_tokens": 16,
+    "native_domain": "number_theory",
+    "native_objects": [
+      "structured semiprimes",
+      "coprime rational base",
+      "integer rational-base descent orbit",
+      "bounded gcd correction vector"
+    ],
+    "object_regime": "finite_discrete",
+    "reduction": null,
+    "reduction_kind": "none",
+    "reduction_source": "paper_central",
+    "verification_operations": [
+      "exact integer multiplication and floor division",
+      "exact Euclidean gcd",
+      "integer range comparison"
+    ]
+  },
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 18,
+    "rows": 24
+  },
+  "track": "B"
+}
