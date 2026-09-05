@@ -1,0 +1,187 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction_audit": "the carried permutation orbit matched every planted answer",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "wrong number of IDs: expected 7, got 6"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "candidate IDs must be distinct"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "candidate ID out of range"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "candidate IDs must be strictly increasing"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "fenced_matches": true,
+    "garbage_returns_none": true,
+    "pass": true,
+    "tagged_matches": true
+  },
+  "G4_guess_resistance": {
+    "anchor_compatible_candidates": 1106,
+    "candidate_space": 2507831816322196,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over increasing anchored k-subsets after filtering every candidate that visibly fails distance to the mandatory anchor",
+    "total": 200000,
+    "wall_clock_sec": 6.627784
+  },
+  "G5_density_and_baseline": {
+    "demo_candidate_space": 6,
+    "demo_exact_solution_count": 1,
+    "known_efficient_algorithm_operations": 2825984,
+    "known_efficient_algorithm_wall_clock_sec": 0.021976,
+    "pass": true,
+    "reference_algorithm_nodes": 4297,
+    "reference_algorithm_row_checks": 3798441,
+    "reference_algorithm_wall_clock_sec": 2.024765,
+    "reference_average_nodes": 537,
+    "reference_average_row_checks": 474805,
+    "shipping_candidate_space": 2507831816322196,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "random_restart_greedy_256",
+    "strongest_failing_attack_steps": 5602667,
+    "strongest_failing_attack_wall_clock_sec": 11.452707
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_lexicographic_first_fit": {
+        "attempts": 8,
+        "steps": 23666,
+        "successes": 0,
+        "wall_clock_sec": 0.044988
+      },
+      "in_context_near_anchor_ids": {
+        "attempts": 8,
+        "steps": 22052,
+        "successes": 0,
+        "wall_clock_sec": 0.026923
+      },
+      "outlier_coordinate_rarity": {
+        "attempts": 8,
+        "steps": 358435,
+        "successes": 0,
+        "wall_clock_sec": 0.343019
+      },
+      "random_restart_greedy_256": {
+        "attempts": 8,
+        "steps": 5602667,
+        "successes": 0,
+        "wall_clock_sec": 11.452707
+      }
+    },
+    "compact_route_audit": {
+      "name": "follow the anchor orbit with binary search in the sorted table",
+      "operations_per_instance": 294,
+      "solves": "construction identity, audited by G1"
+    },
+    "known_efficient_algorithm": {
+      "average_operations_per_instance": 353248,
+      "complexity": "O(NL+kL) exact bit inspections",
+      "name": "full candidate indexing plus coordinate-permutation orbit lookup",
+      "operations": 2825984,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.021976
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_nodes_per_instance": 537,
+      "average_row_checks_per_instance": 474805,
+      "complexity": "exponential worst case; exact cover on k*n coordinates",
+      "name": "Algorithm X exact-cover backtracking with minimum-column branching",
+      "nodes": 4297,
+      "operations": 3802738,
+      "row_checks": 3798441,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 2.024765
+    }
+  },
+  "G7_scales": {
+    "doubled_answer_length": 7,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "doubled_word_length": 532,
+    "pass": true,
+    "preset_candidate_spaces": {
+      "demo": 6,
+      "easy": 91390,
+      "hard": 2507831816322196,
+      "medium": 1085371516236
+    },
+    "preset_word_lengths": {
+      "demo": 9,
+      "easy": 40,
+      "hard": 266,
+      "medium": 112
+    }
+  },
+  "G8_canonical_key": {
+    "canonicalization_caveat": "color refinement is a strong cheap invariant, not a complete isomorphism algorithm for colored set systems",
+    "carried_witness_checks": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_failures": [],
+    "pass": true,
+    "transformations": [
+      "arbitrary candidate-table reorder with IDs carried",
+      "arbitrary coordinate relabelling with the permutation conjugated",
+      "composition of candidate reorder and coordinate relabelling"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 30,
+    "answer_elements": 7,
+    "answer_tokens": 8,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 294,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "code_size": 7,
+    "decoy_orbits": 220,
+    "n": 38
+  },
+  "track": "B"
+}
