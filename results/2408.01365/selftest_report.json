@@ -1,0 +1,157 @@
+{
+  "G1_planted_verifies": {
+    "generation_route": "composition of hidden equal-pair identities",
+    "instances": 16,
+    "original_models_mispredict": 16,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "drop_one": "too few IDs: exactly 20 ordinary samples are required",
+      "duplicate": "retained sample IDs must be distinct",
+      "element_swap": "retrained classifier predicts -1 (test margin -88911142919/89026255542)",
+      "empty": "the retained ordinary-sample list must not be empty",
+      "order_swap": "retained sample IDs must be strictly increasing",
+      "out_of_range": "every retained sample ID must lie in 0..39"
+    }
+  },
+  "G3_round_trip": {
+    "malformed_returns_none": true,
+    "pass": true,
+    "realistic_response": true
+  },
+  "G4_guess_resistance": {
+    "empirical_probability": 0.0,
+    "hits": 0,
+    "measurement": "exact Appendix-B.1 integer-sum criterion",
+    "pass": true,
+    "prior": "uniform k-subsets containing index 0",
+    "structure_aware_space": 68923264410,
+    "total": 200000,
+    "wall_clock_sec": 24.56986486702226
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack": "exact fixed-cardinality Horowitz--Sahni meet-in-the-middle",
+    "baseline_operation_count": 3145725,
+    "baseline_state_count": 1572864,
+    "baseline_wall_clock_sec": 20.087645014049485,
+    "demo_candidate_count": 35,
+    "demo_exact_solution_count": 2,
+    "pass": true,
+    "shipping_candidate_count": 68923264410,
+    "shipping_exact_solution_count": 600,
+    "shipping_valid_fraction": 8.705333462309813e-09
+  },
+  "G6_adversary_panel": {
+    "attack_costs": {
+      "lll_reduction_loops": 640,
+      "random_restart_iterations": 30720
+    },
+    "attacks": {
+      "balanced_largest_first_greedy": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "by_hand_consecutive_quartets": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "lll_cardinality_embedding_80_loop_prefix": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "per_element_smallest_magnitude": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_one_swap_24x160": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "complexity": "O(n) exact arithmetic with a fixed modulus",
+      "max_operations": 180,
+      "name": "normalization plus residue-class equal-pair decomposition",
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.0025279878173023462
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(2^(n/2)) time and storage",
+      "name": "exact fixed-cardinality Horowitz--Sahni meet-in-the-middle",
+      "operations": 3145725,
+      "solves": "1/1, as expected",
+      "states": 1572864,
+      "wall_clock_sec": 20.087645014049485
+    }
+  },
+  "G7_scales": {
+    "base_candidate_space": 68923264410,
+    "base_n": 40,
+    "doubled_n": 80,
+    "pass": true,
+    "planted_verifies": true,
+    "scaled_candidate_space": 53753604366668088230810
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated": 20,
+    "invariance_checks": 60,
+    "original_answer_checks": 20,
+    "pass": true,
+    "real_transformation_checks": 60,
+    "symmetries": [
+      "ordinary-sample relabelling",
+      "independent simultaneous sign flip of each (x,y) pair",
+      "compositions of those transformations"
+    ],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 72,
+    "answer_elements": 20,
+    "answer_tokens": 18,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0,
+    "hinted_verdict": "not_yet_run",
+    "intended_route_operations": 180,
+    "pass": true,
+    "token_measurement": "ceil(serialized JSON characters / 4)",
+    "worst_case_answer_chars": 80,
+    "worst_case_answer_tokens": 20
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "index_bits": 8,
+      "max_index": 255,
+      "max_indices": 128
+    },
+    "description": "A strictly increasing JSON list of exactly n/2 distinct 0-based ordinary-sample indices, containing index 0; n is a multiple of 4 and n <= 64 for every named preset."
+  },
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 40,
+    "payload_bits": 20
+  },
+  "track": "B"
+}
