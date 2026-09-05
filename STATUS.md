@@ -1,12 +1,12 @@
 # Status
 
-`█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **383 / 12,167** resolved (3.15%)
+`█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **384 / 12,167** resolved (3.16%)
 
 | state | count |
 |---|---:|
-| ✅ done | 206 |
+| ✅ done | 207 |
 | 🚫 rejected (documented) | 177 |
-| 🔄 in progress | 164 |
+| 🔄 in progress | 163 |
 | ⚪ free | 11,620 |
 | **total** | **12,167** |
 
@@ -54,7 +54,7 @@
 | `1304.2429` | GUIJIN SON | 2026-09-05T04:02 |
 | `2403.06290` | GUIJIN SON | 2026-09-05T04:02 |
 | `2310.15909` | GUIJIN SON | 2026-09-05T04:02 |
-| … 124 more | | |
+| … 123 more | | |
 
 ## By family
 
@@ -73,4 +73,4 @@
 | words and permutations | 7 | 237 |
 | finite field constructions | 15 | 235 |
 
-_regenerated 2026-09-05 07:41Z by `scripts/status.sh --write`_
+_regenerated 2026-09-05 07:42Z by `scripts/status.sh --write`_
