@@ -1,0 +1,271 @@
+{
+  "G1_planted_verifies": {
+    "checks": [
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "demo",
+        "reason": "ok",
+        "seed": 0
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "demo",
+        "reason": "ok",
+        "seed": 1
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "demo",
+        "reason": "ok",
+        "seed": 2
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "easy",
+        "reason": "ok",
+        "seed": 0
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "easy",
+        "reason": "ok",
+        "seed": 1
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "easy",
+        "reason": "ok",
+        "seed": 2
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "medium",
+        "reason": "ok",
+        "seed": 0
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "medium",
+        "reason": "ok",
+        "seed": 1
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "medium",
+        "reason": "ok",
+        "seed": 2
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "hard",
+        "reason": "ok",
+        "seed": 0
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "hard",
+        "reason": "ok",
+        "seed": 1
+      },
+      {
+        "json_native": true,
+        "ok": true,
+        "preset": "hard",
+        "reason": "ok",
+        "seed": 2
+      }
+    ],
+    "json_round_trips": 12,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "each triple must be a list of exactly three integers"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "the four triples must be distinct"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer must be a list of exactly four triples"
+      },
+      "non_integer": {
+        "accepted": false,
+        "reason": "every entry must be an integer"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "every entry must be a positive integer"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "the four triples must be lexicographically increasing"
+      }
+    },
+    "distinct_required_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "tagged_matches": true,
+    "untagged_fence_matches": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 272043839600,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over all 4-subsets of normalized pool rows",
+    "total": 200000,
+    "wall_clock_sec": 1.078073
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "reference_algorithm_operations": 50855,
+    "reference_algorithm_wall_clock_sec": 0.003047,
+    "reference_average_operations": 6356,
+    "shipping_candidate_space": 272043839600,
+    "shipping_exact_density": 3.6758781285779205e-12,
+    "shipping_exact_valid_answers": 1,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "distinguished_factors_separate_then_balance",
+    "strongest_failing_attack_steps": 38400,
+    "strongest_failing_attack_wall_clock_sec": 0.015376
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "a_square_then_balance": {
+        "attempts": 8,
+        "steps": 38400,
+        "successes": 0,
+        "wall_clock_sec": 0.013905
+      },
+      "distinguished_factors_separate_then_balance": {
+        "attempts": 8,
+        "steps": 38400,
+        "successes": 0,
+        "wall_clock_sec": 0.015376
+      },
+      "greedy_most_balanced_rows": {
+        "attempts": 8,
+        "steps": 12800,
+        "successes": 0,
+        "wall_clock_sec": 0.002284
+      },
+      "in_context_cyclic_factor_ansatz": {
+        "attempts": 8,
+        "steps": 416,
+        "successes": 0,
+        "wall_clock_sec": 6.1e-05
+      },
+      "outlier_median_magnitude": {
+        "attempts": 8,
+        "steps": 12800,
+        "successes": 0,
+        "wall_clock_sec": 0.004128
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "steps": 2048,
+        "successes": 0,
+        "wall_clock_sec": 0.011481
+      }
+    },
+    "compact_route_audit": {
+      "name": "Proposition 2.8 four-by-three factor incidence",
+      "operations": 384,
+      "operations_per_instance": 48,
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations_per_instance": 6356,
+      "complexity": "expected O(n) dictionary operations and O(n) exact arithmetic",
+      "name": "exact integer-sum signature hashing",
+      "operations": 50855,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.003047
+    }
+  },
+  "G7_scales": {
+    "answer_elements_unchanged": true,
+    "doubled_n": 3200,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "pass": true,
+    "preset_pool_sizes": {
+      "demo": 10,
+      "easy": 600,
+      "hard": 1600,
+      "medium": 1000
+    }
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_failures": [],
+    "pass": true,
+    "transformations": [
+      "candidate-row reordering",
+      "independent coordinate permutations within every triple",
+      "composition of row and coordinate reordering"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 225,
+    "answer_elements": 12,
+    "answer_tokens": 57,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "diagnostic_is_not_gated": true,
+    "exhaustively_checked_s_values": 29,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 48,
+    "pass": true,
+    "within_caps": true,
+    "worst_case_answer_chars": 270,
+    "worst_case_answer_elements": 12,
+    "worst_case_answer_tokens": 68
+  },
+  "all_passed": true,
+  "paper": "arXiv:2408.13867",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 1600,
+    "s_max": 47,
+    "s_min": 19
+  },
+  "track": "B"
+}
