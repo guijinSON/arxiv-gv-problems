@@ -144,12 +144,25 @@ NATIVE_ESSENTIALITY = "native"
 # "cryptographic" and "degree of" matched "degree of the polynomial", both of which
 # fired on 1912.02640, a finite-field module with no graph in it.  Bounding the words
 # keeps the render() signal and drops that whole class.
-GRAPH_PATTERNS = (
-    r"\badjacen(?:t|cy)\b", r"\bedges?\b", r"\bneighbou?r",
-    r"\bvert(?:ex|ices)\b", r"\bconflict", r"\bcliques?\b",
-    r"\b(?:sub|multi|di|hyper)?graphs?\b", r"\binciden(?:t|ce)\b",
-    r"\bdegree of (?:a |the )?(?:vertex|vertices|node|nodes)\b",
+# Split by how much each word actually proves. Reading render() is right -- renaming
+# "edges" to "pairs" evaded a keys-only test -- but ONE ambiguous word in prose is not
+# evidence of a graph. Of the 11 papers this gate blocked on 2026-09-06, at least 7 were
+# ordinary algebraic prose: "incidence vector belongs to the row span", "every adjacent
+# pair swapped", "finite projective vertex", "swapping adjacent disjoint cycles".
+GRAPH_STRONG = (
+    r"\b(?:sub|multi|di|hyper)?graphs?\b", r"\bcliques?\b", r"\bedges?\b",
+    r"\badjacency\b", r"\bneighbou?rs?\b",
 )
+GRAPH_WEAK = (
+    r"\badjacent\b", r"\binciden(?:t|ce)\b", r"\bvert(?:ex|ices)\b",
+    r"\bconflict", r"\bdegree of (?:a |the )?(?:vertex|vertices|node|nodes)\b",
+)
+
+
+def _is_graphy(text):
+    if any(re.search(w, text) for w in GRAPH_STRONG):
+        return True
+    return sum(1 for w in GRAPH_WEAK if re.search(w, text)) >= 2
 ASSIGN = ("clause", "assign", "variab", "literal", "colour", "color", "constraint")
 COVER = ("lengths", "items", "weights", "subset", "blocks", "target", "capacit")
 PERM = ("permutation", "ordering", "ranking", "bracket", "seeding")
@@ -179,11 +192,13 @@ def derive_core(inst, shown=""):
     # chosen to match key names, and key names are short and controlled.  The graph
     # test is regex because it also reads prose, where substrings misfire.
     def _hit(words, text, rx):
+        if rx == "fn":
+            return _is_graphy(text)
         return any(re.search(w, text) for w in words) if rx else any(w in text for w in words)
     hits = [name for name, words, rx in (("csp_sat", ASSIGN, False),
                                          ("exact_cover", COVER, False),
                                          ("permutation", PERM, False),
-                                         ("graph", GRAPH_PATTERNS, True))
+                                         ("graph", (), "fn"))
             if _hit(words, keys, rx)]
     if len(hits) == 1:
         return hits[0]
@@ -191,7 +206,7 @@ def derive_core(inst, shown=""):
         return UNKNOWN            # ambiguous: several cores match the same instance
     # Nothing in the instance keys.  The rendered statement is weaker evidence -- use
     # it only for graph, and only when the keys said nothing at all.
-    if any(re.search(w, both) for w in GRAPH_PATTERNS):
+    if _is_graphy(both):
         return "graph"
     return UNKNOWN
 

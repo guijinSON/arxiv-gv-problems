@@ -370,7 +370,11 @@ seeds = [r.get("seed") for r in rows]
 if len(set(seeds)) != len(seeds):
     fail.append("repeated seeds — every attempt must use a distinct instance")
 rounds = [r.get("escalation_round", 0) for r in rows]
-cap = meta.get("max_escalations", 3)
+# Track harden.py's own default, not a frozen number. When MAX_ESCALATIONS went
+# 3 -> 6 this stayed at 3, so a run whose .meta.json lost its fields (the G9 arms
+# overwrite it) was blocked for "escalation_round reached 5, above the cap of 3" --
+# a cap that never applied to that run.
+cap = meta.get("max_escalations") or int(os.environ.get("ORACLE_MAX_ESCALATIONS", "6"))
 if rounds and max(rounds) > cap:
     fail.append(f"escalation_round reached {max(rounds)}, above the cap of {cap}")
 # The hardness claim rests on the level that held, not on the run as a whole:
@@ -516,18 +520,31 @@ DISCRETE_CORE = {"graph", "csp_sat", "exact_cover", "subset_sum", "permutation"}
 # have blocked every crypto paper that ever says so, which is exactly the
 # under-represented family this corpus needs.  "degree of" matched "degree of the
 # polynomial" for the same reason and is now pinned to a graph noun.
-GRAPH_PATTERNS = (
-    r"\badjacen(?:t|cy)\b", r"\bedges?\b", r"\bneighbou?r",
-    r"\bvert(?:ex|ices)\b", r"\bconflict", r"\bcliques?\b",
-    r"\b(?:sub|multi|di|hyper)?graphs?\b", r"\binciden(?:t|ce)\b",
-    r"\bdegree of (?:a |the )?(?:vertex|vertices|node|nodes)\b",
+# Split by how much each word actually proves. Reading render() is right -- renaming
+# "edges" to "pairs" evaded a keys-only test -- but ONE ambiguous word in prose is not
+# evidence of a graph. Of the 11 papers this gate blocked on 2026-09-06, at least 7 were
+# ordinary algebraic prose: "incidence vector belongs to the row span", "every adjacent
+# pair swapped", "finite projective vertex", "swapping adjacent disjoint cycles".
+GRAPH_STRONG = (
+    r"\b(?:sub|multi|di|hyper)?graphs?\b", r"\bcliques?\b", r"\bedges?\b",
+    r"\badjacency\b", r"\bneighbou?rs?\b",
 )
+GRAPH_WEAK = (
+    r"\badjacent\b", r"\binciden(?:t|ce)\b", r"\bvert(?:ex|ices)\b",
+    r"\bconflict", r"\bdegree of (?:a |the )?(?:vertex|vertices|node|nodes)\b",
+)
+
+
+def _is_graphy(text):
+    if any(re.search(w, text) for w in GRAPH_STRONG):
+        return True
+    return sum(1 for w in GRAPH_WEAK if re.search(w, text)) >= 2
 try:
     _shown = m.render(i).lower()
 except Exception:
     _shown = ""
 keys = (" ".join(k for k in i if k != "answer") + " " + _shown).lower()
-graphy = any(re.search(w, keys) for w in GRAPH_PATTERNS)
+graphy = _is_graphy(keys)
 
 if graphy and NAT["core"] not in DISCRETE_CORE:
     print(f"ERROR: the solver is handed {sorted(k for k in i if k != 'answer')},\n"
