@@ -1,0 +1,184 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "inverse-generated permutation-polynomial matchings bundled k+1 at a time",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "expected 4 parameter pairs, got 3",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "component 4 induces more than 8 intercepts",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "scale a at component 1 must be an integer in 1..66",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "component 1 induces more than 8 intercepts",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 382362201079056,
+    "candidate_space_bits": 49,
+    "exact_compact_density": 2.6153212769931804e-15,
+    "exact_valid_compact_answers": 1,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_constraints": [
+      "exactly one [a,b] pair per component",
+      "each a is nonzero and each b is arbitrary modulo p",
+      "pair repetitions are allowed exactly as in the statement"
+    ],
+    "total": 200000,
+    "wall_clock_sec": 1.193637
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_restarts": 2048,
+    "baseline_attack_successes": 0,
+    "baseline_attack_wall_clock_sec": 0.012934,
+    "demo_candidate_space": 156,
+    "demo_exact_solution_count": 1,
+    "demo_exact_solution_fraction": 0.00641025641025641,
+    "pass": true,
+    "shipping_exact_compact_solution_count": 1,
+    "shipping_exact_compact_solution_fraction": 2.6153212769931804e-15,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density_estimate": 0.0,
+    "strongest_failing_attack": "random_restart_2048"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_first_moment_affine_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.001354
+      },
+      "by_hand_first_pair_alignment": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000262
+      },
+      "greedy_minimum_neighbor": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.001296
+      },
+      "outlier_degree_constant": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000107
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.01335
+      }
+    },
+    "intended_compact_route": {
+      "name": "quintic finite differences of neighbourhood sums",
+      "operations": 260,
+      "solves": "8/8",
+      "wall_clock_sec": 0.000278
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(b r^2 p^2) edge inspections",
+      "name": "repeated augmenting-path perfect matchings, bundled k+1 per colour",
+      "operations": 54433,
+      "operations_mean": 53290.75,
+      "output_edge_labels": 2144,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.012633,
+      "wall_clock_sec_total_8": 0.089885
+    }
+  },
+  "G7_scales": {
+    "answer_length_unchanged": 4,
+    "doubled_build_and_verify_sec": 0.110743,
+    "doubled_edges": 4384,
+    "doubled_prime": 137,
+    "doubled_requested_n": 134,
+    "doubled_verify_reason": "ok",
+    "escalation_after_shipping": {
+      "colours": 2,
+      "components": 3,
+      "modulus": 4,
+      "n": 137
+    },
+    "pass": true,
+    "shipping_edges": 2144,
+    "shipping_prime": 67,
+    "shipping_requested_n": 67
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariant_relabellings": 100,
+    "key_caveat": "complete for the declared generated coordinate symmetries; it uses affine offset-set normal forms and is not a general bipartite graph isomorphism algorithm outside this family",
+    "pass": true,
+    "real_transformations_verified": 100,
+    "transformations": [
+      "arbitrary vertex-ID and edge-list relabelling",
+      "component reordering with carried answer",
+      "independent affine changes of left/right coordinates",
+      "a second independent ID/edge reordering",
+      "composition of ID, component, and affine changes"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 33,
+    "answer_elements": 8,
+    "answer_tokens": 9,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "service_errors": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "service_errors": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 2,
+        "service_errors": 4,
+        "solved": 1
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "diagnostic_evidence_ready": false,
+    "hinted_minus_placebo": -0.5,
+    "hinted_verdict": "hardened; placebo third slot unavailable after key-limit errors",
+    "intended_route_operations": 260,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true
+}
