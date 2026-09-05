@@ -1,0 +1,120 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "instances": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "drop_one": "answer is missing its denominator",
+      "swap": "the exact count must have denominator 1",
+      "duplicate": "answer has extra entries",
+      "empty": "answer is empty",
+      "out_of_range": "count exceeds the number of ordered distinct tuples",
+      "wrong_in_range": "incorrect exact orthogonal-system count"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed": [
+      240,
+      1
+    ]
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "observed_probability": 0.0,
+    "certificate_space": 33941735686592228782,
+    "candidate_prior": "uniform over every k!-multiple in [0, falling(|E|,k)]"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_valid_answers": 1,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sample_density": 0.0,
+    "exact_language_density": 2.9462252880456646e-20,
+    "baseline_wall_seconds": 0.0576617423503194,
+    "baseline_field_operations": 2165594.0,
+    "baseline_euclidean_divisions": 1319.125,
+    "strongest_failing_attack_wall_seconds": 0.0016950410790741444,
+    "strongest_failing_attack_restarts": 4096,
+    "demo_valid_answer_count": 1
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_largest_scalar_layer": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_top_k_projective_lines": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "paper_random_density_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_certificate_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "projective normalization + exact Gram check + coefficient DP",
+      "complexity": "O(|E|d + d^3 + dk) exact",
+      "wall_clock_sec": 0.0576617423503194,
+      "operations": 2165594.0,
+      "euclidean_divisions": 1319.125,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_dimension": 128,
+    "doubled_dimension": 256,
+    "shipping_vectors": 411,
+    "doubled_vectors": 773,
+    "doubled_verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "relabelled_witness_checks": 20,
+    "unrelated_seeds": 20,
+    "distinct_keys": 20,
+    "transformations": [
+      "input-row permutation",
+      "global coordinate permutation and sign changes",
+      "composition of both"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": false,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 1,
+        "attempts": 1
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "too_easy",
+    "answer_chars": 30,
+    "answer_tokens": 8,
+    "answer_elements": 2,
+    "intended_route_operations": 285
+  },
+  "all_passed": false
+}
