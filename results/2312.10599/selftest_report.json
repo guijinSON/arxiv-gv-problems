@@ -1,0 +1,194 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "rejections": {
+      "drop_one": {
+        "reason": "selected vertices do not dominate core vertex 22",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "vertex labels must not repeat",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "pre-assignment must be nonempty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "vertex label is outside the graph's range",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "vertex labels must be strictly increasing",
+        "rejected": true
+      }
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 2434053505276148,
+    "empirical_probability": 0.0,
+    "fast_predicate_matches_verify": "100/100",
+    "hits": 0,
+    "instance_structure_check": "ok",
+    "pass": true,
+    "prior": "uniform over every nonempty core subset of size at most k",
+    "sampling_wall_seconds": 25.709602823015302,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_cap_reached": true,
+    "baseline_node_cap": 1000000,
+    "baseline_nodes": 1000000,
+    "baseline_successes": 0,
+    "baseline_wall_seconds": 43.963704050984234,
+    "demo_exact_valid_count": 4,
+    "pass": true,
+    "shipping_candidate_space": 2434053505276148,
+    "shipping_density_sample_count": 200000,
+    "shipping_exact_valid_count": null,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_valid_hits": 0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "exact_ids_branch_and_propagate_1m": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_maximum_domination_gain": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_core_degree": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256_greedy": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "spectral_centered_zero_block": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "standard_attack_cost": {
+      "caps_reached": 8,
+      "complexity": "exponential worst case",
+      "name": "capped exact independent-domination branch and propagation",
+      "nodes_mean": 1000000.0,
+      "nodes_total": 8000000,
+      "wall_clock_sec_mean": 27.18179433324258,
+      "wall_clock_sec_total": 217.45435466594063
+    }
+  },
+  "G7_scales": {
+    "answer_length_fixed": 10,
+    "doubled_build_and_verify_seconds": 0.03083976893685758,
+    "doubled_core_n": 320,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "named_candidate_spaces": [
+      2434053505276148,
+      38901895217346723,
+      339978537467839023
+    ],
+    "pass": true,
+    "shipping_core_n": 160
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "invariance_checks": 80,
+    "key_kind": "marked-core Weisfeiler--Lehman invariant",
+    "pass": true,
+    "real_transformation_verify_checks": 80,
+    "symmetries": [
+      "arbitrary vertex relabelling",
+      "edge-order reversal",
+      "core-list and private-pair reordering"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 40,
+    "answer_elements": 10,
+    "answer_tokens": 10,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unavailable: OpenRouter key limit exhausted",
+    "intended_route_operations": 170,
+    "pass": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "entries": "distinct labels from the instance's core W",
+      "length_max": "instance k",
+      "length_min": 1,
+      "order": "strictly increasing canonical order"
+    },
+    "description": "A strictly increasing JSON list of between 1 and k distinct vertex labels, all from the displayed core W.  It denotes vertices forbidden from the minimum vertex cover."
+  },
+  "problem_profile": {
+    "certificate_form": "integer_tuple",
+    "computational_core": "graph",
+    "domain_essentiality": "licensed_reduction",
+    "hardness_basis": "Track A: Section 3, Theorem 4 proves NP-completeness for bipartite PAU-VC via exactly the pendant-corona regime, while the augmented vertex-cover number grows with n outside the paper's small-tau easy regime; at the shipping preset the capped exact independent-domination search cost is measured by G5.",
+    "intuition_description": "Across the two core colour classes the wanted vertices form a small all-zero rectangle whose closed neighborhoods cover the core; without propagating both conditions one must branch over core subsets.",
+    "intuition_type": "constraint propagation",
+    "max_answer_tokens": 11,
+    "native_domain": "combinatorics",
+    "native_objects": [
+      "bipartite graph with a distinguished core and one private leaf per core vertex",
+      "Exclude pre-assignment for minimum vertex cover"
+    ],
+    "object_regime": "finite_discrete",
+    "reduction": "Section 3, Lemmas 4 and 5 and Theorem 4: the pendant-corona reduction from bipartite Independent Dominating Set to PAU-VC",
+    "reduction_kind": "paper_licensed",
+    "reduction_source": "paper_central",
+    "verification_operations": [
+      "pendant-pair consistency check",
+      "core-edge adjacency lookup",
+      "independence check",
+      "closed-neighborhood domination check"
+    ]
+  },
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "k": 10,
+    "n": 160,
+    "plant_degree": 1,
+    "regularity": 0
+  },
+  "track": "A"
+}
