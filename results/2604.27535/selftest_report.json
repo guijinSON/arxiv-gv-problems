@@ -1,0 +1,166 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "generation_route": "inverse generation by cyclic-shift composition",
+    "ore_reason": "every graph has minimum degree at least n/2",
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "expected exactly 64 graph indices",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "graph indices must be pairwise distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "graph index out of range",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "edge position 1 is absent from graph 80",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "model_style_round_trip": true,
+    "pass": true,
+    "renderer_example_parses": true
+  },
+  "G4_guess_resistance": {
+    "estimated_probability": 0.0,
+    "hits": 0,
+    "pass": true,
+    "sampler": "uniform permutations of exactly the k graph indices that occur in the table",
+    "structure_aware_space": 126886932185884164103433389335161480802865516174545192198801894375214704230400000000000000,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_max_operations": 7107,
+    "baseline_operations": 6709.875,
+    "baseline_table_bit_inspections": 4096,
+    "baseline_wall_clock_sec": 0.0003173512523062527,
+    "demo_candidate_space": 24,
+    "demo_exact_solution_count": 2,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_solution_fraction_estimate": 0.0,
+    "strongest_failing_attack": "random_restart_512",
+    "strongest_failing_attack_restarts": 4096,
+    "strongest_failing_attack_wall_clock_sec": 0.09355227509513497
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "diagonal_or_reversed_shift_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.014667266048491001
+      },
+      "greedy_largest_graph": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.0012368725147098303
+      },
+      "greedy_smallest_graph": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.00130372098647058
+      },
+      "outlier_row_column_frequency": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.0019887438975274563
+      },
+      "random_restart_512": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.09355227509513497
+      }
+    },
+    "compact_route": {
+      "bit_inspections_by_literal_implementation": 9216,
+      "exact_operations": 70,
+      "name": "align the unique longest cyclic marker",
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(k^2 + E*sqrt(2k))",
+      "max_operations": 7107,
+      "name": "Hopcroft--Karp bipartite matching after full table scan",
+      "operations": 6709.875,
+      "solves": "8/8, as expected",
+      "table_bit_inspections": 4096,
+      "wall_clock_sec": 0.0003173512523062527
+    }
+  },
+  "G7_scales": {
+    "doubled_cycle_length": 128,
+    "doubled_n": 256,
+    "doubled_space_bits": 717,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_cycle_length": 64,
+    "shipping_n": 128,
+    "shipping_space_bits": 296
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "invariance_checks": 100,
+    "pass": true,
+    "symmetries": [
+      "arbitrary vertex relabelling",
+      "arbitrary graph-index relabelling",
+      "arbitrary display-column reordering",
+      "cycle rotation and reversal",
+      "compositions of these maps"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 270,
+    "answer_elements": 64,
+    "answer_tokens": 68,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 1
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "compact_route_verifies": "20/20",
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unreachable_http_403_key_total_limit",
+    "intended_route_operations": 70,
+    "pass": true,
+    "pattern_bit_inspections_by_literal_implementation": 9216
+  },
+  "all_passed": true
+}
