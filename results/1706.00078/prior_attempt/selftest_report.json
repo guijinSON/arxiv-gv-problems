@@ -1,0 +1,125 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "logical_compilation_checks": 16,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop_one": {"reason": "bit string is too short: expected 26, got 25", "rejected": true},
+      "duplicate_one": {"reason": "bit string is too long: expected 26, got 27", "rejected": true},
+      "empty": {"reason": "answer string is empty", "rejected": true},
+      "out_of_range": {"reason": "answer contains a character outside {0,1}", "rejected": true},
+      "swap_one": {"reason": "base assignment violates a displayed dense parity equation", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response_parsed": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sample_wall_clock_sec": 22.183361262083054,
+    "sampler": "uniform n-bit base assignment in the exact output language",
+    "structure_aware_space": "67108864",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_row_xors_mean": 300,
+    "baseline_scalar_bit_operations_mean": 8123,
+    "baseline_wall_clock_sec_mean": 0.00030072068329900503,
+    "demo_candidate_space": 256,
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "shipping_candidate_space": "67108864",
+    "shipping_compiled_ternary_equations": 672,
+    "shipping_dense_equations": 32,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_all_zero": {"attempts": 8, "successes": 0},
+      "by_hand_alternating": {"attempts": 8, "successes": 0},
+      "dpll_nae_unit_128_nodes": {"attempts": 8, "exhausted": 8, "nodes": 1024, "successes": 0},
+      "greedy_local_flip": {"attempts": 8, "successes": 0},
+      "outlier_literal_polarity": {"attempts": 8, "successes": 0},
+      "random_restart_256": {"attempts": 8, "successes": 0}
+    },
+    "compact_route": {
+      "attempts": 8,
+      "name": "frequency-two cycle recovery and step-three XOR recurrence",
+      "successes": 8,
+      "xor_operations_max": 128
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "O(R*n^2) scalar bit operations for R equations",
+      "name": "exact GF(2) Gaussian elimination on the displayed dense equations",
+      "row_xors_max": 342,
+      "row_xors_mean": 300,
+      "scalar_bit_operations_max": 9234,
+      "scalar_bit_operations_mean": 8123,
+      "solves": "8/8, as expected for Track B",
+      "successes": 8,
+      "wall_clock_sec_max": 0.0005078911781311035,
+      "wall_clock_sec_mean": 0.00030072068329900503
+    }
+  },
+  "G7_scales": {
+    "crowded_decoys": 32,
+    "crowded_matrix_dimension": 41350,
+    "crowded_verify_reason": "ok",
+    "doubled_matrix_dimension": 92674,
+    "doubled_n": 52,
+    "doubled_search_bits": 52,
+    "doubled_verify_reason": "ok",
+    "fixed_answer_n": 26,
+    "pass": true,
+    "shipping_decoys": 6,
+    "shipping_matrix_dimension": 22838,
+    "shipping_n": 26,
+    "shipping_search_bits": 26
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "invariance_checks": 80,
+    "pass": true,
+    "real_transformation_witness_checks": 80,
+    "transformations": [
+      "arbitrary base-variable renaming",
+      "arbitrary equation reordering",
+      "independent base-variable complementation with RHS transport",
+      "base-output coordinate reordering, all composed"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 28,
+    "answer_elements": 26,
+    "answer_tokens": 7,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 2},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "quota_blocked",
+    "intended_route_operations": 128,
+    "intended_route_verified": true,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}

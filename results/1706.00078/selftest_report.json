@@ -1,0 +1,173 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "logical_compilation_checks": 16,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop_one": {
+        "reason": "bit string is too short: expected 58, got 57",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "bit string is too long: expected 58, got 59",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer string is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "answer contains a character outside {0,1}",
+        "rejected": true
+      },
+      "swap_one": {
+        "reason": "base assignment violates a displayed dense parity equation",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response_parsed": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sample_wall_clock_sec": 1.2474604230374098,
+    "sampler": "uniform n-bit base assignment in the exact output language",
+    "structure_aware_space": "288230376151711744",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_row_xors_mean": 809,
+    "baseline_scalar_bit_operations_mean": 47782,
+    "baseline_wall_clock_sec_mean": 0.0007213252829387784,
+    "demo_candidate_space": 256,
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "shipping_candidate_space": "288230376151711744",
+    "shipping_compiled_ternary_equations": 3498,
+    "shipping_dense_equations": 66,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_all_zero": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "by_hand_alternating": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "dpll_nae_unit_128_nodes": {
+        "attempts": 8,
+        "exhausted": 8,
+        "nodes": 1024,
+        "successes": 0
+      },
+      "greedy_local_flip": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_literal_polarity": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "attempts": 8,
+      "name": "frequency-two cycle recovery and step-three XOR recurrence",
+      "successes": 8,
+      "xor_operations_max": 288
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "O(R*n^2) scalar bit operations for R equations",
+      "name": "exact GF(2) Gaussian elimination on the displayed dense equations",
+      "row_xors_max": 925,
+      "row_xors_mean": 809,
+      "scalar_bit_operations_max": 54575,
+      "scalar_bit_operations_mean": 47782,
+      "solves": "8/8, as expected for Track B",
+      "successes": 8,
+      "wall_clock_sec_max": 0.00101615977473557,
+      "wall_clock_sec_mean": 0.0007213252829387784
+    }
+  },
+  "G7_scales": {
+    "crowded_decoys": 66,
+    "crowded_matrix_dimension": 223318,
+    "crowded_verify_reason": "ok",
+    "doubled_matrix_dimension": 467962,
+    "doubled_n": 116,
+    "doubled_search_bits": 116,
+    "doubled_verify_reason": "ok",
+    "fixed_answer_n": 58,
+    "pass": true,
+    "shipping_decoys": 8,
+    "shipping_matrix_dimension": 118918,
+    "shipping_n": 58,
+    "shipping_search_bits": 58
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "invariance_checks": 80,
+    "pass": true,
+    "real_transformation_witness_checks": 80,
+    "transformations": [
+      "arbitrary base-variable renaming",
+      "arbitrary equation reordering",
+      "independent base-variable complementation with RHS transport",
+      "base-output coordinate reordering, all composed"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 60,
+    "answer_elements": 58,
+    "answer_tokens": 15,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 3
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not_run_after_cap_bound",
+    "intended_route_operations": 288,
+    "intended_route_verified": true,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
