@@ -1,0 +1,120 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "base_identity_checked": true,
+    "displayed_decoder_successes": 12,
+    "json_roundtrips": 12,
+    "pass": true,
+    "successes": 12
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "reasons": {
+      "drop_one": "wrong length: expected 246, got 245",
+      "duplicate_on_edge": "edge conflict on 0-37",
+      "empty": "answer is empty",
+      "out_of_range": "color outside the stated range at vertex 0",
+      "swap_two": "color not in L(118)"
+    }
+  },
+  "G3_round_trip": {"parsed_length": 246, "pass": true},
+  "G4_guess_resistance": {
+    "candidate_space": 1848022711807006789363742924186380397459598743988580507626230184853329698401651277038959872394848076799452648304270867457338358569307601442233135458081960678100585937500,
+    "candidate_space_bits": 558,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "independent uniform choice from each displayed L(v)",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "demo_enumeration_nodes": 93872,
+    "demo_exact_solution_count": 57884,
+    "pass": true,
+    "reference_algorithm_decisions": 246,
+    "reference_algorithm_list_tests": 151057,
+    "reference_algorithm_solved": 1,
+    "reference_algorithm_wall_clock_sec": 0.01166136609390378,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "strongest_failing_attack_restarts": 256,
+    "strongest_failing_attack_steps": 62976,
+    "strongest_failing_attack_wall_clock_sec": 0.06949507701210678
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "first_displayed_base_key": {"attempts": 8, "successes": 0},
+      "greedy_high_degree_first": {"attempts": 8, "successes": 0},
+      "greedy_label_order": {"attempts": 8, "successes": 0},
+      "obvious_barycentric_vertex_key_ansatz": {"attempts": 8, "successes": 0},
+      "outlier_rarest_list_color": {"attempts": 8, "successes": 0},
+      "random_greedy_256_restarts": {"attempts": 8, "successes": 0}
+    },
+    "efficient_distribution_decoder": {
+      "complexity": "O(N), since every tag has at most three terms",
+      "membership_tests": 25,
+      "name": "compatible-key selection plus barycentric-parity transport",
+      "operations": 114,
+      "selection_xors": 0,
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "backtracks": 0,
+      "complexity": "O(5^N) worst case for this implementation; O(N^2) on the measured zero-backtrack scan, matching the natural Thomassen-style bound",
+      "decisions": 246,
+      "name": "MRV forward-checking executable proxy for the proof-guided construction",
+      "operations": 151131,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.012124298984417692
+    }
+  },
+  "G7_scales": {
+    "doubled_space_bits": 2219,
+    "doubled_vertices": 966,
+    "pass": true,
+    "shipping_space_bits": 558,
+    "shipping_vertices": 246
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 100,
+    "carried_witnesses_valid": 100,
+    "distinct_unrelated_keys": 20,
+    "distinctness_attempts": 20,
+    "invariance_attempts": 100,
+    "invariant_relabellings": 100,
+    "pass": true,
+    "symmetries_tested": [
+      "arbitrary vertex renumbering",
+      "edge-list reversal",
+      "key-candidate row reversal",
+      "outer-cycle rotation and reversal",
+      "global affine color permutation",
+      "auxiliary barycentric base-frame renaming",
+      "compositions of the above"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 493,
+    "answer_elements": 246,
+    "answer_tokens": 124,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 2},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run_bare_cap_bound",
+    "intended_route_membership_tests": 56,
+    "intended_route_operations": 114,
+    "pass": false
+  },
+  "all_passed": false,
+  "disposition": "cap_bound: retained and parked, not rejected and not shipped",
+  "shipping_difficulty": "hard",
+  "shipping_params": {"n": 5},
+  "track": "B"
+}
