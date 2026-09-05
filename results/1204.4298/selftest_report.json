@@ -1,0 +1,206 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_coordinate": {
+        "reason": "origin must be a length-2 coordinate pair",
+        "rejected": true
+      },
+      "duplicate_steps": {
+        "reason": "layer_step and slot_step are linearly dependent",
+        "rejected": true
+      },
+      "empty_answer": {
+        "reason": "answer object is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "a frame coordinate is outside the inclusive range 0..1008",
+        "rejected": true
+      },
+      "swap_step_roles": {
+        "reason": "a vertex decodes outside the permitted slot range",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_chars": 64,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform over all origins and all ordered linearly independent step-vector pairs over F_p; shape, bounds and independence are enforced before verification",
+    "structure_aware_space": 1054182825985282560,
+    "total": 200000,
+    "wall_clock_sec": 1.90069
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attempts_or_iterations": 8,
+    "baseline_wall_clock_sec_total_8": 0.023216,
+    "candidate_space_at_shipping": 1054182825985282560,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_demo_candidate_space": 98784,
+    "exact_demo_enumeration_wall_clock_sec": 0.464915,
+    "exact_demo_valid_answers": 2,
+    "pass": false,
+    "reference_algorithm_operations_mean": 36271,
+    "reference_algorithm_wall_clock_sec_mean": 0.0059076,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "visible_degree3_twin_endpoint"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "coordinate_axes": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000333
+      },
+      "degree_extrema_frame": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.008785
+      },
+      "lexicographic_local_frame": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.005978
+      },
+      "projective_direction_frequency": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.01484
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.019208
+      },
+      "visible_degree3_twin_endpoint": {
+        "attempts": 8,
+        "successes": 8,
+        "wall_clock_sec_total_8": 0.023216
+      }
+    },
+    "compact_route": {
+      "count_model": "two vector differences, orientation/scale checks in the two endpoint classes, and four modular checks per quotient layer",
+      "name": "affine twin-path coordinate change",
+      "worst_case_exact_operations": 204
+    },
+    "pass": false,
+    "reference_algorithm": {
+      "complexity": "O(N^2 + L^2 + w^3 + NLw^2) exact",
+      "name": "closed-neighborhood twin refinement, quotient-path ordering, and exact affine-progression recovery",
+      "operations_max": 39752,
+      "operations_mean": 36271,
+      "operations_min": 30454,
+      "shipping_vertex_edge_sizes": [
+        [
+          166,
+          1217
+        ],
+        [
+          171,
+          1303
+        ],
+        [
+          159,
+          1122
+        ],
+        [
+          174,
+          1345
+        ],
+        [
+          170,
+          1294
+        ],
+        [
+          171,
+          1309
+        ],
+        [
+          169,
+          1280
+        ],
+        [
+          168,
+          1268
+        ]
+      ],
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.0059076,
+      "wall_clock_sec_total_8": 0.047261
+    }
+  },
+  "G7_scales": {
+    "doubled_layers": 64,
+    "doubled_vertices": 352,
+    "fixed_answer_elements": 6,
+    "original_layers": 32,
+    "original_vertices": 166,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witnesses_valid": 80,
+    "failures": [],
+    "invariant_relabellings": 60,
+    "pass": true,
+    "transformations": [
+      "vertex index permutation and edge reordering",
+      "invertible affine coordinate relabelling over F_p",
+      "their composition",
+      "layer-path reversal (alternate witness)"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 66,
+    "answer_elements": 6,
+    "answer_tokens": 17,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "answer_chars": 2000,
+      "answer_elements": 256,
+      "intended_route_operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unrun",
+    "intended_route_operations": 204,
+    "pass": true
+  },
+  "paper": "arXiv:1204.4298",
+  "pass": false,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 32,
+    "p": 1009,
+    "width_max": 7,
+    "width_min": 4
+  },
+  "track": "B"
+}
