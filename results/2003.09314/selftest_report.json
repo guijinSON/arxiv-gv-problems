@@ -1,0 +1,280 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_element": {
+        "accepted": false,
+        "reason": "incomplete: radius 31 is missing"
+      },
+      "drop_group": {
+        "accepted": false,
+        "reason": "wrong group count: expected 8, got 7"
+      },
+      "duplicate_across": {
+        "accepted": false,
+        "reason": "duplicate across components: radius 7 appears twice"
+      },
+      "duplicate_inside": {
+        "accepted": false,
+        "reason": "duplicate within component: component 0 repeats a radius"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty: the component partition is absent"
+      },
+      "exchange_components": {
+        "accepted": false,
+        "reason": "component length mismatch: component 0 receives 123 vertices of fire-ball capacity, not 117"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "out of range: radius 37 is not in [0,36]"
+      },
+      "swap_order": {
+        "accepted": false,
+        "reason": "noncanonical order: component 0 is not increasing"
+      }
+    },
+    "distinct_reasons": 8,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 2449380252051393086407492937986560,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform onto assignments of all radii to labeled nonempty components",
+    "total": 200000,
+    "wall_clock_sec": 5.504065
+  },
+  "G5_density_and_baseline": {
+    "baseline_algorithm": "memoized fixed-bin path-forest dynamic program",
+    "baseline_total_nodes": 408638,
+    "baseline_total_operations": 2363676,
+    "baseline_total_wall_clock_sec": 0.752179,
+    "demo_candidate_count": 186480,
+    "demo_exact_solution_count": 12,
+    "demo_n": 9,
+    "pass": true,
+    "shipping_candidate_space": 2449380252051393086407492937986560,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "affine_modulo_ansatz": {
+        "attempts": 8,
+        "operations": 9472,
+        "successes": 0,
+        "wall_clock_sec": 0.003654
+      },
+      "greedy_largest_residual": {
+        "attempts": 8,
+        "operations": 2368,
+        "successes": 0,
+        "wall_clock_sec": 0.000342
+      },
+      "greedy_tightest_residual": {
+        "attempts": 8,
+        "operations": 2368,
+        "successes": 0,
+        "wall_clock_sec": 0.00032
+      },
+      "outlier_length_rank_blocks": {
+        "attempts": 8,
+        "operations": 296,
+        "successes": 0,
+        "wall_clock_sec": 0.000114
+      },
+      "random_greedy_restarts": {
+        "attempts": 8,
+        "operations": 8436,
+        "successes": 0,
+        "wall_clock_sec": 0.011721
+      }
+    },
+    "construction_aware_attacks": [
+      "outlier_length_rank_blocks",
+      "greedy_tightest_residual",
+      "greedy_largest_residual",
+      "random_greedy_restarts",
+      "affine_modulo_ansatz"
+    ],
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "O(k*t*product_c(L_c+1)); polynomial for fixed t",
+      "name": "memoized fixed-bin path-forest dynamic program",
+      "nodes": 408638,
+      "operations": 2363676,
+      "per_seed": [
+        {
+          "nodes": 20878,
+          "operations": 111248,
+          "seed": 800,
+          "solved": true,
+          "wall_clock_sec": 0.032902
+        },
+        {
+          "nodes": 84602,
+          "operations": 513388,
+          "seed": 801,
+          "solved": true,
+          "wall_clock_sec": 0.166355
+        },
+        {
+          "nodes": 98900,
+          "operations": 503746,
+          "seed": 802,
+          "solved": true,
+          "wall_clock_sec": 0.17125
+        },
+        {
+          "nodes": 6442,
+          "operations": 43207,
+          "seed": 803,
+          "solved": true,
+          "wall_clock_sec": 0.012159
+        },
+        {
+          "nodes": 23134,
+          "operations": 141508,
+          "seed": 804,
+          "solved": true,
+          "wall_clock_sec": 0.041254
+        },
+        {
+          "nodes": 66468,
+          "operations": 388427,
+          "seed": 805,
+          "solved": true,
+          "wall_clock_sec": 0.120384
+        },
+        {
+          "nodes": 55373,
+          "operations": 326738,
+          "seed": 806,
+          "solved": true,
+          "wall_clock_sec": 0.101423
+        },
+        {
+          "nodes": 52841,
+          "operations": 335414,
+          "seed": 807,
+          "solved": true,
+          "wall_clock_sec": 0.106454
+        }
+      ],
+      "solves": "8/8, as expected",
+      "successes": 8,
+      "wall_clock_sec": 0.752179
+    }
+  },
+  "G7_scales": {
+    "fixed_length_escalation": {
+      "components": 9,
+      "filter_max_nodes": 250000,
+      "filter_min_nodes": 5000,
+      "n": 37,
+      "random_restarts": 32
+    },
+    "ladder": [
+      {
+        "candidate_space": 186480,
+        "components": 4,
+        "filter_min_nodes": 0,
+        "k": 9,
+        "preset": "demo"
+      },
+      {
+        "candidate_space": 2449380252051393086407492937986560,
+        "components": 8,
+        "filter_min_nodes": 5000,
+        "k": 37,
+        "preset": "easy"
+      },
+      {
+        "candidate_space": 42702996616813219959676271450683927411200,
+        "components": 8,
+        "filter_min_nodes": 15000,
+        "k": 45,
+        "preset": "medium"
+      },
+      {
+        "candidate_space": 725820718451873852348071034885269044709536023040,
+        "components": 8,
+        "filter_min_nodes": 40000,
+        "k": 53,
+        "preset": "hard"
+      }
+    ],
+    "pass": true,
+    "size_doubled_params": {
+      "components": 8,
+      "filter_max_nodes": 0,
+      "filter_min_nodes": 0,
+      "n": 74,
+      "random_restarts": 0
+    },
+    "size_doubled_reason": "ok",
+    "size_doubled_verifies": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 40,
+    "distinct_keys": 20,
+    "invariance_checks": 40,
+    "invariance_failures": [],
+    "key_definition": "SHA-256 of k and the sorted multiset of component orders",
+    "pass": true,
+    "transformations": [
+      "arbitrary component reordering",
+      "composition of two independent component reorderings",
+      "implicit reversal of any path component"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 118,
+    "answer_elements": 37,
+    "answer_tokens": 30,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 3
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 3
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 231,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "components": 8,
+    "filter_max_nodes": 250000,
+    "filter_min_nodes": 5000,
+    "n": 37,
+    "random_restarts": 32
+  },
+  "track": "B"
+}
