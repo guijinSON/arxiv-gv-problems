@@ -1,0 +1,142 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "expected exactly 7 vertices, got 6"
+      },
+      "swap_one": {
+        "accepted": false,
+        "reason": "vertex 0 does not have the query's power residue"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "repeated vertices are forbidden"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer list is empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "a vertex is outside the inclusive residue range 0..602136"
+      }
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "model_style_round_trip": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "observed_probability": 0.0,
+    "structure_aware_space": 8218772673697723195925429621413916025133200675,
+    "elapsed_sec": 1.627636105986312
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "shipping_density_fraction": 0.0,
+    "demo_exact_solution_count": 1,
+    "demo_candidate_count": 9,
+    "strongest_failing_attack_wall_clock_sec": 0.018970018019899726,
+    "strongest_failing_attack_iterations": 2088,
+    "reference_wall_clock_sec_mean": 0.4119956079812255,
+    "reference_operations_mean": 3231947.0,
+    "reference_vertex_count_mean": 538658.0
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_degree_tie_break": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_nearest_labels": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_additive_quotient_step": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "obvious_powers_of_two_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "single_reflection_then_greedy": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "exhaustive exact power-residue scan",
+      "complexity": "O(p log s) exact modular operations for this implicit graph",
+      "wall_clock_sec_mean": 0.4119956079812255,
+      "operations_mean": 3231947.0,
+      "vertices_mean": 538658.0,
+      "solves": "8/8, as expected on Track B",
+      "paper_generic_bound": "Section 2 gives linear time for one domination test and quadratic time to find all vertices dominated by one vertex"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 524288,
+    "shipping_vertices": 524352,
+    "doubled_n": 1048576,
+    "doubled_vertices": 1048600,
+    "doubled_verification": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "carried_witness_checks": 80,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "distinct_prime_parameters": 20,
+    "failures": []
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "answer_chars": 61,
+    "answer_tokens": 16,
+    "answer_elements": 7,
+    "intended_route_operations": 79,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true
+}
