@@ -1,0 +1,154 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong length: expected 64 vertices",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "cycle vertices must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "vertex outside the inclusive range 0..63",
+        "rejected": true
+      },
+      "swap_first_two": {
+        "reason": "canonical cycle must start with vertex 0",
+        "rejected": true
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_wall_clock_sec": 3.789354,
+    "structure_aware_space": 991304157702220032058073354180949068772386845113634314053139799806364876800000000000000,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_complexity": "O(N^3) exact adjacency queries",
+    "baseline_name": "dense root-star reconstruction plus Hierholzer",
+    "baseline_operations": 266848,
+    "baseline_reason": "ok",
+    "baseline_wall_clock_sec": 0.008313,
+    "demo_candidate_count": 60,
+    "demo_exact_valid_answers": 1,
+    "pass": true,
+    "shipping_candidate_count": 991304157702220032058073354180949068772386845113634314053139799806364876800000000000000,
+    "shipping_density_method": "structure-aware Monte Carlo",
+    "shipping_sampled_fraction": 0.0,
+    "shipping_sampled_hits": 0,
+    "shipping_sampled_total": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_high_onward_degree": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_lowest_label_walk": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "input_order_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_low_degree_order": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256_walks": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N^3) exact adjacency queries, then O(N+E)",
+      "name": "dense root-star reconstruction plus Hierholzer",
+      "operations_for_8": 2134784,
+      "solves": "8/8, as expected on Track B",
+      "wall_clock_sec_for_8": 0.068646
+    }
+  },
+  "G7_scales": {
+    "doubled_displayed_vertices": 104,
+    "doubled_planted_verifies": true,
+    "doubled_root_vertices": 80,
+    "doubled_space": 49514503582430902037733576272908866745450829110572462415026402773499383329208111416070720536941769246326758192988646046611441067207574945792000000000000000000000000,
+    "pass": true,
+    "shipping_displayed_vertices": 64,
+    "shipping_root_vertices": 40,
+    "shipping_space": 991304157702220032058073354180949068772386845113634314053139799806364876800000000000000
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariance_checks": 60,
+    "pass": true,
+    "transformed_witness_checks": 60,
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 246,
+    "answer_elements": 64,
+    "answer_tokens": 62,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.3333333333333333,
+    "hinted_verdict": "too_easy (diagnostic only; retired as a gate)",
+    "intended_route_operations": 224,
+    "pass": true
+  },
+  "H_final_hardness_audit": {
+    "compact_route_operations": 224,
+    "failed_track": "B",
+    "mechanical_algorithm": "Lehot optimal line-graph recognition/root reconstruction plus Hierholzer",
+    "mechanical_complexity": "E + O(N), then O(|V_root|+|E_root|)",
+    "mechanical_graph_item_visits_approx": 328,
+    "pass": false,
+    "reason": "the mechanical and compact routes are the same linear method",
+    "shipping_line_edges": 160,
+    "shipping_line_vertices": 64,
+    "shipping_root_edges": 64,
+    "shipping_root_vertices": 40
+  },
+  "all_passed": false,
+  "shipping_difficulty": "medium",
+  "track": "B"
+}
