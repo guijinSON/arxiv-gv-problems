@@ -1,0 +1,168 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "missing multipliers: expected 31, got 30"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "extra multipliers: expected 31, got 32"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty certificate has no multipliers"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "multiplier 0 is outside the allowed set {-1,+1}"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "coefficient of X_0 is -36, not 0"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 300540195,
+    "exact_fraction": 3.3273419550419868e-09,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over all {-1,+1} vectors with the exactly-15-positive constant sum forced by the target -1",
+    "total": 200000,
+    "wall_clock_sec": 10.814792
+  },
+  "G5_density_and_baseline": {
+    "demo_bruteforce_solution_count": 1,
+    "demo_candidate_space": 35,
+    "pass": true,
+    "reference_algorithm_operations": 5369902,
+    "reference_algorithm_wall_clock_sec": 0.229666,
+    "reference_average_operations": 671237,
+    "shipping_exact_solution_count": 1,
+    "shipping_exact_solution_fraction": 3.3273419550419868e-09,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "random_restart_256_balanced",
+    "strongest_failing_attack_steps": 2048,
+    "strongest_failing_attack_wall_clock_sec": 0.080464
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_prefix_cancellation": {
+        "attempts": 8,
+        "steps": 103680,
+        "successes": 0,
+        "wall_clock_sec": 0.003735
+      },
+      "obvious_walsh_ansatz": {
+        "attempts": 8,
+        "steps": 64,
+        "successes": 0,
+        "wall_clock_sec": 0.002281
+      },
+      "outlier_row_l1_norm": {
+        "attempts": 8,
+        "steps": 158720,
+        "successes": 0,
+        "wall_clock_sec": 0.003795
+      },
+      "random_restart_256_balanced": {
+        "attempts": 8,
+        "steps": 2048,
+        "successes": 0,
+        "wall_clock_sec": 0.080464
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations_per_instance": 671237,
+      "complexity": "O(n*m^2+m^3) exact field operations for m equations",
+      "name": "modular Gaussian elimination with exact rational validation",
+      "operations": 5369902,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.229666
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 1280,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "escalated_params": {
+      "coeff_bound": 17,
+      "label_bits": 5,
+      "n": 1280
+    },
+    "escalation_keeps_answer_length": true,
+    "pass": true,
+    "preset_matrix_entries": {
+      "demo": 84,
+      "easy": 2976,
+      "hard": 19840,
+      "medium": 7936
+    }
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "pass": true,
+    "transformations": [
+      "arbitrary equation permutation",
+      "arbitrary variable permutation",
+      "composed row and variable permutation",
+      "composition with an invertible cyclic rotation of row-label bits"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 203,
+    "answer_elements": 62,
+    "answer_tokens": 51,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 3
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unreachable_openrouter_key_limit",
+    "intended_route_operations": 222,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "coeff_bound": 17,
+    "label_bits": 5,
+    "n": 640
+  },
+  "track": "B"
+}
