@@ -1,0 +1,135 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "json_native_checks": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "drop_one": "row_signs must be a length-8 integer list",
+      "duplicate": "row_codes must be a permutation of 0,...,m-1",
+      "empty": "answer must be a JSON object",
+      "out_of_range": "weights entries must lie in 1..5",
+      "swap_two": "certificate does not reconstruct the displayed polynomials"
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_prose": true
+  },
+  "G4_guess_resistance": {
+    "certificate_language_size": 104877313228800000000000,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "structure_aware": true,
+    "total": 200000
+  },
+  "G5_density_baseline": {
+    "demo_exact": {
+      "candidate_space": 128,
+      "valid_answers": 2
+    },
+    "pass": true,
+    "reference_operations": 1921598,
+    "reference_wall_clock_sec": 0.825282,
+    "shipping_density": {
+      "hits": 0,
+      "kind": "sampled",
+      "observed_fraction": 0.0,
+      "total": 200000
+    },
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "strongest_attack": {
+      "checksum": 856768,
+      "largest_coefficient_terms": 823543,
+      "monomial_insertions": 960799,
+      "name": "expanded successive elimination after exact coefficient recovery",
+      "operations": 1921598,
+      "wall_clock_sec": 0.825282
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "direct_unmixed_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_chain_unmixed_walsh": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_row_norm": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m^2 + sum_(r=1)^(m-1) d^r) exact monomial operations",
+      "monomial_insertions": 960799,
+      "name": "coefficient-column recovery plus expanded successive elimination",
+      "operations": 1921598,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.825282
+    }
+  },
+  "G7_scales": {
+    "doubled_m": 16,
+    "doubled_reference_operations": 11077643523198,
+    "doubled_verification": "ok",
+    "pass": true,
+    "shipping_m": 8,
+    "shipping_reference_operations": 1921598
+  },
+  "G8_canonical_key": {
+    "invariance_checks": 20,
+    "pass": true,
+    "real_transformation_checks": 20,
+    "symmetries_tested": [
+      "variable renaming",
+      "input-generator reordering",
+      "their composition"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 249,
+    "answer_elements": 48,
+    "answer_tokens": 63,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unscored_quota_error",
+    "intended_route_operations": 148,
+    "pass": true
+  },
+  "all_pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "d": 7,
+    "n": 8,
+    "weight_max": 5
+  },
+  "track": "B"
+}
