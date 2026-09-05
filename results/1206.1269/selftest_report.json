@@ -1,0 +1,107 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true,
+    "structural_promise_checks": 16
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "expected 236 colors, got 235", "rejected": true},
+      "duplicate_one": {"reason": "parallel bundle 0 repeats a color", "rejected": true},
+      "empty": {"reason": "answer must be a nonempty list", "rejected": true},
+      "out_of_range": {"reason": "edge 0 uses color 9437, which is outside the palette", "rejected": true},
+      "swap_two": {"reason": "base vertex 19 has incident edges 163 and 0 with repeated color 9211", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_length": 236,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 277588615167050156312792302265596243837328753163569363503801635758672447289391876551114592681975159590689109766919292090437026546686468916713002659134921139814400000000000000000000000000000000000000000000000000000000000,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "lazy exact draws from independent ordered four-color samples without replacement inside every displayed bundle",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_attempts": 8,
+    "baseline_operations_max": 220134,
+    "baseline_wall_clock_seconds": 0.544068,
+    "exact_density_log10": -67.35056676175,
+    "exact_valid_answer_count": 12383257064013173111231501020922617421918736871899421976259596545833515816033990929209872927909620159990857185036188110918741581651407578071040000000000,
+    "pass": true,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sampled_solution_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_bundle_first_fit": {"attempts": 8, "successes": 0},
+      "outlier_endpoint_label_statistic": {"attempts": 8, "successes": 0},
+      "parallel_copy_index_ansatz": {"attempts": 8, "successes": 0},
+      "random_restart_256": {"attempts": 8, "successes": 0}
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "O(n*C(10,4)*C(6,4)) transitions after incidence decomposition",
+      "name": "dynamic programming on the quotient-cycle CSP",
+      "operations": 220134,
+      "solves": "8/8, as expected on Track B",
+      "successes": 8,
+      "wall_clock_sec": 0.544068
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 118,
+    "doubled_verifies": true,
+    "escalated_bundles": 63,
+    "escalated_candidate_bits": 775,
+    "pass": true,
+    "shipping_bundles": 59,
+    "shipping_candidate_bits": 726
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "distinct_unrelated": 20,
+    "failures": [],
+    "invariance_checks": 100,
+    "pass": true,
+    "seeds_examined": 21,
+    "symmetries": [
+      "base-vertex relabelling",
+      "edge-id relabelling",
+      "bundle reordering and endpoint reversal",
+      "color-label relabelling",
+      "compositions of these maps"
+    ],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 1181,
+    "answer_elements": 236,
+    "answer_tokens": 296,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not run",
+    "intended_route_operations": 236,
+    "pass": true,
+    "placebo_verdict": "not run"
+  },
+  "all_passed": true,
+  "paper": "1206.1269",
+  "shipping_difficulty": "hard",
+  "shipping_params": {"max_components": 7, "n": 59},
+  "track": "B"
+}
