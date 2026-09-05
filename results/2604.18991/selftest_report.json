@@ -1,0 +1,179 @@
+{
+  "G1_planted_verifies": {
+    "answer_json_native": true,
+    "attempts": 12,
+    "formula_matches_independent_euclid": 12,
+    "pass": true,
+    "reference_comparisons": 12,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop": {
+        "reason": "polynomial is missing one or more required coefficient terms",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "monomial exponents must be exactly 0,...,E-2 in order",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer polynomial is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "coefficient at degree 0 lies outside the declared height bound",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "candidate does not satisfy the Bezout identity modulo A",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response_recovered": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 8897433611264709324773647641856011495602038767616,
+    "exact_probability_from_unique_inverse": 1.1239195971453354e-49,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform independent nonzero multipliers z_j with |z_j|<=E-1, then w_j=g*z_j; shape, order, scale divisibility, and bounds are already enforced",
+    "total": 200000,
+    "wall_clock_sec": 16.294035
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_max_operation_count": 2048442,
+    "baseline_name": "succinct modular arithmetic plus polynomial extended Euclid",
+    "baseline_operation_count": 2029486,
+    "baseline_wall_clock_sec": 1.079347,
+    "demo_candidate_count": 16,
+    "demo_enumeration_wall_clock_sec": 9e-05,
+    "demo_exact_solution_count_by_bruteforce": 1,
+    "pass": true,
+    "shipping_candidate_count": 8897433611264709324773647641856011495602038767616,
+    "shipping_density_method": "200000 structure-aware samples",
+    "shipping_observed_density": 0.0,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_unique_inverse_density": 1.1239195971453354e-49
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "flat_coefficient_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000233
+      },
+      "greedy_left_to_right_no_wrap": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.00026
+      },
+      "outlier_small_magnitude_signs": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000901
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.103862
+      },
+      "untransformed_cyclotomic_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000252
+      }
+    },
+    "intended_compact_route": {
+      "name": "roots-of-unity cyclic coefficient permutation",
+      "operations": 288,
+      "solves": "8/8",
+      "wall_clock_sec": 0.000109
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(E^2(log s+log N)+E^3) exact rational operations",
+      "max_operations": 2048442,
+      "name": "succinct modular arithmetic plus polynomial extended Euclid",
+      "operations": 2029486,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 1.079347
+    }
+  },
+  "G7_scales": {
+    "answer_elements_doubled": 84,
+    "answer_elements_shipping": 84,
+    "candidate_space_doubled": 8897433611264709324773647641856011495602038767616,
+    "candidate_space_shipping": 8897433611264709324773647641856011495602038767616,
+    "doubled_build_sec": 6.2e-05,
+    "doubled_count_bits": 4096,
+    "doubled_n_bits": 4096,
+    "doubled_reference_operations": 4062080,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "scaling_basis": "n doubles the generic reference work while the bounded answer language and written coefficient count remain fixed",
+    "shipping_count_bits": 2048,
+    "shipping_n_bits": 2048,
+    "shipping_reference_operations": 2029486
+  },
+  "G8_canonical_key": {
+    "invariant_attempts": 160,
+    "invariant_relabellings": 160,
+    "pass": true,
+    "real_transformation_attempts": 160,
+    "real_transformations_verified": 160,
+    "transformations": [
+      "affine translation/rescaling of the underlying variable",
+      "rational affine coordinate change",
+      "replacement of F by F+A(4-7L)",
+      "replacement of F by F+A(2-3L+5L^2)",
+      "affine change composed with a new quadratic A multiple",
+      "common nonzero scaling of F and the right-hand side",
+      "addition of seventeen whole E-periods to the large exponent",
+      "odd common scaling of N and the right-hand side"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 647,
+    "answer_elements": 84,
+    "answer_tokens": 309,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300,
+      "tokens": 500
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unavailable_http_403_key_limit",
+    "intended_route_operations": 288,
+    "pass": true,
+    "token_measurement": "maximum of o200k_base and cl100k_base over all 756 order-29 transformations at maximal 32-bit scale",
+    "worst_case_answer_chars": 666,
+    "worst_case_answer_tokens": 309
+  },
+  "all_passed": true
+}
