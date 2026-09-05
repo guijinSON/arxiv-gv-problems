@@ -1,0 +1,200 @@
+{
+  "G1_planted_verifies": {
+    "checks": 16,
+    "json_native_checks": 16,
+    "pass": true,
+    "presets": [
+      "demo",
+      "easy",
+      "medium",
+      "hard"
+    ]
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop_one": {
+        "reason": "expected exactly 64 exponents, got 63",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "module equation fails at top coordinate 0: got 580771, expected 851000",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer list is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "exponent 63 is outside the inclusive range 0..1000002",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "module equation fails at top coordinate 0: got 202139, expected 851000",
+        "rejected": true
+      }
+    },
+    "distinct_reason_count": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "json_native": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1000192018145124979467308811073672900852517069717423285177334066759830395724993628780980926677012809652731489384791590126000361157467099958684928226862400507952820112732540513779299598566871492022225527349278722960143455921871550870538000985805389904381511452523602128624247350278163517068965455983838337721735976057078260065545861255271736813407881121199938191437553212209229177089281,
+    "exact_probability_denominator": 1000192018145124979467308811073672900852517069717423285177334066759830395724993628780980926677012809652731489384791590126000361157467099958684928226862400507952820112732540513779299598566871492022225527349278722960143455921871550870538000985805389904381511452523602128624247350278163517068965455983838337721735976057078260065545861255271736813407881121199938191437553212209229177089281,
+    "exact_probability_numerator": 1,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over all length-k canonical residue tuples",
+        "sampling_wall_clock_seconds": 2.810791,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_algorithm": "exact modular Gauss-Jordan elimination",
+    "baseline_field_operations": 26736,
+    "baseline_verified": true,
+        "baseline_wall_clock_seconds": 0.000994,
+    "compact_route_field_operations": 280,
+    "compact_route_verified": true,
+    "demo_candidate_space": 1331,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "shipping_density_fraction": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_enumeration": null,
+    "shipping_exact_solution_count_by_invertibility": 1,
+    "strongest_attack_restarts": 256,
+    "strongest_attack_succeeded": false,
+        "strongest_attack_wall_clock_seconds": 0.00374,
+    "strongest_failing_attack": "256 structure-aware uniform restarts"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "constant_average_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_one_pass_coordinate": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_target_equals_exponents": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_diagonal_coordinate": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(k^3) finite-field operations",
+      "name": "exact modular Gauss-Jordan elimination",
+      "operations_max": 97822,
+      "operations_mean": 30219,
+      "solves": "8/8, as expected",
+            "wall_clock_sec_max": 0.00272,
+            "wall_clock_sec_mean": 0.001047
+        },
+        "strongest_failing_attack_wall_clock_sec_mean": 0.003792
+  },
+  "G7_scales": {
+    "doubled_matrix_entries": 16384,
+        "doubled_n": 128,
+        "doubled_planted_verifies": true,
+        "doubled_search_space_bits": 2552,
+        "escalation_terminal": "cap_bound",
+        "first_escalation_keeps_answer_length": {
+            "modulus": 10000019,
+            "n": 64
+        },
+        "last_admissible_escalation": {
+            "modulus": 2147483647,
+            "n": 69
+        },
+        "last_admissible_route_operations": 300,
+        "pass": true,
+    "shipping_matrix_entries": 4096,
+    "shipping_n": 64,
+    "shipping_search_space_bits": 1276
+  },
+  "G8_canonical_key": {
+        "carried_witness_checks_attempted": 120,
+        "carried_witness_checks_passed": 120,
+        "changed_serializations": 120,
+        "invariance_checks_attempted": 120,
+        "invariance_checks_passed": 120,
+        "key_kind": "hash of the exact reduced [I|z] normal form modulo summand permutation and global affine exponent relabelling",
+    "pass": true,
+    "transformations": [
+            "module top-coordinate permutation",
+            "S-unit summand/unknown permutation",
+            "invertible elementary change of top-module basis",
+            "global exponent-residue translation",
+            "global nonzero exponent-residue scaling",
+            "all transformations composed"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+        "answer_chars": 513,
+    "answer_elements": 64,
+        "answer_tokens": 129,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "error_calls": 4,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "error_calls": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "error_calls": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "evidence_complete": false,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unavailable_api_errors",
+    "intended_route_operations": 280,
+        "pass": true,
+        "sampled_answer_chars_max": 447,
+        "within_caps": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "max_atomic_elements": 256,
+      "max_exponents": 256,
+      "max_modulus": 2147483647,
+      "min_residue": 0
+    },
+    "description": "A list of exactly k canonical exponent residues z_0,...,z_{k-1}; each entry is an integer in [0,p-1].  The module action has period p, so these residues represent all integer exponent classes."
+  },
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "modulus": 1000003,
+    "n": 64
+  },
+  "track": "B"
+}
