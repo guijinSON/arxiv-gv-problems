@@ -1,0 +1,176 @@
+{
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "identity_checks": 21,
+    "json_roundtrips": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "empty": {
+        "rejected": true,
+        "reason": "answer is empty"
+      },
+      "drop": {
+        "rejected": true,
+        "reason": "wrong answer length: expected 18 digits"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "digit at position 0 is outside 1..9"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "the three supplied digits in panel 0, band 0 are not distinct"
+      },
+      "swap_one": {
+        "rejected": true,
+        "reason": "the completed fractions sum to 93425/94316, not 1"
+      }
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed": [
+      6,
+      3,
+      2,
+      9,
+      4,
+      6,
+      2,
+      7,
+      8,
+      6,
+      9,
+      1,
+      7,
+      5,
+      1,
+      5,
+      3,
+      4
+    ],
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "observed_probability": 0.0,
+    "exact_valid_answers": 1,
+    "structure_aware_space": 2687385600,
+    "exact_probability": 3.7210886297820456e-10,
+    "audited_shipping_seeds": 20,
+    "audited_valid_answer_range": [
+      1,
+      6
+    ],
+    "maximum_audited_exact_probability": 2.2326531778692272e-09,
+    "sampler": "uniform panel digit-count completions conditioned on three distinct supplied digits per displayed band"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_exact_solution_count": 1,
+    "shipping_candidate_count": 2687385600,
+    "shipping_exact_solution_fraction": 3.7210886297820456e-10,
+    "shipping_sample_valid_hits": 0,
+    "shipping_density_samples": 200000,
+    "audited_shipping_seeds": 20,
+    "maximum_audited_solution_fraction": 2.2326531778692272e-09,
+    "baseline_name": "exact panel meet-in-the-middle",
+    "baseline_operations": 4115210,
+    "baseline_wall_seconds": 0.660615
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_nearest_visible_digits": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_equal_panel_share": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_4096": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "in_context_equal_band_share": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "exact panel meet-in-the-middle",
+      "complexity": "O(A*n) for the two shipping panels after enumerating A structure-valid assignments per panel",
+      "median_wall_clock_sec": 0.478338,
+      "median_operations": 2955550,
+      "max_operations": 3972242,
+      "operations": 2955550,
+      "operation_definition": "decimal digit multiply/add, exact scale division, numerator multiplication, subtotal addition, complement, and hash probe",
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "balanced three-row unit-fraction decomposition",
+      "complexity": "O(n) with six local permutations per band",
+      "median_wall_clock_sec": 9.3e-05,
+      "median_operations": 293,
+      "max_operations": 293,
+      "operation_definition": "decimal concatenations, exact divisions/multiplications, and scaled-integer additions after the structural insight",
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_fraction_rows": 18,
+    "doubled_fraction_rows": 36,
+    "shipping_search_space": 2687385600,
+    "doubled_search_space": 7222041363087360000,
+    "doubled_verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "carried_witness_checks": 80,
+    "unrelated_instances": 20,
+    "distinct_unrelated_keys": 20,
+    "symmetries": "panel reorder, band reorder within panels, row reorder within bands, and their composition",
+    "key_basis": "exact sorted normal form of all masked fraction rows",
+    "failures": []
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 2
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not run: bare panel incomplete after quota exhaustion",
+    "answer_chars": 37,
+    "answer_tokens": 10,
+    "answer_elements": 18,
+    "intended_route_operations": 293,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true
+}
