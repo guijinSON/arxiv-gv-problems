@@ -1,0 +1,125 @@
+{
+  "G1_planted_verifies": {"checks": 16, "failures": [], "pass": true},
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "cycle 0 has 2 vertices; expected 3", "rejected": true},
+      "duplicate": {"reason": "cycle 0 repeats a vertex", "rejected": true},
+      "empty": {"reason": "expected 72 cycles, got 0", "rejected": true},
+      "out_of_range": {"reason": "vertex 216 is outside 0..215", "rejected": true},
+      "swap_one": {"reason": "cycle 0 is not a directed 3-cycle", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {"garbage_returns_none": true, "json_native": true, "pass": true, "realistic_response_parsed": true},
+  "G4_guess_resistance": {
+    "candidate_space": 1538156802759578675930396837827496743779821079866835499252967945375895058001855857877082231063927481759341499700979393520933471282676993627135486523080163254940130645421162633899693998543137502402657655288796205285376000000000000000000000000000000000000,
+    "hits": 0,
+    "measured_probability": 0.0,
+    "pass": true,
+    "prior": "uniform partition of all vertices into unlabelled triples",
+    "total": 200000
+  },
+  "G5_shipping_difficulty": {
+    "baseline_nodes": 50001,
+    "baseline_search_exhausted": false,
+    "baseline_solved": false,
+    "baseline_wall_seconds": 0.88724210485816,
+    "candidate_space": 1538156802759578675930396837827496743779821079866835499252967945375895058001855857877082231063927481759341499700979393520933471282676993627135486523080163254940130645421162633899693998543137502402657655288796205285376000000000000000000000000000000000000,
+    "decoder_peak_ties_total": 3,
+    "density_method": "uniform random_candidate sampling checked by verify",
+    "density_sample_size": 200000,
+    "exact_solution_count": null,
+    "observed_valid_fraction": 0.0,
+    "pass": true,
+    "reference_operations": 4020,
+    "reference_solved": true,
+    "reference_wall_seconds": 0.0008855541236698627,
+    "shipping_instance_seed": 2024,
+    "shipping_params": {"degree": 12, "n": 72, "screen_nodes": 50000},
+    "shipping_preset": "easy",
+    "valid_answers_sampled": 0
+  },
+  "G6_adversary_panel": {
+    "algorithm_x_nodes": [50001, 50001, 50001, 50001, 50001, 50001, 50001, 50001],
+    "attacks": {
+      "algorithm_x_50000": {"attempts": 8, "successes": 0},
+      "greedy_left_to_right": {"attempts": 8, "successes": 0},
+      "outlier_low_degree": {"attempts": 8, "successes": 0},
+      "random_restart_256": {"attempts": 8, "successes": 0},
+      "zero_offset_block_ansatz": {"attempts": 8, "successes": 0}
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(|A| + n) integer/index operations",
+      "name": "inter-block modular-offset frequency decoder",
+      "operations": 33564,
+      "per_instance_operations": [4248, 4200, 4500, 4068, 4128, 4236, 4080, 4104],
+      "solves": "8/8, as expected on Track B",
+      "wall_clock_sec": 0.007989340228959918
+    }
+  },
+  "G7_scales": {"base_n": 72, "doubled_edges": 5184, "doubled_n": 144, "doubled_vertices": 432, "pass": true, "verify_reason": "ok"},
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "method": "triangle-support-seeded directed color refinement, converse-normalized",
+    "pass": true,
+    "transformations": [
+      "arbitrary vertex relabelling plus reversed edge-list order",
+      "global reversal of every arc",
+      "composition of relabelling, input reordering, and arc reversal",
+      "edge-list reordering alone"
+    ],
+    "unrelated_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 899,
+    "answer_elements": 216,
+    "answer_tokens": 225,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 2},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300, "tokens": 500},
+    "compact_vertices_inspected": 4,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run_cap_bound",
+    "intended_route_operations": 159,
+    "pass": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {"n_triples": "n", "triple_size": 3, "vertex_count": "3*n", "vertex_max": "3*n - 1", "vertex_min": 0},
+    "description": "Canonical JSON partitions of vertices 0,...,3*n-1 into exactly n unlabelled triples: each triple has three distinct increasing integers, triples are lexicographically sorted, and every vertex occurs exactly once."
+  },
+  "native": {
+    "core": "exact_cover",
+    "domain": "combinatorics",
+    "intuition": "symmetry: The desired cycles are the orbits of a hidden order-three modular block shift; without recognizing it, the legal cycles form a large exact-cover search.",
+    "objects": ["directed kidney-compatibility graph", "directed 3-cycles"],
+    "reduction": null
+  },
+  "problem_profile": {
+    "certificate_form": "integer_tuple",
+    "computational_core": "exact_cover",
+    "domain_essentiality": "native",
+    "hardness_basis": "Track B: the distribution-specific offset decoder is O(|A|+n) after tallying inter-block displacements (about 4,000 integer/index operations and under 0.02 s at the shipping preset), whereas the compact symmetry route uses under 300 modular operations; the generic class remains the length-3 perfect-cycle-cover problem proved NP-complete by Abraham--Blum--Sandholm Theorem 1 and cited in Section 1.2.",
+    "intuition_description": "The desired cycles are the orbits of a hidden order-three modular block shift; without recognizing it, the legal cycles form a large exact-cover search.",
+    "intuition_type": "symmetry",
+    "max_answer_tokens": 225,
+    "native_domain": "combinatorics",
+    "native_objects": ["directed kidney-compatibility graph", "directed 3-cycles"],
+    "object_regime": "finite_discrete",
+    "reduction": null,
+    "reduction_kind": "none",
+    "reduction_source": "paper_central",
+    "verification_operations": ["integer range and disjointness checks", "exact directed-edge membership", "full vertex-coverage comparison"]
+  },
+  "shipping_difficulty": "easy",
+  "shipping_params": {"degree": 12, "n": 72, "screen_nodes": 50000},
+  "track": "B"
+}
