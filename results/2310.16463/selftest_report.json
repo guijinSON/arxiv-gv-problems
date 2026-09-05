@@ -1,0 +1,171 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "Theorem 2.1 / Algorithm 1 with exact unlabelled-atom macros",
+    "explicit_macro_expansion_checks": 6,
+    "explicit_macro_expansion_failures": [],
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_tree": {
+        "reason": "expected 2 trees, got 1",
+        "rejected": true
+      },
+      "duplicate_one_component": {
+        "reason": "tree 1 repeats a component",
+        "rejected": true
+      },
+      "empty_one_terminal_port": {
+        "reason": "tree 1 terminal port 1 is empty",
+        "rejected": true
+      },
+      "out_of_range_endpoint": {
+        "reason": "tree 1 edge 1 has out-of-range endpoint",
+        "rejected": true
+      },
+      "swap_two_terminal_ports": {
+        "reason": "tree 1 terminal port 1 misses its terminal",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 1016,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_constraints": [
+      "exactly the required number of ordered trees",
+      "every terminal already has a genuine exclusive incident edge in every tree",
+      "all explicit edges are genuine Sierpinski edges and globally distinct",
+      "all atom macros are syntactically valid and terminal-free",
+      "the public total-component bound is enforced"
+    ],
+    "total": 200000,
+    "wall_clock_sec": 90.938702
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.043734,
+    "demo_candidate_space": 2744,
+    "demo_exact_solution_count": 432,
+    "demo_exact_solution_fraction": 0.15743440233236153,
+    "pass": true,
+    "reference_operation_count": 10922,
+    "reference_wall_clock_sec": 0.000839,
+    "shipping_candidate_space": 370611138929221250548777165385109712729211129571045723049230600699193042254650041670535669599219096626866069623219979628625486211058380894003373476519085229640287048148201925483395593761113988629057251069092077937565256726997509627515914848090865133600860023671924892564444965748111918170159103446796116400,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density_estimate": 0.0,
+    "strongest_failing_attack": "random_restart_256_normalized"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_last_coordinate_ports": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000165
+      },
+      "greedy_lowest_unused_ports": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000195
+      },
+      "outlier_extreme_terminal_ports": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000419
+      },
+      "random_restart_256_normalized": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.34987
+      },
+      "single_prefix_atom_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000175
+      }
+    },
+    "intended_compact_route": {
+      "name": "labelled-prefix expansion with terminal-free atom macros",
+      "operations": 143,
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "checksum": 0,
+      "complexity": "O(c * alphabet^depth) expanded tree/atom visits",
+      "name": "Section 2 Algorithm 1 explicit level-by-level atom scan",
+      "operations": 10922,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.000839
+    }
+  },
+  "G7_scales": {
+    "doubled_build_sec": 0.006952,
+    "doubled_depth": 14,
+    "doubled_verify_reason": "ok",
+    "doubled_vertices": 268435456,
+    "escalation_after_shipping": {
+      "alphabet": 4,
+      "n": 8,
+      "terminals": 4
+    },
+    "pass": true,
+    "shipping_depth": 7,
+    "shipping_vertices": 16384
+  },
+  "G8_canonical_key": {
+    "invariant_relabellings": 60,
+    "pass": true,
+    "real_transformations_verified": 60,
+    "transformations": [
+      "coordinatewise alphabet permutation",
+      "terminal input reordering",
+      "their composition"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 812,
+    "answer_elements": 73,
+    "answer_tokens": 203,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 134,
+    "measured_worst_over_seeds": 1000,
+    "pass": true,
+    "within_caps": true,
+    "worst_case_answer_chars": 1046,
+    "worst_case_answer_elements": 94,
+    "worst_case_answer_tokens": 262,
+    "worst_case_intended_route_operations": 166,
+    "worst_case_seed_by_chars": 40
+  },
+  "all_passed": true
+}
