@@ -1,0 +1,3375 @@
+Reading additional input from stdin...
+OpenAI Codex v0.150.1
+--------
+workdir: /home/gson/gvrepo/results/2006.16756
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 01a070b9-274c-7962-9730-a0d30056f93d
+--------
+user
+# TASK: turn this paper into a self-contained, verified problem generator
+
+You are given one arXiv paper. Produce a single Python module that manufactures an
+unlimited supply of instances of ONE problem family from that paper, together with
+everything needed to pose the problem to a solver and grade the answer
+automatically.
+
+A family is only acceptable if all three hold:
+
+- **G — generatable.** You can build an instance *and know a certificate for it by
+  construction*. Four routes count:
+  - **inverse generation** — sample the answer first and build the problem around it;
+  - **theorem-backed construction** — a theorem in the paper guarantees the object you
+    just assembled has the property, and the certificate is what its proof produces;
+  - **transformation of a known instance** — apply a structure-preserving map to an
+    instance whose certificate you hold, and carry the certificate through the map;
+  - **composition of identities** — build the instance from pieces whose certificates
+    compose: a product of telescoping terms, a sum of squares assembled from known
+    squares, a substitution chain with a known inverse.
+
+  What is forbidden is shipping a family whose answer you obtained by *solving* the
+  instance. If you had to search for it, so will your generator, and the family will
+  not scale.
+- **H — hard.** Hard in the sense your `TRACK` declares — see **TWO TRACKS** below.
+  Under either track the answer space must be far too large to guess.
+- **V — verifiable.** A candidate answer is checked cheaply and exactly: substitute,
+  expand, recompute, compare.
+
+## The witness rule
+
+The answer must be a **witness**: a concrete object whose validity is decided by
+inspecting only the object and the instance. No search, no oracle, no appeal to a
+theorem the checker cannot execute.
+
+That is a statement about the *checker*, not about the answer's type. So certified
+negatives, certified optima and numeric answers **are admissible** — provided the
+certificate is itself such an object:
+
+| the claim | the certificate that makes it admissible |
+|---|---|
+| no solution exists | a Farkas certificate, a Nullstellensatz or Positivstellensatz certificate, a bounded-length refutation |
+| this is the optimum | a primal–dual pair with complementary slackness, or a feasible point plus a dual bound that meets it |
+| this real number | an algebraic number as (minimal polynomial, isolating interval with rational endpoints) |
+| this quantity lies here | a rigorous enclosure with **exact rational** endpoints |
+| this system is stable | a Lyapunov or barrier certificate with rational coefficients |
+
+**But — the discriminating test, and it is the one that matters:**
+
+> If the certificate is simply the output of a polynomial-time algorithm run on the
+> instance, you have not found a way past H. You have found the reason the family
+> fails it.
+
+An LP dual, a Gram matrix read off by coefficient matching, an SOS certificate that an
+SDP returns, a Lyapunov function that a linear solve produces, a root isolation — each
+is a perfectly good *witness* and a disqualifying *family*. The witness rule and the
+hardness rule are separate gates, and a certificate can clear the first while failing
+the second.
+
+Ask this at **STEP 0, before you write any code.** It is one question — *what algorithm
+produces this certificate, and what does it cost?* — and the paper's own theorem
+statements usually answer it in a line.
+
+The five algebraic papers rejected most recently were all rejected on exactly this
+point, and every one of them cost a full builder run first:
+
+| paper | what produces the certificate |
+|---|---|
+| `2605.28674` | disjunctive SOS: the paper reduces certificate search to an SDP, with SOCP and LP refinements |
+| `2504.18110` | the Gram matrix and the switching root are written out explicitly in Section 2 |
+| `2211.12582` | a necessary-and-sufficient spectral characterisation; the dimension is read off an eigenvalue multiplicity |
+| `1910.13133` | the witness is given by an explicit matrix formula |
+| `2512.19313` | the witness is a direct evaluation of a displayed trinomial construction — found after reading all 31 pages and the LaTeX source |
+
+One sentence applied at triage would have stopped all five. Instead each was claimed,
+read end to end, and rejected: five builder runs, roughly 90 minutes and 1.5M tokens, to
+rediscover a fact stated in each paper's own main theorem.
+
+---
+
+## TWO TRACKS — say which hardness you are claiming
+
+Declare `TRACK = "A"` or `TRACK = "B"` at module level. Required.
+
+**Track A — structural hardness.** No known efficient general method for the
+distribution you generate. Note *distribution*, not *worst case*: worst-case NP-hardness
+is a different claim and does not imply this one. `2503.01929` sat exactly inside the
+strongly NP-hard 3-PARTITION band and fell to Algorithm X in under five seconds, because
+random instances in that band are not hard. `PROBLEM_PROFILE["hardness_basis"]` must
+name the theorem *and* the parameter regime; G5's baseline cost is the evidence.
+
+**Track B — no-tool compression.** An efficient algorithm exists, and you say so. The
+claim is narrower and different: the evaluated model has no sandbox, no CAS and no
+solver, so it must find and execute a compact route unaided. The difficulty is the gap
+between the mechanical route (10⁶ operations — fine for a solver, impossible by hand)
+and the compact one (a change of variables, an invariant, a symmetry — a dozen
+operations, if you see it).
+
+**Track B families must be honest about the algorithm that exists.** In
+`hardness_basis`, name it, give its complexity, and give its measured cost at the
+shipping preset. A Track B family that hides the algorithm is a Track A claim, and a
+false one.
+
+The track also changes what G6 means:
+
+- **Track A** — every entry in `attacks` must have `successes == 0`, the domain-standard
+  algorithm included. Unchanged from today.
+- **Track B** — the domain-standard algorithm is *expected* to succeed. Report it under
+  a separate key `reference_algorithm` (name, complexity, wall-clock, operation count),
+  **not** inside `attacks`; that number is your `hardness_basis`, not a failure.
+  `attacks` still needs its ≥4 failing entries, and for Track B the fourth is an attack a
+  solver could actually run *in context, without tools* — the by-hand heuristic, the
+  greedy route, the obvious ansatz. If you cannot find a fourth in-context attack that
+  fails, the family is guessable by hand and you should reject it.
+
+Why the label is mandatory: without it the project drifts silently between
+complexity-theoretic hardness and practical model difficulty. Both are defensible
+benchmarks. They are not the same benchmark, and a corpus that mixes them unlabelled can
+support neither claim. Every family shipped so far is an unlabelled Track A claim, and
+`AUDIT.md` records five where that claim was simply false.
+
+---
+
+## STEP 0 — read the actual paper, not just the abstract
+
+**Do this first. Do not skip it.** Fetch and read the full text
+(`https://arxiv.org/abs/<id>`, or the LaTeX source at
+`https://arxiv.org/e-print/<id>`).
+
+The abstract will not tell you the four things that decide whether your generator
+works:
+
+1. **The exact definition.** Informal phrasings hide precise constraints. "Balanced"
+   turned out to mean *exactly f from each colour class* — a completely different
+   problem from what the abstract suggested.
+2. **Which parameter regime is hard.** Papers prove hardness for specific settings.
+   Find the theorem and use *its* parameters.
+3. **What makes it EASY.** This is the one that kills generators. Look specifically
+   for: polynomial-time algorithms for special cases, **FPT algorithms** (an FPT
+   algorithm parameterised by *k* means instances with small *k* are tractable — so
+   *k* must grow with instance size), approximation schemes, and any explicit
+   construction that solves the search directly.
+4. **What produces the certificate.** Find the theorem that hands you the witness and
+   ask what algorithm it is. If the answer is "an SDP", "a linear solve", "a spectral
+   characterisation", "an explicit formula" or "a classification table", then **the
+   family fails H on Track A** — not the witness rule, and *not necessarily at all*.
+   The certificate is a perfectly good witness; what it is not is hard to obtain on
+   Track A. Those are separate gates (see the discriminating test above).
+
+   **This is the single most expensive mistake made on this project so far, so do it
+   in this order.** An independent audit re-read 12 rejected papers against their
+   actual arXiv text: **7 of the 12 should have been built.** Every miss came from
+   stopping at "a method exists" without asking the next question. One rejected paper
+   was dismissed because "Theorem 1 gives u by a short linear formula" — while the
+   paper's own mechanical route was enumerating **16,689,170 dual-lattice vectors,
+   788 seconds and 4.6 GB in Magma**. A fifteen-step shortcut against 16.7 million
+   enumerations is not a non-family. It is the definition of Track B.
+
+   **FIRST ask whether it is Track B. Only then consider rejecting.**
+
+   Write down two numbers before you decide:
+
+   | | what to record |
+   |---|---|
+   | **mechanical cost** | operations the standard method needs at your shipping size — the paper often states it, or you can measure it |
+   | **compact route** | steps a solver needs who sees the structure: the invariant, symmetry, or change of variable |
+
+   - **`TRACK = "B"`** when the mechanical cost is out of reach by hand and the compact
+     route is short. Name the algorithm and both numbers in `hardness_basis`. An SDP
+     over a 40×40 Gram matrix is not something a model does in its head; a 2×2 linear
+     solve is.
+   - **Reject** only when the compact route is *no shorter* than the mechanical one —
+     that is, when there is nothing to see, so the question tests nothing. Say both
+     numbers in `REJECTED.md` and show they are comparable. "An algorithm exists" on
+     its own is **not a sufficient reason to reject** and will be sent back.
+
+   What is never acceptable is declaring Track A while knowing the algorithm exists.
+
+### Build in the paper's own objects first
+
+Before you reduce anything, write down the problem **in the objects the theorem and
+proof actually use** — vectors, Gram matrices, polynomials over ℚ or ℚ(i),
+coordinates, functions, trajectories, group elements. Ask whether a finite exact
+certificate exists *for that* object: a Gram or Seidel matrix, a rational SOS
+decomposition, a minimal polynomial with an isolating interval, a telescoping
+certificate, an antiderivative, a coordinate/sign construction checked by exact
+inner products, a dual witness. Verification stays exact — the *object* may be
+continuous even when its *certificate* is a finite symbolic thing.
+
+Only after that may you consider a discrete reduction.
+
+**Do not replace a problem over ℝ, ℂ, manifolds, functions or trajectories with a
+graph, SAT/CSP, finite field or integer-coordinate surrogate unless that reduction
+is central to the source paper.** If you do reduce, name the theorem or section that
+licenses it. If you reduce for convenience, the result is a *discretised analogue*:
+declare `reduction_kind="convenience"` in `PROBLEM_PROFILE` (and mirror the citation
+text in `NATIVE["reduction"]`), and do not present it as coverage of the paper's native
+domain. Such a family is archived, never counted in the native release — see
+PROBLEM_PROFILE in STEP 1.
+
+This has gone wrong repeatedly and silently. Real examples from this corpus:
+
+- An equiangular-lines paper (Gram matrices, Seidel matrices, eigenvalue
+  interlacing) shipped as a 720-vertex adjacency matrix with `verify` documented as
+  *"check any size-k clique"*. **The instance contained no vectors at all.**
+- A quantum-satisfiability paper about complex polynomial systems shipped as an
+  assignment problem over 𝔽₁₁.
+- A kissing-number paper with explicit real coordinates and sign patterns shipped as
+  a conflict graph.
+
+In each case the paper's mathematics was discarded before the solver saw anything,
+every gate passed, and the row was counted as geometric or algebraic coverage.
+
+If after reading you conclude the family fails G, H or V, **say so and stop**. A
+correct rejection is a good outcome. Common disqualifiers: the task is in P; the
+paper's contribution *is* a complete classification (so the answer is a lookup); the
+witness is a proof or an unbounded-length object; verification needs research-level
+machinery.
+
+---
+
+## STEP 1 — the module
+
+One file, deterministic given `(n, seed)`. No file IO, no network, no printing at
+import. Use `random.Random(seed)`, never global `random`.
+
+**What you may import.** The standard library, and `gvlib/` from the repo root. `gvlib`
+is standard-library-only itself, so importing it keeps the module dependency-free: it
+carries exact rationals with JSON encoding (`gvlib.rationals`), multivariate polynomials
+over ℚ (`gvlib.sparse_poly`), rational matrices with Bareiss determinant, rank, solve,
+Gram and LDL/PSD (`gvlib.exact_matrices`), and Sturm sequences and real-root isolation
+(`gvlib.roots`). Use it — a certificate that is a polynomial identity, a Gram matrix or
+an isolating interval should not cost you a day of writing `Fraction` row reduction for
+the fifth time. Nothing else may be imported.
+
+`gvlib` sits at the repo root and your module sits in `results/<id>/`, so the import
+needs the root on `sys.path` — `emit.sh` and `submit.sh` run from the root and find it,
+but `harden.py` is invoked from your own directory and will not. Do it once, at the top,
+and degrade gracefully:
+
+```python
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals
+except ImportError:                 # not present: stay standard-library-only
+    exact_matrices = rationals = None
+```
+
+If it does not import, stay standard-library-only and say so in the README rather than
+adding a dependency. Do not let a missing helper library become the reason a family
+ships as a graph.
+
+**`inst["answer"]` must be JSON-native.** `emit.sh` writes it straight into
+`artifacts/<id>.jsonl` with `json.dumps`, so a `Fraction`, a `complex` or a custom class
+does not fail your selftest — it fails the emit, after the expensive part is paid for.
+Serialise: **rationals as `[num, den]`**, **monomials as exponent lists**, polynomials as
+lists of `[[num, den], [e1, e2, ...]]`, matrices as lists of lists. `json.loads(
+json.dumps(a)) == a` must hold for every answer the family produces, and whatever
+`verify` accepts, `parse_answer` must be able to return.
+
+```python
+TRACK: str                  # "A" or "B" -- see TWO TRACKS.  Required.
+    # scripts/corpus_report.py reads this straight into its `track` column; anything
+    # that is not "A" or "B" is recorded as "unknown", which is what every family
+    # shipped before this prompt reads as today.
+
+PROBLEM_PROFILE: dict       # what this family really is, on a controlled vocabulary.
+    # PREFERRED.  NATIVE (below) is the LEGACY form and is still what submit.sh reads,
+    # so declare BOTH and keep them consistent.  Seven shipped modules declare only
+    # NATIVE; they stay valid and nothing here orphans them.
+    #
+    # The token spellings below are the ones scripts/corpus_report.py reads.  Inventing
+    # a synonym does not produce a warning -- it silently drops your row out of the
+    # coverage counts, which is the exact failure mode this schema exists to stop.
+    #
+    # {"native_domain":  combinatorics|algebra|geometry|analysis|dynamics|
+    #                    optimization|number_theory|logic
+    #                    -- what the SOLVER reasons about, NOT the arXiv category.
+    #
+    #  "object_regime":  what kind of object the solver actually manipulates:
+    #      finite_discrete     finite, exactly representable as ints and structures
+    #      finite_field        elements of GF(q)
+    #      integer_lattice     integer vectors / lattice points
+    #      rational_exact      rationals, polynomials, matrices over Q; exact
+    #                          arithmetic end to end, no approximation anywhere
+    #      real_algebraic      the object is a real number, but the certificate is a
+    #                          finite exact symbolic thing -- (minimal polynomial,
+    #                          isolating interval with rational endpoints)
+    #      continuous_analytic the object lives in R, C, a manifold, a function space
+    #                          or a trajectory.  Then the certificate MUST be exact:
+    #                          a rational SOS, a Lyapunov function over Q, or a
+    #                          rigorous enclosure with exact rational endpoints
+    #                          (declare certificate_form="interval" for that last one).
+    #                          A float anywhere in verify() is a bug, not a regime.
+    #
+    #  "computational_core":  what the solver actually searches, one of
+    #                    graph|csp_sat|exact_cover|subset_sum|permutation|
+    #                    linear_algebra|polynomial_identity|sos|telescoping|
+    #                    symbolic_integration|interval_bound|other
+    #
+    #  "certificate_form":  the shape of the answer, one of
+    #                    sos|telescoping|symbolic_integral|algebraic_number|
+    #                    matrix_certificate|interval|polynomial|rational|exact_symbolic
+    #                        -- these count toward the release quota on symbolic
+    #                           certificates
+    #                    integer_tuple
+    #                        -- this one does not, and it is what the corpus already
+    #                           has far too much of.  Do not reach for it by reflex:
+    #                           an answer that IS a tuple of small ints is one thing,
+    #                           an answer flattened into one to make G4 easy to report
+    #                           is the collapse this schema exists to measure.
+    #  "native_objects": the objects the solver is HANDED, e.g.
+    #                    ["Gram matrix over Q", "unit vectors"].  If the honest answer
+    #                    is ["adjacency matrix"], write that and take the consequence.
+    #  "verification_operations": the exact operations verify() performs, e.g.
+    #                    ["exact rational inner product", "PSD check via LDL",
+    #                     "sign comparison"].  If this list is nothing but set
+    #                    membership and integer comparison, your core is discrete
+    #                    whatever native_domain says.
+    #
+    #  "domain_essentiality":  how load-bearing the paper's mathematics is:
+    #      native               ESSENTIAL -- the paper's objects are handed to the
+    #                           solver AND verify() operates on them; delete the domain
+    #                           structure and the problem is gone
+    #      licensed_reduction   REPRESENTATIONAL -- a reduction the paper itself
+    #                           licenses; the native objects are visible but the search
+    #                           is carried by the surrogate
+    #      discretised_analogue ANALOGUE -- the paper's mathematics was compiled away
+    #                           before the solver saw anything
+    #
+    #  "reduction_kind":  none | paper_licensed | convenience
+    #  "reduction":       None when reduction_kind == "none" -- it MUST be falsy then,
+    #                     or the report labels a native family a discretised analogue.
+    #                     Otherwise the citation string: "Section 5, Lemma 5 (...)".
+    #  "reduction_source": paper_central | external_standard | benchmark_convenience
+    #                     -- the finer distinction reduction_kind cannot spell.
+    #                     paper_central     -> reduction_kind "paper_licensed"
+    #                     external_standard -> reduction_kind "convenience": a textbook
+    #                                          reduction is not this paper's
+    #                                          mathematics and must not buy coverage
+    #                     benchmark_convenience -> reduction_kind "convenience"
+    #
+    #  "intuition_type":  one of, and write it with SPACES, not underscores --
+    #                     "symmetry" | "invariant" | "duality" |
+    #                     "change of variables" | "ansatz" | "extremal bound" |
+    #                     "decomposition" | "constraint propagation" |
+    #                     "reduction recognition" | "search pruning".
+    #                     The reporter matches this as prose: "change_of_variables"
+    #                     with underscores does NOT match and lands as
+    #                     "unclassified".  All ten match when written with spaces.
+    #  "intuition_description": one sentence: the insight, and what a solver who does
+    #                     not have it must do instead.
+    #  "hardness_basis":  one sentence, and it must match TRACK.  Track A: the theorem
+    #                     and the parameter regime.  Track B: the algorithm that
+    #                     exists, its complexity, its measured cost at the shipping
+    #                     preset, and why the compact route is not mechanically
+    #                     executable in context.
+    #  "max_answer_tokens": your MEASURED worst-case serialised answer length at the
+    #                     shipping preset, in tokens.  See G9(c) for the cap.}
+    #
+    # **Only `domain_essentiality == "native"` together with `reduction_kind` in
+    # {none, paper_licensed} counts toward native-domain coverage.**  Everything else
+    # is recorded honestly and reported separately, and `benchmark_convenience` is
+    # archived and excluded from the native release entirely.  Declaring
+    # `discretised_analogue` costs you a coverage row.  Declaring `native` when the
+    # solver is handed an adjacency matrix costs the corpus its credibility, which is
+    # the failure this schema exists to prevent.
+
+NATIVE: dict                # LEGACY form.  Still REQUIRED: submit.sh reads this one.
+    # {"domain":    one of combinatorics|algebra|geometry|analysis|dynamics|
+    #                       optimization|number_theory|logic
+    #  "core":      what a solver actually searches, one of
+    #               graph|csp_sat|exact_cover|subset_sum|permutation|
+    #               linear_algebra|polynomial_identity|sos|telescoping|
+    #               symbolic_integration|interval_bound|other
+    #  "objects":   the mathematical objects the solver is handed, e.g.
+    #               ["adjacency matrix"] or ["Gram matrix over Q", "unit vectors"]
+    #  "intuition": the insight the problem is meant to test, e.g. "symmetry",
+    #               "invariant", "change of variables", "ansatz", "duality"
+    #  "reduction": None if the family is stated in the paper's own objects;
+    #               otherwise the section/theorem that licenses the surrogate.}
+    # Derive it from PROBLEM_PROFILE and keep the two consistent:
+    #   domain    <- native_domain        core      <- computational_core
+    #   objects   <- native_objects       reduction <- reduction  (same value)
+    #   intuition <- intuition_type + ": " + intuition_description
+    # `domain` is NOT the arXiv category -- it is what the solver reasons about.
+    # A geometry paper rendered as an adjacency matrix has domain="combinatorics"
+    # and core="graph".  Labelling it "geometry" is the failure this field exists
+    # to prevent.
+
+DIFFICULTY: dict            # exactly four presets, named "demo", "easy", "medium"
+                            # and "hard", in that order -- harden.py walks the dict
+                            # in insertion order, so it is the ladder, ascending.
+                            # Each maps to kwargs for make_instance.
+                            # "demo" is the smallest setting the family supports:
+                            # a person must be able to solve it and check the
+                            # answer on paper.  It is an illustration, not a
+                            # difficulty level -- harden.py skips it, and
+                            # SHIPPING_DIFFICULTY must never name it.
+
+def make_instance(n, seed=0, **params) -> dict
+    """Build an instance whose certificate you know BY CONSTRUCTION -- by inverse
+    generation, theorem-backed construction, transformation of a known instance, or
+    composition of identities (see G above). Never by solving the instance you just
+    built. Returns a dict containing key "answer" (the certificate, JSON-native)
+    plus all data the solver needs. `n` is the size parameter; larger n must mean
+    harder."""
+
+def render(inst) -> str
+    """The complete problem statement a solver reads. See the OUTPUT CONTRACT.
+
+    Hint modes, for G9: when os.environ.get("GV_HINT_MODE") is "structural" append
+    STRUCTURAL_HINT, when it is "placebo" append PLACEBO_HINT, and otherwise append
+    NOTHING. The default MUST be no hint -- emit.sh, submit.sh and the STEP 4
+    hardening run all call render(), and a hint leaking into artifacts/ would
+    silently change what the dataset is."""
+
+STRUCTURAL_HINT: str        # ONE sentence naming the structural insight -- the thing
+                            # intuition_description says this family tests.  Required.
+                            # "The columns of the Gram matrix repeat with period 7."
+PLACEBO_HINT: str           # ONE sentence of the same length and register carrying no
+                            # structural information.  Required.  "This problem
+                            # rewards being careful with the indexing."  See G9(a).
+
+def parse_answer(text) -> object | None
+    """Extract an answer from raw solver output. Return None if absent/malformed.
+    Must tolerate surrounding prose, markdown fences, and whitespace."""
+
+def verify(inst, answer) -> tuple[bool, str]
+    """(True,"ok") or (False, reason). Accept ANY valid witness, not only
+    inst["answer"] — other correct answers may exist. NEVER read inst["answer"]."""
+
+### The answer format is collapsing too — pick from this menu
+
+Measured across the 55 shipped modules: **82% of answers are plain integers or lists
+of integers**, 65% are literally `list[int]`, and `search_space()` returned an `int`
+**55 times out of 55**. There is not one rational, polynomial, matrix or symbolic
+answer in the corpus.
+
+Nothing forbids those. The gates just happen to be *cheapest* to satisfy with a tuple
+of small integers — `search_space` is easy to count, `random_candidate` is easy to
+sample, G4 is easy to measure. So every builder lands in the same place. Do not let
+the path of least resistance choose your certificate for you.
+
+`gvlib/` exists so the richer options cost about the same: exact rationals, sparse
+multivariate polynomials over ℚ, exact matrices with Bareiss determinant and LDL
+PSD-testing, and Sturm root isolation. Standard library only, already tested. Import
+it rather than hand-rolling arithmetic.
+
+| certificate | JSON-native form | `search_space` | `random_candidate` |
+|---|---|---|---|
+| tuple of indices | `[3, 17, 42]` | C(n,k) | sample k of n |
+| **rational vector** | `[[num, den], ...]` | bound heights: (2H+1)^d | sample numerators/denominators in range |
+| **polynomial** | `[[coef, [e1,e2,...]], ...]` | #monomials under the degree bound, coefficients bounded | sample a support set, then coefficients |
+| **matrix over ℚ or F_q** | `[[...],[...]]` | q^(mn), or bounded heights | sample entries |
+| **SOS decomposition** | list of polynomials | as polynomial, times the number of squares | sample squares, sum them |
+| **primal–dual pair** | `{"x": [...], "y": [...]}` | product of the two spaces | sample both |
+| **algebraic number** | `{"minpoly": [...], "interval": [[a,b],[c,d]]}` | #polynomials under degree+height bound | sample a squarefree minpoly, isolate |
+| **group element / word** | `["a","b","a^-1", ...]` | (2g)^L for length L | sample a reduced word |
+| **permutation / ordering** | `[2, 0, 1, ...]` | n! | Fisher–Yates |
+| **set system / partition** | `[[...],[...]]` | Bell or Stirling number | sample a random partition |
+
+`search_space` may return `None` when the declared language is genuinely uncountable —
+then G5 carries a **sampled density estimate** instead. That path exists and has never
+been used; if your certificate is naturally continuous-but-certified, use it rather
+than discretising the answer to keep the counter happy.
+
+**Before you settle on `list[int]`, write down what the paper's own objects are.** If
+the theorem is about polynomials, the answer should probably be a polynomial. Reducing
+it to indices is the same failure as reducing geometry to a graph — it survives the
+gates and loses the mathematics.
+
+CERTIFICATE_LANGUAGE: dict  # the BOUNDED language the answer is written in. Required.
+    # {"description": a human-readable grammar/bounds statement, e.g.
+    #                 "SOS: <=6 squares, each a poly of degree <=4 over the fixed
+    #                  monomial basis, rational coefficients with |num|,|den| < 2^32"
+    #  "bounds":      the numeric bounds that make it finite, e.g.
+    #                 {"n_squares": 6, "max_degree": 4, "basis": 45, "coeff_bits": 32}}
+    #
+    # This field exists because requiring an integer `search_space` silently forces
+    # every family to be a tuple of small integers.  Measured over the first 40
+    # shipped generators: search_space returned an int 40/40 and None 0/40, and not
+    # one answer was a rational, a polynomial or a symbolic expression -- because a
+    # symbolic answer has no uniformly-sampleable candidate set, so G4 could not be
+    # reported and the family was never built.
+    #
+    # Declaring bounds fixes that.  An antiderivative is infinite; an antiderivative
+    # over a fixed operator set with depth <= 4 and coefficients under 2^16 is a
+    # finite, countable, samplable space.  Bound the language and the continuous
+    # families become expressible without weakening exact verification at all.
+
+def random_candidate(inst, rng) -> object
+    """A random candidate that ALREADY SATISFIES every constraint a solver would
+    trivially enforce from reading the statement (shape, size, and any structural
+    rule that is obvious once stated). Used to measure P(random guess). Must not
+    bias toward the planted answer. See G4 — do NOT sample from the naive space."""
+
+def search_space(inst) -> int | None
+    """Size of CERTIFICATE_LANGUAGE at these parameters -- the space
+    `random_candidate` samples from, not a looser superset. Return None ONLY if
+    the declared language is genuinely uncountable; then G5 must carry a sampled
+    density estimate instead."""
+
+def enumerate_all(inst) -> int | None
+    """Exact count of valid answers by brute force; None if the space is too big.
+    Cap the work — return None rather than hanging."""
+
+def canonical_key(inst) -> str
+    """This family's definition of "the same problem". Two instances that map to
+    each other by relabelling — vertex numbering, permutation of the ground set,
+    reordering of the input — MUST return the same key, so that emit.sh can tell
+    a genuinely new instance from a recolouring of one it already has.
+
+    Do NOT hash the seed, and do NOT hash render(inst). Both make every instance
+    look distinct and silently disable the diversity check, which is worse than
+    having no check at all. Build the key from the instance data in a canonical
+    order: sort what can be sorted, normalise what has a normal form, and if the
+    family's isomorphism is genuinely intractable say so in the README caveats
+    and key on the strongest invariant you can compute cheaply.
+
+    Must be deterministic: same seed and params => same key. submit.sh checks this."""
+
+def escalate(params) -> dict | str | None
+    """Parameters strictly harder than `params`.
+
+    GROW THE HAYSTACK, NOT THE NEEDLE.  This is the rule, and 61% of shipped
+    modules break it: they escalate by raising `n`, which lengthens the ANSWER,
+    which hits the output cap, at which point they return None and the harness
+    calls the family `too_easy` and the paper is thrown away.  Ten papers have
+    been discarded that way -- judged un-writable rather than unsuitable.
+
+    Difficulty should scale with the SPACE THE ANSWER IS DRAWN FROM, not with the
+    NUMBER OF THINGS IN THE ANSWER.  A planted clique is the model: n goes from
+    512 to 4096 while k stays 16, so the search explodes and the answer stays
+    sixteen numbers long.
+
+    Axes that raise difficulty at FIXED answer length -- reach for these first:
+      - enlarge the ground set / ambient space, keeping the witness size fixed
+      - raise the modulus, field size or coefficient range, so each answer
+        element carries more entropy without taking more characters
+      - raise decoy density or crowding: more near-misses per real element
+      - move the plant closer to the feasibility boundary
+      - delete redundant clues from the instance -- less given, same answer
+      - tighten the constraints, shrinking the solution set
+
+    Only after those are exhausted should you consider a longer answer.
+
+    RETURN VALUES, and the distinction matters:
+      dict          -- harder parameters. Preferred.
+      "cap_bound"   -- the family CAN be made harder, but only by pushing the
+                       answer past the output cap.  Say this instead of None.
+                       It parks the paper rather than condemning it: the limit
+                       is our answer format, not the paper's mathematics.
+      None          -- genuinely nothing left on ANY axis.  Rare.  If you are
+                       returning None because the answer got too long, you mean
+                       "cap_bound"."""
+```
+
+---
+
+## STEP 2 — the OUTPUT CONTRACT (render + parse_answer)
+
+`render` must be **self-contained** — a solver sees only this string, never the
+paper — and must end with explicit output instructions that `parse_answer` can
+consume. Use a delimited block:
+
+```
+Give your final answer inside <answer></answer> tags, as <exact format>.
+Example: <answer>3, 17, 42</answer>
+Output nothing else inside the tags.
+```
+
+Rules for the statement:
+
+- Define every term used. Do not assume the solver knows the paper's notation.
+- **Pin down every ambiguity that could make a correct answer look wrong.** Closed
+  vs open intervals, inclusive vs exclusive bounds, 0- vs 1-indexing, whether order
+  matters, whether repeats are allowed. Each unstated convention is a grading bug.
+- State the required size/shape of the answer explicitly.
+- Give all instance data inline, in a simple parseable layout.
+- **Keep the answer writable.** The solver has to type it out, by hand, with no
+  scratchpad. An answer running to thousands of elements measures transcription
+  stamina, not intuition, and the failures it produces tell you nothing. G9(c) puts a
+  hard cap on this.
+- **Serialise rationals and polynomials the way `parse_answer` reads them back**, and
+  say so in the statement: rationals as `num/den`, monomials as exponent lists. The
+  rendered form and the JSON form must agree.
+
+`parse_answer` must round-trip: `parse_answer(render_of_answer) == answer`, and must
+return `None` — not raise — on garbage.
+
+---
+
+## STEP 3 — mandatory gates
+
+Implement `selftest()` running all of these and returning a dict. **Every gate must
+pass at the difficulty you ship** — except where a part is explicitly marked
+*recorded, not gated*, which is true of G9(a) and of nothing else.
+
+| gate | requirement |
+|---|---|
+| **G1 planted verifies** | `verify(inst, inst["answer"])` is True — for **every** preset × several seeds. Re-run this after *any* change. |
+| **G2 rejects corruption** | Perturbed answers (drop one element, swap one, duplicate, empty, out-of-range) are all rejected, each with a distinct reason. |
+| **G3 round-trip** | `parse_answer` recovers an answer from a realistic model-style response with prose around it. |
+| **G4 guess resistance** | `P(random guess) < 1e-6` from ≥200k samples drawn from `CERTIFICATE_LANGUAGE`, measured **structure-aware** (see below). Report hits/total. |
+| **G5 density + baseline cost** | A real number, never "not feasible": an exact solution count where enumeration works at any preset, otherwise a sampled density estimate — **plus** the measured cost of your strongest attack. See below. |
+| **G6 adversary panel** | ≥4 attacks in `attacks`, each FAILING across ≥8 seeds. Track A: three cheap probes **plus the standard algorithm for the problem class**. Track B: three cheap probes plus an in-context attack, with the standard algorithm reported separately under `reference_algorithm`. See TWO TRACKS and below. |
+| **G7 scales** | Difficulty grows with `n`; a size-doubled instance still builds and still passes G1. |
+| **G8 canonical_key** | The key is invariant under every relabelling that preserves the family, and distinct across unrelated instances. See below — `submit.sh` cannot check this. |
+| **G9 no-tool suitability** | **One** gated part — the answer and route fit the caps (G9c). The three-arm diagnostic (bare / hinted / placebo) is **recorded, never gated**; the hinted arm G9(b) was a gate until 2026-09-05 and is now diagnostic too. See below. |
+
+### G4: measure P(guess) against a solver, not against noise
+
+The naive candidate space is almost always a wild overestimate of the difficulty,
+and reporting it makes a guessable family look impossible. `random_candidate` must
+sample from the space **a solver who has read the statement would search**, with
+every freely-deducible constraint already applied.
+
+Measured on a real run of this prompt — an exact-tiling family where the statement
+implies exactly 3 items fill each block:
+
+| n | P(guess), uniform over all shift vectors | P(guess), structure-aware |
+|---|---|---|
+| 2 | 2.0e-10 | **0.20** |
+| 3 | 6.6e-16 | 4.3e-2 |
+| 4 | 7.0e-22 | 3.1e-3 |
+
+The uniform column says "impossible" for an instance that is in fact guessed one
+time in five. Eighty orders of magnitude of self-deception.
+
+So: before sampling, ask what a solver gets for free from the statement — the
+arity, the partition shape, the degree, the range, the sum constraint — and build
+those into `random_candidate`. If you also report the naive number, label it
+clearly as the naive one. The structure-aware number is the one that must pass.
+
+### G5: measure difficulty, do not infer it from cardinality
+
+Across the first 40 shipped generators, `enumerate_all` returned `None` at the
+**shipping** preset **40/40**. G5 was therefore measured on a reduced instance
+(n = 4–40, against shipping n up to 512) or carried no number at all (7/40). It
+never described the instance that actually ships — and a density at n=4 says
+nothing about n=32.
+
+Worse, a reduced-preset number can be passed while being alarming: `2104.04330`
+reported a solution fraction of **5.7e-4** at n=18 — roughly one candidate in 1768
+is valid — and passed G5 anyway.
+
+A large space is not difficulty. `2503.01929` reported a 1536-bit candidate space
+and fell to Algorithm X in under five seconds. Report both of these, as numbers,
+**at the shipping preset**:
+
+1. **Density at the shipping preset.** Exact count if `enumerate_all` terminates
+   there; otherwise sample `random_candidate` and report the observed fraction of
+   valid answers with the sample size. A count from a smaller preset may be given
+   in addition, labelled with its `n` — never instead. `None` is not an answer.
+2. **Baseline cost.** Run your strongest G6 attack at the *shipping* preset and
+   record what it actually cost: wall-clock seconds, and nodes/restarts/iterations.
+   A family whose best attack fails in 0.2 s is not obviously hard — it may simply
+   be unsatisfiable-looking to that attack. Cost is the honest difficulty signal.
+
+### G6: the adversary panel — this is where generators actually die
+
+A planted instance can pass every correctness gate and still be trivial, because
+the planting leaves a statistical signature. **Write attacks that exploit how you
+built it**, and prove they fail. At minimum:
+
+- **Outlier attack** — is the planted element distinguishable by any per-element
+  statistic? Position, magnitude, width, degree, frequency, ordering.
+- **Greedy attack** — does an obvious greedy/left-to-right rule solve it?
+- **Random restart** — does sampling with a mild heuristic find a solution?
+- **The standard algorithm for the problem class — REQUIRED, not optional.** The
+  three above are generic and they are *not sufficient*; they probe how you built
+  the instance, not what is known about the problem. Ask what a specialist would
+  reach for first and run *that*:
+
+  | the problem is about | run at least |
+  |---|---|
+  | satisfiability / CSP | a SAT or SMT solver, or DPLL with unit propagation |
+  | covering, packing, assignment, scheduling | an ILP/LP relaxation, or matching |
+  | a planted subgraph, colouring, partition, or community | **a spectral method** — top eigenvectors of the adjacency/Laplacian, and an SDP or nuclear-norm relaxation if the paper mentions one |
+  | subset sum, knapsack, lattice, or small-coefficient integer relations | LLL / lattice reduction |
+  | exact cover, tiling, set partition | Algorithm X / DLX, or a CP solver |
+  | paths, cycles, flows, connectivity | the classical polynomial algorithm for the relaxed version, then repair |
+  | permutations, words, group elements | normal forms and the natural rewriting/canonicalisation |
+
+  If no library is available, implement the cheap version — power iteration is a
+  dozen lines and breaks most planted-subgraph constructions. If you genuinely
+  cannot run the standard attack, say so explicitly in the README caveats and name
+  the attack you could not run. Never silently omit it.
+
+**Report G6 in this shape**, so the panel can be checked mechanically rather than
+read prose-by-prose:
+
+```python
+report["G6_adversary_panel"] = {
+    "pass": all_failed,
+    "attacks": {                      # one entry per attack, name -> result
+        "outlier_degree":     {"successes": 0, "attempts": 8},
+        "greedy_largest_first":{"successes": 0, "attempts": 8},
+        "random_restart_256": {"successes": 0, "attempts": 8},
+        "spectral_top_eigenvector": {"successes": 0, "attempts": 8},   # the domain attack
+    },
+}
+```
+
+Extra keys alongside `attacks` are fine. `submit.sh` requires `attacks` to be
+present with **at least 4 entries** — three generic probes plus the domain attack — and
+it **recomputes `pass` from the `successes` on disk**: a panel that records a solved
+attack is refused no matter what `pass` says. `2410.07666` logged walksat at 8/8 and
+honestly set `pass=false`; nothing else would have caught it.
+
+That recomputation is exactly why a **Track B** family must not put its
+domain-standard algorithm in `attacks`. On Track B that algorithm is *supposed* to
+succeed — it is the `hardness_basis`, not a failure — so it goes in a sibling key and
+`attacks` keeps its meaning:
+
+```python
+report["G6_adversary_panel"]["reference_algorithm"] = {   # Track B only
+    "name": "Bareiss elimination over Q",
+    "complexity": "O(n^3) exact",
+    "wall_clock_sec": 0.4,
+    "operations": 1_240_000,      # this number IS the Track B hardness claim
+    "solves": "8/8, as expected",
+}
+```
+
+Track B still needs four *failing* entries in `attacks`, and its fourth is an attack a
+solver could actually run in context without tools — the by-hand heuristic, the greedy
+route, the obvious ansatz. If you cannot find one that fails, the family is guessable by
+hand and you should reject it.
+
+Real failures from previous attempts, so you know what this looks like:
+
+- Planted intervals placed at multiples of 100 while decoys clustered elsewhere:
+  "pick the positional outlier" solved **37%** with no search.
+- Fixing that by widening decoys made them 10× wider than plants: "pick the
+  narrowest" solved **25%**.
+- A planted graph partition was so sparse that brute force cracked n=22 in 0.03 s,
+  yet adding edges to harden it made instances *unsatisfiable* — the usable window
+  was narrow and had to be found by sweeping.
+- A zero-sum family had a 3×10⁶ space but **7.7% of all candidates were valid** —
+  a huge space and a worthless problem.
+- **A bounded Token Jumping family (arXiv:2408.04743) passed every gate, and the
+  four-vendor oracle pool returned `hardened`.** A construction-aware spectral
+  attack then recovered a verified witness on **20/20 shipping instances in
+  polynomial time** — the planted colour classes formed an exact −3 eigenvector.
+  The generic outlier/greedy/restart panel saw nothing. This is why the domain
+  attack is mandatory: gates passing and the oracle failing to solve are jointly
+  *not* evidence of hardness, and this family would have shipped on that evidence.
+
+**Draw plants and decoys from the SAME distribution.** Get difficulty from
+crowding/density/size, never from making the planted object look different.
+
+### G8: canonical_key must be invariant under relabelling
+
+`submit.sh` emits sample instances and counts distinct keys. It checks only that
+the key is **deterministic** — it cannot tell a real invariant from a fake one.
+So a key built on the seed, or on `hashlib.sha256(render(inst))`, makes every
+instance look distinct, reports a perfect diversity score, and silently turns the
+duplicate check into a no-op that can never fail. That is worse than shipping no
+check at all, and nothing downstream will catch it. This gate is the only thing
+standing between that bug and the corpus.
+
+Prove the key is structural, in `selftest()`:
+
+1. **Invariance.** Enumerate the transformations that map an instance to *the same
+   problem* — permuting the ground set, renumbering vertices, reordering the input
+   list, and any family-specific symmetry (an affine map `x -> u*x + t` on a cyclic
+   group, a change of basis, a global translation). Apply each, and each composed
+   with the others, over ≥20 seeds. Assert the key is unchanged every time.
+2. **The transformation is real.** For at least one relabelling, assert the
+   transformed instance still verifies against the *original, untransformed*
+   answer — or against the answer carried through the relabelling. A key that is
+   invariant under a map that does not preserve the problem is over-collapsing
+   distinct instances, which is the opposite failure and just as bad.
+3. **Distinctness.** Over ≥20 unrelated seeds, assert all keys differ.
+
+Report all three counts in the gate dict. If the family's isomorphism is genuinely
+intractable, say so explicitly in the README caveats and key on the strongest
+cheap invariant you can — but still run steps 2 and 3 against it.
+
+### G9: is the failure informative? — measured, mostly not gated
+
+Every family here is built so that a model fails it. That makes "the model failed"
+almost uninformative on its own: a model also fails a question whose answer is forty
+thousand tokens long, and one that needs ten thousand exact multiplications. Those
+failures say nothing about mathematical intuition, and a corpus full of them measures
+patience.
+
+G9 separates the two. **It is not a "the model must succeed" gate.** That would be the
+exact negation of STEP 4, which holds a level only when all three oracles fail, and it
+would delete every family that survives the hardening loop. Three parts, and only two of
+them are gates.
+
+#### (a) The three-arm diagnostic — recorded, never gated
+
+Run the shipping preset three times and record solved/attempts for each arm:
+
+| arm | prompt |
+|---|---|
+| bare | `render(inst)` as shipped |
+| hinted | `render(inst)` + `STRUCTURAL_HINT` |
+| placebo | `render(inst)` + `PLACEBO_HINT` |
+
+**Why the placebo arm exists.** Appending *any* sentence changes the prompt — its
+length, its register, and the signal that the asker thought a hint was warranted.
+Comparing hinted against bare confounds all of that with the hint's actual content. The
+placebo holds everything fixed except the structural information, so **hinted − placebo**
+is the estimate of real structural help; hinted − bare is contaminated by prompt leakage
+and is not.
+
+If hinted ≈ placebo, your hint carried no information: either it is badly written, or
+the family does not respond to the intuition you claimed in `intuition_type`. That is a
+finding, not a failure. Record the three numbers and say what you conclude in the
+README. **It does not block the ship** — this arm exists so the corpus knows what it is
+measuring, and gating on it would let a builder tune the hint instead of the family.
+
+#### (b) The hinted arm — RECORDED, NOT GATED (retired 2026-09-05)
+
+> Run the shipping preset with `STRUCTURAL_HINT` appended and record solved/attempts.
+> **This does not block the ship.**
+
+**This used to be a gate**, requiring the family to defeat the pool even when handed its
+hint. It was retired because the premise was backwards and the cost was enormous.
+
+The premise: "a family that dissolves the moment you name the trick was never testing
+whether a model can *find* the structure — it had already memorised it." That does not
+follow. A model that had memorised the trick would solve the **bare** statement, and
+STEP 4 proves it does not. What dissolving-on-hint actually shows is that the difficulty
+sits in *finding* the insight — which is precisely what this corpus is for, and what
+G9's own preamble contrasts against families that merely measure patience. As a gate it
+kept families that stay hard *even when handed the insight* — hard for reasons other
+than insight — and deleted the rest.
+
+The cost: 8 rejections and 23 papers blocked at submit, **six of which had already
+defeated the four-vendor no-tool pool at their shipping preset**. Three more were
+`cap_bound`/`budget_bound`, which made the gate unsatisfiable in principle — it asked
+for a family that could not be escalated at all to be escalated. Against 100 accepted
+problems that was the single largest loss mechanism in the pipeline.
+
+It also had the exact defect G9(a) is explicitly protected against: gating on a hinted
+arm lets a builder tune the *hint* instead of the family. Measured over the 17 modules
+carrying a hint, 4 of 9 rejected papers had handed the solver a procedure rather than an
+invariant.
+
+Record `hinted − placebo` and say what you conclude in the README. If the hint makes the
+family easy, that is a **good** sign about where its difficulty lives — note it and
+ship.
+
+Run it with the harness, not by hand:
+
+```bash
+mkdir -p g9_hinted && cp gen_<arxiv_id>.py g9_hinted/
+# in the COPY, cut DIFFICULTY down to the shipping preset alone, so the ladder
+# has one rung and the verdict is about that rung
+cd g9_hinted && GV_HINT_MODE=structural python3 ../../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+`harden.py` opens `llm_loop_transcript.jsonl` and `.meta.json` with mode `"w"` — it
+**overwrites**. Run every G9 arm in its own scratch directory, never in the result
+directory, or you will destroy the STEP 4 evidence you already paid for. Copy the
+finished transcripts back as `g9_<arm>_transcript.jsonl`.
+
+#### What a structural hint may contain — read this before you write one
+
+G9(b) rejects a paper when the hinted oracle solves it. That inference is only valid if
+the hint carries **the insight and nothing else**. If you hand over the algorithm, the
+oracle solving it measures your hint, not the paper — and the paper is discarded for it.
+
+A structural hint **names the invariant a solver has to notice**. It says what to look
+at. It does not say what to do next, it does not chain a second step, and it does not
+state a quantity the solver was supposed to derive.
+
+Measured over the 17 modules on disk carrying a `STRUCTURAL_HINT`: 4 of 9 rejected
+papers handed over a procedure, against 1 of 8 accepted. Real examples, all four from
+rejected papers:
+
+| hint | why it is a procedure |
+|---|---|
+| "Among target-one vertices, keep edges whose endpoints have equal eligible degree; **the result is three even cycles, so take alternating edges on each**." | states the derived count *and* the final step — the whole algorithm |
+| "Subtract the displayed center modulo p, **then** enumerate the two named exponent cosets by repeated multiplication" | chains a second step |
+| "Link repeated-letter word patterns **first, then** propagate one bijection across every occurrence **before using** ordinary letter frequencies" | a three-step method |
+
+Contrast one that is fine, from a paper whose G9(b) rejection stands on other grounds:
+
+> "Reduce every magnitude modulo 997: each four-element residue bucket contains two
+> complementary pairs with identical sums."
+
+It names the invariant — residue buckets carry complementary pairs — and stops. What to
+do with that is left to the solver.
+
+`submit.sh --reject` refuses a G9-citing rejection whose hint chains steps ("then",
+"; ...", "so take", "first,") or hands over a derived fact ("the result is ...",
+"there are three ..."). Rewrite the hint to name only the invariant, re-run the G9(b)
+arm, and reject only if the family still dissolves.
+
+Record the verdict. `hardened` means the hint did not break the family; `too_easy` means
+it did. **Neither blocks the ship** — put the number in the README and move on. Do not
+write `REJECTED.md` citing G9(b); `submit.sh --reject` will refuse it.
+
+#### (c) The size and effort caps — gated
+
+| cap | limit at the shipping preset |
+|---|---|
+| serialised answer | ≤ **2,000 characters** (≈ **500 tokens**) and ≤ **256 atomic elements** |
+| intended route | ≤ **300 exact arithmetic operations** |
+
+Measure both, put the numbers in the gate dict, and put the token figure in
+`PROBLEM_PROFILE["max_answer_tokens"]`.
+
+"Intended route" means the operations left **after** the insight — the compact route the
+family claims to test, not the search it replaces. A family over the answer cap is a
+transcription test. A family whose intended method needs thousands of arithmetic
+operations is a calculator test, and the evaluated model has no calculator; that is a
+fact about the harness, not a property of the mathematics.
+
+If you are genuinely over a cap and believe the family should ship anyway, say so in the
+README caveats with the measured number and expect to be argued with. Do not quietly
+round it down.
+
+Report the gate like this:
+
+```python
+report["G9_no_tool_suitability"] = {
+    "pass": hinted_still_hardened and within_caps,     # (b) and (c) only
+    "arms": {                                          # (a): recorded, not gated
+        "bare":    {"solved": 0, "attempts": 3},
+        "hinted":  {"solved": 0, "attempts": 3},
+        "placebo": {"solved": 0, "attempts": 3},
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",                      # (b)
+    "answer_chars": 412, "answer_tokens": 104, "answer_elements": 32,   # (c)
+    "intended_route_operations": 47,                   # (c)
+}
+```
+
+---
+
+## STEP 4 — the LLM hardening loop (required)
+
+**You do not write this loop.** `scripts/harden.py` owns it. Run it from your
+working directory once the module passes STEP 3:
+
+```bash
+python3 ../../scripts/harden.py gen_<arxiv_id>.py
+```
+
+It requires **`OPENROUTER_API_KEY`** in the environment. An OpenAI key alone is not
+enough: the oracle pool spans four vendors and is reached through OpenRouter.
+
+What it does, so you know what its output means:
+
+- The oracle is drawn **fresh from a four-vendor pool on every single call**, at
+  reasoning effort `medium`. A family that only defeats one model has not been shown
+  to be hard — it has been fitted to that model's blind spots. The builder model is
+  excluded from the pool for the same reason.
+- Each difficulty level gets **three attempts against three distinct models**, each on
+  a randomly drawn seed. The level is defeated if **any** of them solves it; it is
+  held only if **all three fail**.
+- A call that errors is redrawn against another model and does not consume an attempt.
+  An API failure is never recorded as the model failing to solve.
+- The ladder starts at `easy`. `demo` is skipped: it is built to be solvable, so
+  starting there would spend an escalation proving exactly that.
+- When a level is solved the harness escalates: to the next named preset, and once
+  `DIFFICULTY` is exhausted, by calling your `escalate()`. After **3 escalations** — or
+  as soon as `escalate()` returns None — it stops and reports `verdict: "too_easy"`.
+- It writes `llm_loop_transcript.jsonl` itself, and records the master seed, the pool
+  and its verdict in `.meta.json`. Do not write either file by hand; `submit.sh`
+  validates their schema and will reject a hand-rolled one.
+- It opens both files with mode `"w"`. **A second run in the same directory overwrites
+  the evidence from the first.** This run — bare, no hint — is the one that ships, so
+  G9's extra arms run in their own scratch directories. See G9(b).
+
+Read the verdict it prints:
+
+- `{"verdict": "hardened", ...}` — `shipping_params` is the level that held. If it came
+  from `escalate()` rather than a named preset, the four names are already taken, so
+  **slide the ladder up**: drop the rung the oracle solved, keep the survivors in
+  ascending order, and put the escalated level in as the new `hard`, leaving
+  `demo`/`easy`/`medium`/`hard` still spelled that way. Point `SHIPPING_DIFFICULTY` at
+  whichever name now carries the level that held, then re-run STEP 3's gates at it.
+  `demo` never moves: it stays the hand-solvable rung.
+- `{"verdict": "too_easy", ...}` — the family is **given up on**. Write `REJECTED.md`
+  saying which theorem or regime you were relying on and why you now think it does not
+  bite, and stop. Do not keep escalating by hand, and do not ship it. Three escalations
+  against four vendors is the bar; a family that clears the bar only after you retune
+  it by hand is a family tuned to that run.
+
+Your remaining job in this step is the renderer, not the loop: if the transcript shows
+`parse_answer` returning None on a reply that visibly *contains* an answer, that is a
+**G3 bug in your output contract**. Fix the contract and re-run the harness — do not
+celebrate a false negative.
+
+---
+
+## STEP 5 — deliverables
+
+Write these as **files in the working directory**, not only as chat output — the
+repo collects them and a report that exists only in the run log is not machine
+readable.
+
+1. `gen_<arxiv_id>.py` — the module. Set `SHIPPING_DIFFICULTY` to the preset you ship.
+2. `selftest_report.json` — the dict `selftest()` returns: every gate with its
+   measured number (P(guess) as hits/total, solution counts, per-attack results,
+   G9's three arms and its measured answer size and operation count).
+3. `llm_loop_transcript.jsonl` — **written by `scripts/harden.py`, not by you.** One
+   JSON object per oracle call, carrying `schema_version, model, effort, preset,
+   params, seed, escalation_round, solved, parsed, verify_ok, verify_reason, reply,
+   error, elapsed_sec, http_status, finish_reason`. This is the evidence for the hardness claim.
+   `.meta.json` is likewise owned by the scripts (master seeds, oracle pool, verdict,
+   duplicate rate) — leave both alone.
+4. `g9_hinted_transcript.jsonl` and `g9_placebo_transcript.jsonl` — the G9 arms,
+   produced by `harden.py` in scratch directories and copied back. See G9(b).
+5. A `NOTES` string in the module: which paper section fixed the definition, which
+   result told you what makes it easy, what you did to defeat each attack.
+6. `README.md` — **you write this, by hand.** See below.
+
+### README.md
+
+You are the only one who will ever have read this paper alongside this code. A
+script can reformat the JSON; it cannot say which theorem you were steering around
+or which version of the generator was secretly trivial. Write the page you would
+have wanted before you started.
+
+Write for someone who has **never read the paper** and wants to know, in this order:
+what the problem is, whether they can trust it, and how to run it. Keep it tight —
+one screen of prose plus tables. Cover:
+
+- **The profile up front**: `TRACK`, native domain, object regime, computational core,
+  certificate form, intended intuition and `domain_essentiality` — copied from
+  `PROBLEM_PROFILE`. If `reduction_kind` is anything but `none` or `paper_licensed`,
+  say plainly that this is **not** native coverage of the paper's domain, and name what
+  was discarded.
+- **What the family is**, in plain language. What object is handed to the solver,
+  what they must find, and why checking an answer is cheap. Name the paper, link it.
+- **Why it is hard**, in the sense your `TRACK` declares. Track A: the specific theorem
+  and parameter regime you are inside, and — just as important — the easy regimes you
+  had to avoid and the results that identify them. Track B: **name the algorithm that
+  solves it**, its complexity and its measured cost, then say why the compact route is
+  not something a model can execute in context. A Track B README that reads like a
+  Track A README is the failure mode here. Cite sections by number either way. This is
+  the part only you know.
+- **A worked example.** A rendered instance small enough to read in full — use the
+  `demo` preset, which exists for this — its answer, `verify` returning True on it,
+  and `verify` returning False with its reason on a corrupted variant. Say plainly
+  whether a person can actually solve it by hand, and if not, why the family's
+  smallest supported setting still is not hand-scale.
+- **Difficulty presets**, as a table, and which one ships. If a preset was rejected,
+  say which gate rejected it — a preset the oracle failed but an attack solved is
+  worth recording.
+- **Gate results**, as a table with the measured numbers.
+- **The oracle loop**, as a table: preset, seed, solved, why.
+- **The G9 arms**, as a table: bare / hinted / placebo solved-out-of-attempts, the
+  hinted − placebo difference, and what you conclude. If the structural hint bought the
+  oracle nothing, say so — that is evidence about your `intuition_type`, and this
+  README is the only place it will ever be written down. Give the measured answer size
+  and intended-route operation count here too.
+- **How to use it**: an import-and-verify snippet, and the `scripts/emit.sh` command.
+- **Caveats — required, and do not skip this one.** What would make this family
+  easy; what your `P(guess)` number does and does not mean given the prior your
+  `random_candidate` samples from; which attacks you did *not* try; anything you
+  are unsure of. A reader who trusts a weak family because the README was silent
+  is worse off than one you warned. If you genuinely have no caveat, say what you
+  checked that makes you confident.
+
+`submit.sh` refuses a result whose `README.md`, `selftest_report.json` or
+`llm_loop_transcript.jsonl` is missing.
+
+### `cap_bound` is not a rejection
+
+If the harness returns `cap_bound`, **do not write `REJECTED.md`.** The family is
+fine and the paper is fine; the answer simply cannot be written out at the size that
+would make it hard. Say so in your report and stop. The paper goes back to the pool
+for a future run under a larger cap, not into the reject pile.
+
+You should reach `cap_bound` only after trying the fixed-length axes in
+`escalate()`. If you reached it by raising `n` alone, you have not finished the job.
+
+## Writing `REJECTED.md`
+
+A rejection is a real result and costs nothing — but a *wrong* rejection throws away a
+paper someone already paid to read, and an audit found 7 of 12 rejections were wrong.
+So `REJECTED.md` must answer the question that was skipped:
+
+- Which of G, H, V fails, and **which track** — a family can fail H on Track A and
+  still be a perfectly good Track B family.
+- If you are rejecting because an efficient method exists, state the **mechanical
+  cost** and the **compact route length**, and show the gap is too small to test
+  anything. Without those two numbers the rejection is not reviewable, and
+  `submit.sh --reject` will refuse it.
+- Which theorem or section you are relying on, by number.
+
+Do not reject on the abstract. Do not reject because the paper "gives a construction" —
+that describes almost every paper in this pool.
+
+### If you built a module, KEEP it
+
+If you got as far as writing a generator and are now rejecting, **rename it to
+`rejected_gen_<id>.py` and leave it in place. Do not delete it.** `REJECTED.md` is
+what `submit.sh` reads, so a retained module cannot be mistaken for a shipped one —
+deleting it does not protect anything, and it destroys the only evidence that can
+re-open the decision later.
+
+This is not hypothetical. `harden.py` used to take `escalate() -> None` at face value
+and record `too_easy` when the real obstacle was the 256-atom answer cap. Replaying
+the fixed detector over past rejections recovered five papers that should have been
+parked, not rejected — and it could only do that for rejections that still had a
+module. `2411.12911` and `2601.05272` deleted theirs, so their rejections cannot be
+re-checked at all: both had to be parked on suspicion instead of measurement.
+
+Keep the module, and keep `.meta.json` and `llm_loop_transcript.jsonl` with it.
+
+## Report honestly
+
+If the family fails, say which gate and why. A rejected family costs nothing; a
+family that silently generates easy or unsolvable instances poisons the dataset.
+Never report a gate as passing without the number that shows it.
+
+## PAPER
+
+arXiv id: 2006.16756
+url: https://arxiv.org/abs/2006.16756
+title: Euclidean Geometry and Elliptic Curves
+categories: math.NT
+
+Prior triage (a hypothesis, not ground truth - verify it against the paper):
+  family: algebraic geometric structures
+  method: substitution check
+  candidate generator: choose geometric parameters yielding elliptic curve with explicit rational point
+  candidate verifier: substitute candidate rational point into curve equation
+codex
+I’ll begin with the paper’s full definitions, hardness/easiness results, and certificate-producing method—the Step 0 triage that determines whether this is Track A, Track B, or a justified rejection. I’ll then inspect the repository harness and only build a module if the paper supports a genuinely useful witness family.
+web search: 
+web search: https://arxiv.org/abs/2006.16756
+web search: 
+web search: 
+web search: 
+web search: 
+codex
+Step 0 points strongly toward Track B, if anything: the paper is a review of explicit geometric constructions, not a complexity paper, and its displayed rational points are produced by direct formulas. I’m now testing whether one of those constructions still creates a real no-tool compression gap after the construction parameters are hidden; otherwise the honest result will be a rejection with measured mechanical and compact costs.
+exec
+/bin/bash -lc "pwd && rg --files -g 'AGENTS.md' -g 'scripts/harden.py' -g 'gvlib/**' -g 'results/2006.16756/**' | sed -n '1,160p'" in /home/gson/gvrepo
+ succeeded in 0ms:
+/home/gson/gvrepo
+gvlib/sparse_poly.py
+gvlib/roots.py
+gvlib/README.md
+gvlib/rationals.py
+gvlib/exact_matrices.py
+gvlib/test_gvlib.py
+gvlib/__pycache__/rationals.cpython-312.pyc
+gvlib/__pycache__/exact_matrices.cpython-312.pyc
+gvlib/__pycache__/roots.cpython-312.pyc
+gvlib/__pycache__/__init__.cpython-312.pyc
+gvlib/__pycache__/test_gvlib.cpython-312.pyc
+gvlib/__pycache__/sparse_poly.cpython-312.pyc
+gvlib/__init__.py
+scripts/harden.py
+results/2006.16756/.task.md
+results/2006.16756/.meta.json
+results/2006.16756/codex_run.log
+results/2006.16756/.runner.sh
+
+exec
+/bin/bash -lc "sed -n '1,260p' scripts/harden.py
+rg -n 'TRACK = \"B\"|TRACK: str = \"B\"|reference_algorithm|G9_no_tool_suitability' results -g 'gen_*.py' | sed -n '1,200p'" in /home/gson/gvrepo
+ succeeded in 0ms:
+#!/usr/bin/env python3
+"""The LLM hardening loop.  Usage: python3 scripts/harden.py <path to gen_*.py>
+
+This file, not the builder, owns the loop.  The builder writes gen_<id>.py and
+runs this; everything about which model is asked, with which seed, and when a
+family is declared too easy is decided here.  That is deliberate: a builder that
+reports its own hardening result has an obvious incentive not to report a
+failure, and a transcript whose schema is chosen per run cannot be validated.
+
+Requires OPENROUTER_API_KEY.  The oracle pool spans four vendors, so a single
+OpenAI key is not enough.  Standard library only.
+"""
+
+import importlib.util
+import json
+import os
+import random
+import sys
+import threading
+import time
+import ssl
+import urllib.error
+import urllib.request
+
+# --- configuration ----------------------------------------------------------
+# The oracle pool.  Four vendors at the same price tier as the model this
+# replaced (openai/gpt-5.6-terra, $2/$12 per M tokens).  A model is drawn afresh
+# for every single call: a family that only defeats one model's blind spots is
+# not hard, it is overfitted to.
+#
+# openai/gpt-5.6-sol is deliberately absent — it is the builder model, and a
+# family checked against its own author proves nothing.
+# Two-model pool as of 2026-09-05. The property that matters is that no single
+# vendor's blind spot can carry a family through, and two vendors still give that.
+# ATTEMPTS_PER_PRESET stays 3, so a level is tried three times; with two models one
+# is drawn twice, on a DIFFERENT instance seed each time.
+DEFAULT_POOL = [
+    "openai/gpt-5.6-terra",
+    "google/gemini-3.8-flash",
+]
+ORACLE_POOL = [m.strip() for m in os.environ.get(
+    "ORACLE_POOL", ",".join(DEFAULT_POOL)).split(",") if m.strip()]
+
+ORACLE_EFFORT = os.environ.get("ORACLE_EFFORT", "medium")
+ATTEMPTS_PER_PRESET = 3      # distinct models per difficulty level
+# Raises of difficulty before the family is given up on.  This was 3, and 7 of the
+# 13 too_easy verdicts on disk came from EXHAUSTING IT rather than from the family
+# running out of hardness: 1612.03280 stopped at n=149 with escalate() still willing
+# to climb to 237 before it would have said cap_bound.  A budget is not a property of
+# the paper, so hitting it is now reported as `budget_bound`, not `too_easy` -- see
+# the end of main().  The budget still exists because each level costs a full pool
+# sweep; it is env-overridable so a park can be re-run with a bigger one.
+MAX_ESCALATIONS = int(os.environ.get("ORACLE_MAX_ESCALATIONS", "6"))
+MAX_ERROR_RETRIES = 3        # per attempt; API errors do not count as attempts
+MAX_TOKENS = int(os.environ.get("ORACLE_MAX_TOKENS", "32000"))
+# Reasoning tokens are billed against max_tokens on some vendors, so a budget
+# sized for the answer alone comes back HTTP 200 with an empty body — observed
+# live at 16000 against claude-sonnet-5 on a 2030-character statement.
+REQUEST_TIMEOUT = 900
+# urlopen(timeout=) is a per-socket-operation timeout, NOT a total deadline: a
+# provider that trickles bytes (or holds a streaming connection open) resets it on
+# every read, so a single call can hang indefinitely.  Observed live -- one call
+# sat open 44 minutes against a 900s "timeout" and blocked the paper for 74.  The
+# request therefore runs on a worker thread under a hard wall-clock deadline.
+TOTAL_DEADLINE = int(os.environ.get("ORACLE_TOTAL_DEADLINE", str(REQUEST_TIMEOUT)))
+
+# The published answer cap (prompts/codex_task.md): <= 2000 chars and <= 256 atoms.
+ANSWER_CHAR_CAP  = 2000
+ANSWER_ATOM_CAP  = 256
+# How close to the cap counts as "the cap is what stopped you". A ladder that has
+# already consumed most of the budget had nowhere left to go along the axis it was
+# using, whatever escalate() says about the mathematics.
+CAP_NEAR_FRACTION = 0.6
+
+
+def _answer_size(mod, params):
+    """(atoms, chars) of the serialised planted answer at these parameters.
+
+    Returns (None, None) if it cannot be measured -- never raises, because this is
+    diagnostic and must not be able to fail a run.
+    """
+    try:
+        inst = mod.make_instance(seed=98765, **{k: v for k, v in params.items()
+                                                if k != "_preset"})
+        ans = inst["answer"]
+        blob = json.dumps(ans, default=str)
+
+        def atoms(a):
+            if isinstance(a, dict):  return sum(atoms(v) for v in a.values())
+            if isinstance(a, (list, tuple)): return sum(atoms(v) for v in a)
+            return 1
+        return atoms(ans), len(blob)
+    except Exception:                                   # noqa: BLE001
+        return None, None
+
+ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _ssl_context():
+    """A context with a CA bundle that actually exists.
+
+    A python.org build on macOS whose "Install Certificates.command" was never
+    run has openssl_cafile pointing at a file that is not there, and every call
+    dies with CERTIFICATE_VERIFY_FAILED.  The loop treats that as an API error
+    and refuses to make a hardness claim, which is the right failure, but it is
+    a failure of the machine and not of the family — so find a usable bundle
+    first.  Never fall back to an unverified context: this call carries an API
+    key.
+    """
+    ctx = ssl.create_default_context()
+    if ctx.cert_store_stats().get("x509_ca", 0) > 0:
+        return ctx
+    candidates = [os.environ.get("SSL_CERT_FILE"), "/etc/ssl/cert.pem",
+                  "/etc/pki/tls/certs/ca-bundle.crt",
+                  "/etc/ssl/certs/ca-certificates.crt"]
+    try:
+        import certifi
+        candidates.append(certifi.where())
+    except ImportError:
+        pass
+    for path in candidates:
+        if path and os.path.exists(path):
+            try:
+                return ssl.create_default_context(cafile=path)
+            except Exception:                                 # noqa: BLE001
+                continue
+    sys.exit("ERROR: no usable CA bundle — TLS verification would fail for every "
+             "oracle call. On a python.org build, run the bundled "
+             "'Install Certificates.command', or set SSL_CERT_FILE.")
+
+
+SSL_CONTEXT = None
+SCHEMA_VERSION = 2
+
+TRANSCRIPT = "llm_loop_transcript.jsonl"
+META = ".meta.json"
+
+
+# --- module loading ---------------------------------------------------------
+def load_module(path):
+    spec = importlib.util.spec_from_file_location("gen", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for fn in ("make_instance", "render", "parse_answer", "verify", "escalate"):
+        if not callable(getattr(mod, fn, None)):
+            sys.exit(f"ERROR: {path} has no callable {fn}() — see prompts/codex_task.md STEP 1")
+    if not isinstance(getattr(mod, "DIFFICULTY", None), dict) or not mod.DIFFICULTY:
+        sys.exit(f"ERROR: {path} has no non-empty DIFFICULTY dict")
+    return mod
+
+
+# --- metadata ---------------------------------------------------------------
+def read_meta():
+    try:
+        with open(META) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def update_meta(**fields):
+    meta = read_meta()
+    meta.update(fields)
+    with open(META, "w") as f:
+        json.dump(meta, f, indent=1)
+
+
+# --- the oracle call --------------------------------------------------------
+def _ask_blocking(model, prompt, key):
+    """Return (reply_text, http_status, finish_reason, error, empty).
+
+    Exactly one of reply/error is set.  An empty body is NOT an API error: it is
+    flagged via `empty`, and attempt() scores it as an unsolved attempt.  A model
+    that spends its whole budget on reasoning and emits nothing did not produce a
+    witness under the conditions the pool is measured at, so it consumes its slot
+    rather than being redrawn.  The diagnostic is preserved in verify_reason so a
+    level hardened this way can still be told apart from one hardened on wrong
+    answers -- if ORACLE_MAX_TOKENS is the real constraint, raise it and re-run.
+
+    Every model in the default pool accepts OpenRouter's normalised `reasoning`
+    field, so no per-vendor body mapping is needed.  A model that rejects it is
+    reported as an error rather than silently retried without it — dropping the
+    effort setting would change what the hardness claim means.
+    """
+    body = json.dumps({
+        "model": model,
+        "reasoning": {"effort": ORACLE_EFFORT},
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": MAX_TOKENS,
+    }).encode()
+    req = urllib.request.Request(
+        ENDPOINT, data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT,
+                                    context=SSL_CONTEXT) as resp:
+            status = resp.status
+            payload = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        return None, e.code, None, f"http {e.code}: {e.read()[:400].decode('utf-8', 'replace')}", False
+    except Exception as e:                                    # noqa: BLE001
+        return None, None, None, f"{type(e).__name__}: {e}", False
+    try:
+        choice = payload["choices"][0]
+        text = choice["message"]["content"]
+        finish = choice.get("finish_reason") or choice.get("native_finish_reason")
+    except (KeyError, IndexError, TypeError):
+        return None, status, None, f"unparseable response: {json.dumps(payload)[:400]}", False
+    if not (text or "").strip():
+        usage = payload.get("usage") or {}
+        return None, status, finish, (
+            f"empty reply (finish_reason={finish}, usage={json.dumps(usage)[:160]}) — "
+            f"the model returned no content, most likely because reasoning consumed "
+            f"max_tokens={MAX_TOKENS}; raise ORACLE_MAX_TOKENS"), True
+    return text, status, finish, None, False
+
+
+def ask(model, prompt, key):
+    """_ask_blocking under a hard wall-clock deadline.
+
+    A deadline overrun is reported as an ERROR, not a failure to solve: the model
+    never got to answer, so scoring it as unsolved would manufacture hardness out
+    of a hung socket.  attempt() redraws against a different vendor.
+    """
+    box = {}
+
+    def run():
+        try:
+            box["v"] = _ask_blocking(model, prompt, key)
+        except Exception as e:                                # noqa: BLE001
+            box["v"] = (None, None, None, f"{type(e).__name__}: {e}", False)
+
+    # daemon=True matters: a wedged socket must not keep the interpreter alive at
+    # exit, which is exactly what a ThreadPoolExecutor worker would do.
+    t = threading.Thread(target=run, daemon=True, name=f"oracle-{model}")
+    t.start()
+    t.join(TOTAL_DEADLINE)
+    if t.is_alive():
+        return (None, None, None,
+                f"total deadline exceeded: no complete response in {TOTAL_DEADLINE}s",
+                False)
+    return box.get("v", (None, None, None, "worker produced no result", False))
+
+
+def attempt(mod, model, params, seed, key):
+    """One oracle call.  Returns the transcript record for it."""
+    inst = mod.make_instance(seed=seed, **params)
+    t0 = time.time()
+    reply, status, finish, error, empty = ask(model, mod.render(inst), key)
+    elapsed = round(time.time() - t0, 2)
+
+    rec = {
+        "schema_version": SCHEMA_VERSION,
+        "model": model,
+        "effort": ORACLE_EFFORT,
+        "params": dict(params),
+        "seed": seed,
+        "solved": "error",
+        "parsed": False,
+results/1608.06944/g9_placebo/gen_1608_06944.py:1135:    report["G9_no_tool_suitability"] = {
+results/2307.06792/gen_2307_06792.py:25:TRACK = "B"
+results/2307.06792/gen_2307_06792.py:926:    reference_algorithm = {
+results/2307.06792/gen_2307_06792.py:941:        "reference_algorithm": reference_algorithm,
+results/2307.06792/gen_2307_06792.py:963:        "reference_algorithm_edge_scans_mean": reference_algorithm["edge_scans_mean"],
+results/2307.06792/gen_2307_06792.py:964:        "reference_algorithm_wall_clock_sec_mean": reference_algorithm["wall_clock_sec_mean"],
+results/2307.06792/gen_2307_06792.py:1043:    report["G9_no_tool_suitability"] = {
+results/1608.06944/g9_hinted/gen_1608_06944.py:1135:    report["G9_no_tool_suitability"] = {
+results/2506.12019/gen_2506_12019.py:40:TRACK = "B"
+results/2506.12019/gen_2506_12019.py:166:solver is deliberately reported as Track B's reference_algorithm, not as a
+results/2506.12019/gen_2506_12019.py:848:        "reference_algorithm": reference,
+results/2506.12019/gen_2506_12019.py:968:    report["G9_no_tool_suitability"] = {
+results/1311.0603/g9_placebo/gen_1311_0603.py:37:TRACK = "B"
+results/1311.0603/g9_placebo/gen_1311_0603.py:980:        "reference_algorithm": {
+results/1311.0603/g9_placebo/gen_1311_0603.py:1072:    report["G9_no_tool_suitability"] = {
+results/2506.12019/g9_placebo/gen_2506_12019.py:40:TRACK = "B"
+results/2506.12019/g9_placebo/gen_2506_12019.py:162:solver is deliberately reported as Track B's reference_algorithm, not as a
+results/2506.12019/g9_placebo/gen_2506_12019.py:766:        "reference_algorithm": reference,
+results/2506.12019/g9_placebo/gen_2506_12019.py:855:    report["G9_no_tool_suitability"] = {
+results/1311.0603/gen_1311_0603.py:37:TRACK = "B"
+results/1311.0603/gen_1311_0603.py:979:        "reference_algorithm": {
+results/1311.0603/gen_1311_0603.py:1071:    report["G9_no_tool_suitability"] = {
+results/1311.0603/g9_hinted/gen_1311_0603.py:37:TRACK = "B"
+results/1311.0603/g9_hinted/gen_1311_0603.py:980:        "reference_algorithm": {
+results/1311.0603/g9_hinted/gen_1311_0603.py:1072:    report["G9_no_tool_suitability"] = {
+results/2506.12019/g9_hinted/gen_2506_12019.py:40:TRACK = "B"
+results/2506.12019/g9_hinted/gen_2506_12019.py:162:solver is deliberately reported as Track B's reference_algorithm, not as a
+results/2506.12019/g9_hinted/gen_2506_12019.py:766:        "reference_algorithm": reference,
+results/2506.12019/g9_hinted/gen_2506_12019.py:855:    report["G9_no_tool_suitability"] = {
+results/1705.01240/gen_1705_01240.py:1253:    report["G9_no_tool_suitability"] = {
+results/1705.01240/g9_placebo/gen_1705_01240.py:1168:    report["G9_no_tool_suitability"] = {
+results/1504.05476/g9_placebo_run/gen_1504_05476.py:32:TRACK = "B"
+results/1504.05476/g9_placebo_run/gen_1504_05476.py:912:        "reference_algorithm": {
+results/1504.05476/g9_placebo_run/gen_1504_05476.py:998:    report["G9_no_tool_suitability"] = {
+results/1504.05476/gen_1504_05476.py:32:TRACK = "B"
+results/1504.05476/gen_1504_05476.py:915:        "reference_algorithm": {
+results/1504.05476/gen_1504_05476.py:1001:    report["G9_no_tool_suitability"] = {
+results/1705.01240/g9_hinted/gen_1705_01240.py:1168:    report["G9_no_tool_suitability"] = {
+results/2006.14813/gen_2006_14813.py:53:TRACK = "B"
+results/2006.14813/gen_2006_14813.py:661:def _reference_algorithm(inst):
+results/2006.14813/gen_2006_14813.py:926:    reference_answer, reference_stats = _reference_algorithm(shipping)
+results/2006.14813/gen_2006_14813.py:947:        "reference_algorithm_operations": reference_stats["operations"],
+results/2006.14813/gen_2006_14813.py:948:        "reference_algorithm_wall_clock_sec": round(reference_stats["wall_clock_sec"], 6),
+results/2006.14813/gen_2006_14813.py:966:        found, stats = _reference_algorithm(attacked)
+results/2006.14813/gen_2006_14813.py:977:        "reference_algorithm": {
+results/2006.14813/gen_2006_14813.py:1064:    report["G9_no_tool_suitability"] = {
+results/1504.05476/g9_structural_run/gen_1504_05476.py:32:TRACK = "B"
+results/1504.05476/g9_structural_run/gen_1504_05476.py:912:        "reference_algorithm": {
+results/1504.05476/g9_structural_run/gen_1504_05476.py:998:    report["G9_no_tool_suitability"] = {
+results/2303.06986/gen_2303_06986.py:34:TRACK = "B"
+results/2303.06986/gen_2303_06986.py:758:        "reference_algorithm": {
+results/2303.06986/gen_2303_06986.py:786:        "reference_algorithm_operations": reference_operations,
+results/2303.06986/gen_2303_06986.py:787:        "reference_algorithm_wall_clock_sec": round(reference_wall, 6),
+results/2303.06986/gen_2303_06986.py:879:    report["G9_no_tool_suitability"] = {
+results/2303.06986/g9_placebo/gen_2303_06986.py:21:TRACK = "B"
+results/2303.06986/g9_placebo/gen_2303_06986.py:913:        "reference_algorithm": reference,
+results/2303.06986/g9_placebo/gen_2303_06986.py:940:        "reference_algorithm_operations_mean": reference["operations_mean"],
+results/2303.06986/g9_placebo/gen_2303_06986.py:941:        "reference_algorithm_wall_clock_sec_mean": reference["wall_clock_sec_mean"],
+results/2303.06986/g9_placebo/gen_2303_06986.py:985:    report["G9_no_tool_suitability"] = {
+results/2502.13060/gen_2502_13060.py:32:TRACK: str = "B"
+results/2502.13060/gen_2502_13060.py:670:        "reference_algorithm": reference,
+results/2502.13060/gen_2502_13060.py:759:    report["G9_no_tool_suitability"] = {
+results/2303.06986/g9_hinted/gen_2303_06986.py:21:TRACK = "B"
+results/2303.06986/g9_hinted/gen_2303_06986.py:913:        "reference_algorithm": reference,
+results/2303.06986/g9_hinted/gen_2303_06986.py:940:        "reference_algorithm_operations_mean": reference["operations_mean"],
+results/2303.06986/g9_hinted/gen_2303_06986.py:941:        "reference_algorithm_wall_clock_sec_mean": reference["wall_clock_sec_mean"],
+results/2303.06986/g9_hinted/gen_2303_06986.py:985:    report["G9_no_tool_suitability"] = {
+results/2512.19324/g9_placebo/gen_2512_19324.py:30:TRACK = "B"
+results/2512.19324/g9_placebo/gen_2512_19324.py:951:def _reference_algorithm(inst):
+results/2512.19324/g9_placebo/gen_2512_19324.py:1232:        recovered, metrics = _reference_algorithm(trial)
+results/2512.19324/g9_placebo/gen_2512_19324.py:1248:        "reference_algorithm": {
+results/2512.19324/g9_placebo/gen_2512_19324.py:1276:        "reference_algorithm_operations": reference_operations,
+results/2512.19324/g9_placebo/gen_2512_19324.py:1277:        "reference_algorithm_wall_clock_sec": round(reference_wall, 6),
+results/2512.19324/g9_placebo/gen_2512_19324.py:1376:    report["G9_no_tool_suitability"] = {
+results/2502.13060/g9_placebo/gen_2502_13060.py:32:TRACK: str = "B"
+results/2502.13060/g9_placebo/gen_2502_13060.py:670:        "reference_algorithm": reference,
+results/2502.13060/g9_placebo/gen_2502_13060.py:759:    report["G9_no_tool_suitability"] = {
+results/2512.19324/gen_2512_19324.py:30:TRACK = "B"
+results/2512.19324/gen_2512_19324.py:958:def _reference_algorithm(inst):
+results/2512.19324/gen_2512_19324.py:1239:        recovered, metrics = _reference_algorithm(trial)
+results/2512.19324/gen_2512_19324.py:1255:        "reference_algorithm": {
+results/2512.19324/gen_2512_19324.py:1283:        "reference_algorithm_operations": reference_operations,
+results/2512.19324/gen_2512_19324.py:1284:        "reference_algorithm_wall_clock_sec": round(reference_wall, 6),
+results/2512.19324/gen_2512_19324.py:1383:    report["G9_no_tool_suitability"] = {
+results/2502.13060/g9_hinted/gen_2502_13060.py:32:TRACK: str = "B"
+results/2502.13060/g9_hinted/gen_2502_13060.py:670:        "reference_algorithm": reference,
+results/2502.13060/g9_hinted/gen_2502_13060.py:759:    report["G9_no_tool_suitability"] = {
+results/2512.19324/g9_hinted/gen_2512_19324.py:30:TRACK = "B"
+results/2512.19324/g9_hinted/gen_2512_19324.py:951:def _reference_algorithm(inst):
+results/2512.19324/g9_hinted/gen_2512_19324.py:1232:        recovered, metrics = _reference_algorithm(trial)
+results/2512.19324/g9_hinted/gen_2512_19324.py:1248:        "reference_algorithm": {
+results/2512.19324/g9_hinted/gen_2512_19324.py:1276:        "reference_algorithm_operations": reference_operations,
+results/2512.19324/g9_hinted/gen_2512_19324.py:1277:        "reference_algorithm_wall_clock_sec": round(reference_wall, 6),
+results/2512.19324/g9_hinted/gen_2512_19324.py:1376:    report["G9_no_tool_suitability"] = {
+results/2605.17594/g9_placebo/gen_2605_17594.py:42:TRACK = "B"
+results/2605.17594/g9_placebo/gen_2605_17594.py:899:        "reference_algorithm": {
+results/2605.17594/g9_placebo/gen_2605_17594.py:968:    report["G9_no_tool_suitability"] = {
+results/2605.17594/g9_hinted/gen_2605_17594.py:42:TRACK = "B"
+results/2605.17594/g9_hinted/gen_2605_17594.py:899:        "reference_algorithm": {
+results/2605.17594/g9_hinted/gen_2605_17594.py:968:    report["G9_no_tool_suitability"] = {
+results/1305.2743/gen_1305_2743.py:24:TRACK: str = "B"
+results/1305.2743/gen_1305_2743.py:1296:        "reference_algorithm": {
+results/1305.2743/gen_1305_2743.py:1413:    report["G9_no_tool_suitability"] = {
+results/2605.17594/gen_2605_17594.py:42:TRACK = "B"
+results/2605.17594/gen_2605_17594.py:924:        "reference_algorithm": {
+results/2605.17594/gen_2605_17594.py:993:    report["G9_no_tool_suitability"] = {
+results/2506.24012/g9_placebo/gen_2506_24012.py:29:TRACK = "B"
+results/2506.24012/g9_placebo/gen_2506_24012.py:653:def _reference_algorithm(inst: dict) -> dict:
+results/2506.24012/g9_placebo/gen_2506_24012.py:884:        reference_runs.append(_reference_algorithm(trial))
+results/2506.24012/g9_placebo/gen_2506_24012.py:899:        "reference_algorithm": {
+results/2506.24012/g9_placebo/gen_2506_24012.py:973:    report["G9_no_tool_suitability"] = {
+results/1305.2743/g9_placebo/gen_1305_2743.py:24:TRACK: str = "B"
+results/1305.2743/g9_placebo/gen_1305_2743.py:1259:        "reference_algorithm": {
+results/1305.2743/g9_placebo/gen_1305_2743.py:1377:    report["G9_no_tool_suitability"] = {
+results/2308.11427/gen_2308_11427.py:32:TRACK = "B"
+results/2308.11427/gen_2308_11427.py:915:        "reference_algorithm": reference,
+results/2308.11427/gen_2308_11427.py:1001:    report["G9_no_tool_suitability"] = {
+results/2506.24012/g9_hinted/gen_2506_24012.py:29:TRACK = "B"
+results/2506.24012/g9_hinted/gen_2506_24012.py:653:def _reference_algorithm(inst: dict) -> dict:
+results/2506.24012/g9_hinted/gen_2506_24012.py:884:        reference_runs.append(_reference_algorithm(trial))
+results/2506.24012/g9_hinted/gen_2506_24012.py:899:        "reference_algorithm": {
+results/2506.24012/g9_hinted/gen_2506_24012.py:973:    report["G9_no_tool_suitability"] = {
+results/1305.2743/g9_hinted/gen_1305_2743.py:24:TRACK: str = "B"
+results/1305.2743/g9_hinted/gen_1305_2743.py:1259:        "reference_algorithm": {
+results/1305.2743/g9_hinted/gen_1305_2743.py:1377:    report["G9_no_tool_suitability"] = {
+results/2506.24012/gen_2506_24012.py:29:TRACK = "B"
+results/2506.24012/gen_2506_24012.py:657:def _reference_algorithm(inst: dict) -> dict:
+results/2506.24012/gen_2506_24012.py:888:        reference_runs.append(_reference_algorithm(trial))
+results/2506.24012/gen_2506_24012.py:903:        "reference_algorithm": {
+results/2506.24012/gen_2506_24012.py:920:        "reference_algorithm_wall_seconds": ref_wall,
+results/2506.24012/gen_2506_24012.py:921:        "reference_algorithm_mean_wall_seconds": ref_wall / 8,
+results/2506.24012/gen_2506_24012.py:922:        "reference_algorithm_operations": ref_operations,
+results/2506.24012/gen_2506_24012.py:923:        "reference_algorithm_mean_operations": ref_operations // 8,
+results/2506.24012/gen_2506_24012.py:983:    report["G9_no_tool_suitability"] = {
+results/1507.02602/gen_1507_02602.py:27:TRACK = "B"
+results/1507.02602/gen_1507_02602.py:866:    reference_algorithm = {
+results/1507.02602/gen_1507_02602.py:877:        "reference_algorithm": reference_algorithm,
+results/1507.02602/gen_1507_02602.py:902:        "reference_wall_clock_sec": reference_algorithm["wall_clock_sec"],
+results/1507.02602/gen_1507_02602.py:993:    report["G9_no_tool_suitability"] = {
+results/1210.1451/g9_placebo/gen_1210_1451.py:43:TRACK: str = "B"
+results/1210.1451/g9_placebo/gen_1210_1451.py:730:        "reference_algorithm": {
+results/1210.1451/g9_placebo/gen_1210_1451.py:828:    report["G9_no_tool_suitability"] = {
+results/2402.08332/gen_2402_08332.py:36:TRACK = "B"
+results/2402.08332/gen_2402_08332.py:655:def _reference_algorithm(inst):
+results/2402.08332/gen_2402_08332.py:962:    ref_answer, ref_ops, ref_elapsed = _reference_algorithm(inst)
+results/2402.08332/gen_2402_08332.py:1007:        found, operations, elapsed = _reference_algorithm(trial)
+results/2402.08332/gen_2402_08332.py:1020:        "reference_algorithm": {
+results/2402.08332/gen_2402_08332.py:1099:    report["G9_no_tool_suitability"] = {
+results/1304.0278/g9_placebo/gen_1304_0278.py:27:TRACK = "B"
+results/1304.0278/g9_placebo/gen_1304_0278.py:1365:        "reference_algorithm": {
+results/1304.0278/g9_placebo/gen_1304_0278.py:1478:    report["G9_no_tool_suitability"] = {
+results/1210.1451/g9_hinted/gen_1210_1451.py:43:TRACK: str = "B"
+results/1210.1451/g9_hinted/gen_1210_1451.py:730:        "reference_algorithm": {
+results/1210.1451/g9_hinted/gen_1210_1451.py:828:    report["G9_no_tool_suitability"] = {
+results/1210.1451/gen_1210_1451.py:43:TRACK: str = "B"
+results/1210.1451/gen_1210_1451.py:728:        "reference_algorithm": {
+results/1210.1451/gen_1210_1451.py:830:    report["G9_no_tool_suitability"] = {
+results/2405.16539/gen_2405_16539.py:38:TRACK: str = "B"
+results/2405.16539/gen_2405_16539.py:1243:    report["G9_no_tool_suitability"] = {
+results/1304.0278/g9_hinted/gen_1304_0278.py:27:TRACK = "B"
+results/1304.0278/g9_hinted/gen_1304_0278.py:1365:        "reference_algorithm": {
+results/1304.0278/g9_hinted/gen_1304_0278.py:1478:    report["G9_no_tool_suitability"] = {
+results/1304.0278/gen_1304_0278.py:27:TRACK = "B"
+results/1304.0278/gen_1304_0278.py:1446:        "reference_algorithm": {
+results/1304.0278/gen_1304_0278.py:1554:    report["G9_no_tool_suitability"] = {
+results/2405.16539/g9_placebo/gen_2405_16539.py:1238:    report["G9_no_tool_suitability"] = {
+results/2308.12406/g9_placebo/gen_2308_12406.py:28:TRACK = "B"
+results/2308.12406/g9_placebo/gen_2308_12406.py:992:        "reference_algorithm": {
+results/2308.12406/g9_placebo/gen_2308_12406.py:1106:    report["G9_no_tool_suitability"] = {
+results/2405.16539/g9_hinted/gen_2405_16539.py:1238:    report["G9_no_tool_suitability"] = {
+results/2308.12406/g9_hinted/gen_2308_12406.py:28:TRACK = "B"
+results/2308.12406/g9_hinted/gen_2308_12406.py:992:        "reference_algorithm": {
+results/2308.12406/g9_hinted/gen_2308_12406.py:1106:    report["G9_no_tool_suitability"] = {
+results/2308.12406/gen_2308_12406.py:28:TRACK = "B"
+results/2308.12406/gen_2308_12406.py:995:        "reference_algorithm": {
+results/2308.12406/gen_2308_12406.py:1109:    report["G9_no_tool_suitability"] = {
+results/1510.00110/gen_1510_00110.py:26:TRACK = "B"
+results/1510.00110/gen_1510_00110.py:955:    reference_algorithm = {
+results/1510.00110/gen_1510_00110.py:966:        "reference_algorithm": reference_algorithm,
+results/1510.00110/gen_1510_00110.py:992:        "reference_wall_clock_sec": reference_algorithm["wall_clock_sec"],
+results/1510.00110/gen_1510_00110.py:1088:    report["G9_no_tool_suitability"] = {
+results/2308.00979/g9_hard_placebo/gen_2308_00979.py:29:TRACK = "B"
+results/2308.00979/g9_hard_placebo/gen_2308_00979.py:591:def _reference_algorithm(inst: dict) -> tuple[object | None, dict[str, int]]:
+results/2308.00979/g9_hard_placebo/gen_2308_00979.py:868:    reference_answer, reference_ops = _reference_algorithm(ship)
+results/2308.00979/g9_hard_placebo/gen_2308_00979.py:905:        candidate, ops = _reference_algorithm(inst)
+results/2308.00979/g9_hard_placebo/gen_2308_00979.py:915:        "reference_algorithm": {
+results/2308.00979/g9_hard_placebo/gen_2308_00979.py:996:    report["G9_no_tool_suitability"] = {
+results/2509.07282/gen_2509_07282.py:22:TRACK = "B"
+results/2509.07282/gen_2509_07282.py:691:    reference_algorithm = {
+results/2509.07282/gen_2509_07282.py:706:        "reference_algorithm": reference_algorithm,
+results/2509.07282/gen_2509_07282.py:799:    report["G9_no_tool_suitability"] = {
+results/2308.00979/g9_hard_hinted/gen_2308_00979.py:29:TRACK = "B"
+results/2308.00979/g9_hard_hinted/gen_2308_00979.py:591:def _reference_algorithm(inst: dict) -> tuple[object | None, dict[str, int]]:
+results/2308.00979/g9_hard_hinted/gen_2308_00979.py:868:    reference_answer, reference_ops = _reference_algorithm(ship)
+results/2308.00979/g9_hard_hinted/gen_2308_00979.py:905:        candidate, ops = _reference_algorithm(inst)
+results/2308.00979/g9_hard_hinted/gen_2308_00979.py:915:        "reference_algorithm": {
+results/2308.00979/g9_hard_hinted/gen_2308_00979.py:996:    report["G9_no_tool_suitability"] = {
+results/1905.08621/g9_placebo/gen_1905_08621.py:42:TRACK: str = "B"
+results/1905.08621/g9_placebo/gen_1905_08621.py:1093:        "reference_algorithm": {
+results/1905.08621/g9_placebo/gen_1905_08621.py:1185:    report["G9_no_tool_suitability"] = {
+
+exec
+/bin/bash -lc "sed -n '1,240p' results/2006.14813/gen_2006_14813.py
+sed -n '620,720p' results/2006.14813/gen_2006_14813.py
+sed -n '900,1090p' results/2006.14813/gen_2006_14813.py" in /home/gson/gvrepo
+ succeeded in 0ms:
+"""Verified Track-B problems from quaternion tensor simultaneous diagonalization.
+
+The paper's Lemma 1.7 says that an n x p x n quaternion tensor with an
+invertible first frontal slice has rank n exactly when the remaining slices,
+after normalizing by the first, are simultaneously diagonalizable.  This
+module specializes to a tensor (I; A), and asks for a compact exact
+diagonalizer of A.
+
+Generation starts with a diagonal quaternion matrix D and the Walsh matrix H.
+It applies an independently sampled signed permutation R to form
+
+                  A = R H D H^T R^T / n.
+
+The diagonal entries of D are additive functions of binary column indices, so
+A is sparse, but its rows and signs are shuffled.  The planted answer records
+R, not a solution recovered from A.  A candidate expands to the real matrix
+P=R H.  Verification checks exactly that P^T A P is diagonal; because P is a
+signed row permutation of H, this is equivalent to checking that the changed
+basis is an XOR-convolution matrix.
+
+The generic mechanical route projects the quaternion entries to a real matrix
+with a supplied simple spectrum and performs n exact nullspace solves.  The
+compact route recognizes the repeated quaternion displacement classes and
+recovers binary coordinates and signs.  The former is deliberately reported
+as Track B's successful reference algorithm, never as a failed attack.
+"""
+
+from __future__ import annotations
+
+import copy
+import hashlib
+import itertools
+import json
+import math
+import os
+import random
+import re
+import sys
+import time
+from fractions import Fraction
+
+
+sys.path.insert(
+    0,
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+)
+try:
+    from gvlib import exact_matrices, rationals  # noqa: F401
+except ImportError:  # Quaternion arithmetic below remains standard-library-only.
+    exact_matrices = rationals = None
+
+
+TRACK = "B"
+
+PROBLEM_PROFILE = {
+    "native_domain": "algebra",
+    "object_regime": "rational_exact",
+    "computational_core": "linear_algebra",
+    "certificate_form": "matrix_certificate",
+    "native_objects": [
+        "three-way tensor over the rational quaternions",
+        "quaternion frontal slices",
+        "compressed signed-Walsh diagonalizing matrix",
+    ],
+    "verification_operations": [
+        "exact quaternion coordinate comparison",
+        "exact signed change of basis",
+        "exact off-diagonal zero test",
+    ],
+    "domain_essentiality": "native",
+    "reduction_kind": "none",
+    "reduction": None,
+    "reduction_source": "paper_central",
+    "intuition_type": "change of variables",
+    "intuition_description": (
+        "After the right signed row relabelling, the quaternion slice is an "
+        "XOR-convolution matrix, so Walsh characters diagonalize it; without "
+        "recognizing that basis, one solves a full exact eigenvector problem."
+    ),
+    "hardness_basis": (
+        "Track B: Lemma 1.7 reduces rank n to simultaneous diagonalization; the "
+        "implemented exact reference algorithm projects to a simple-spectrum "
+        "real matrix and performs n rational nullspace eliminations in O(n^4), "
+        "measured at 616,864 exact operations and 0.45 seconds at n=32, while "
+        "the signed-XOR change of variables uses at most 111 exact class/sign "
+        "comparisons at n=32 and is not a mechanical in-context eigensolve."
+    ),
+    "max_answer_tokens": 52,
+}
+
+NATIVE = {
+    "domain": PROBLEM_PROFILE["native_domain"],
+    "core": PROBLEM_PROFILE["computational_core"],
+    "objects": list(PROBLEM_PROFILE["native_objects"]),
+    "intuition": (
+        PROBLEM_PROFILE["intuition_type"]
+        + ": "
+        + PROBLEM_PROFILE["intuition_description"]
+    ),
+    "reduction": PROBLEM_PROFILE["reduction"],
+}
+
+
+DIFFICULTY = {
+    "demo": {"n": 2, "height": 3},
+    "easy": {"n": 8, "height": 5},
+    "medium": {"n": 16, "height": 9},
+    "hard": {"n": 32, "height": 17},
+}
+SHIPPING_DIFFICULTY = "hard"
+
+STRUCTURAL_HINT = (
+    "Up to one signed simultaneous row-column relabelling, the quaternion "
+    "slice is an XOR-convolution matrix."
+)
+PLACEBO_HINT = (
+    "Careful attention to the coordinate order and signs is useful for this "
+    "quaternion matrix."
+)
+
+CERTIFICATE_LANGUAGE = {
+    "description": (
+        "A normalized compressed n by n real matrix P: row_for_word is a "
+        "permutation of 0,...,n-1 that maps the displayed nonzero off-diagonal "
+        "pattern exactly to pairs x,z with popcount(x XOR z)=1; row_signs has "
+        "n entries in {-1,+1}, and row_signs[0]=+1; P[row_for_word[x],y]="
+        "row_signs[x](-1)^popcount(x&y)."
+    ),
+    "bounds": {
+        "permutation_length": "n",
+        "sign_length": "n",
+        "sign_alphabet": [-1, 1],
+        "normalization": "row_signs[0]=1",
+        "structural_rule": "off-diagonal support is mapped to Hamming-distance-one word pairs",
+        "maximum_shipping_atomic_elements": 64,
+    },
+}
+
+NOTES = (
+    "Definition 1.1 fixes a simple tensor entry as the ordered quaternion "
+    "product a_i b_j c_k, and Definition 1.3 defines rank as the minimum number "
+    "of such terms. Lemma 1.7 is the construction used here: with an invertible "
+    "first slice, rank n is equivalent to simultaneous diagonalizability of the "
+    "normalized remaining slices. Lemma 1.5 supplies the paper's mechanical "
+    "complex-adjoint diagonalizability route. Theorem 0.1 and Sections 2--5 "
+    "only bound dimensions two and three; Proposition 2.1 even writes the "
+    "2x2x2 decomposition explicitly. Consequently the paper supplies no "
+    "distributional hardness basis for Track A. This module is Track B and "
+    "openly runs exact projected eigensolves as its reference algorithm. "
+    "Instances are transformations of a known diagonal quaternion tensor by a "
+    "signed Walsh matrix, so the certificate is carried through the map. The "
+    "per-row outlier, unsigned coordinate greedy, random-restart, and separable "
+    "sign ansatz attacks omit either the coupled binary coordinates or the "
+    "non-character row signs; the exact eigensolve remains successful as "
+    "expected."
+)
+
+
+# These are diagnostics, not gates.  They are replaced with the script-owned
+# transcript measurements after the three hardening runs.
+G9_ORACLE_RESULTS = {
+    "bare": {"solved": 0, "attempts": 0},
+    "hinted": {"solved": 0, "attempts": 0},
+    "placebo": {"solved": 0, "attempts": 0},
+    "hinted_verdict": "not_run",
+}
+
+
+_ZERO = (0, 0, 0, 0)
+_PROJECTION = (1, 2, 3, 5)
+
+
+def _q_add(left, right):
+    return tuple(left[i] + right[i] for i in range(4))
+
+
+def _q_neg(value):
+    return tuple(-x for x in value)
+
+
+def _q_scale(value, sign):
+    return value if sign == 1 else _q_neg(value)
+
+
+def _q_dot(value, coefficients=_PROJECTION):
+    return sum(value[i] * coefficients[i] for i in range(4))
+
+
+def _q_norm2(value):
+    return sum(x * x for x in value)
+
+
+def _q_pm_key(value):
+    """Canonical representative of {q,-q}, with the orientation sign."""
+    value = tuple(value)
+    for coordinate in value:
+        if coordinate:
+            if coordinate > 0:
+                return value, 1
+            return _q_neg(value), -1
+    return value, 1
+
+
+def _is_power_of_two(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 2 and value & (value - 1) == 0
+
+
+def _is_character(signs):
+    """Whether signs[x] is a character of the binary XOR group."""
+    if not signs or signs[0] != 1 or not _is_power_of_two(len(signs)):
+        return False
+    basis = [signs[1 << bit] for bit in range(len(signs).bit_length() - 1)]
+    for word, actual in enumerate(signs):
+        expected = 1
+        for bit, value in enumerate(basis):
+            if word & (1 << bit):
+                expected *= value
+        if actual != expected:
+            return False
+    return True
+
+
+def _sample_weights(log_n, rng, height):
+    """Quaternion weights with a superincreasing public real projection."""
+    weights = []
+    projected_total = 0
+    for bit in range(log_n):
+        projected = projected_total + rng.randint(height, 2 * height + 1)
+        imaginary = [0, 0, 0]
+        imaginary[bit % 3] = rng.randint(2, height + 3)
+        imaginary[(bit + 1) % 3] = rng.choice((-1, 0, 1))
+        real = (
+            projected
+            - _PROJECTION[1] * imaginary[0]
+            - _PROJECTION[2] * imaginary[1]
+            - _PROJECTION[3] * imaginary[2]
+        )
+        quaternion = (real, imaginary[0], imaginary[1], imaginary[2])
+        weights.append(quaternion)
+        projected_total += projected
+    n = len(matrix)
+    work = [
+        [Fraction(matrix[row][column] - (eigenvalue if row == column else 0)) for column in range(n)]
+        for row in range(n)
+    ]
+    operations = n
+    pivot_columns = []
+    pivot_row = 0
+    for column in range(n):
+        selected = next((row for row in range(pivot_row, n) if work[row][column]), None)
+        if selected is None:
+            continue
+        if selected != pivot_row:
+            work[pivot_row], work[selected] = work[selected], work[pivot_row]
+        pivot = work[pivot_row][column]
+        for cursor in range(column, n):
+            work[pivot_row][cursor] /= pivot
+            operations += 1
+        for row in range(n):
+            if row == pivot_row or not work[row][column]:
+                continue
+            factor = work[row][column]
+            for cursor in range(column, n):
+                work[row][cursor] -= factor * work[pivot_row][cursor]
+                operations += 2
+        pivot_columns.append(column)
+        pivot_row += 1
+        if pivot_row == n:
+            break
+    free = [column for column in range(n) if column not in pivot_columns]
+    if len(free) != 1:
+        return None, operations
+    free_column = free[0]
+    vector = [Fraction(0) for _ in range(n)]
+    vector[free_column] = Fraction(1)
+    for row, column in reversed(list(enumerate(pivot_columns))):
+        vector[column] = -work[row][free_column]
+        operations += 1
+    return vector, operations
+
+
+def _reference_algorithm(inst):
+    """Exact projected eigensolve, followed by lossless Walsh compression."""
+    started = time.perf_counter()
+    dense, operations = _dense_projected_matrix(inst)
+    spectrum = sorted(inst["projected_spectrum"])
+    columns = []
+    for eigenvalue in spectrum:
+        vector, used = _nullvector(dense, eigenvalue)
+        operations += used
+        if vector is None or not vector[0]:
+            return None, {"operations": operations, "wall_clock_sec": time.perf_counter() - started}
+        normalized = [entry / vector[0] for entry in vector]
+        operations += len(vector)
+        if any(entry not in (Fraction(-1), Fraction(1)) for entry in normalized):
+            return None, {"operations": operations, "wall_clock_sec": time.perf_counter() - started}
+        columns.append([int(entry) for entry in normalized])
+
+    n = inst["n"]
+    log_n = inst["log_n"]
+    order = [-1] * n
+    signs = [0] * n
+    for physical in range(n):
+        row = [columns[column][physical] for column in range(n)]
+        sign = row[0]
+        word = 0
+        for bit in range(log_n):
+            value = row[1 << bit] * sign
+            operations += 1
+            if value == -1:
+                word |= 1 << bit
+            elif value != 1:
+                return None, {"operations": operations, "wall_clock_sec": time.perf_counter() - started}
+        if order[word] != -1:
+            return None, {"operations": operations, "wall_clock_sec": time.perf_counter() - started}
+        order[word] = physical
+        signs[word] = sign
+    answer = {"row_for_word": order, "row_signs": signs}
+    return answer, {"operations": operations, "wall_clock_sec": time.perf_counter() - started}
+
+
+def _compact_route(inst):
+    """Recover the signed XOR coordinates from repeated quaternion classes."""
+    started = time.perf_counter()
+    n = inst["n"]
+    matrix = _matrix_lookup(inst)
+    class_at = {}
+    transitions = [dict() for _ in range(n)]
+    operations = 0
+    for (row, column), value in matrix.items():
+        if row >= column:
+            continue
+        key, _ = _q_pm_key(value)
+        class_at[key] = None
+        transitions[row][key] = column
+        transitions[column][key] = row
+        operations += 1
+    classes = sorted(class_at)
+    if len(classes) != inst["log_n"]:
+        return None, {"operations": operations, "wall_clock_sec": time.perf_counter() - started}
+
+        + json.dumps(shipping["answer"])
+        + "\n</answer>\n```\nThe entries are exact."
+    )
+    parsed = parse_answer(response)
+    report["G3_round_trip"] = {
+        "pass": parsed == shipping["answer"] and verify(shipping, parsed)[0],
+        "parsed": parsed == shipping["answer"],
+    }
+
+    sample_total = 200_000
+    sample_hits = 0
+    sample_rng = random.Random(604211)
+    sample_started = time.perf_counter()
+    for _ in range(sample_total):
+        sample_hits += int(verify(shipping, random_candidate(shipping, sample_rng))[0])
+    sample_wall = time.perf_counter() - sample_started
+    report["G4_guess_resistance"] = {
+        "pass": sample_hits / sample_total < 1e-6,
+        "hits": sample_hits,
+        "total": sample_total,
+        "observed_probability": sample_hits / sample_total,
+        "construction_exact_probability": shipping["n"] / (1 << (shipping["n"] - 1)),
+        "certificate_space": search_space(shipping),
+        "wall_clock_sec": round(sample_wall, 6),
+    }
+
+    reference_answer, reference_stats = _reference_algorithm(shipping)
+    compact_answer, compact_stats = _compact_route(shipping)
+    demo = make_instance(seed=7, **DIFFICULTY["demo"])
+    demo_count = enumerate_all(demo)
+    report["G5_density_and_baseline"] = {
+        "pass": demo_count is not None
+        and reference_answer is not None
+        and verify(shipping, reference_answer)[0]
+        and compact_answer is not None
+        and verify(shipping, compact_answer)[0],
+        "shipping_density_hits": sample_hits,
+        "shipping_density_samples": sample_total,
+        "shipping_sampled_valid_fraction": sample_hits / sample_total,
+        "shipping_construction_exact_valid_count": (
+            shipping["n"] * math.factorial(shipping["log_n"]) * shipping["n"]
+        ),
+        "shipping_construction_exact_valid_fraction": (
+            shipping["n"] / (1 << (shipping["n"] - 1))
+        ),
+        "demo_exact_solution_count": demo_count,
+        "demo_certificate_space": search_space(demo),
+        "reference_algorithm_operations": reference_stats["operations"],
+        "reference_algorithm_wall_clock_sec": round(reference_stats["wall_clock_sec"], 6),
+        "compact_route_operations": compact_stats["operations"],
+        "compact_route_wall_clock_sec": round(compact_stats["wall_clock_sec"], 6),
+    }
+
+    attack_counts = {
+        "outlier_row_norm_order": 0,
+        "greedy_unsigned_xor_coordinates": 0,
+        "random_restart_256": 0,
+        "separable_character_sign_ansatz": 0,
+    }
+    reference_runs = []
+    for seed in range(310, 318):
+        attacked = make_instance(seed=seed, **shipping_params)
+        attack_counts["outlier_row_norm_order"] += int(_attack_outlier_row_order(attacked))
+        attack_counts["greedy_unsigned_xor_coordinates"] += int(_attack_unsigned_coordinate_greedy(attacked))
+        attack_counts["random_restart_256"] += int(_attack_random_restart(attacked, seed))
+        attack_counts["separable_character_sign_ansatz"] += int(_attack_separable_sign_ansatz(attacked))
+        found, stats = _reference_algorithm(attacked)
+        stats["solved"] = bool(found is not None and verify(attacked, found)[0])
+        reference_runs.append(stats)
+    attacks = {
+        name: {"successes": successes, "attempts": 8}
+        for name, successes in attack_counts.items()
+    }
+    report["G6_adversary_panel"] = {
+        "pass": all(result["successes"] == 0 for result in attacks.values())
+        and all(run["solved"] for run in reference_runs),
+        "attacks": attacks,
+        "reference_algorithm": {
+            "name": "real projection plus exact rational nullspace solve for every supplied eigenvalue",
+            "complexity": "O(n^4) exact arithmetic for n separate n by n eliminations",
+            "operations": reference_stats["operations"],
+            "max_operations": max(run["operations"] for run in reference_runs),
+            "wall_clock_sec": round(reference_stats["wall_clock_sec"], 6),
+            "max_wall_clock_sec": round(max(run["wall_clock_sec"] for run in reference_runs), 6),
+            "solves": f"{sum(run['solved'] for run in reference_runs)}/8, as expected",
+        },
+    }
+
+    doubled_params = dict(shipping_params)
+    doubled_params["n"] = 2 * shipping_params["n"]
+    doubled_params["height"] = shipping_params["height"] + 1
+    doubled = make_instance(seed=991, **doubled_params)
+    doubled_ok, doubled_reason = verify(doubled, doubled["answer"])
+    doubled_compact, doubled_stats = _compact_route(doubled)
+    report["G7_scales"] = {
+        "pass": doubled_ok
+        and doubled_compact is not None
+        and verify(doubled, doubled_compact)[0]
+        and search_space(doubled) > search_space(shipping)
+        and doubled_stats["operations"] <= 300,
+        "shipping_n": shipping["n"],
+        "doubled_n": doubled["n"],
+        "doubled_verify_reason": doubled_reason,
+        "shipping_search_space_bits": search_space(shipping).bit_length(),
+        "doubled_search_space_bits": search_space(doubled).bit_length(),
+        "doubled_compact_operations": doubled_stats["operations"],
+    }
+
+    invariance_checks = 0
+    carried_checks = 0
+    key_failures = []
+    unrelated_keys = set()
+    for seed in range(20):
+        instance = make_instance(seed=8000 + seed, **shipping_params)
+        base_key = canonical_key(instance)
+        unrelated_keys.add(base_key)
+        rng = random.Random(9000 + seed)
+        permutation = list(range(instance["n"]))
+        rng.shuffle(permutation)
+        basis_signs = [rng.choice((-1, 1)) for _ in range(instance["n"])]
+        identity = list(range(instance["n"]))
+        all_positive = [1] * instance["n"]
+        variants = [
+            _transform_instance(instance, permutation, all_positive, seed),
+            _transform_instance(instance, identity, basis_signs, seed + 100),
+            _transform_instance(instance, permutation, basis_signs, seed + 200),
+        ]
+        for variant in variants:
+            invariance_checks += 1
+            if canonical_key(variant) != base_key:
+                key_failures.append({"seed": seed, "kind": "invariance"})
+            carried_checks += 1
+            if not verify(variant, variant["answer"])[0]:
+                key_failures.append({"seed": seed, "kind": "carried_witness"})
+    report["G8_canonical_key"] = {
+        "pass": not key_failures and len(unrelated_keys) == 20,
+        "invariance_checks": invariance_checks,
+        "carried_witness_checks": carried_checks,
+        "distinct_unrelated": len(unrelated_keys),
+        "unrelated_attempts": 20,
+        "transformations": [
+            "simultaneous row-column permutation",
+            "real diagonal sign conjugation",
+            "their composition plus sparse-entry reordering",
+        ],
+        "failures": key_failures,
+    }
+
+    answer_blobs = [
+        json.dumps(make_instance(seed=seed, **shipping_params)["answer"], separators=(",", ":"))
+        for seed in range(100)
+    ]
+    answer_chars = max(map(len, answer_blobs))
+    answer_tokens = math.ceil(answer_chars / 4)
+    answer_elements = _answer_atoms(shipping["answer"])
+    arms = copy.deepcopy(G9_ORACLE_RESULTS)
+    hinted_verdict = arms.pop("hinted_verdict", "not_run")
+    hinted = arms["hinted"]
+    placebo = arms["placebo"]
+    hinted_rate = hinted["solved"] / hinted["attempts"] if hinted["attempts"] else None
+    placebo_rate = placebo["solved"] / placebo["attempts"] if placebo["attempts"] else None
+    diagnostic_complete = all(arms[name]["attempts"] >= 3 for name in ("bare", "hinted", "placebo"))
+    compact_ok = compact_answer is not None and verify(shipping, compact_answer)[0]
+    within_caps = answer_chars <= 2000 and answer_elements <= 256 and compact_stats["operations"] <= 300
+    report["G9_no_tool_suitability"] = {
+        "pass": within_caps and compact_ok,
+        "arms": arms,
+        "diagnostic_complete": diagnostic_complete,
+        "hinted_minus_placebo": (
+            hinted_rate - placebo_rate if hinted_rate is not None and placebo_rate is not None else None
+        ),
+        "hinted_verdict": hinted_verdict,
+        "answer_chars": answer_chars,
+        "answer_tokens": answer_tokens,
+        "answer_elements": answer_elements,
+        "intended_route_operations": compact_stats["operations"],
+        "intended_route_verified": compact_ok,
+        "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    }
+
+    report["track"] = TRACK
+    report["shipping_difficulty"] = SHIPPING_DIFFICULTY
+    report["shipping_params"] = dict(shipping_params)
+    report["all_passed"] = all(
+        isinstance(value, dict) and value.get("pass")
+        for key, value in report.items()
+        if key.startswith("G") and key[1:2].isdigit()
+    )
+    return report
+
+
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+try:
+ import sympy as s
+ print('sympy', s.__version__)
+ k=s.symbols('k')
+ a=10*k**2-8*k+8
+ b=k*(k**2-4*k+20)
+ c=(k+2)*(k**2-4)
+ for name,e in [('ab+1',a*b+1),('ac+1',a*c+1),('bc+1',b*c+1)]:
+  print(name, s.factor(e))
+ print('curve coeffs', [s.factor(a*b+b*c+a*c), s.factor(a*b*b*c+a*b*a*c+b*c*a*c), s.factor(a*b*b*c*a*c)])
+except Exception as e: print(type(e).__name__,e)
+PY" in /home/gson/gvrepo/results/2006.16756
+ succeeded in 72ms:
+sympy 1.12
+ab+1 10*k**5 - 48*k**4 + 240*k**3 - 192*k**2 + 160*k + 1
+ac+1 10*k**5 + 12*k**4 - 48*k**3 - 32*k**2 + 32*k - 63
+bc+1 k**6 - 2*k**5 + 8*k**4 + 48*k**3 - 48*k**2 - 160*k + 1
+curve coeffs [k**6 + 18*k**5 - 28*k**4 + 240*k**3 - 272*k**2 + 32*k - 64, 4*k**2*(k - 2)*(k + 2)**4*(k**2 - 4*k + 20)*(5*k**2 - 4*k + 4), 4*k**2*(k - 2)**2*(k + 2)**4*(k**2 - 4*k + 20)**2*(5*k**2 - 4*k + 4)**2]
+
+codex
+The decisive obstruction is now concrete: in the paper’s own curve family from Section 4, the stated equation already yields the witness \(P=(0,abc)\), since the right-hand side at \(x=0\) is \((abc)^2\). That is both the standard mechanical route and the “insight” route—two multiplications either way—so it does not qualify for Track B. I’m checking the source and the other sections before committing to rejection, then I’ll record measured costs rather than relying on this one example alone.
+2026-09-05T08:43:33.073833Z ERROR codex_core::tools::router: error=exec_command failed for `/bin/bash -lc 'tmpdir=$(mktemp -d)
+curl -L --fail --silent --show-error https://arxiv.org/e-print/2006.16756 -o "$tmpdir/paper.tar"
+tar -tf "$tmpdir/paper.tar"
+tar -xf "$tmpdir/paper.tar" -C "$tmpdir"
+rg -n '"'\\\\begin\\{theorem\\}|\\\\begin\\{proposition\\}|\\\\begin\\{corollary\\}|rank|point|easy|algorithm|search|parametri|substitut' \""'$tmpdir" -g '"'*.tex' | sed -n '1,260p'
+rm -rf \""'$tmpdir"'`: CreateProcess { message: "Rejected(\"`/bin/bash -lc 'tmpdir=$(mktemp -d)\\ncurl -L --fail --silent --show-error https://arxiv.org/e-print/2006.16756 -o \\\"$tmpdir/paper.tar\\\"\\ntar -tf \\\"$tmpdir/paper.tar\\\"\\ntar -xf \\\"$tmpdir/paper.tar\\\" -C \\\"$tmpdir\\\"\\nrg -n '\\\"'\\\\\\\\\\\\\\\\begin\\\\\\\\{theorem\\\\\\\\}|\\\\\\\\\\\\\\\\begin\\\\\\\\{proposition\\\\\\\\}|\\\\\\\\\\\\\\\\begin\\\\\\\\{corollary\\\\\\\\}|rank|point|easy|algorithm|search|parametri|substitut' \\\\\\\"\\\"'$tmpdir\\\" -g '\\\"'*.tex' | sed -n '1,260p'\\nrm -rf \\\\\\\"\\\"'$tmpdir\\\"'` rejected: rm -f style commands are not permitted. Use a safer approach\")" }
+exec
+/bin/bash -lc 'source_dir=$(mktemp -d)
+curl -L --fail --silent --show-error https://arxiv.org/e-print/2006.16756 -o "$source_dir/paper.tar"
+tar -tf "$source_dir/paper.tar"
+tar -xf "$source_dir/paper.tar" -C "$source_dir"
+rg -n '"'\\\\begin\\{theorem\\}|\\\\begin\\{proposition\\}|\\\\begin\\{corollary\\}|rank|point|easy|algorithm|search|parametri|substitut' \""'$source_dir" -g '"'*.tex' | sed -n '1,300p'" in /home/gson/gvrepo/results/2006.16756
+ succeeded in 570ms:
+tar: This does not look like a tar archive
+tar: Skipping to next header
+tar: Exiting with failure status due to previous errors
+tar: This does not look like a tar archive
+tar: Skipping to next header
+tar: Exiting with failure status due to previous errors
+
+exec
+/bin/bash -lc 'source_file=$(find /tmp -maxdepth 2 -type f -name paper.tar -mmin -5 | sort | tail -n 1)
+file "$source_file"
+wc -c "$source_file"
+head -c 120 "$source_file" | od -An -tx1' in /home/gson/gvrepo/results/2006.16756
+ succeeded in 63ms:
+/tmp/tmp.n6nXJe1G5U/paper.tar: gzip compressed data, last modified: Wed Jun  8 00:14:16 2022, from Unix, original size modulo 2^32 102400
+27073 /tmp/tmp.n6nXJe1G5U/paper.tar
+ 1f 8b 08 00 d8 e9 9f 62 00 03 ec 3c db 6e 1b b9
+ 92 f3 1a 7f 05 31 83 ec 24 b3 b2 c6 2d 3b 76 3c
+ 07 01 8e 2c cb b6 32 96 ed 48 4e e6 22 f9 68 a9
+ 6e 4a 62 d4 17 a5 2f b6 95 46 07 fb 0f fb 87 fb
+ 25 5b c5 be b1 9b 94 e2 1c ec ec 62 81 15 90 a8
+ c5 2a 92 55 c5 ba b2 49 df f8 dc 39 65 e6 29 9f
+ cd 9a d3 a9 fd dd 5f f1 d9 83 cf e1 e1 81 f8 86
+ 4f ed db 78 75 64 ec 7f
+
+exec
+/bin/bash -lc 'source_file=$(find /tmp -maxdepth 2 -type f -name paper.tar 2>/dev/null | sort | tail -n 1)
+source_dir=$(dirname "$source_file")
+tar -tzf "$source_file"
+tar -xzf "$source_file" -C "$source_dir"
+rg -n '"'\\\\begin\\{theorem\\}|\\\\begin\\{proposition\\}|\\\\begin\\{corollary\\}|rank|point|easy|algorithm|search|parametri|substitut' \""'$source_dir" -g '"'*.tex' | sed -n '1,320p'" in /home/gson/gvrepo/results/2006.16756
+ succeeded in 83ms:
+tar: This does not look like a tar archive
+tar: Skipping to next header
+tar: Exiting with failure status due to previous errors
+tar: This does not look like a tar archive
+tar: Skipping to next header
+tar: Exiting with failure status due to previous errors
+
+exec
+/bin/bash -lc 'find /tmp -maxdepth 2 -type f -name paper.tar -mmin -15 -print 2>/dev/null | xargs -r file' in /home/gson/gvrepo/results/2006.16756
+ succeeded in 21ms:
+/tmp/tmp.pBp4ym4qsF/paper.tar: gzip compressed data, last modified: Tue Jul  4 00:33:24 2023, from Unix, original size modulo 2^32 3317760
+/tmp/tmp.Kbcu6T14Jc/paper.tar: gzip compressed data, last modified: Tue Dec 19 02:22:14 2023, from Unix, original size modulo 2^32 409600
+/tmp/tmp.dghGkpj7bY/paper.tar: gzip compressed data, last modified: Fri Mar 20 00:58:44 2026, from Unix, original size modulo 2^32 122880
+/tmp/tmp.TNsdFpj0fW/paper.tar: gzip compressed data, last modified: Fri Jan  9 01:02:27 2026, from Unix, original size modulo 2^32 10240
+/tmp/tmp.ZFS0RlErrt/paper.tar: gzip compressed data, last modified: Mon Feb 16 01:49:07 2026, from Unix, original size modulo 2^32 696320
+/tmp/tmp.BYvlIxb7Wm/paper.tar: gzip compressed data, last modified: Wed Aug  5 00:43:45 2026, from Unix, original size modulo 2^32 204800
+/tmp/tmp.Xm0ObVZxly/paper.tar: gzip compressed data, was "paper.tex", last modified: Wed Jul  7 15:00:33 2010, max speed, from Unix, original size modulo 2^32 101569
+/tmp/tmp.n6nXJe1G5U/paper.tar: gzip compressed data, last modified: Wed Jun  8 00:14:16 2022, from Unix, original size modulo 2^32 102400
+/tmp/tmp.HjIKplD1ON/paper.tar: gzip compressed data, last modified: Tue Feb  2 01:20:03 2021, from Unix, original size modulo 2^32 880640
+/tmp/tmp.Lpr48QOYF1/paper.tar: gzip compressed data, last modified: Thu Jul  2 01:02:10 2026, from Unix, original size modulo 2^32 122880
+/tmp/tmp.R7z5oNpU6D/paper.tar: gzip compressed data, was "tnsr_arxiv.tex", last modified: Tue Jan 16 17:18:16 2018, max compression, from Unix, original size modulo 2^32 56902
+/tmp/tmp.KOjPfuEsAr/paper.tar: gzip compressed data, was "Euclidean_geometry_and_elliptic_curves.tex", last modified: Sat Jul  4 21:47:24 2020, max compression, from Unix, original size modulo 2^32 39853
+
+exec
+/bin/bash -lc "gzip -dc /tmp/tmp.KOjPfuEsAr/paper.tar | rg -n '\\\\begin\\{theorem\\}|\\\\begin\\{proposition\\}|\\\\begin\\{corollary\\}|rank|point|easy|algorithm|search|parametri|substitut' | sed -n '1,320p'" in /home/gson/gvrepo/results/2006.16756
+ succeeded in 0ms:
+51:In this paper, we demonstrate the intimate relationships among some geometric figures and the families of elliptic curves with positive ranks. These geometric figures include \textit{\textbf{Heron triangles}}, \textit{\textbf{Brahmagupta quadrilaterals}} and \textit{\textbf{Bicentric quadrilaterals}}.
+52:Firstly, we investigate the important properties of these figures and then utilizing these properties, we show that how to construct various families of elliptic curves with different positive ranks having different torsion subgroups.
+85:In this review paper, we show that many authors utilize these formulas  form all three figures to construct different elliptic curves with positive ranks. The main goal of the paper is that how the Euclidean geometry intimately related to the theory of elliptic curves.
+88:The use of Heron$^{,}$s formula in umber theory was not new. However the author together with some other people provided with a series of papers utilizing Heron$^{,}$s formula, Brahmagupta quadrilaterals as well as Bicentric quadrilaterals in an attempt to construct new families of elliptic curves with positive ranks. In this paper, we try to demonstrate the main results of these series of papers and leave the details for the corresponding original papers. To make it more accessible for the readers we devote separate sections to separate papers. Each section comes with the title of the corresponding original paper.
+91:In this paper, \cite{IN2} the authors construct a family of elliptic curves with rank $\geq 5$. To do this, they use the  Heron formula for a triple $(A^2, B^2, C^2)$ which are not necessarily the three sides of a triangle. It turns out that as parameters of a family of elliptic curves, these three positive integers $A$, $B$, and $C$, along with the extra parameter $D$ satisfy the quartic Diophantine equation $A^4+D^4=2(B^4+D^4)$. For the solutions of this diophantine equation see \cite{IK}.
+124:Since the roles of $A$, $B$, and $C$ are symmetric in the Heron formula, the following points lie on
+133:Next it is easy to impose two more  points on the curve \eqref{Eq1.2} with $x-$coordiates as $B^2D^2$ and $C^2D^2$. Substituting $x=B^2D^2$ in \eqref{Eq1.2} yields
+145:then by substituting $A^4=2B^4+2C^4-D^4$ in \eqref{Eq1.3}, we get
+150:Thus, the point $P_4=\left(B^2D^2,\ \frac{BD(B^4+D^4-C^4)}{2}\right)$ is a new  point on \eqref{Eq1.2}.
+151:Similarly, one can easily check that the point $P_5=\left(C^2D^2,\ \frac{CD(C^4+D^4-B^4)}{2}\right)$ lies  on \eqref{Eq1.2} as well.\\
+153:It is clear that the existence  of these extra points on the family depends exactly on the existence of the solutions of the Diophantine equation $A^4+D^4=2(B^4+C^4)$.\\
+160:In this paper, \cite{IKZ1} the authors construct a family of elliptic curves with six parameters, arising from a system of Diophantine equations, whose rank is at least five. To do so, they use the Brahmagupta formula for the area of cyclic quadrilaterals \((p^3,q^3,r^3,s^3)\) not necessarily representing genuine geometric objects. It turns out that, as parameters of the curves, the integers \(p,q,r,s\), along with the extra integers \(u\), \(v\) satisfy the system of diophantine equations \(u^6+v^6+p^6+q^6=2(r^6+s^6)\), \(uv=pq\), (see \cite{IKZ2}), and they then utilize a subset of solutions of the system by the solutions of a specific positive rank elliptic curve.
+162:In this work, the authors use the Brahmagupta formula for the area of cyclic quadrilaterals to find infinitely many elliptic curves with high rank. In effect, the elliptic curve is
+172:and prove that the group of the rational maps $C\rightarrow E_{u,v,p,q,r,s}$, that commute with the projection $E_{u,v,p,q,r,s}\rightarrow C$, has rank at least five. This is done by exhibiting five explicit sections $P_1$, $P_2$, $P_3$, $P_4$, $P_5$, and showing that these are linearly independent. They use the fact that $C(\Bbb Q)$, the set of rational solutions on $C$, is infinite in order to deduce that infinitely many specializations of $E_{u,v,p,q,r,s}$ have ranks at least five over the rationales. This last assertion is done by using $$y^2-28xy-560y=x^3-20x^2-400x+8000,$$
+173:an elliptic curve of positive rank lying on $C$ found in \cite{IKZ2}. In fact, the following theorem is proved.
+175:\begin{theorem}
+176:There are infinitely many elliptic curves $E_{u,v,p,q,r,s}$ over $C$ of rank at least five, parameterized by an elliptic curve of rank at least three over $\Bbb Q(p,q,r,s)$.
+192:Now, take $(a,b,c,d)=(p^3,q^3,r^3,s^3)$. By substitution, \eqref{hq3} turns into
+207:By symmetric roles of $p, q, r, s$ in the formulas, the elliptic curve has the following non-obvious points:
+213:By the specialization theorem \cite{S2}, they proved that the family has rank at least 3. Finally utilizing the
+216:discussed in \cite{IKZ2} the authors showed that the following points also lie on the above family of elliptic curves.
+223:In this paper F. Izadi et al. \cite{IK}, constructed families of elliptic curves arising from Heron triangles and Diophantine triples with the Mordell-Weil torsion subgroup of ${Z/2Z}\times {Z/2Z}$. These families have ranks at least 2 and 3, respectively, and contain particular examples with rank equal to 7.\\
+237:\begin{theorem} Let $a(k)$, $b(k)$ and $c(k)$ be defined as (4.1) functions, where $k$ is an arbitrary rational number different from $0$, $-2$ and $2$. Then the elliptic curve
+242:\begin{theorem}
+243:With the terminology in theorem (4.1), rank $E(\mathbb{Q}(k))\geqslant 2$.
+247:For each $2\leqslant r\leqslant 7$, there exists some $k$ such that the elliptic curve $E_{k}$ defined in the theorem (4.1) has torsion subgroup $\mathbb{Z}/2\mathbb{Z}\times \mathbb{Z}/2\mathbb{Z}$ and rank $r$.
+250:\begin{theorem}
+251:There exists a subfamily of $E_{k}$ of rank $\geqslant 3$ over $\mathbb{Q}(m)$.
+257:\begin{theorem}
+258:Consider $(a,b,c)=(k-1,k+1,4k)$ with property $D(1)$. Then there exists a subfamily of $C:Y^{2}=(aX+1)(bX+1)(cX+1)$ over $\mathbb{Q}$ with rank $\geqslant 2$.
+262:The paper by Dujella and peral \cite{DP1} adopted the method  from \cite{IK} to construct families of elliptic curves with ranks at least $2$, $3$, $4$, and $5$. For the subfamily with rank $\geqslant 5$, they show that its generic rank is exactly equal to 5 and found free generators of the corresponding group. By specialization,
+263:examples of elliptic curves over $Q$ with rank equal to 9 and 10 are also obtained.
+277:\begin{theorem} A positive integer $n$ can be expressed as the area of a triangle with rational sides if and only if for some nonzero rational number $\tau$ the elliptic curve
+281:has a rational point which is not of order 2. Moreover, $n$ is a congruent number if and only if we can choose $\tau=1$.
+307:The authors further study this family of elliptic curves, looking at their torsion groups and ranks. They also explore their connection with congruent numbers, which are the $\alpha=0$ case. Congruent numbers are positive integers which are the area of a right triangle with rational side lengths.
+308:We give explicit formulas which show how to construct the elliptic curve and some non-trivial points on the curve given the side lengths and area of the quadrilateral.  If we set one of the side lengths to zero, then the formulas collapse to exactly those of Maddox-Goins. They also show the other direction of the correspondence, that is, how to find a cyclic quadrilateral which corresponds to a given elliptic curve in our family. The pair $(\alpha, n)$ is called a \emph{generalized congruent number pair} if the elliptic curve $y^2=x^3+\alpha x^2-n^2 x$ has a point of infinite order. Similarly one can call the curve a generalized congruent number elliptic curve.  The generalized congruent number curves with $\alpha=0$ are precisely the congruent number curves.  Stated in this way, the results relate generalized congruent number pairs with cyclic quadrilaterals with area $n$.
+310:\begin{theorem}
+314:with 2 rational points, neither of which has order 2.  Conversely, given an elliptic curve $E_{\alpha,-n^2}$ with positive rank, then there is a cyclic quadrilateral with area $n$ whose side lengths are rational (under the correspondence given above).
+317:\begin{theorem}
+318:\label{rank0}
+319:If the curve $E_{\alpha,-n^2}$ arising from a cyclic quadrilateral has rank 0 then the associated quadrilateral is either a square, or an isosceles trapezoid with three sides equal ($a=b=d$) such that $(a+c)(3a-c)$ is a square.   The torsion group is $\mathbb{Z}/6\mathbb{Z}$ for this rank 0 case.
+322:\begin{theorem}
+323:If the quadrilateral is a square, then the rank is  0, with torsion group $\mathbb{Z}/6\mathbb{Z}$.
+326:The rank need not be 0 for isosceles trapezoids with three sides equal.  Take, for example the quadrilateral with side lengths $(13,13,23,13)$, which yields the curve $E_{-11,-216^2}$.  This curve has rank 1, with generating point $(-196,1092)$ and has torsion group $\mathbb{Z}/6\mathbb{Z}$. One can have rank 0 curves $E_{\alpha,-n^2}$ with torsion group $\mathbb{Z}/2\mathbb{Z} \times \mathbb{Z}/4\mathbb{Z}$.  Take for example $\alpha=7, n=12$.  The previous results prove that such curves do not correspond with a cyclic quadrilateral. By allowing the quadrilaterals with $d=0$, then it can be shown that these curves come from quadrilaterals with $d=0$, i.e. triangles with rational area.
+328:\begin{theorem}
+333:\begin{theorem}
+334:Every non-square and non-three-sides equal trapezoidal rational cyclic quadrilateral with area $N \in \mathbb{N}$ gives rise to a generalized congruent number elliptic curve $E_{\alpha,-N^2}$ with positive rank.  Conversely, for any integer $N$ and generalized congruent curve $E_{\alpha,-N^2}$ with positive rank, there are infinitely many non-rectangular cyclic quadrilaterals.
+336:Next the structure of torsion points are discussed.
+338:There is no point $P$ on the curve $E_{\alpha,-n^2}$ such that $2P=(0,0)$. Consequently, the torsion group $T \neq \mathbb{Z}/4\mathbb{Z},$ $\mathbb{Z}/8\mathbb{Z}$, or $\mathbb{Z}/12\mathbb{Z}$.
+342:There are no points of order 5 on the curve $E_{\alpha,-n^2}$.
+344:By an old result, an elliptic curve with a rational point of order 5 will have its $j$-invariant of the form $(s^2+10s+5)^3/s$ for some $s \in \mathbb Q$ \cite{Fricke}.
+363:The elliptic curve arising from a rectangle has a point of order 3 if and only if the rectangle is actually a square.
+372:In the remainder of the paper, the authors give two different new infinite families of congruent number elliptic curves with (at least) rank three.  Searching for families of congruent curves with high rank has been done before \cite{Duj5},\cite{Duj6},\cite{Rog},\cite{Rub}.  Currently, the best known results are a few infinite families with rank at least 3 \cite{Spe3},\cite{Rub}, and several individual curves with rank 7.
+374:The authors conclude the paper by constructing an infinite family with rank at least 4 as well as an infinite family of rank 5. By computer search examples of the curves with rank 10 are also obtained.
+390:\(\mathbb Z/8\mathbb Z\), and in rare cases \(\mathbb Z/2\mathbb Z\times\mathbb Z/8\mathbb Z\) as torsion subgroups. It can be show that the existence of infinitely many elliptic curves $E_a$ of rank at least two with torsion subgroup $\mathbb Z/8\mathbb Z$, parameterized by the points of an elliptic curve of rank at least one, and give five particular examples of rank $5$. It can be also show the existence of a subfamily of $E_a$ whose torsion subgroup is $\mathbb Z/2\mathbb Z\times\mathbb Z/8\mathbb Z$.
+397:\begin{theorem}\label{ps}
+398:All rational bicentric quadrilaterals with rational $N$ correspond to rational points on $E_a$ for some $a>0$, where $E_a(\mathbb Q)$ will have strictly positive rank.
+400:\begin{theorem}\label{4.1}
+403:From this, refer  to \cite{GM,Du} to see what is known concerning the ranks of curves with prescribed torsion subgroup $\mathbb Z/2\mathbb Z\times \mathbb Z/8\mathbb Z$.
+405:They close this section by listing, in Table \ref{T4}, 26 out of 27 known rank-three curves which come from the family $E_a$,  with $a$
+430:\caption{Curves with torsion subgroup $\mathbb Z/2\mathbb Z\times\mathbb Z/8\mathbb Z$ having rank $3$}\label{T4}
+440:having ranks (at least) 4, 5, and 6. Furthermore, by specializing they give examples from these families of specific curves with rank 9.
+445:The existence and parametrization of quadrilaterals with rational side lengths (and additional conditions) has a long history \cite{A-N,Dai,Dic,Gup,I-V}.
+452:area are integers, i.e., Brahmagupta quadrilaterals. He introduced a rational parametrization of the four sides of
+479:A priori, there is no reason to associate Brahmagupta quadrilaterals with elliptic curves.  However, by the area formula (\ref{area}) one see the point $(\alpha,\beta)=(s,S)$ lies on the quartic
+490:By the substitution
+503:{Assuming $a \neq b \neq c \neq d$, the curve $E$ has three $2$-torsion points:
+509:Next, the authors construct an infinite family of rank at leat 3, and families of rank at least 4. From families of rank at least 4 they finally found a subfamily of rank at least 5 as ell as a family of rank at least 6.
+510:A computer search also shows the following special examples for the ranks.
+513:\caption{Curves $E_{t,v,m}$ with high rank}\label{tab:1}
+516:$t$ & $v$ & $m$ & rank \\ \hline  \hline
+524:8 & 18 & 20 & $7\leq {\rm rank}\leq 9$ \\ \hline
+525:10 & 1/4 & 7/4 & $8\leq {\rm rank}\leq 10$ \\ \hline
+531:\bibitem{DP2} J. Aguirre, A. Dujella and J. C. Peral, On the rank of elliptic curves coming from rational Diophantine triples, Rocky Mountain J. of Math. 42, (2012), 1759-1776.
+540:\bibitem{Duj} A.  Dujella,   High rank  elliptic curves with prescribed torsion,\\
+543:\bibitem{Duj6} A. Dujella,  A. S. Janfada, J. C. Peral, S. Salami, On the high rank $\pi/3$ and $2\pi/3$ - congruent number elliptic curves, Rocky Mountain J. Math. Vol. 44, No. 6, (2014), 1867-1880.
+544:\bibitem{Duj5} A. Dujella, A. S. Janfada and S. Salami, A search for high rank congruent number elliptic curves, J. Integer Seq., \textbf{12} (2009), Article 09.5.8.
+549:\bibitem{IKMZ}F. Izadi, F. Khoshnam, A. J. MacLeod, A. S. Zargar, On parametric spaces of bicentric quadrilaterals, Math. Slovaca 67 (2017), 611-622
+552:\bibitem{IN2} F. Izadi and K. Nabardi, A family of elliptic curves with rank $\geq5$, Vol. 71, issue 2, 245-249.
+558:rank at least three, Canad. Math. Bull., \textbf{53} (2010), no. 4, 661-666.
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+import math, random, statistics, time
+for bits in (64, 256, 1024, 4096):
+    rng=random.Random(200616756+bits)
+    rows=[]
+    for _ in range(2000):
+        k=rng.getrandbits(bits) | (1 << (bits-1)) | 1
+        a=10*k*k-8*k+8
+        b=k*(k*k-4*k+20)
+        c=(k+2)*(k*k-4)
+        c0=(a*b*c)**2
+        t=time.perf_counter_ns()
+        y=math.isqrt(c0)
+        dt=time.perf_counter_ns()-t
+        assert y*y==c0 and y==abs(a*b*c)
+        rows.append(dt)
+    print(bits, 'median_isqrt_us', round(statistics.median(rows)/1000,3), 'p95_us', round(sorted(rows)[1899]/1000,3), 'answer_digits', len(str(y)), 'rhs_bits', c0.bit_length())
+
+rng=random.Random(16756)
+items=[]
+for _ in range(10000):
+    k=rng.getrandbits(256)|(1<<255)|1
+    a=10*k*k-8*k+8
+    b=k*(k*k-4*k+20)
+    c=(k+2)*(k*k-4)
+    items.append((a,b,c))
+t=time.perf_counter()
+for a,b,c in items:
+    y=a*b*c
+elapsed=time.perf_counter()-t
+print('direct_formula_256_10000_sec',round(elapsed,6),'per_instance_us',round(elapsed/10000*1e6,3),'arithmetic_ops_per_instance',2)
+PY" in /home/gson/gvrepo/results/2006.16756
+ exited 1 in 3822ms:
+64 median_isqrt_us 1.7 p95_us 1.85 answer_digits 154 rhs_bits 1022
+256 median_isqrt_us 8.48 p95_us 8.89 answer_digits 617 rhs_bits 4099
+1024 median_isqrt_us 81.545 p95_us 103.88 answer_digits 2467 rhs_bits 16391
+Traceback (most recent call last):
+  File "<stdin>", line 16, in <module>
+ValueError: Exceeds the limit (4300 digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit
+
+exec
+/bin/bash -lc "python3 - <<'PY'
+import random,time
+rng=random.Random(16756)
+items=[]
+for _ in range(10000):
+    k=rng.getrandbits(256)|(1<<255)|1
+    a=10*k*k-8*k+8
+    b=k*(k*k-4*k+20)
+    c=(k+2)*(k*k-4)
+    items.append((a,b,c))
+t=time.perf_counter()
+for a,b,c in items:
+    y=a*b*c
+elapsed=time.perf_counter()-t
+print('direct_formula_256_10000_sec',round(elapsed,6))
+print('per_instance_us',round(elapsed/10000*1e6,3))
+print('arithmetic_ops_per_instance',2)
+PY" in /home/gson/gvrepo/results/2006.16756
+ succeeded in 0ms:
+direct_formula_256_10000_sec 0.020803
+per_instance_us 2.08
+arithmetic_ops_per_instance 2
+
+exec
+/bin/bash -lc "rg -n 'REJECTED|mechanical cost|compact route|--reject|G9' scripts/submit.sh scripts -g '*.py' -g '*.sh' | sed -n '1,280p'
+sed -n '1,220p' results/2006.16756/.meta.json 2>/dev/null || true" in /home/gson/gvrepo
+ succeeded in 0ms:
+scripts/park.sh:7:# submitted -- the oracle solves it at the shipping preset, so G9 fails -- and it must
+scripts/submit.sh:5:ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+scripts/submit.sh:6:REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
+scripts/submit.sh:11:  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+scripts/submit.sh:19:  # A G9(b) rejection blames the PAPER for a result produced by the builder's own
+scripts/submit.sh:22:  # only ever runs on --reject, so that one accepted paper is never touched by it.
+scripts/submit.sh:31:rj = os.path.join(d, "REJECTED.md")
+scripts/submit.sh:36:# only gate rejections that actually turn on G9
+scripts/submit.sh:37:if not re.search(r"G9\(b\)|G9\b", note):
+scripts/submit.sh:39:# G9(b) stopped being a gate on 2026-09-05, so a rejection that turns on it is no
+scripts/submit.sh:41:# it outright when G9(b) is named as the deciding reason.
+scripts/submit.sh:42:if re.search(r"fails?\s+\*{0,2}(H|hardness)?\*{0,2}[^.]{0,60}G9\(b\)|G9\(b\)[^.]{0,40}(gate|fail)"
+scripts/submit.sh:43:             r"|rejected?[^.]{0,60}G9\(b\)", note, re.I):
+scripts/submit.sh:44:    print("ERROR: this rejection turns on G9(b), the polarity-flipped hinted-oracle gate.")
+scripts/submit.sh:45:    print("       G9(b) was retired to a DIAGNOSTIC on 2026-09-05: a family that")
+scripts/submit.sh:51:    print("       in the README as a diagnostic. See prompts/codex_task.md G9(b).")
+scripts/submit.sh:84:print("ERROR: this rejection cites G9, but the STRUCTURAL_HINT is a PROCEDURE, not a")
+scripts/submit.sh:85:print("       structural hint, so G9(b) measured your hint and not the paper.")
+scripts/submit.sh:92:print("       Rewrite the hint to name only the invariant, re-run the G9(b) arm, and")
+scripts/submit.sh:93:print("       reject only if the family still dissolves. See prompts/codex_task.md G9(b).")
+scripts/submit.sh:111:    print("       more levels available.  PARK it -- delete REJECTED.md and re-run with")
+scripts/submit.sh:125:print("       PARK it -- delete REJECTED.md and leave the claim in_progress.  Harden")
+scripts/submit.sh:137:  python3 - "$D/REJECTED.md" <<'PYREJ' || exit 6
+scripts/submit.sh:150:has_compact = re.search(r"compact route|shortcut|by hand|no shorter|"
+scripts/submit.sh:174:    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+scripts/submit.sh:205:# G9(b) -- the polarity-flipped hinted gate -- was retired to a diagnostic on
+scripts/submit.sh:212:# G9's `pass` folds (a) the three-arm diagnostic, (b) that retired gate, and (c) the
+scripts/submit.sh:215:g9key = next((k for k in gates if k.startswith("G9")), None)
+scripts/submit.sh:233:        print("ERROR: G9(c) size/effort caps exceeded: " + "; ".join(over))
+scripts/submit.sh:234:        print("       (G9(b), the hinted-oracle gate, is a diagnostic and no longer blocks.)")
+scripts/submit.sh:241:# `all_passed` is the BUILDER's summary and still folds in G9(b), so a module that
+scripts/submit.sh:247:          " passes (G9(b) is retired).")
+scripts/submit.sh:390:                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+scripts/run_codex.sh:92:  echo '  if { [ -f README.md ] && [ -f selftest_report.json ] && [ -f llm_loop_transcript.jsonl ]; } || [ -f REJECTED.md ]; then break; fi'
+scripts/harden.py:466:                                + ".  PARK this paper -- do not write REJECTED.md.  Harden at "
+scripts/harden.py:500:                        "the paper.  PARK it -- do not write REJECTED.md.  Re-run with "
+scripts/submit.sh:5:ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+scripts/submit.sh:6:REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
+scripts/submit.sh:11:  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+scripts/submit.sh:19:  # A G9(b) rejection blames the PAPER for a result produced by the builder's own
+scripts/submit.sh:22:  # only ever runs on --reject, so that one accepted paper is never touched by it.
+scripts/submit.sh:31:rj = os.path.join(d, "REJECTED.md")
+scripts/submit.sh:36:# only gate rejections that actually turn on G9
+scripts/submit.sh:37:if not re.search(r"G9\(b\)|G9\b", note):
+scripts/submit.sh:39:# G9(b) stopped being a gate on 2026-09-05, so a rejection that turns on it is no
+scripts/submit.sh:41:# it outright when G9(b) is named as the deciding reason.
+scripts/submit.sh:42:if re.search(r"fails?\s+\*{0,2}(H|hardness)?\*{0,2}[^.]{0,60}G9\(b\)|G9\(b\)[^.]{0,40}(gate|fail)"
+scripts/submit.sh:43:             r"|rejected?[^.]{0,60}G9\(b\)", note, re.I):
+scripts/submit.sh:44:    print("ERROR: this rejection turns on G9(b), the polarity-flipped hinted-oracle gate.")
+scripts/submit.sh:45:    print("       G9(b) was retired to a DIAGNOSTIC on 2026-09-05: a family that")
+scripts/submit.sh:51:    print("       in the README as a diagnostic. See prompts/codex_task.md G9(b).")
+scripts/submit.sh:84:print("ERROR: this rejection cites G9, but the STRUCTURAL_HINT is a PROCEDURE, not a")
+scripts/submit.sh:85:print("       structural hint, so G9(b) measured your hint and not the paper.")
+scripts/submit.sh:92:print("       Rewrite the hint to name only the invariant, re-run the G9(b) arm, and")
+scripts/submit.sh:93:print("       reject only if the family still dissolves. See prompts/codex_task.md G9(b).")
+scripts/submit.sh:111:    print("       more levels available.  PARK it -- delete REJECTED.md and re-run with")
+scripts/submit.sh:125:print("       PARK it -- delete REJECTED.md and leave the claim in_progress.  Harden")
+scripts/submit.sh:137:  python3 - "$D/REJECTED.md" <<'PYREJ' || exit 6
+scripts/submit.sh:150:has_compact = re.search(r"compact route|shortcut|by hand|no shorter|"
+scripts/submit.sh:174:    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+scripts/submit.sh:205:# G9(b) -- the polarity-flipped hinted gate -- was retired to a diagnostic on
+scripts/submit.sh:212:# G9's `pass` folds (a) the three-arm diagnostic, (b) that retired gate, and (c) the
+scripts/submit.sh:215:g9key = next((k for k in gates if k.startswith("G9")), None)
+scripts/submit.sh:233:        print("ERROR: G9(c) size/effort caps exceeded: " + "; ".join(over))
+scripts/submit.sh:234:        print("       (G9(b), the hinted-oracle gate, is a diagnostic and no longer blocks.)")
+scripts/submit.sh:241:# `all_passed` is the BUILDER's summary and still folds in G9(b), so a module that
+scripts/submit.sh:247:          " passes (G9(b) is retired).")
+scripts/submit.sh:390:                "write REJECTED.md and use: scripts/submit.sh <id> --reject")
+{
+ "paper": "2006.16756",
+ "schema_version": 2,
+ "model": "gpt-5.6-sol",
+ "effort": "xhigh",
+ "codex_version": "0.150.1",
+ "started_at": "2026-09-05T08:39:37Z"
+}
+exec
+/bin/bash -lc "sed -n '1,185p' scripts/submit.sh" in /home/gson/gvrepo
+ succeeded in 0ms:
+#!/usr/bin/env bash
+# Submit a finished paper.  Usage: scripts/submit.sh <arxiv_id>
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+ID="${1:?usage: scripts/submit.sh <arxiv_id> [--reject]}"
+REJECT=""; [ "${2:-}" = "--reject" ] && REJECT=1
+D="results/$ID"
+[ -d "$D" ] || { echo "ERROR: $D missing."; exit 1; }
+
+if [ -n "$REJECT" ]; then
+  [ -f "$D/REJECTED.md" ] || { echo "ERROR: write $D/REJECTED.md explaining WHY first."; exit 6; }
+
+  # A cap_bound paper must not be rejected.  scripts/harden.py now DETECTS this
+  # rather than waiting for escalate() to declare it: if the ladder stopped with the
+  # answer near the output cap, or never moved more than one dial, the binding
+  # constraint was our answer FORMAT, not the paper.  2601.05272 climbed n=64..84,
+  # stopped at 249 atoms against a 256 cap, reported "cannot be made harder", and was
+  # rejected.  Instruction alone did not prevent that; this guard does.
+  # A G9(b) rejection blames the PAPER for a result produced by the builder's own
+  # hint.  Measured over the 17 modules on disk that carry a STRUCTURAL_HINT: 4 of 9
+  # rejected papers hand the solver a procedure, against 1 of 8 accepted.  This gate
+  # only ever runs on --reject, so that one accepted paper is never touched by it.
+  #
+  # 1904.00563 is the pattern: "Among target-one vertices, keep edges whose endpoints
+  # have equal eligible degree; the result is three even cycles, so take alternating
+  # edges on each."  That is the whole algorithm, including the derived count and the
+  # final step.  The hinted oracle solving it says nothing about the paper.
+  python3 - "$D" <<'PYHINT' || exit 6
+import ast, glob, re, sys, os
+d = sys.argv[1]
+rj = os.path.join(d, "REJECTED.md")
+try:
+    note = open(rj, encoding="utf-8", errors="ignore").read()
+except OSError:
+    sys.exit(0)
+# only gate rejections that actually turn on G9
+if not re.search(r"G9\(b\)|G9\b", note):
+    sys.exit(0)
+# G9(b) stopped being a gate on 2026-09-05, so a rejection that turns on it is no
+# longer a valid rejection at all -- regardless of how the hint was written. Refuse
+# it outright when G9(b) is named as the deciding reason.
+if re.search(r"fails?\s+\*{0,2}(H|hardness)?\*{0,2}[^.]{0,60}G9\(b\)|G9\(b\)[^.]{0,40}(gate|fail)"
+             r"|rejected?[^.]{0,60}G9\(b\)", note, re.I):
+    print("ERROR: this rejection turns on G9(b), the polarity-flipped hinted-oracle gate.")
+    print("       G9(b) was retired to a DIAGNOSTIC on 2026-09-05: a family that")
+    print("       dissolves when you name the trick is one whose difficulty lies in")
+    print("       FINDING the insight, which is what this corpus is for. It cost 8")
+    print("       rejections and 23 blocked papers, 6 of which had already defeated")
+    print("       the four-vendor no-tool pool.")
+    print("       If the family passed G, V and STEP 4, SHIP IT. Record the hinted arm")
+    print("       in the README as a diagnostic. See prompts/codex_task.md G9(b).")
+    sys.exit(1)
+
+hint = None
+for f in glob.glob(os.path.join(d, "*gen_*.py")):
+    try:
+        tree = ast.parse(open(f, encoding="utf-8", errors="ignore").read())
+    except Exception:
+        continue
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign):
+            for t in n.targets:
+                if isinstance(t, ast.Name) and t.id == "STRUCTURAL_HINT":
+                    try:
+                        hint = " ".join(str(ast.literal_eval(n.value)).split())
+                    except Exception:
+                        pass
+    if hint:
+        break
+if not hint:
+    sys.exit(0)                      # no module or no hint kept: cannot check
+CHAIN = re.compile(r";\s*(the\s+)?\w+|,\s*then\b|\bthen\b|\bso (take|use|apply|read|pick|choose)\b"
+                   r"|\bbefore using\b|\bfirst,|\bnext,|\bfinally\b", re.I)
+DERIVED = re.compile(r"\bthe result is\b|\bthis (gives|yields|produces)\b|\byou (get|obtain)\b"
+                     r"|\bthere are (two|three|four|five|\d+)\b|\bexactly (two|three|four|\d+)\b", re.I)
+bad = []
+if CHAIN.search(hint):
+    bad.append("it chains a SECOND step (\"then\" / \"; ...\" / \"so take\" / \"first,\")")
+if DERIVED.search(hint):
+    bad.append("it hands over a DERIVED FACT the solver was supposed to find "
+               "(\"the result is ...\", \"there are three ...\")")
+if not bad:
+    sys.exit(0)
+print("ERROR: this rejection cites G9, but the STRUCTURAL_HINT is a PROCEDURE, not a")
+print("       structural hint, so G9(b) measured your hint and not the paper.")
+print(f"       hint: {hint[:200]}")
+for b in bad:
+    print(f"       - {b}")
+print("       A structural hint names the INVARIANT a solver has to notice -- the thing")
+print("       to look at. It does not say what to do with it, does not chain steps, and")
+print("       does not state a quantity the solver was supposed to derive.")
+print("       Rewrite the hint to name only the invariant, re-run the G9(b) arm, and")
+print("       reject only if the family still dissolves. See prompts/codex_task.md G9(b).")
+sys.exit(1)
+PYHINT
+
+  python3 - "$D/.meta.json" <<'PYCAP' || exit 6
+import json, sys
+try:
+    v = (json.load(open(sys.argv[1])) or {}).get("harden_verdict") or {}
+except Exception:
+    sys.exit(0)                       # no verdict recorded; nothing to contradict
+if v.get("verdict") not in ("cap_bound", "budget_bound"):
+    sys.exit(0)
+if v.get("verdict") == "budget_bound":
+    print("ERROR: the oracle harness recorded verdict=budget_bound for this paper.")
+    print("       The ladder ran out of ESCALATIONS while escalate() was still willing")
+    print(f"       to climb ({v.get('escalate_says')}); the binding constraint was this")
+    print("       harness's budget, not the paper.  7 of 13 too_easy verdicts on disk")
+    print("       were this, including 1612.03280, which stopped at n=149 with five")
+    print("       more levels available.  PARK it -- delete REJECTED.md and re-run with")
+    print("       ORACLE_MAX_ESCALATIONS raised, or ship at a higher preset.")
+    sys.exit(1)
+print("ERROR: the oracle harness recorded verdict=cap_bound for this paper, which")
+print("       means the ANSWER CAP stopped the ladder, not the mathematics.")
+a, c = v.get("answer_atoms"), v.get("answer_chars")
+if a is not None:
+    print(f"       answer at the last level: {a} atoms / {c} chars "
+          f"(cap {v.get('atom_cap')} atoms / {v.get('char_cap')} chars)")
+print(f"       dials the ladder ever moved: {v.get('axes_moved') or 'none'}")
+sig = v.get("signal", "")
+if "single_axis" in sig and "answer_cap" not in sig:
+    print("       signal=single_axis: the answer is still small -- this family was never")
+    print("       explored, not exhausted. Turn a SECOND dial before giving it up.")
+print("       PARK it -- delete REJECTED.md and leave the claim in_progress.  Harden")
+print("       at FIXED ANSWER LENGTH instead: grow the haystack, not the needle.")
+print("       Bigger ground set with the same witness size, larger modulus, denser")
+print("       decoys, tighter constraints.  See prompts/codex_task.md, escalate().")
+sys.exit(1)
+PYCAP
+
+  # A rejection that says only "an efficient method exists" is not reviewable, and an
+  # independent audit found 7 of 12 such rejections were WRONG -- the papers were
+  # buildable on Track B. One was dismissed for having "a short linear formula" while
+  # its mechanical alternative was 16,689,170 lattice-vector enumerations. If the note
+  # rests on a method existing, it must quantify the gap it is claiming is too small.
+  python3 - "$D/REJECTED.md" <<'PYREJ' || exit 6
+import re, sys
+t = open(sys.argv[1], encoding="utf-8", errors="ignore").read()
+low = t.lower()
+METHOD_EXISTS = re.compile(
+    r"polynomial[- ]time|explicit (construction|formula)|closed[- ]form|"
+    r"constructive (solution|procedure|algorithm)|efficient algorithm|"
+    r"linear solve|spectral characteri|classification (table|of)|is in p|"
+    r"algorithm (exists|is given)|buchberger|gaussian elimination|sdp", re.I)
+if not METHOD_EXISTS.search(low):
+    sys.exit(0)                       # rejected for some other reason; nothing to check
+has_mech = re.search(r"mechanical|brute[- ]force cost|operations|enumerat|seconds|"
+                     r"cost|running time", low)
+has_compact = re.search(r"compact route|shortcut|by hand|no shorter|"
+                        r"same length|nothing to see|track b", low)
+if has_mech and has_compact:
+    sys.exit(0)
+print("ERROR: this rejection rests on 'an efficient method exists', which is NOT by")
+print("       itself a reason to reject -- that is what TRACK B is for.  State the")
+print("       MECHANICAL COST (operations the standard method needs at shipping size)")
+print("       and the COMPACT ROUTE length, and show the gap is too small to test")
+print("       anything.  7 of 12 audited rejections of this shape were wrong.")
+print("       See prompts/codex_task.md, STEP 0 item 4.")
+sys.exit(1)
+PYREJ
+  python3 -c "
+import json,datetime,os
+p='claims/$ID.json'
+d=json.load(open(p)) if os.path.exists(p) else {'paper':'$ID'}
+d['status']='rejected'
+d['done_at']=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+json.dump(d,open(p,'w'))"
+  rm -f "$D/.orkey" "$D/.task.md" "$D/.runner.sh"; rm -rf "$D/__pycache__"
+  bash scripts/status.sh --write >/dev/null
+  git add "$D" "claims/$ID.json" STATUS.md
+  git commit -q -m "reject $ID"
+  git pull -q --rebase origin main && bash scripts/status.sh --write >/dev/null && git add STATUS.md \
+    && git commit -q --amend --no-edit && git push -q origin main && echo "REJECTED $ID (documented)" || {
+    echo "push failed — run: git pull --rebase origin main && git push origin main"; exit 4; }
+  exit 0
+fi
+
+MOD="$(ls "$D"/gen_*.py 2>/dev/null | head -1)"
+[ -n "$MOD" ] || { echo "ERROR: no gen_*.py in $D — nothing to submit."; exit 2; }
+
+# The builder writes these; a result nobody can read or re-check is not a result.
+for f in README.md selftest_report.json llm_loop_transcript.jsonl; do
+  [ -s "$D/$f" ] || { echo "ERROR: $D/$f missing or empty — see prompts/codex_task.md STEP 5."; exit 7; }
+done
+
+codex
+The full LaTeX source confirms the pattern across the paper: Sections 2 and 3 print the rational sections, Section 7 says the points come from explicit formulas, and Section 9 prints both the birational substitution and the torsion points. The only exactly checkable family that remains faithful to the paper is therefore formula evaluation/substitution. At a 256-bit parameter size, I measured 2 arithmetic operations and about 2.08 μs per witness (or one exact integer square root, median 8.48 μs, if the cubic is expanded), leaving no Track-B compression gap. I’m documenting the Step-0 rejection now; per the task’s stop rule, I will not fabricate a module or oracle evidence for a failed family.
+apply patch
+patch: completed
+/home/gson/gvrepo/results/2006.16756/REJECTED.md
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..a1fd5e96a92a0cd598381d562b3daeb4d212258b
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,99 @@
++# Step-0 rejection: arXiv:2006.16756
++
++Paper: [Farzali Izadi, *Euclidean Geometry and Elliptic Curves*](https://arxiv.org/abs/2006.16756), arXiv:2006.16756v2.
++
++## Decision
++
++No generator is shipped. The natural exact-witness family passes **G** and **V** but
++fails **H on both tracks**. This was decided from the full paper and its LaTeX source,
++before writing a generator, as required by Step 0.
++
++The paper describes explicit parametrized constructions; it does not state a
++complexity or distributional-hardness result. Section 1 calls the article a review,
++says that it demonstrates results from earlier papers, and leaves their details to
++those papers. Consequently there is no theorem or parameter regime supporting a
++Track-A claim for instances obtained by sampling the displayed parameters.
++
++Track B does not rescue the natural family. The mechanical certificate-producing
++algorithm and the compact route are the same constant-length calculation, so there is
++nothing structural to discover.
++
++## The discriminating calculation
++
++Section 4, Theorems 4.1 and 4.2, uses
++
++\[
++E_k:\quad y^2=(x+a(k)b(k))(x+b(k)c(k))(x+a(k)c(k)),
++\]
++
++with the three displayed polynomial functions `a(k)`, `b(k)`, and `c(k)`. A faithful
++candidate problem would provide these native rational objects and ask for a rational
++point with nonzero `y`. But the instance itself gives
++
++\[
++P=(0,a(k)b(k)c(k)),
++\]
++
++because the right-hand side at `x=0` is `(abc)^2`. Verification is exact substitution,
++so G and V are immediate. H is not:
++
++| route | exact work at a would-be 256-bit shipping parameter |
++|---|---:|
++| mechanical formula evaluation | 2 integer multiplications (`a*b`, then `*c`) |
++| compact route/by hand | the same 2 integer multiplications |
++| expanded-cubic variant | 1 exact integer square root of the square constant term |
++
++A deterministic Python benchmark (`random.Random`, 10,000 admissible positive
++256-bit integer values of `k`) took 0.020803 seconds for the direct formula, or 2.080
++microseconds per instance. On 2,000 independently sampled 256-bit values, exact
++`math.isqrt` of the expanded cubic's constant term had median 8.480 microseconds and
++95th percentile 8.890 microseconds. The resulting `y` had about 617 decimal digits,
++comfortably below the answer-character cap. Thus this is not a cap-bound case: it is
++an easy family. The obvious `x=0` attack succeeds on every generated instance.
++
++These numbers also satisfy the required Track-B comparison. The mechanical cost is
++2 operations and the compact route is 2 operations (or one square-root operation in
++both descriptions after expansion). There is no million-operation mechanical route
++versus a short structural shortcut.
++
++## Why the other sections do not supply a harder witness family
++
++- Section 2, equations (2.2)--(2.4), writes down `P1` through `P5` explicitly.
++- Section 3, equations (3.7)--(3.9), again writes down five explicit rational sections.
++- Section 7 states that the quadrilateral-to-curve correspondence gives explicit
++  formulas for the curve and two non-2-torsion points.
++- Section 8 gives a fixed one-parameter curve family and a closed-form torsion
++  characterization (Theorem 8.2), not a growing search regime.
++- Section 9, equations (9.4)--(9.6), gives the point `(s,S)`, the birational
++  substitution, and all three rational 2-torsion points explicitly.
++
++In each verifiable point-finding version, the certificate producer is evaluation of a
++displayed formula followed by substitution. Sampling larger numerators increases
++bit-length but not the number of structural steps. Expanding the equations only turns
++the same task into an exact square-root or fixed-degree factorization, still comparable
++to the shortcut.
++
++Asking instead for positive rank, exact rank, linear independence of the displayed
++sections, or a complete torsion subgroup does not fix H while retaining the required
++checker: a point-on-curve substitution is not by itself a certificate of infinite
++order or independence, and the paper's specialization and torsion arguments are not
++finite objects that the requested checker can simply inspect.
++
++Finally, hiding the paper's parameters behind unrelated affine masks, large decoy
++sets, or a synthetic chain of coordinate changes could manufacture a search puzzle,
++but its difficulty would come from the added concealment rather than a theorem or
++construction in this paper. It would not justify Track A, and the paper supplies no
++Track-B mechanical/compact gap for that modified distribution.
++
++## Gate classification
++
++- **G:** achievable by theorem-backed/direct construction.
++- **V:** achievable by exact rational substitution.
++- **H / Track A:** fails; there is no distributional-hardness theorem or regime, and
++  the sampled displayed families have constant-length witness formulas.
++- **H / Track B:** fails; measured mechanical cost and compact-route length are the
++  same (2 exact multiplications), so the family tests formula evaluation rather than
++  recognition of a compressed route.
++
++No `gen_2006_16756.py`, self-test report, or hardening transcript was created because
++the task explicitly requires stopping when Step 0 shows that G, H, or V fails.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..a1fd5e96a92a0cd598381d562b3daeb4d212258b
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,99 @@
++# Step-0 rejection: arXiv:2006.16756
++
++Paper: [Farzali Izadi, *Euclidean Geometry and Elliptic Curves*](https://arxiv.org/abs/2006.16756), arXiv:2006.16756v2.
++
++## Decision
++
++No generator is shipped. The natural exact-witness family passes **G** and **V** but
++fails **H on both tracks**. This was decided from the full paper and its LaTeX source,
++before writing a generator, as required by Step 0.
++
++The paper describes explicit parametrized constructions; it does not state a
++complexity or distributional-hardness result. Section 1 calls the article a review,
++says that it demonstrates results from earlier papers, and leaves their details to
++those papers. Consequently there is no theorem or parameter regime supporting a
++Track-A claim for instances obtained by sampling the displayed parameters.
++
++Track B does not rescue the natural family. The mechanical certificate-producing
++algorithm and the compact route are the same constant-length calculation, so there is
++nothing structural to discover.
++
++## The discriminating calculation
++
++Section 4, Theorems 4.1 and 4.2, uses
++
++\[
++E_k:\quad y^2=(x+a(k)b(k))(x+b(k)c(k))(x+a(k)c(k)),
++\]
++
++with the three displayed polynomial functions `a(k)`, `b(k)`, and `c(k)`. A faithful
++candidate problem would provide these native rational objects and ask for a rational
++point with nonzero `y`. But the instance itself gives
++
++\[
++P=(0,a(k)b(k)c(k)),
++\]
++
++because the right-hand side at `x=0` is `(abc)^2`. Verification is exact substitution,
++so G and V are immediate. H is not:
++
++| route | exact work at a would-be 256-bit shipping parameter |
++|---|---:|
++| mechanical formula evaluation | 2 integer multiplications (`a*b`, then `*c`) |
++| compact route/by hand | the same 2 integer multiplications |
++| expanded-cubic variant | 1 exact integer square root of the square constant term |
++
++A deterministic Python benchmark (`random.Random`, 10,000 admissible positive
++256-bit integer values of `k`) took 0.020803 seconds for the direct formula, or 2.080
++microseconds per instance. On 2,000 independently sampled 256-bit values, exact
++`math.isqrt` of the expanded cubic's constant term had median 8.480 microseconds and
++95th percentile 8.890 microseconds. The resulting `y` had about 617 decimal digits,
++comfortably below the answer-character cap. Thus this is not a cap-bound case: it is
++an easy family. The obvious `x=0` attack succeeds on every generated instance.
++
++These numbers also satisfy the required Track-B comparison. The mechanical cost is
++2 operations and the compact route is 2 operations (or one square-root operation in
++both descriptions after expansion). There is no million-operation mechanical route
++versus a short structural shortcut.
++
++## Why the other sections do not supply a harder witness family
++
++- Section 2, equations (2.2)--(2.4), writes down `P1` through `P5` explicitly.
++- Section 3, equations (3.7)--(3.9), again writes down five explicit rational sections.
++- Section 7 states that the quadrilateral-to-curve correspondence gives explicit
++  formulas for the curve and two non-2-torsion points.
++- Section 8 gives a fixed one-parameter curve family and a closed-form torsion
++  characterization (Theorem 8.2), not a growing search regime.
++- Section 9, equations (9.4)--(9.6), gives the point `(s,S)`, the birational
++  substitution, and all three rational 2-torsion points explicitly.
++
++In each verifiable point-finding version, the certificate producer is evaluation of a
++displayed formula followed by substitution. Sampling larger numerators increases
++bit-length but not the number of structural steps. Expanding the equations only turns
++the same task into an exact square-root or fixed-degree factorization, still comparable
++to the shortcut.
++
++Asking instead for positive rank, exact rank, linear independence of the displayed
++sections, or a complete torsion subgroup does not fix H while retaining the required
++checker: a point-on-curve substitution is not by itself a certificate of infinite
++order or independence, and the paper's specialization and torsion arguments are not
++finite objects that the requested checker can simply inspect.
++
++Finally, hiding the paper's parameters behind unrelated affine masks, large decoy
++sets, or a synthetic chain of coordinate changes could manufacture a search puzzle,
++but its difficulty would come from the added concealment rather than a theorem or
++construction in this paper. It would not justify Track A, and the paper supplies no
++Track-B mechanical/compact gap for that modified distribution.
++
++## Gate classification
++
++- **G:** achievable by theorem-backed/direct construction.
++- **V:** achievable by exact rational substitution.
++- **H / Track A:** fails; there is no distributional-hardness theorem or regime, and
++  the sampled displayed families have constant-length witness formulas.
++- **H / Track B:** fails; measured mechanical cost and compact-route length are the
++  same (2 exact multiplications), so the family tests formula evaluation rather than
++  recognition of a compressed route.
++
++No `gen_2006_16756.py`, self-test report, or hardening transcript was created because
++the task explicitly requires stopping when Step 0 shows that G, H, or V fails.
+
+exec
+/bin/bash -lc "sed -n '1,280p' REJECTED.md
+git status --short -- REJECTED.md
+git diff --check -- REJECTED.md" in /home/gson/gvrepo/results/2006.16756
+ exited 129 in 0ms:
+fatal: not a git repository (or any of the parent directories): .git
+warning: Not a git repository. Use --no-index to compare two paths outside a working tree
+usage: git diff --no-index [<options>] <path> <path>
+
+Diff output format options
+    -p, --patch           generate patch
+    -s, --no-patch        suppress diff output
+    -u                    generate patch
+    -U, --unified[=<n>]   generate diffs with <n> lines context
+    -W, --[no-]function-context
+                          generate diffs with <n> lines context
+    --raw                 generate the diff in raw format
+    --patch-with-raw      synonym for '-p --raw'
+    --patch-with-stat     synonym for '-p --stat'
+    --numstat             machine friendly --stat
+    --shortstat           output only the last line of --stat
+    -X, --dirstat[=<param1,param2>...]
+                          output the distribution of relative amount of changes for each sub-directory
+    --cumulative          synonym for --dirstat=cumulative
+    --dirstat-by-file[=<param1,param2>...]
+                          synonym for --dirstat=files,param1,param2...
+    --check               warn if changes introduce conflict markers or whitespace errors
+    --summary             condensed summary such as creations, renames and mode changes
+    --name-only           show only names of changed files
+    --name-status         show only names and status of changed files
+    --stat[=<width>[,<name-width>[,<count>]]]
+                          generate diffstat
+    --stat-width <width>  generate diffstat with a given width
+    --stat-name-width <width>
+                          generate diffstat with a given name width
+    --stat-graph-width <width>
+                          generate diffstat with a given graph width
+    --stat-count <count>  generate diffstat with limited lines
+    --[no-]compact-summary
+                          generate compact summary in diffstat
+    --binary              output a binary diff that can be applied
+    --[no-]full-index     show full pre- and post-image object names on the "index" lines
+    --[no-]color[=<when>] show colored diff
+    --ws-error-highlight <kind>
+                          highlight whitespace errors in the 'context', 'old' or 'new' lines in the diff
+    -z                    do not munge pathnames and use NULs as output field terminators in --raw or --numstat
+    --[no-]abbrev[=<n>]   use <n> digits to display object names
+    --src-prefix <prefix> show the given source prefix instead of "a/"
+    --dst-prefix <prefix> show the given destination prefix instead of "b/"
+    --line-prefix <prefix>
+                          prepend an additional prefix to every line of output
+    --no-prefix           do not show any source or destination prefix
+    --default-prefix      use default prefixes a/ and b/
+    --inter-hunk-context <n>
+                          show context between diff hunks up to the specified number of lines
+    --output-indicator-new <char>
+                          specify the character to indicate a new line instead of '+'
+    --output-indicator-old <char>
+                          specify the character to indicate an old line instead of '-'
+    --output-indicator-context <char>
+                          specify the character to indicate a context instead of ' '
+
+Diff rename options
+    -B, --break-rewrites[=<n>[/<m>]]
+                          break complete rewrite changes into pairs of delete and create
+    -M, --find-renames[=<n>]
+                          detect renames
+    -D, --irreversible-delete
+                          omit the preimage for deletes
+    -C, --find-copies[=<n>]
+                          detect copies
+    --[no-]find-copies-harder
+                          use unmodified files as source to find copies
+    --no-renames          disable rename detection
+    --[no-]rename-empty   use empty blobs as rename source
+    --[no-]follow         continue listing the history of a file beyond renames
+    -l <n>                prevent rename/copy detection if the number of rename/copy targets exceeds given limit
+
+Diff algorithm options
+    --minimal             produce the smallest possible diff
+    -w, --ignore-all-space
+                          ignore whitespace when comparing lines
+    -b, --ignore-space-change
+                          ignore changes in amount of whitespace
+    --ignore-space-at-eol ignore changes in whitespace at EOL
+    --ignore-cr-at-eol    ignore carrier-return at the end of line
+    --ignore-blank-lines  ignore changes whose lines are all blank
+    -I, --[no-]ignore-matching-lines <regex>
+                          ignore changes whose all lines match <regex>
+    --[no-]indent-heuristic
+                          heuristic to shift diff hunk boundaries for easy reading
+    --patience            generate diff using the "patience diff" algorithm
+    --histogram           generate diff using the "histogram diff" algorithm
+    --diff-algorithm <algorithm>
+                          choose a diff algorithm
+    --anchored <text>     generate diff using the "anchored diff" algorithm
+    --word-diff[=<mode>]  show word diff, using <mode> to delimit changed words
+    --word-diff-regex <regex>
+                          use <regex> to decide what a word is
+    --color-words[=<regex>]
+                          equivalent to --word-diff=color --word-diff-regex=<regex>
+    --[no-]color-moved[=<mode>]
+                          moved lines of code are colored differently
+    --[no-]color-moved-ws <mode>
+                          how white spaces are ignored in --color-moved
+
+Other diff options
+    --[no-]relative[=<prefix>]
+                          when run from subdir, exclude changes outside and show relative paths
+    -a, --[no-]text       treat all files as text
+    -R                    swap two inputs, reverse the diff
+    --[no-]exit-code      exit with 1 if there were differences, 0 otherwise
+    --[no-]quiet          disable all output of the program
+    --[no-]ext-diff       allow an external diff helper to be executed
+    --[no-]textconv       run external text conversion filters when comparing binary files
+    --ignore-submodules[=<when>]
+                          ignore changes to submodules in the diff generation
+    --submodule[=<format>]
+                          specify how differences in submodules are shown
+    --ita-invisible-in-index
+                          hide 'git add -N' entries from the index
+    --ita-visible-in-index
+                          treat 'git add -N' entries as real in the index
+    -S <string>           look for differences that change the number of occurrences of the specified string
+    -G <regex>            look for differences that change the number of occurrences of the specified regex
+    --pickaxe-all         show all changes in the changeset with -S or -G
+    --pickaxe-regex       treat <string> in -S as extended POSIX regular expression
+    -O <file>             control the order in which files appear in the output
+    --rotate-to <path>    show the change in the specified path first
+    --skip-to <path>      skip the output to the specified path
+    --find-object <object-id>
+                          look for differences that change the number of occurrences of the specified object
+    --diff-filter [(A|C|D|M|R|T|U|X|B)...[*]]
+                          select files by diff type
+    --output <file>       output to a specific file
+
+# Step-0 rejection: arXiv:2006.16756
+
+Paper: [Farzali Izadi, *Euclidean Geometry and Elliptic Curves*](https://arxiv.org/abs/2006.16756), arXiv:2006.16756v2.
+
+## Decision
+
+No generator is shipped. The natural exact-witness family passes **G** and **V** but
+fails **H on both tracks**. This was decided from the full paper and its LaTeX source,
+before writing a generator, as required by Step 0.
+
+The paper describes explicit parametrized constructions; it does not state a
+complexity or distributional-hardness result. Section 1 calls the article a review,
+says that it demonstrates results from earlier papers, and leaves their details to
+those papers. Consequently there is no theorem or parameter regime supporting a
+Track-A claim for instances obtained by sampling the displayed parameters.
+
+Track B does not rescue the natural family. The mechanical certificate-producing
+algorithm and the compact route are the same constant-length calculation, so there is
+nothing structural to discover.
+
+## The discriminating calculation
+
+Section 4, Theorems 4.1 and 4.2, uses
+
+\[
+E_k:\quad y^2=(x+a(k)b(k))(x+b(k)c(k))(x+a(k)c(k)),
+\]
+
+with the three displayed polynomial functions `a(k)`, `b(k)`, and `c(k)`. A faithful
+candidate problem would provide these native rational objects and ask for a rational
+point with nonzero `y`. But the instance itself gives
+
+\[
+P=(0,a(k)b(k)c(k)),
+\]
+
+because the right-hand side at `x=0` is `(abc)^2`. Verification is exact substitution,
+so G and V are immediate. H is not:
+
+| route | exact work at a would-be 256-bit shipping parameter |
+|---|---:|
+| mechanical formula evaluation | 2 integer multiplications (`a*b`, then `*c`) |
+| compact route/by hand | the same 2 integer multiplications |
+| expanded-cubic variant | 1 exact integer square root of the square constant term |
+
+A deterministic Python benchmark (`random.Random`, 10,000 admissible positive
+256-bit integer values of `k`) took 0.020803 seconds for the direct formula, or 2.080
+microseconds per instance. On 2,000 independently sampled 256-bit values, exact
+`math.isqrt` of the expanded cubic's constant term had median 8.480 microseconds and
+95th percentile 8.890 microseconds. The resulting `y` had about 617 decimal digits,
+comfortably below the answer-character cap. Thus this is not a cap-bound case: it is
+an easy family. The obvious `x=0` attack succeeds on every generated instance.
+
+These numbers also satisfy the required Track-B comparison. The mechanical cost is
+2 operations and the compact route is 2 operations (or one square-root operation in
+both descriptions after expansion). There is no million-operation mechanical route
+versus a short structural shortcut.
+
+## Why the other sections do not supply a harder witness family
+
+- Section 2, equations (2.2)--(2.4), writes down `P1` through `P5` explicitly.
+- Section 3, equations (3.7)--(3.9), again writes down five explicit rational sections.
+- Section 7 states that the quadrilateral-to-curve correspondence gives explicit
+  formulas for the curve and two non-2-torsion points.
+- Section 8 gives a fixed one-parameter curve family and a closed-form torsion
+  characterization (Theorem 8.2), not a growing search regime.
+- Section 9, equations (9.4)--(9.6), gives the point `(s,S)`, the birational
+  substitution, and all three rational 2-torsion points explicitly.
+
+In each verifiable point-finding version, the certificate producer is evaluation of a
+displayed formula followed by substitution. Sampling larger numerators increases
+bit-length but not the number of structural steps. Expanding the equations only turns
+the same task into an exact square-root or fixed-degree factorization, still comparable
+to the shortcut.
+
+Asking instead for positive rank, exact rank, linear independence of the displayed
+sections, or a complete torsion subgroup does not fix H while retaining the required
+checker: a point-on-curve substitution is not by itself a certificate of infinite
+order or independence, and the paper's specialization and torsion arguments are not
+finite objects that the requested checker can simply inspect.
+
+Finally, hiding the paper's parameters behind unrelated affine masks, large decoy
+sets, or a synthetic chain of coordinate changes could manufacture a search puzzle,
+but its difficulty would come from the added concealment rather than a theorem or
+construction in this paper. It would not justify Track A, and the paper supplies no
+Track-B mechanical/compact gap for that modified distribution.
+
+## Gate classification
+
+- **G:** achievable by theorem-backed/direct construction.
+- **V:** achievable by exact rational substitution.
+- **H / Track A:** fails; there is no distributional-hardness theorem or regime, and
+  the sampled displayed families have constant-length witness formulas.
+- **H / Track B:** fails; measured mechanical cost and compact-route length are the
+  same (2 exact multiplications), so the family tests formula evaluation rather than
+  recognition of a compressed route.
+
+No `gen_2006_16756.py`, self-test report, or hardening transcript was created because
+the task explicitly requires stopping when Step 0 shows that G, H, or V fails.
+
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..a1fd5e96a92a0cd598381d562b3daeb4d212258b
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,99 @@
++# Step-0 rejection: arXiv:2006.16756
++
++Paper: [Farzali Izadi, *Euclidean Geometry and Elliptic Curves*](https://arxiv.org/abs/2006.16756), arXiv:2006.16756v2.
++
++## Decision
++
++No generator is shipped. The natural exact-witness family passes **G** and **V** but
++fails **H on both tracks**. This was decided from the full paper and its LaTeX source,
++before writing a generator, as required by Step 0.
++
++The paper describes explicit parametrized constructions; it does not state a
++complexity or distributional-hardness result. Section 1 calls the article a review,
++says that it demonstrates results from earlier papers, and leaves their details to
++those papers. Consequently there is no theorem or parameter regime supporting a
++Track-A claim for instances obtained by sampling the displayed parameters.
++
++Track B does not rescue the natural family. The mechanical certificate-producing
++algorithm and the compact route are the same constant-length calculation, so there is
++nothing structural to discover.
++
++## The discriminating calculation
++
++Section 4, Theorems 4.1 and 4.2, uses
++
++\[
++E_k:\quad y^2=(x+a(k)b(k))(x+b(k)c(k))(x+a(k)c(k)),
++\]
++
++with the three displayed polynomial functions `a(k)`, `b(k)`, and `c(k)`. A faithful
++candidate problem would provide these native rational objects and ask for a rational
++point with nonzero `y`. But the instance itself gives
++
++\[
++P=(0,a(k)b(k)c(k)),
++\]
++
++because the right-hand side at `x=0` is `(abc)^2`. Verification is exact substitution,
++so G and V are immediate. H is not:
++
++| route | exact work at a would-be 256-bit shipping parameter |
++|---|---:|
++| mechanical formula evaluation | 2 integer multiplications (`a*b`, then `*c`) |
++| compact route/by hand | the same 2 integer multiplications |
++| expanded-cubic variant | 1 exact integer square root of the square constant term |
++
++A deterministic Python benchmark (`random.Random`, 10,000 admissible positive
++256-bit integer values of `k`) took 0.020803 seconds for the direct formula, or 2.080
++microseconds per instance. On 2,000 independently sampled 256-bit values, exact
++`math.isqrt` of the expanded cubic's constant term had median 8.480 microseconds and
++95th percentile 8.890 microseconds. The resulting `y` had about 617 decimal digits,
++comfortably below the answer-character cap. Thus this is not a cap-bound case: it is
++an easy family. The obvious `x=0` attack succeeds on every generated instance.
++
++These numbers also satisfy the required Track-B comparison. The mechanical cost is
++2 operations and the compact route is 2 operations (or one square-root operation in
++both descriptions after expansion). There is no million-operation mechanical route
++versus a short structural shortcut.
++
++## Why the other sections do not supply a harder witness family
++
++- Section 2, equations (2.2)--(2.4), writes down `P1` through `P5` explicitly.
++- Section 3, equations (3.7)--(3.9), again writes down five explicit rational sections.
++- Section 7 states that the quadrilateral-to-curve correspondence gives explicit
++  formulas for the curve and two non-2-torsion points.
++- Section 8 gives a fixed one-parameter curve family and a closed-form torsion
++  characterization (Theorem 8.2), not a growing search regime.
++- Section 9, equations (9.4)--(9.6), gives the point `(s,S)`, the birational
++  substitution, and all three rational 2-torsion points explicitly.
++
++In each verifiable point-finding version, the certificate producer is evaluation of a
++displayed formula followed by substitution. Sampling larger numerators increases
++bit-length but not the number of structural steps. Expanding the equations only turns
++the same task into an exact square-root or fixed-degree factorization, still comparable
++to the shortcut.
++
++Asking instead for positive rank, exact rank, linear independence of the displayed
++sections, or a complete torsion subgroup does not fix H while retaining the required
++checker: a point-on-curve substitution is not by itself a certificate of infinite
++order or independence, and the paper's specialization and torsion arguments are not
++finite objects that the requested checker can simply inspect.
++
++Finally, hiding the paper's parameters behind unrelated affine masks, large decoy
++sets, or a synthetic chain of coordinate changes could manufacture a search puzzle,
++but its difficulty would come from the added concealment rather than a theorem or
++construction in this paper. It would not justify Track A, and the paper supplies no
++Track-B mechanical/compact gap for that modified distribution.
++
++## Gate classification
++
++- **G:** achievable by theorem-backed/direct construction.
++- **V:** achievable by exact rational substitution.
++- **H / Track A:** fails; there is no distributional-hardness theorem or regime, and
++  the sampled displayed families have constant-length witness formulas.
++- **H / Track B:** fails; measured mechanical cost and compact-route length are the
++  same (2 exact multiplications), so the family tests formula evaluation rather than
++  recognition of a compressed route.
++
++No `gen_2006_16756.py`, self-test report, or hardening transcript was created because
++the task explicitly requires stopping when Step 0 shows that G, H, or V fails.
+
+codex
+Rejected at Step 0. The paper’s explicit elliptic-curve constructions make rational-point certificates directly evaluable; for example, Section 4 immediately gives \(P=(0,abc)\). The mechanical and compact routes both require only two multiplications, so the family fails H on both Track A and Track B. The [full paper](https://arxiv.org/html/2006.16756v2) supplies no alternative hardness regime.
+
+Measured at 256-bit parameters:
+
+- Direct formula: 2 operations, 2.080 μs per instance.
+- Expanded-cubic route: one exact square root, median 8.480 μs.
+- Obvious \(x=0\) attack: succeeds on every instance.
+
+The complete, reviewable decision is in [REJECTED.md](/home/gson/gvrepo/results/2006.16756/REJECTED.md). Per the task’s Step-0 stop rule, no generator or fabricated hardening evidence was created.
+diff --git a/REJECTED.md b/REJECTED.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..a1fd5e96a92a0cd598381d562b3daeb4d212258b
+--- /dev/null
++++ b/REJECTED.md
+@@ -0,0 +1,99 @@
++# Step-0 rejection: arXiv:2006.16756
++
++Paper: [Farzali Izadi, *Euclidean Geometry and Elliptic Curves*](https://arxiv.org/abs/2006.16756), arXiv:2006.16756v2.
++
++## Decision
++
++No generator is shipped. The natural exact-witness family passes **G** and **V** but
++fails **H on both tracks**. This was decided from the full paper and its LaTeX source,
++before writing a generator, as required by Step 0.
++
++The paper describes explicit parametrized constructions; it does not state a
++complexity or distributional-hardness result. Section 1 calls the article a review,
++says that it demonstrates results from earlier papers, and leaves their details to
++those papers. Consequently there is no theorem or parameter regime supporting a
++Track-A claim for instances obtained by sampling the displayed parameters.
++
++Track B does not rescue the natural family. The mechanical certificate-producing
++algorithm and the compact route are the same constant-length calculation, so there is
++nothing structural to discover.
++
++## The discriminating calculation
++
++Section 4, Theorems 4.1 and 4.2, uses
++
++\[
++E_k:\quad y^2=(x+a(k)b(k))(x+b(k)c(k))(x+a(k)c(k)),
++\]
++
++with the three displayed polynomial functions `a(k)`, `b(k)`, and `c(k)`. A faithful
++candidate problem would provide these native rational objects and ask for a rational
++point with nonzero `y`. But the instance itself gives
++
++\[
++P=(0,a(k)b(k)c(k)),
++\]
++
++because the right-hand side at `x=0` is `(abc)^2`. Verification is exact substitution,
++so G and V are immediate. H is not:
++
++| route | exact work at a would-be 256-bit shipping parameter |
++|---|---:|
++| mechanical formula evaluation | 2 integer multiplications (`a*b`, then `*c`) |
++| compact route/by hand | the same 2 integer multiplications |
++| expanded-cubic variant | 1 exact integer square root of the square constant term |
++
++A deterministic Python benchmark (`random.Random`, 10,000 admissible positive
++256-bit integer values of `k`) took 0.020803 seconds for the direct formula, or 2.080
++microseconds per instance. On 2,000 independently sampled 256-bit values, exact
++`math.isqrt` of the expanded cubic's constant term had median 8.480 microseconds and
++95th percentile 8.890 microseconds. The resulting `y` had about 617 decimal digits,
++comfortably below the answer-character cap. Thus this is not a cap-bound case: it is
++an easy family. The obvious `x=0` attack succeeds on every generated instance.
++
++These numbers also satisfy the required Track-B comparison. The mechanical cost is
++2 operations and the compact route is 2 operations (or one square-root operation in
++both descriptions after expansion). There is no million-operation mechanical route
++versus a short structural shortcut.
++
++## Why the other sections do not supply a harder witness family
++
++- Section 2, equations (2.2)--(2.4), writes down `P1` through `P5` explicitly.
++- Section 3, equations (3.7)--(3.9), again writes down five explicit rational sections.
++- Section 7 states that the quadrilateral-to-curve correspondence gives explicit
++  formulas for the curve and two non-2-torsion points.
++- Section 8 gives a fixed one-parameter curve family and a closed-form torsion
++  characterization (Theorem 8.2), not a growing search regime.
++- Section 9, equations (9.4)--(9.6), gives the point `(s,S)`, the birational
++  substitution, and all three rational 2-torsion points explicitly.
++
++In each verifiable point-finding version, the certificate producer is evaluation of a
++displayed formula followed by substitution. Sampling larger numerators increases
++bit-length but not the number of structural steps. Expanding the equations only turns
++the same task into an exact square-root or fixed-degree factorization, still comparable
++to the shortcut.
++
++Asking instead for positive rank, exact rank, linear independence of the displayed
++sections, or a complete torsion subgroup does not fix H while retaining the required
++checker: a point-on-curve substitution is not by itself a certificate of infinite
++order or independence, and the paper's specialization and torsion arguments are not
++finite objects that the requested checker can simply inspect.
++
++Finally, hiding the paper's parameters behind unrelated affine masks, large decoy
++sets, or a synthetic chain of coordinate changes could manufacture a search puzzle,
++but its difficulty would come from the added concealment rather than a theorem or
++construction in this paper. It would not justify Track A, and the paper supplies no
++Track-B mechanical/compact gap for that modified distribution.
++
++## Gate classification
++
++- **G:** achievable by theorem-backed/direct construction.
++- **V:** achievable by exact rational substitution.
++- **H / Track A:** fails; there is no distributional-hardness theorem or regime, and
++  the sampled displayed families have constant-length witness formulas.
++- **H / Track B:** fails; measured mechanical cost and compact-route length are the
++  same (2 exact multiplications), so the family tests formula evaluation rather than
++  recognition of a compressed route.
++
++No `gen_2006_16756.py`, self-test report, or hardening transcript was created because
++the task explicitly requires stopping when Step 0 shows that G, H, or V fails.
+
+tokens used
+100,634
+Rejected at Step 0. The paper’s explicit elliptic-curve constructions make rational-point certificates directly evaluable; for example, Section 4 immediately gives \(P=(0,abc)\). The mechanical and compact routes both require only two multiplications, so the family fails H on both Track A and Track B. The [full paper](https://arxiv.org/html/2006.16756v2) supplies no alternative hardness regime.
+
+Measured at 256-bit parameters:
+
+- Direct formula: 2 operations, 2.080 μs per instance.
+- Expanded-cubic route: one exact square root, median 8.480 μs.
+- Obvious \(x=0\) attack: succeeds on every instance.
+
+The complete, reviewable decision is in [REJECTED.md](/home/gson/gvrepo/results/2006.16756/REJECTED.md). Per the task’s Step-0 stop rule, no generator or fabricated hardening evidence was created.
