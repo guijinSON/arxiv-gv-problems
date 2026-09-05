@@ -1,0 +1,153 @@
+{
+  "paper": "1801.05377",
+  "track": "B",
+  "shipping_difficulty": "easy",
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "drop_one": "expected exactly five weighted linear forms",
+      "swap_two": "weights must be the displayed weights in increasing order",
+      "duplicate_form": "the five linear forms must be distinct",
+      "empty": "answer must be a nonempty JSON list",
+      "out_of_range": "term 0 coefficient exceeds the displayed bound H",
+      "coefficient_change": "weighted cube expansion does not equal the target cubic"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "realistic_response_recovered": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "observed_probability": 0.0,
+    "candidate_space": 292983355981061226769133889166035043865168458762611573806922109822263301644965754412078551843984815407586278985632445595451426323307695945895542183033858032647229557683575796860083841830902431080116834543546293662816852138224071639129396144872054921851278311663734020901491746799616181565738214235478744919595795689397809094762751839005821764753242755837539369597873328521133192375460392722288762394339971319057045373376633806236885463952492494625817471427582791895259864404187233731990697811016124022254455541942376324065205265448317139867250469977473278220930056994405588509394417510223951292736000,
+    "candidate_space_bits": 1992,
+    "sampling_wall_clock_sec": 6.312136,
+    "sampling_prior": "uniform ordered distinct normalized forms [1,a,b,c] in the displayed coefficient box, with the fixed weights already applied"
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "unchanged_base_forms": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 0.000179
+      },
+      "greedy_first_change_only": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 8.6e-05
+      },
+      "largest_generator_outlier": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 0.000149
+      },
+      "endpoint_without_initial_value": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 6e-05
+      },
+      "diagonal_projection_ansatz": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 0.000116
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 0.064939
+      }
+    },
+    "reference_algorithm": {
+      "name": "sequential GL(4) transport through all M_k",
+      "complexity": "O(n) exact integer arithmetic for fixed 4x4 format",
+      "wall_clock_sec": 0.21204,
+      "operations": 1597580,
+      "solves": "8/8, as expected"
+    },
+    "intended_compact_route": {
+      "name": "square-zero product and endpoint differences",
+      "complexity": "O(log n) modular multiplications plus fixed 4x4 work",
+      "wall_clock_sec": 3.9e-05,
+      "operations": 237,
+      "solves": "8/8"
+    }
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density_estimate": 0.0,
+    "shipping_candidate_space": 292983355981061226769133889166035043865168458762611573806922109822263301644965754412078551843984815407586278985632445595451426323307695945895542183033858032647229557683575796860083841830902431080116834543546293662816852138224071639129396144872054921851278311663734020901491746799616181565738214235478744919595795689397809094762751839005821764753242755837539369597873328521133192375460392722288762394339971319057045373376633806236885463952492494625817471427582791895259864404187233731990697811016124022254455541942376324065205265448317139867250469977473278220930056994405588509394417510223951292736000,
+    "exact_solution_count": "not enumerated; shipping density is sampled",
+    "strongest_failing_attack": "random_restart_256",
+    "baseline_attack_wall_clock_sec": 0.008117,
+    "baseline_attack_iterations": 256,
+    "reference_wall_clock_sec": 0.21204,
+    "reference_operation_count": 1597580,
+    "compact_operation_count": 237
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 8192,
+    "doubled_n": 16384,
+    "reference_operations_shipping": 1597580,
+    "reference_operations_doubled": 3195020,
+    "answer_elements_shipping": 25,
+    "answer_elements_doubled": 25,
+    "doubled_build_sec": 0.000268,
+    "doubled_verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "carried_answer_verification_checks": 60,
+    "unrelated_instances": 20,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "transformations": [
+      "reorder the five displayed base terms",
+      "signed-permutation-plus-translation affine coordinate relabelling",
+      "composition of the two"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 2,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": -0.6666666666666666,
+    "hinted_verdict": "hardened",
+    "answer_chars": 744,
+    "answer_tokens": 186,
+    "answer_elements": 25,
+    "intended_route_operations": 237,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true
+}
+
