@@ -1,0 +1,252 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop_one": {
+        "reason": "answer is too short: expected 127 bits",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "answer is too long: expected 127 bits",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "answer contains a non-binary character",
+        "rejected": true
+      },
+      "swap_unequal": {
+        "reason": "forest majority is False: clause tree 349 voted False",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_wall_clock_sec": 0.136904,
+    "structure_aware_space": "170141183460469231731687303715884105728",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations": 81280,
+    "baseline_wall_clock_sec": 0.006135,
+    "pass": true,
+    "reference_cost": {
+      "average_operations": 65873,
+      "average_wall_clock_sec": 0.019811,
+      "complexity": "O(2^n*C) clause work in the worst case; the promised XOR subfamily also admits polynomial GF(2) elimination",
+      "literal_checks": 1305994,
+      "name": "DPLL with unit propagation (domain-standard SAT baseline)",
+      "nodes": 64,
+      "operation_unit": "clause scans",
+      "operations": 526991,
+      "promised_polynomial_algorithm": {
+        "average_operations": 1140137,
+        "average_wall_clock_sec": 0.004018,
+        "complexity": "O(e*n^2) elementary bit operations; polynomial",
+        "name": "four-tree XOR recognition plus GF(2) Gaussian elimination",
+        "operation_unit": "scalar bit operations",
+        "operations": 9121096,
+        "ranks": [
+          120,
+          120,
+          120,
+          120,
+          120,
+          120,
+          120,
+          120
+        ],
+        "solves": "8/8, as expected",
+        "wall_clock_sec": 0.032145
+      },
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.158488
+    },
+    "shipping_density": {
+      "exact_fraction": "2^-120",
+      "exact_solution_count_by_rank": 128,
+      "hits": 0,
+      "measured_gf2_rank": 120,
+      "method": "structure-aware uniform sampling from all n-bit inputs, checked against the exact XOR rows decoded from the forest",
+      "observed_fraction": 0.0,
+      "samples": 200000
+    },
+    "shipping_density_fraction": 0.0,
+    "shipping_samples": 200000,
+    "shipping_valid_hits": 0,
+    "small_preset_exact_count": {
+      "candidate_space": 128,
+      "n": 7,
+      "preset": "demo",
+      "valid_answers": 8
+    },
+    "strongest_failing_attack": {
+      "attempts": 8,
+      "name": "greedy_single_sweep",
+      "operations": 650240,
+      "successes": 0,
+      "wall_clock_sec": 0.049079
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "all_zero_baseline_ansatz": {
+        "attempts": 8,
+        "operations": 1016,
+        "successes": 0,
+        "wall_clock_sec": 1.3e-05
+      },
+      "greedy_single_sweep": {
+        "attempts": 8,
+        "operations": 650240,
+        "successes": 0,
+        "wall_clock_sec": 0.049079
+      },
+      "outlier_tag_degree": {
+        "attempts": 8,
+        "operations": 15240,
+        "successes": 0,
+        "wall_clock_sec": 0.020577
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "operations": 2048,
+        "successes": 0,
+        "wall_clock_sec": 0.023229
+      },
+      "rhs_majority_ansatz": {
+        "attempts": 8,
+        "operations": 15240,
+        "successes": 0,
+        "wall_clock_sec": 0.022161
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations": 65873,
+      "average_wall_clock_sec": 0.019811,
+      "complexity": "O(2^n*C) clause work in the worst case; the promised XOR subfamily also admits polynomial GF(2) elimination",
+      "literal_checks": 1305994,
+      "name": "DPLL with unit propagation (domain-standard SAT baseline)",
+      "nodes": 64,
+      "operation_unit": "clause scans",
+      "operations": 526991,
+      "promised_polynomial_algorithm": {
+        "average_operations": 1140137,
+        "average_wall_clock_sec": 0.004018,
+        "complexity": "O(e*n^2) elementary bit operations; polynomial",
+        "name": "four-tree XOR recognition plus GF(2) Gaussian elimination",
+        "operation_unit": "scalar bit operations",
+        "operations": 9121096,
+        "ranks": [
+          120,
+          120,
+          120,
+          120,
+          120,
+          120,
+          120,
+          120
+        ],
+        "solves": "8/8, as expected",
+        "wall_clock_sec": 0.032145
+      },
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.158488
+    }
+  },
+  "G7_scales": {
+    "beyond_shipping_cap_clause_trees": 10220,
+    "beyond_shipping_cap_n": 511,
+    "beyond_shipping_cap_verify_reason": "ok",
+    "doubled_clause_trees": 5100,
+    "doubled_verify_reason": "ok",
+    "generator_size_bound": null,
+    "next_supported_n": 255,
+    "pass": true,
+    "shipping_clause_trees": 2540,
+    "shipping_n": 127,
+    "size_ratio": 2.0078740157480315
+  },
+  "G8_canonical_key": {
+    "carried_witness_verifications": 100,
+    "invariance_checks": 100,
+    "invariance_failures": [],
+    "pass": true,
+    "transformations": [
+      "feature renumbering with tags carried",
+      "clause-tree reordering",
+      "literal-test reordering",
+      "global GL(d,2) tag-coordinate transvection",
+      "compositions of the above transformations"
+    ],
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 129,
+    "answer_elements": 127,
+    "answer_token_measure": "conservative upper bound of one token per serialized character",
+    "answer_tokens": 129,
+    "arms": {
+      "bare": {
+        "api_error_calls": 4,
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "api_error_calls": 4,
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "api_error_calls": 4,
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "diagnostic_recorded_not_gated": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "unmeasured_openrouter_http_403_key_limit",
+    "intended_route_execution": {
+      "basis_assignments": 7,
+      "derived_features": 120,
+      "verified": true,
+      "verify_reason": "ok",
+      "wall_clock_sec": 0.005713738035410643,
+      "xor_operations": 240
+    },
+    "intended_route_operations": 240,
+    "pass": true
+  },
+  "all_pass": true,
+  "paper": "arXiv:2010.08281",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "equation_factor": 5,
+    "n": 127
+  },
+  "track": "B"
+}
