@@ -1,0 +1,157 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "attempts": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": {
+        "rejected": true,
+        "reason": "answer is too short: 63 symbols; expected 64"
+      },
+      "swap": {
+        "rejected": true,
+        "reason": "reflection partners of value 16434566661145110050707201556791620420249137782996223515776110602435323737134345336815441313874559412749737815549731786432492884575685194248583050234904169719724762692418495170299448729196400252472503233671590955281968516217465098982330478013581791268159826877919383744303820333494013956965 have different colors"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "answer is too long: 65 symbols; expected 64"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "answer contains invalid symbol 'X'; use only A and B"
+      },
+      "whole_pair_near_miss": {
+        "rejected": true,
+        "reason": "centered power 2 sums differ by -672873201413626385293090995576409264600165903816913476996077577135190738591620614278872610848481165169757595588586042129865299280047349084000353698292580203337945487360537163486965747560163423340559464031245370598795627408298168967187986565881534696733386616240589979984591928810262198369593577161312766973261818589480473792165537193496076857324618498952874220757593171113094853696859799531416998999432732498516513053009836635598136020818067057007575448823673101010316429229959130460922914178981359215844543653332311402200826367197766601945449572126327196745489448479263241443920"
+      }
+    },
+    "distinct_core_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed_equals_answer": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "fraction": 0.0,
+    "search_space": 601080390,
+    "sampling_prior": "uniform over all choices of 16 of the 32 reflection pairs; every candidate has the stated size, closure, and equal first moment",
+    "wall_clock_sec": 42.228191
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_extreme_pair_widths": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 0.00043
+      },
+      "greedy_fourth_moment_balance": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 0.005145
+      },
+      "random_restart_256_pair_halves": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 0.406705
+      },
+      "by_hand_sorted_pair_alternation": {
+        "successes": 0,
+        "attempts": 8,
+        "wall_clock_sec": 0.000344
+      }
+    },
+    "reference_algorithm": {
+      "name": "symmetry-aware meet-in-the-middle on reflection-pair cardinality and centered even moments",
+      "complexity": "O(degree * 2^(P/2)) exact time and O(2^(P/2)) memory for P reflection pairs",
+      "wall_clock_sec": 0.29883,
+      "mean_wall_clock_sec": 0.270038,
+      "operations": 589914,
+      "states": 65536,
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "translation removal and Boolean-cube reconstruction",
+      "max_operations": 127,
+      "solves": "8/8"
+    }
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_exact_solution_count": 2,
+    "shipping_count_seed": 10000,
+    "shipping_solution_density": 3.3273419550419868e-09,
+    "shipping_candidate_space": 601080390,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "demo_exact_solution_count": 2,
+    "baseline_name": "symmetry-aware meet-in-the-middle on reflection-pair cardinality and centered even moments",
+    "baseline_wall_clock_sec": 0.29883,
+    "baseline_operation_count": 589914,
+    "baseline_states": 65536,
+    "random_restart_panel_wall_clock_sec": 0.406705,
+    "random_restart_panel_iterations": 2048,
+    "reference_wall_clock_sec": 0.29883,
+    "reference_operation_count": 589914,
+    "compact_route_max_operations": 127
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 480,
+    "doubled_n": 960,
+    "answer_elements_unchanged": true,
+    "doubled_build_sec": 0.000104,
+    "doubled_verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks_passed": 100,
+    "invariance_checks_total": 100,
+    "carried_certificate_checks_passed": 100,
+    "carried_certificate_checks_total": 100,
+    "unrelated_distinct": 20,
+    "unrelated_total": 20,
+    "symmetries_tested": [
+      "input permutation",
+      "positive integral affine map",
+      "global reflection",
+      "each affine map composed with input permutation"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 1,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 1,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "cap_bound",
+    "diagnostic_complete": true,
+    "answer_chars": 66,
+    "answer_tokens": 17,
+    "answer_elements": 64,
+    "intended_route_operations": 127,
+    "within_caps": true
+  },
+  "all_passed": true
+}
