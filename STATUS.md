@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **214 / 12,167** resolved (1.76%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **215 / 12,167** resolved (1.77%)
 
 | state | count |
 |---|---:|
 | ✅ done | 110 |
-| 🚫 rejected (documented) | 104 |
-| 🔄 in progress | 211 |
+| 🚫 rejected (documented) | 105 |
+| 🔄 in progress | 210 |
 | ⚪ free | 11,742 |
 | **total** | **12,167** |
 
@@ -54,7 +54,7 @@
 | `2302.13657` | GUIJIN SON | 2026-09-05T03:59 |
 | `1304.0278` | GUIJIN SON | 2026-09-05T03:59 |
 | `1507.05605` | GUIJIN SON | 2026-09-05T03:59 |
-| … 171 more | | |
+| … 170 more | | |
 
 ## By family
 
@@ -66,7 +66,7 @@
 | integer equations | 9 | 607 |
 | reconfiguration | 12 | 551 |
 | geometric configurations | 11 | 533 |
-| constraint satisfaction | 10 | 508 |
+| constraint satisfaction | 11 | 508 |
 | algebraic identity solutions | 8 | 398 |
 | algebraic geometric structures | 7 | 299 |
 | schedules and allocations | 6 | 259 |
