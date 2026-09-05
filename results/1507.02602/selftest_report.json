@@ -1,0 +1,162 @@
+{
+  "G1_planted_verifies": {
+    "answer_json_native": true,
+    "attempts": 12,
+    "direct_demo_action_match": true,
+    "explicit_braid_identity_checks": 24,
+    "explicit_involution_checks": 24,
+    "field_prime_checks": {
+      "goldilocks": true,
+      "toy": true
+    },
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop": {
+        "reason": "left polynomial must have exactly two coefficients",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "right polynomial must have exactly two coefficients",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be an object with exactly left and right keys",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "polynomial coefficient is outside the canonical field range",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "left polynomial is not monic affine",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response_recovered": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 128,
+    "exact_probability": 2.938735878424174e-39,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform constants in the two stated monic affine polynomials",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.0581,
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "reference_operation_count": 2057,
+    "reference_wall_clock_sec": 0.000151,
+    "shipping_exact_solution_count": 1,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 2.938735878424174e-39
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "coefficient_magnitude_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.001829
+      },
+      "constant_term_only_greedy": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.001774
+      },
+      "flip_map_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.001811
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.464796
+      },
+      "short_prefix_horner": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.001784
+      }
+    },
+    "intended_compact_route": {
+      "name": "low-degree quotient plus vanishing-factor decomposition",
+      "operations": 109,
+      "solves": "8/8",
+      "wall_clock_sec": 1.4e-05
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n) exact field operations",
+      "name": "two full Horner evaluations of the circulant symbol",
+      "operations": 2057,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.000151
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_doubled": 4,
+    "answer_atoms_shipping": 4,
+    "doubled_build_sec": 0.000742,
+    "doubled_n": 1024,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "reference_operations_doubled": 4105,
+    "reference_operations_shipping": 2057,
+    "shipping_n": 512
+  },
+  "G8_canonical_key": {
+    "invariant_attempts": 140,
+    "invariant_relabellings": 140,
+    "pass": true,
+    "real_transformations_verified": 140,
+    "transformations": [
+      "cyclic coordinate translation",
+      "two nontrivial cyclic-group automorphisms",
+      "coordinate reflection",
+      "automorphisms composed with translations",
+      "a three-way composition of the tested generators"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 65,
+    "answer_elements": 4,
+    "answer_tokens": 17,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 109,
+    "pass": true,
+    "worst_case_answer_chars": 66,
+    "worst_case_answer_tokens": 17
+  },
+  "all_passed": true
+}
