@@ -1,0 +1,161 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "json_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "wrong section count: expected 3, got 2",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "section labels are duplicated",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "every coefficient must be the integer 0 or 1",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "sections are not in constant, linear, quadratic order",
+        "rejected": true
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_sections": 3,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "analytic_probability_upper_bound": 3.7300935591088266e-24,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over the three row-zero-compatible constants and every remaining free coefficient; the fixed diagonal and dependency order are enforced",
+    "structure_aware_space": 140304157183766680147553743940763169886969524125696,
+    "total": 200000,
+    "upper_bound_reason": "a quadratic map is determined by its values at 0, unit vectors, and pair sums, with at most three table choices at each point",
+    "valid_count_upper_bound": 523347633027360537213511521
+  },
+  "G5_density_and_baseline": {
+    "baseline_counted_operations": 474258,
+    "baseline_operation_breakdown": {
+      "interpolation_vector_xors": 145,
+      "offset_vector_xors": 1,
+      "row_center_vector_xors": 2048,
+      "total_counted_operations": 474258,
+      "validated": true,
+      "validation_scalar_operations": 472064
+    },
+    "baseline_wall_seconds": 0.013638,
+    "demo_exact_solution_count": 5,
+    "known_constructed_solutions_lower_bound": 3,
+    "pass": true,
+    "shipping_certificate_space": 140304157183766680147553743940763169886969524125696,
+    "shipping_density_samples": 200000,
+    "shipping_sampled_solution_fraction": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_solution_fraction_upper_bound": 3.7300935591088266e-24
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "domain_matching_then_quadratic_fit": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_target_rank": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_unshifted_center": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_minimum_target": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N (log N)^3) exact operations",
+      "median_operations": 474258,
+      "median_wall_clock_sec": 0.012734,
+      "name": "rowwise-XOR quadratic interpolation with full validation",
+      "operation_definition": "one d-bit vector XOR during recovery, or one scalar GF(2) AND/XOR or table-membership primitive during validation",
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "doubled_dimension": 11,
+    "doubled_free_coefficients": 231,
+    "doubled_language_size": 5054990000090744961500065328816180751306964579226357340206926921728,
+    "doubled_n": 2048,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_dimension": 10,
+    "shipping_free_coefficients": 175,
+    "shipping_language_size": 140304157183766680147553743940763169886969524125696,
+    "shipping_n": 1024
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "invariance_checks": 80,
+    "key_basis": "translation-normalised linear tensor, quadratic tensor, and mask multiset recovered from the unordered table",
+    "pass": true,
+    "transformations": [
+      "row and within-row reordering",
+      "global source XOR translation",
+      "global target XOR translation",
+      "composed source and target translations plus reorderings"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 438,
+    "answer_elements": 178,
+    "answer_tokens": 110,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "evidence_status": "bare, hinted, and placebo transcripts are fresh at the shipping preset; each shipping arm held 0/3",
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 258,
+    "operation_breakdown": {
+      "interpolation_xors": 145,
+      "offset_xor": 1,
+      "selected_row_center_xors": 112
+    },
+    "operation_definition": "one exact XOR of two GF(2)^10 vectors",
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}

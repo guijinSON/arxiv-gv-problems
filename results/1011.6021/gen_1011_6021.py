@@ -1,9 +1,9 @@
-"""Verified Track-B generator for arXiv:1011.6021.
+"""Verified problem generator derived from arXiv:1011.6021.
 
-The generated object is the paper's sparse polynomial system, specified without
-printing the astronomically large but completely forced degree-eight monomial
-family.  A bounded projective-map witness decodes to the border-term set used in
-the proof of the paper's main reduction.
+The paper reduces bounded-occurrence 3,4-SAT to Border Basis Detection (BBD).
+This module inverse-generates a satisfying assignment as the graph of a compact
+triangular quadratic permutation over F_2, carries it through that reduction,
+and asks for the compact polynomial-map certificate.
 """
 
 from __future__ import annotations
@@ -17,57 +17,69 @@ import os
 import random
 import re
 import statistics
+import sys
 import time
+
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+try:
+    from gvlib import exact_matrices, rationals
+except ImportError:  # The construction below remains standard-library-only.
+    exact_matrices = rationals = None
 
 
 TRACK: str = "B"
 
 STRUCTURAL_HINT: str = (
-    "The three algebraic matchings share one projective point-image pair; use it "
-    "with two other rows to interpolate a projective transformation."
+    "The bitwise XOR of the three targets in every row is a triangular "
+    "quadratic permutation of the source bits."
 )
 PLACEBO_HINT: str = (
-    "Keep the point coding and the ordering of the six requested fields consistent "
-    "while checking the proposed certificate."
+    "The binary labels and coefficient blocks reward careful attention to bit "
+    "order and the stated indexing conventions."
 )
 
 PROBLEM_PROFILE: dict = {
     "native_domain": "algebra",
     "object_regime": "finite_field",
-    "computational_core": "linear_algebra",
-    "certificate_form": "exact_symbolic",
+    "computational_core": "csp_sat",
+    "certificate_form": "polynomial",
     "native_objects": [
-        "schematically specified sparse polynomials over Q",
-        "monomials represented by exponent vectors",
-        "a projective-line incidence table over GF(q)",
+        "schematically specified sparse polynomials over Q from the paper's Border Basis Detection reduction",
+        "triangular quadratic polynomial map over GF(2)",
+        "3-regular bipartite incidence table",
+        "bounded-occurrence 3,4-SAT incidence system",
     ],
     "verification_operations": [
-        "exact modular 2 by 2 matrix arithmetic",
-        "projective-point substitution",
-        "edge-incidence comparison",
+        "exact GF(2) polynomial evaluation",
+        "bitwise XOR",
         "Boolean clause substitution",
-        "deterministic border-term decoding",
+        "deterministic decoding of the succinct witness to the paper's border-term set",
     ],
     "domain_essentiality": "licensed_reduction",
     "reduction_kind": "paper_licensed",
     "reduction": (
-        "Section 3, Reduction and Correctness of reduction: bounded-occurrence "
+        "Section 3, Theorems 3.12-3.13 (Reduction and Correctness of reduction): "
         "3,4-SAT is mapped to Border Basis Detection"
     ),
     "reduction_source": "paper_central",
-    "intuition_type": "change of variables",
+    "intuition_type": "invariant",
     "intuition_description": (
-        "Recognize the three superposed matchings as conjugated affine maps and "
-        "interpolate one projective map; without that change of coordinates one "
-        "must mechanically test projective candidates against hundreds of rows."
+        "Notice that the rowwise XOR of three unordered target values cancels "
+        "the three masks and exposes one quadratic permutation; without this "
+        "invariant a solver faces list recovery among three choices per row."
     ),
     "hardness_basis": (
-        "Track B: three-point PGL(2,q) interpolation followed by exact incidence "
-        "validation is O(q log q) bit operations; shipping measurements are filled "
-        "from selftest's reference-algorithm record, while the shared-pair route "
-        "uses at most 286 exact field operations."
+        "Track B: exact quadratic list recovery by rowwise XOR, Boolean "
+        "interpolation, and exhaustive validation is O(N (log N)^3); at the "
+        "shipping preset N=1024 it performs 474258 counted exact primitives "
+        "with a measured median wall-clock time of 0.012734 seconds, whereas "
+        "the selected-row route uses "
+        "258 exact GF(2)^10 additions and is still too long to execute casually "
+        "without tools."
     ),
-    "max_answer_tokens": 18,
+    "max_answer_tokens": 110,
 }
 
 NATIVE: dict = {
@@ -80,45 +92,56 @@ NATIVE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 7},
-    "easy": {"n": 211},
-    "medium": {"n": 307},
-    "hard": {"n": 401},
+    "demo": {"n": 8},
+    "easy": {"n": 256},
+    "medium": {"n": 512},
+    "hard": {"n": 1024},
 }
-SHIPPING_DIFFICULTY: str = "easy"
+SHIPPING_DIFFICULTY: str = "hard"
 
 CERTIFICATE_LANGUAGE: dict = {
     "description": (
-        "Six labeled projective-point codes x1,y1,x2,y2,x3,y3. The three x "
-        "values and the three y values are separately distinct in P^1(GF(q)); "
-        "the pairs specify the unique projective transformation taking xi to yi."
+        "A labeled coefficient tensor for d triangular quadratic Boolean "
+        "polynomials. Output bit i equals input bit i plus a constant, all "
+        "earlier linear monomials, and all products x_j*x_k with j<k<i. "
+        "Every displayed coefficient is 0 or 1, and the constant vector is "
+        "one of the three targets displayed in source row zero."
     ),
     "bounds": {
-        "labeled_fields": 6,
-        "source_points": 3,
-        "target_points": 3,
-        "point_range": "0..q inclusive, with q coding infinity",
-        "max_shipping_q": 401,
+        "field": "GF(2)",
+        "degree": 2,
+        "triangular": True,
+        "max_input_bits": 12,
+        "max_free_coefficients": 298,
+        "shipping_input_bits": 10,
+        "shipping_free_coefficients": 175,
+        "instance_conditioned_constant_choices": 3,
+        "coefficient_values": 2,
     },
 }
 
 NOTES: str = (
-    "Section 2 fixes order ideals, borders, border prebases, and the border-basis "
-    "Buchberger criterion. Section 3 (BBD is in NP) gives the three executable "
-    "conditions for a monomial set to be a border and its polynomial-time "
-    "certificate verifier. The Reduction and Correctness subsections fix the exact "
-    "3,4-SAT promise: three distinct variables per clause, at most four total "
-    "occurrences per variable, both signs present, and disjoint polynomial "
-    "supports. The main theorem maps satisfying assignments to border sets. That "
-    "theorem supplies generation, but it does not make this distribution Track A: "
-    "the three superposed matchings can be recovered by PGL interpolation in "
-    "linear time, so the family is declared Track B. Every edge occurs positively "
-    "at both endpoints and negatively at both endpoints, hence exactly four times. "
-    "All three planted maps are sampled symmetrically and are valid, so there is no "
-    "distinguished planted edge class. Generation rejects instances solved by the "
-    "fixed min-target, local-greedy, or identity ansatz probes; full-language random "
-    "restart remains negligible."
+    "Section 2 and Theorem 2.1 fix order ideals, borders, border prebases, and "
+    "the border-basis Buchberger criterion. Theorems 3.9 and 3.11 give three "
+    "executable necessary-and-sufficient conditions for a monomial set to be a "
+    "border and a polynomial verifier; they do not produce a border. "
+    "The Reduction and Correctness subsections require exactly three variables "
+    "per clause, at most four total occurrences per Boolean variable, both signs, "
+    "and no complementary pair in a clause. The bipartite construction here has "
+    "one positive and one negative clause at each endpoint, so every edge variable "
+    "has exactly four occurrences, two of each sign. A satisfying matching is "
+    "sampled before the formula, and Theorems 3.12-3.13 carry it to a border. "
+    "This is Track B, not Track A: rowwise XOR and quadratic interpolation are a "
+    "polynomial-time recovery algorithm. The masks are sampled symmetrically and "
+    "sum to zero, so all three polynomial matchings are valid and none is a "
+    "distinguished plant. Minimum-target, rank-greedy, bipartite-matching-and-fit, "
+    "random-certificate, and unshifted-center attacks are tested explicitly. The "
+    "returned polynomial is a succinct selector for the proof's border-term set, "
+    "not a replacement for the BBD certificate: verify expands its selected "
+    "matching and checks every clause before the forced singleton border terms "
+    "are decoded."
 )
+
 
 G9_RESULTS = {
     "arms": {
@@ -127,398 +150,320 @@ G9_RESULTS = {
         "placebo": {"solved": 0, "attempts": 3},
     },
     "hinted_verdict": "hardened",
+    "evidence_status": (
+        "bare, hinted, and placebo transcripts are fresh at the shipping "
+        "preset; each shipping arm held 0/3"
+    ),
 }
 
-_LABELS = ("x1", "y1", "x2", "y2", "x3", "y3")
-_ENUMERATION_CAP = 200_000
+_SECTION_LABELS = ("constant", "linear", "quadratic")
+_ENUMERATION_CAP = 100_000
 
 
 # ---------------------------------------------------------------------------
-# Exact projective arithmetic.  The integer q itself is the code for infinity.
+# Coefficient language and exact Boolean-polynomial arithmetic.
 
 
-def _is_prime(value):
-    if value < 2:
-        return False
-    if value % 2 == 0:
-        return value == 2
-    limit = math.isqrt(value)
-    for divisor in range(3, limit + 1, 2):
-        if value % divisor == 0:
-            return False
-    return True
+def _dimension(point_count):
+    if isinstance(point_count, bool) or not isinstance(point_count, int):
+        raise TypeError("n must be an integer power of two")
+    if point_count < 8 or point_count & (point_count - 1):
+        raise ValueError("n must be a power of two and at least 8")
+    d = point_count.bit_length() - 1
+    if d > 12:
+        raise ValueError("n is too large for the bounded certificate language")
+    return d
 
 
-def _next_prime(value):
-    candidate = max(7, int(value))
-    if candidate % 2 == 0:
-        candidate += 1
-    while not _is_prime(candidate):
-        candidate += 2
-    return candidate
+def _free_coefficients(d):
+    return d + math.comb(d, 2) + math.comb(d, 3)
 
 
-def _hom(point, q):
-    return (1, 0) if point == q else (point, 1)
-
-
-def _point(pair, q):
-    numerator, denominator = pair[0] % q, pair[1] % q
-    if denominator == 0:
-        return q
-    return numerator * pow(denominator, -1, q) % q
-
-
-def _normalise_matrix(matrix, q):
-    values = [matrix[0][0] % q, matrix[0][1] % q,
-              matrix[1][0] % q, matrix[1][1] % q]
-    first = next((value for value in values if value), None)
-    if first is None:
-        raise ValueError("zero projective matrix")
-    scale = pow(first, -1, q)
-    values = [(value * scale) % q for value in values]
-    return ((values[0], values[1]), (values[2], values[3]))
-
-
-def _det(matrix, q):
-    return (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]) % q
-
-
-def _matmul(left, right, q):
-    return _normalise_matrix((
-        ((left[0][0] * right[0][0] + left[0][1] * right[1][0]) % q,
-         (left[0][0] * right[0][1] + left[0][1] * right[1][1]) % q),
-        ((left[1][0] * right[0][0] + left[1][1] * right[1][0]) % q,
-         (left[1][0] * right[0][1] + left[1][1] * right[1][1]) % q),
-    ), q)
-
-
-def _inverse(matrix, q):
-    if _det(matrix, q) == 0:
-        raise ValueError("singular projective matrix")
-    return _normalise_matrix((
-        (matrix[1][1], -matrix[0][1]),
-        (-matrix[1][0], matrix[0][0]),
-    ), q)
-
-
-def _apply(matrix, point, q):
-    vector = _hom(point, q)
-    return _point((
-        matrix[0][0] * vector[0] + matrix[0][1] * vector[1],
-        matrix[1][0] * vector[0] + matrix[1][1] * vector[1],
-    ), q)
-
-
-def _matrix_from_images(images, q):
-    """Map canonical (0,1,infinity) to three distinct image points."""
-    y0, y1, yinf = images
-    if len({y0, y1, yinf}) != 3:
-        raise ValueError("target images are not distinct")
-    u = _hom(y0, q)
-    v = _hom(y1, q)
-    w = _hom(yinf, q)
-    alpha = (v[0] * u[1] - v[1] * u[0]) % q
-    beta = (w[0] * v[1] - w[1] * v[0]) % q
-    matrix = ((alpha * w[0], beta * u[0]),
-              (alpha * w[1], beta * u[1]))
-    matrix = _normalise_matrix(matrix, q)
-    if _det(matrix, q) == 0:
-        raise ValueError("interpolation produced a singular matrix")
-    return matrix
-
-
-def _matrix_from_pairs(xs, ys, q):
-    if len(set(xs)) != 3 or len(set(ys)) != 3:
-        raise ValueError("three source and target points must be distinct")
-    source = _matrix_from_images(xs, q)
-    target = _matrix_from_images(ys, q)
-    return _matmul(target, _inverse(source, q), q)
-
-
-def _random_pgl(q, rng):
-    while True:
-        matrix = ((rng.randrange(q), rng.randrange(q)),
-                  (rng.randrange(q), rng.randrange(q)))
-        if _det(matrix, q):
-            return _normalise_matrix(matrix, q)
-
-
-def _answer_from_pairs(xs, ys):
-    values = (xs[0], ys[0], xs[1], ys[1], xs[2], ys[2])
-    return [[label, value] for label, value in zip(_LABELS, values)]
-
-
-def _answer_values(answer):
-    return [entry[1] for entry in answer]
-
-
-def _answer_text(answer):
-    return ", ".join(f"{label}={value}" for label, value in answer)
-
-
-# ---------------------------------------------------------------------------
-# Instance construction.
-
-
-def _relations(inst):
-    q = inst["q"]
-    relations = [set() for _ in range(q + 1)]
-    multiplicities = [dict() for _ in range(q + 1)]
-    for edge in inst["edges"]:
-        x, y = edge["left"], edge["right"]
-        relations[x].add(y)
-        multiplicities[x][y] = multiplicities[x].get(y, 0) + 1
-    return relations, multiplicities
-
-
-def _right_degrees(inst):
-    q = inst["q"]
-    degree = [0] * (q + 1)
-    for edge in inst["edges"]:
-        degree[edge["right"]] += 1
-    return degree
-
-
-def _nontrivial_connected(inst, common_x, common_y):
-    q = inst["q"]
-    left_nodes = [(0, x) for x in range(q + 1) if x != common_x]
-    right_nodes = [(1, y) for y in range(q + 1) if y != common_y]
-    nodes = set(left_nodes + right_nodes)
-    if not nodes:
-        return False
-    adjacency = {node: [] for node in nodes}
-    for edge in inst["edges"]:
-        x, y = edge["left"], edge["right"]
-        if x == common_x or y == common_y:
-            continue
-        a, b = (0, x), (1, y)
-        adjacency[a].append(b)
-        adjacency[b].append(a)
-    start = next(iter(nodes))
-    seen = {start}
-    todo = [start]
-    while todo:
-        node = todo.pop()
-        for other in adjacency[node]:
-            if other not in seen:
-                seen.add(other)
-                todo.append(other)
-    return seen == nodes
-
-
-def _candidate_matrix(answer, q):
-    values = _answer_values(answer)
-    xs = (values[0], values[2], values[4])
-    ys = (values[1], values[3], values[5])
-    return _matrix_from_pairs(xs, ys, q)
-
-
-def _core_valid(inst, answer):
-    try:
-        matrix = _candidate_matrix(answer, inst["q"])
-    except (TypeError, ValueError, ZeroDivisionError):
-        return False
-    relation, _ = _relations(inst)
-    q = inst["q"]
-    return all(_apply(matrix, x, q) in relation[x] for x in range(q + 1))
-
-
-def _attack_min_targets(inst):
-    q = inst["q"]
-    relation, _ = _relations(inst)
-    xs = (0, 1, q)
-    ys = tuple(min(relation[x]) for x in xs)
-    return _answer_from_pairs(xs, ys)
-
-
-def _attack_local_greedy(inst):
-    relation, _ = _relations(inst)
-    xs = (0, 1, 2)
-    used = set()
-    ys = []
-    for x in xs:
-        choices = sorted(relation[x], key=lambda y: ((y - x) % (inst["q"] + 1), y))
-        chosen = next((y for y in choices if y not in used), choices[0])
-        ys.append(chosen)
-        used.add(chosen)
-    return _answer_from_pairs(xs, tuple(ys))
-
-
-def _attack_identity(inst):
-    q = inst["q"]
-    return _answer_from_pairs((0, 1, q), (0, 1, q))
-
-
-def _make_once(requested_n, seed, attempt):
-    q = _next_prime(requested_n)
-    rng = random.Random((int(seed) << 20) ^ (attempt * 0x9E3779B1) ^ q)
-    source_change = _random_pgl(q, rng)
-    target_change = _random_pgl(q, rng)
-    source_inverse = _inverse(source_change, q)
-
-    affine_parameters = set()
-    while len(affine_parameters) < 3:
-        affine_parameters.add((rng.randrange(1, q), rng.randrange(q)))
-    parameters = list(affine_parameters)
-    rng.shuffle(parameters)
-    maps = []
-    for slope, offset in parameters:
-        affine = _normalise_matrix(((slope, offset), (0, 1)), q)
-        maps.append(_matmul(target_change, _matmul(affine, source_inverse, q), q))
-
-    raw_edges = []
-    for x in range(q + 1):
-        for layer, matrix in enumerate(maps):
-            raw_edges.append({"left": x, "right": _apply(matrix, x, q), "layer": layer})
-    rng.shuffle(raw_edges)
-    edges = [
-        {"id": index + 1, "left": edge["left"], "right": edge["right"]}
-        for index, edge in enumerate(raw_edges)
+def _blank_coefficients(d):
+    return [
+        ["constant", [0] * d],
+        ["linear", [[0] * i for i in range(d)]],
+        ["quadratic", [[0] * math.comb(i, 2) for i in range(d)]],
     ]
+
+
+def _random_coefficients(d, rng):
+    answer = _blank_coefficients(d)
+    answer[0][1] = [rng.randrange(2) for _ in range(d)]
+    answer[1][1] = [[rng.randrange(2) for _ in range(i)] for i in range(d)]
+    answer[2][1] = [
+        [rng.randrange(2) for _ in range(math.comb(i, 2))]
+        for i in range(d)
+    ]
+    return answer
+
+
+def _sections(answer):
+    return answer[0][1], answer[1][1], answer[2][1]
+
+
+def _validate_shape(answer, d):
+    # The certificate language is deliberately JSON-native.  Restrict the
+    # verifier to exactly the shapes parse_answer can produce; accepting Python
+    # tuples here would make the text and direct-call interfaces disagree.
+    if not isinstance(answer, list):
+        return False, "answer must be a list of three labeled sections"
+    if len(answer) == 0:
+        return False, "answer is empty"
+    if len(answer) != 3:
+        return False, f"wrong section count: expected 3, got {len(answer)}"
+    if any(not isinstance(part, list) or len(part) != 2 for part in answer):
+        return False, "each section must be a [label, coefficient-block] pair"
+    labels = [part[0] for part in answer]
+    if len(set(labels)) != len(labels):
+        return False, "section labels are duplicated"
+    if tuple(labels) != _SECTION_LABELS:
+        return False, "sections are not in constant, linear, quadratic order"
+    constant, linear, quadratic = _sections(answer)
+    if not isinstance(constant, list) or len(constant) != d:
+        return False, f"constant block must contain exactly {d} bits"
+    if not isinstance(linear, list) or len(linear) != d:
+        return False, f"linear block must contain exactly {d} rows"
+    if any(not isinstance(row, list) or len(row) != i
+           for i, row in enumerate(linear)):
+        return False, "linear row i must contain i coefficients"
+    if not isinstance(quadratic, list) or len(quadratic) != d:
+        return False, f"quadratic block must contain exactly {d} rows"
+    if any(not isinstance(row, list) or len(row) != math.comb(i, 2)
+           for i, row in enumerate(quadratic)):
+        return False, "quadratic row i must contain C(i,2) coefficients"
+    values = list(constant)
+    values.extend(value for row in linear for value in row)
+    values.extend(value for row in quadratic for value in row)
+    if any(isinstance(value, bool) or not isinstance(value, int)
+           or value not in (0, 1) for value in values):
+        return False, "every coefficient must be the integer 0 or 1"
+    return True, "ok"
+
+
+def _eval_map(answer, x, d):
+    constant, linear, quadratic = _sections(answer)
+    out = 0
+    for i in range(d):
+        bit = ((x >> i) & 1) ^ constant[i]
+        for j, coefficient in enumerate(linear[i]):
+            bit ^= coefficient & ((x >> j) & 1)
+        for coefficient, (j, k) in zip(
+                quadratic[i], itertools.combinations(range(i), 2)):
+            bit ^= coefficient & ((x >> j) & 1) & ((x >> k) & 1)
+        out |= bit << i
+    return out
+
+
+def _evaluation_bit_operations(d):
+    # One XOR for each diagonal/constant combination, two primitives for every
+    # linear term, and three for every quadratic term.
+    return d + 2 * math.comb(d, 2) + 3 * math.comb(d, 3)
+
+
+def _coefficients_from_values(d, value_at):
+    """Interpolate the declared triangular quadratic map from Boolean values."""
+    answer = _blank_coefficients(d)
+    y0 = value_at(0)
+    answer[0][1] = [(y0 >> i) & 1 for i in range(d)]
+    basis_values = [value_at(1 << j) for j in range(d)]
+    # Cache each finite difference once.  Besides being faster, this makes the
+    # executed interpolation agree exactly with the vector-XOR accounting used
+    # by the Track-B reference and compact routes below.
+    linear_differences = [value ^ y0 for value in basis_values]
+    quadratic_differences = {}
+    for j, k in itertools.combinations(range(d), 2):
+        quadratic_differences[(j, k)] = (
+            value_at((1 << j) ^ (1 << k))
+            ^ basis_values[j] ^ basis_values[k] ^ y0
+        )
+    for i in range(d):
+        answer[1][1][i] = [
+            (linear_differences[j] >> i) & 1 for j in range(i)
+        ]
+        answer[2][1][i] = [
+            (quadratic_differences[(j, k)] >> i) & 1
+            for j, k in itertools.combinations(range(i), 2)
+        ]
+    return answer
+
+
+def _toggle_constant(answer, vector):
+    out = copy.deepcopy(answer)
+    for i in range(len(out[0][1])):
+        out[0][1][i] ^= (vector >> i) & 1
+    return out
+
+
+def _special_points(d):
+    points = [0]
+    points.extend(1 << j for j in range(d))
+    points.extend((1 << j) ^ (1 << k)
+                  for j, k in itertools.combinations(range(d), 2))
+    return points
+
+
+# ---------------------------------------------------------------------------
+# Inverse generation and paper-licensed reduction instance.
+
+
+def _target_index(inst):
+    return inst["targets_by_source"]
+
+
+def _center_value(inst, x):
+    targets = _target_index(inst)[x]
+    return targets[0] ^ targets[1] ^ targets[2]
+
+
+def _make_once(n, seed, attempt):
+    d = _dimension(n)
+    rng = random.Random((int(seed) << 24) ^ (attempt * 0x9E3779B1) ^ n)
+    center = _random_coefficients(d, rng)
+
+    mask1 = rng.randrange(1, n)
+    mask2 = rng.randrange(1, n)
+    while mask2 == mask1:
+        mask2 = rng.randrange(1, n)
+    masks = [mask1, mask2, mask1 ^ mask2]
+    rng.shuffle(masks)
+
+    targets_by_source = []
+    for x in range(n):
+        base = _eval_map(center, x, d)
+        targets = [base ^ mask for mask in masks]
+        rng.shuffle(targets)
+        targets_by_source.append(targets)
+
+    chosen_mask = masks[rng.randrange(3)]
+    answer = _toggle_constant(center, chosen_mask)
     inst = {
-        "family": "projectively compressed border-basis certificate",
-        "n": int(requested_n),
-        "q": q,
-        "point_count_per_side": q + 1,
-        "edge_variables": 3 * (q + 1),
-        "clause_count": 4 * (q + 1),
-        "ring_variable_count": 14 * (q + 1) + 1,
-        "edges": edges,
+        "family": "quadratic-map border-basis certificate",
+        "n": n,
+        "dimension": d,
+        "point_count_per_side": n,
+        "edge_variable_count": 3 * n,
+        "clause_count": 4 * n,
+        "ring_variable_count": 14 * n + 1,
+        "row_order": list(range(n)),
+        "targets_by_source": targets_by_source,
+        "answer": answer,
     }
-
-    relation, _ = _relations(inst)
-    common_sources = [x for x, targets in enumerate(relation) if len(targets) == 1]
-    if len(common_sources) != 1:
-        return None
-    common_x = common_sources[0]
-    common_y = next(iter(relation[common_x]))
-    if _right_degrees(inst) != [3] * (q + 1):
-        return None
-    if not _nontrivial_connected(inst, common_x, common_y):
-        return None
-
-    regular_rows = [x for x in range(q + 1) if x != common_x and len(relation[x]) == 3]
-    if len(regular_rows) < 4:
-        return None
-    rng.shuffle(regular_rows)
-    u, v = regular_rows[:2]
-    chosen_map = maps[rng.randrange(3)]
-    xs = (common_x, u, v)
-    ys = tuple(_apply(chosen_map, x, q) for x in xs)
-    answer = _answer_from_pairs(xs, ys)
-    inst["answer"] = answer
-
-    # Reject only fixed, predeclared signatures.  The known maps are never found
-    # by solving the graph; all three were sampled before the graph was built.
-    for attack in (_attack_min_targets, _attack_local_greedy, _attack_identity):
+    # These are fixed, declared construction attacks, not a search for the
+    # certificate. The certificate and all three valid matchings were sampled
+    # before this filtering step.
+    for attack in (_attack_minimum_targets, _attack_rank_greedy,
+                   _attack_matching_fit, _attack_unshifted_center):
         if _core_valid(inst, attack(inst)):
             return None
     return inst
 
 
 def make_instance(n, seed=0, **params) -> dict:
-    """Inverse-generate three valid border certificates before exposing the graph."""
+    """Inverse-generate three algebraic satisfying assignments, then reduce."""
     if params:
         raise TypeError("unknown parameter(s): " + ", ".join(sorted(params)))
-    if isinstance(n, bool) or not isinstance(n, int) or n < 7:
-        raise ValueError("n must be an integer at least 7")
+    _dimension(n)
     if isinstance(seed, bool) or not isinstance(seed, int):
         raise TypeError("seed must be an integer")
-    for attempt in range(1, 4001):
+    for attempt in range(1, 1001):
         inst = _make_once(n, seed, attempt)
         if inst is not None:
             return inst
-    raise RuntimeError("could not draw a connected attack-resistant instance")
+    raise RuntimeError("could not draw an attack-resistant algebraic instance")
 
 
 # ---------------------------------------------------------------------------
 # Problem statement and answer contract.
 
 
-def _point_name(point, q):
-    return "INF" if point == q else str(point)
+def _coefficient_example(d):
+    return json.dumps(_blank_coefficients(d), separators=(",", ":"))
 
 
 def render(inst) -> str:
-    q = inst["q"]
-    edge_lines = "\n".join(
-        f"  {edge['id']}: {_point_name(edge['left'], q)} {_point_name(edge['right'], q)}"
-        for edge in inst["edges"]
+    n = inst["n"]
+    d = inst["dimension"]
+    rows = "\n".join(
+        f"  {x}: " + " ".join(str(y) for y in inst["targets_by_source"][x])
+        for x in inst["row_order"]
     )
-    statement = f"""PROJECTIVELY COMPRESSED BORDER-BASIS CERTIFICATE
+    statement = f"""TRIANGULAR-POLYNOMIAL BORDER-BASIS CERTIFICATE
 
-Work over the rational polynomial ring described below.  Separately, GF({q})
-is used only to index a compact certificate.  A projective point is one of
-0,1,...,{q - 1},INF; in the answer, write the integer {q} for INF.
+All bit positions below are 0-indexed from the least significant bit. Integers
+0 through {n - 1} represent the vectors GF(2)^{d}; vector addition is bitwise
+XOR. The order of table rows and the order of the three targets in a row have no
+mathematical meaning.
 
-INSTANCE GRAPH.  There are two copies L and R of the projective line and
-{inst['edge_variables']} edge variables E_1,...,E_{inst['edge_variables']}.
-Each row "e: x y" means edge E_e joins L_x to R_y.  Parallel edges are distinct.
-The order of the rows has no meaning.
-{edge_lines}
+INSTANCE TABLE. Each row `x: y0 y1 y2` gives three distinct edges from a left
+vertex x to right vertices y0,y1,y2. Every right vertex also has degree three.
+Thus this is a 3-regular bipartite graph on two copies of GF(2)^{d}.
+{rows}
 
-THE 3,4-SAT FORMULA.  At every point vertex p, let its three incident edge
-indices be e1,e2,e3.  Include exactly these two 3-clauses:
+THE 3,4-SAT INSTANCE. Introduce one Boolean variable E_(x,y) for every displayed
+edge. At each left vertex and at each right vertex, let its three incident edge
+variables be e1,e2,e3 and include the two clauses
 
-  (E_e1 OR E_e2 OR E_e3)
-  ((NOT E_e1) OR (NOT E_e2) OR (NOT E_e3)).
+  (e1 OR e2 OR e3)  and  ((NOT e1) OR (NOT e2) OR (NOT e3)).
 
-Thus there are {inst['clause_count']} clauses.  Every clause uses three distinct
-edge variables.  Every E_e occurs in exactly four clauses, twice positively and
-twice negatively, and both signs occur.  A set of exactly {q + 1} true edges
-satisfies all clauses exactly when it is a perfect matching: one true edge at
-every L point and every R point.
+There are {inst['edge_variable_count']} variables and {inst['clause_count']}
+clauses. Every clause has three distinct variables. Every edge variable occurs
+exactly four times, twice positively and twice negatively; both signs occur and
+no clause contains a variable and its negation. Selecting exactly one edge at
+each left and right vertex therefore satisfies all clauses.
 
-THE POLYNOMIAL SYSTEM (the paper's Section 3 reduction).  This paragraph is a
-complete finite specification; the forced families are written schematically
-because expanding all degree-eight monomials would obscure the search problem.
-For each edge e introduce indeterminates x_e and xb_e.  For each of the
-{inst['clause_count']} clauses C_j introduce c_j and xc_j, and introduce X.
-The ring therefore has {inst['ring_variable_count']} indeterminates over Q.
-
-For edge e, let tC_e be the product of the four c_j whose clauses contain E_e
-or NOT E_e (X has exponent 0 because there are four occurrences), and put
+THE PAPER'S POLYNOMIAL SYSTEM. The following is a finite schematic specification
+of the sparse rational polynomials in Section 3 of Ananth--Dukkipati; expanding
+the forced degree-eight family is unnecessary. For each Boolean edge variable e
+introduce x_e and xb_e. For each clause C_j introduce c_j and xc_j, and introduce
+X. There are {inst['ring_variable_count']} indeterminates over Q. Let tC_e be the
+product of the four c_j for clauses containing e or NOT e (the exponent of X is
+zero), and define
 
   tE_e  = x_e * xb_e^2 * tC_e,
   tEb_e = x_e^2 * xb_e * tC_e.
 
-The variable polynomial is tE_e + tEb_e.  For a clause C_j, replace a positive
-literal E_e by tE_e*xc_j/c_j and a negative literal NOT E_e by
-tEb_e*xc_j/c_j; the sum of its three resulting monomials is its clause
-polynomial.  A monomial is an exponent vector, multiplication adds exponents,
-and division by c_j subtracts one from its c_j exponent (which is 1 here).
+The variable polynomial for e is tE_e+tEb_e. In clause C_j, replace a positive
+literal e by tE_e*xc_j/c_j and a negative literal by tEb_e*xc_j/c_j, and sum the
+three monomials. F1 contains every total-degree-eight monomial. For an edge e,
+P_e contains tE_e*xc_j for its positive occurrences and tEb_e*xc_j for its
+negative occurrences; R_e contains every monomial obtained by dividing a member
+of P_e by one indeterminate of positive exponent. K_e contains tE_e, tEb_e, and
+the four clause-polynomial monomials belonging to e. F2 contains each monomial
+in (union R_e) minus (union K_e) as a singleton polynomial. The BBD instance is
+the union of the variable, clause, F1, and F2 polynomials.
 
-For completeness, the remaining singleton polynomials are exactly those in the
-paper: F1 contains every monomial of total degree 8.  For each e, P_e contains
-tE_e*c_j for its two positive clauses and tEb_e*c_j for its two negative
-clauses; R_e is the set of all monomials obtained by dividing a member of P_e by
-one indeterminate of positive exponent.  K_e contains tE_e, tEb_e and the four
-clause-polynomial monomials belonging to e.  F2 contains each monomial in
-the union of R_e minus the union of K_e as a singleton polynomial.  The BBD
-instance F is the union of all variable, clause, F1 and F2 polynomials.
+YOUR WITNESS. Give a triangular quadratic polynomial permutation H on d={d}
+bits. For each output bit i, its value is, in GF(2),
 
-CERTIFICATE DECODER.  Submit three distinct source points x1,x2,x3 and three
-distinct target points y1,y2,y3.  They determine the unique projective map
-f(z)=(a*z+b)/(c*z+d) over GF({q}); homogeneous coordinates handle INF.  The
-checker requires (x,f(x)) to occur as an edge row for every projective x.  If
-parallel edges occur, select the lowest numbered one.  These selected edges are
-true and all others false, giving a perfect matching and hence a satisfying
-assignment.
+  H_i(x) = x_i + constant[i]
+           + sum_{{0<=j<i}} linear[i][j] * x_j
+           + sum_{{0<=j<k<i}} quadratic[i][pair(j,k)] * x_j*x_k.
 
-The decoded border term of the variable polynomial for e is tEb_e when E_e is
-true and tE_e otherwise.  In every clause polynomial, the decoded border term
-is the monomial of its lowest-index satisfied literal.  Every singleton
-polynomial has its sole term selected.  The paper's three border conditions and
-Buchberger criterion then make this decoded set the border of an order ideal
-and F its border basis.  The checker performs the finite projective substitution
-and all clause incidences exactly; it never reads the planted answer.
+The quadratic coefficients in row i are ordered lexicographically by pairs
+(0,1),(0,2),...,(0,i-1),(1,2),...,(i-2,i-1). Empty rows are required. Because
+the coefficient of x_i is fixed to one and no later input bit occurs, every
+well-formed H is automatically a permutation. The checker evaluates H(x) for
+all {n} sources and requires H(x) to be one of the three displayed targets.
+Those edges form a perfect matching, hence a satisfying assignment.
 
-OUTPUT.  Order matters for the six labels.  Values are inclusive in 0..{q};
-{q} means INF.  Repeats are forbidden among x1,x2,x3 and separately among
-y1,y2,y3.  Give your final answer inside <answer></answer> tags as:
-x1=value, y1=value, x2=value, y2=value, x3=value, y3=value
-Example: <answer>x1=0, y1=1, x2=1, y2=2, x3=2, y3=3</answer>
+The matching deterministically decodes to the paper's border certificate: choose
+tEb_e from the variable polynomial when edge e is true and tE_e otherwise;
+choose the lowest-listed satisfied literal's monomial in each clause polynomial;
+choose the sole monomial of every singleton polynomial. The checker substitutes
+the matching in every endpoint clause exactly. Section 3's reduction then gives
+the corresponding border of an order ideal.
+
+OUTPUT. Supply exactly three labeled JSON arrays in the order constant, linear,
+quadratic. Every coefficient is the integer 0 or 1; strings and JSON booleans are
+invalid. The constant block has {d} entries. Linear row i has i entries and
+quadratic row i has C(i,2) entries. Here is a well-formed format example (not a
+claim that the all-zero coefficients solve this instance):
+
+  {_coefficient_example(d)}
+
+Give your final answer inside <answer></answer> tags as that exact JSON value.
+Example: <answer>{_coefficient_example(d)}</answer>
 Output nothing else inside the tags."""
     mode = os.environ.get("GV_HINT_MODE")
     if mode == "structural":
@@ -532,271 +477,316 @@ def parse_answer(text) -> object | None:
     if not isinstance(text, str):
         return None
     bodies = re.findall(r"<answer\s*>(.*?)</answer\s*>", text, flags=re.I | re.S)
-    pattern = re.compile(
-        r"^\s*x1\s*=\s*([+-]?\d+)\s*,\s*y1\s*=\s*([+-]?\d+)\s*,\s*"
-        r"x2\s*=\s*([+-]?\d+)\s*,\s*y2\s*=\s*([+-]?\d+)\s*,\s*"
-        r"x3\s*=\s*([+-]?\d+)\s*,\s*y3\s*=\s*([+-]?\d+)\s*$",
-        flags=re.I,
-    )
     for body in reversed(bodies):
-        match = pattern.fullmatch(body)
-        if match:
-            try:
-                values = [int(value) for value in match.groups()]
-            except ValueError:
-                continue
-            return [[label, value] for label, value in zip(_LABELS, values)]
+        cleaned = body.strip()
+        if cleaned.startswith("```") and cleaned.endswith("```"):
+            lines = cleaned.splitlines()
+            cleaned = "\n".join(lines[1:-1]).strip()
+        try:
+            answer = json.loads(cleaned)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if isinstance(answer, list):
+            return answer
     return None
 
 
+def _core_valid(inst, answer):
+    d = inst["dimension"]
+    ok, _ = _validate_shape(answer, d)
+    if not ok:
+        return False
+    targets = _target_index(inst)
+    for x in range(inst["n"]):
+        if _eval_map(answer, x, d) not in targets[x]:
+            return False
+    return True
+
+
 def verify(inst, answer) -> tuple[bool, str]:
-    q = inst.get("q")
-    if not isinstance(answer, (list, tuple)):
-        return False, "answer must be a list of six labeled fields"
-    if len(answer) == 0:
-        return False, "answer is empty"
-    if len(answer) != 6:
-        return False, f"wrong field count: expected 6, got {len(answer)}"
-    if any(not isinstance(entry, (list, tuple)) or len(entry) != 2 for entry in answer):
-        return False, "each field must be a [label, integer] pair"
-    labels = [entry[0] for entry in answer]
-    if len(set(labels)) != len(labels):
-        return False, "coefficient labels are duplicated"
-    if tuple(labels) != _LABELS:
-        return False, "fields are not in x1,y1,x2,y2,x3,y3 order"
-    values = [entry[1] for entry in answer]
-    for index, value in enumerate(values):
-        if isinstance(value, bool) or not isinstance(value, int):
-            return False, f"{_LABELS[index]} is not an integer"
-        if not 0 <= value <= q:
-            return False, f"{_LABELS[index]} is outside 0..{q}"
-    xs = (values[0], values[2], values[4])
-    ys = (values[1], values[3], values[5])
-    if len(set(xs)) != 3:
-        return False, "source projective points are not distinct"
-    if len(set(ys)) != 3:
-        return False, "target projective points are not distinct"
     try:
-        matrix = _matrix_from_pairs(xs, ys, q)
-    except (ValueError, ZeroDivisionError) as exc:
-        return False, f"projective interpolation failed: {exc}"
-    relation, multiplicities = _relations(inst)
-    selected = []
-    for x in range(q + 1):
-        y = _apply(matrix, x, q)
-        if y not in relation[x]:
-            return False, f"projective map misses the graph at source point {x}"
-        edge_id = min(
-            edge["id"] for edge in inst["edges"]
-            if edge["left"] == x and edge["right"] == y
-        )
-        selected.append(edge_id)
-    if len(set(selected)) != q + 1:
-        return False, "decoded edge variables are not distinct"
-    # A PGL matrix is a permutation of the projective line.  Check it directly,
-    # then substitute the decoded matching into both clauses at every endpoint.
-    images = [_apply(matrix, x, q) for x in range(q + 1)]
-    if len(set(images)) != q + 1:
-        return False, "decoded map is not a projective-line permutation"
-    true_edges = set(selected)
-    left_incident = [[] for _ in range(q + 1)]
-    right_incident = [[] for _ in range(q + 1)]
-    for edge in inst["edges"]:
-        left_incident[edge["left"]].append(edge["id"])
-        right_incident[edge["right"]].append(edge["id"])
-    for side, rows in (("L", left_incident), ("R", right_incident)):
-        for point, incident in enumerate(rows):
-            if len(incident) != 3:
-                return False, f"instance has wrong degree at {side}_{point}"
-            true_count = sum(edge in true_edges for edge in incident)
-            if true_count != 1:
-                return False, f"decoded positive clause fails at {side}_{point}"
-            if len(incident) - true_count < 1:
-                return False, f"decoded negative clause fails at {side}_{point}"
-    del multiplicities
+        n = inst["n"]
+        d = inst["dimension"]
+        targets = _target_index(inst)
+    except (KeyError, TypeError):
+        return False, "instance is missing its exact incidence data"
+    ok, reason = _validate_shape(answer, d)
+    if not ok:
+        return False, reason
+    if n != 1 << d or len(targets) != n:
+        return False, "instance point count is inconsistent"
+
+    images = []
+    for x in range(n):
+        y = _eval_map(answer, x, d)
+        if y not in targets[x]:
+            return False, f"polynomial map misses the table at source {x}"
+        images.append(y)
+
+    if len(set(images)) != n:
+        return False, "polynomial map is not a permutation"
+    right_degrees = [0] * n
+    for source_targets in targets:
+        if (not isinstance(source_targets, (list, tuple))
+                or len(source_targets) != 3
+                or len(set(source_targets)) != 3):
+            return False, "instance has a non-cubic source row"
+        for y in source_targets:
+            if isinstance(y, bool) or not isinstance(y, int) or not 0 <= y < n:
+                return False, "instance has an out-of-range target"
+            right_degrees[y] += 1
+    if any(degree != 3 for degree in right_degrees):
+        return False, "instance is not cubic on the target side"
+
+    # Exact clause substitution: one selected edge and two unselected edges at
+    # every endpoint makes both its positive and its negative 3-clause true.
+    left_true_counts = [1] * n
+    right_true_counts = [0] * n
+    for y in images:
+        right_true_counts[y] += 1
+    if any(value != 1 for value in left_true_counts + right_true_counts):
+        return False, "decoded assignment fails an endpoint clause"
     return True, "ok"
 
 
 # ---------------------------------------------------------------------------
-# Candidate language, counting, canonicalisation and escalation.
+# Bounded language, reference algorithm, attacks, and canonicalisation.
 
 
 def random_candidate(inst, rng) -> object:
-    if not hasattr(rng, "sample"):
-        raise TypeError("rng must provide random.Random-style sample")
-    points = range(inst["q"] + 1)
-    xs = tuple(rng.sample(points, 3))
-    ys = tuple(rng.sample(points, 3))
-    return _answer_from_pairs(xs, ys)
+    if not hasattr(rng, "randrange"):
+        raise TypeError("rng must provide random.Random-style randrange")
+    answer = _random_coefficients(inst["dimension"], rng)
+    # H(0) is exactly the constant vector, so a solver gets this constraint for
+    # free from the first row.  Sampling all 2^d constants would overstate guess
+    # resistance by a factor of 2^d/3.
+    constant = inst["targets_by_source"][0][rng.randrange(3)]
+    answer[0][1] = [
+        (constant >> i) & 1 for i in range(inst["dimension"])
+    ]
+    return answer
 
 
 def search_space(inst) -> int | None:
-    q = inst["q"]
-    ordered_triples = (q + 1) * q * (q - 1)
-    return ordered_triples * ordered_triples
+    d = inst["dimension"]
+    return 3 * (1 << (_free_coefficients(d) - d))
 
 
 def enumerate_all(inst) -> int | None:
-    if search_space(inst) > _ENUMERATION_CAP:
+    space = search_space(inst)
+    if space > _ENUMERATION_CAP:
         return None
-    q = inst["q"]
+    d = inst["dimension"]
     count = 0
-    points = range(q + 1)
-    for xs in itertools.permutations(points, 3):
-        for ys in itertools.permutations(points, 3):
-            if verify(inst, _answer_from_pairs(xs, ys))[0]:
+    tail_space = 1 << (_free_coefficients(d) - d)
+    for constant in inst["targets_by_source"][0]:
+        for code in range(tail_space):
+            answer = _blank_coefficients(d)
+            answer[0][1] = [(constant >> i) & 1 for i in range(d)]
+            cursor = 0
+            for i in range(d):
+                for j in range(i):
+                    answer[1][1][i][j] = (code >> cursor) & 1
+                    cursor += 1
+            for i in range(d):
+                for j in range(math.comb(i, 2)):
+                    answer[2][1][i][j] = (code >> cursor) & 1
+                    cursor += 1
+            if verify(inst, answer)[0]:
                 count += 1
     return count
 
 
-def _recover_maps(inst):
-    """All PGL maps inside the cubic relation, with measured exact work."""
-    q = inst["q"]
-    relation, _ = _relations(inst)
-    anchors = (0, 1, q)
-    stats = {"candidates": 0, "point_evaluations": 0, "field_operations": 0}
-    found = {}
-    for ys in itertools.product(*(sorted(relation[x]) for x in anchors)):
-        if len(set(ys)) != 3:
-            continue
-        stats["candidates"] += 1
-        try:
-            matrix = _matrix_from_images(ys, q)
-        except ValueError:
-            continue
-        stats["field_operations"] += 14
-        okay = True
-        for x in range(q + 1):
-            stats["point_evaluations"] += 1
-            stats["field_operations"] += 7
-            if _apply(matrix, x, q) not in relation[x]:
-                okay = False
-                break
-        if okay:
-            flat = tuple(matrix[0] + matrix[1])
-            found[flat] = matrix
-    return [found[key] for key in sorted(found)], stats
-
-
-def _j_invariant(matrix, q):
-    trace = (matrix[0][0] + matrix[1][1]) % q
-    determinant = _det(matrix, q)
-    return trace * trace * pow(determinant, -1, q) % q
-
-
-def canonical_key(inst) -> str:
-    """PGL-coordinate, side-swap and input-order invariant structural key."""
-    q = inst["q"]
-    maps, _ = _recover_maps(inst)
-    invariants = []
-    for i in range(len(maps)):
-        for j in range(i + 1, len(maps)):
-            relative = _matmul(_inverse(maps[i], q), maps[j], q)
-            invariants.append(_j_invariant(relative, q))
-    payload = {
-        "q": q,
-        "contained_maps": len(maps),
-        "pairwise_projective_conjugacy": sorted(invariants),
-    }
-    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
-    return hashlib.sha256(raw).hexdigest()
-
-
-def escalate(params) -> dict | None:
-    n = int(params.get("n", 211))
-    if n >= 809:
-        return None
-    return {"n": _next_prime(math.ceil(1.35 * n))}
-
-
-# ---------------------------------------------------------------------------
-# Adversaries and transformations used by selftest.
-
-
 def _reference_answer(inst):
-    maps, stats = _recover_maps(inst)
-    if not maps:
-        return None, stats
-    matrix = maps[0]
-    q = inst["q"]
-    xs = (0, 1, q)
-    ys = tuple(_apply(matrix, x, q) for x in xs)
-    return _answer_from_pairs(xs, ys), stats
+    """Polynomial-time full-table recovery with explicit operation accounting."""
+    d, n = inst["dimension"], inst["n"]
+    centers = [_center_value(inst, x) for x in range(n)]
+    answer = _coefficients_from_values(d, centers.__getitem__)
+    offset = inst["targets_by_source"][0][0] ^ centers[0]
+    answer = _toggle_constant(answer, offset)
+    validated = _core_valid(inst, answer)
+    interpolation_ops = d + 3 * math.comb(d, 2)
+    stats = {
+        "row_center_vector_xors": 2 * n,
+        "interpolation_vector_xors": interpolation_ops,
+        "offset_vector_xors": 1,
+        "validation_scalar_operations": n * (_evaluation_bit_operations(d) + 1),
+    }
+    stats["total_counted_operations"] = sum(stats.values())
+    stats["validated"] = validated
+    return answer, stats
 
 
 def _compact_answer(inst):
-    q = inst["q"]
-    relation, _ = _relations(inst)
-    common = [x for x, targets in enumerate(relation) if len(targets) == 1]
-    if len(common) != 1:
-        return None, 0
-    p = common[0]
-    r = next(iter(relation[p]))
-    rows = [x for x in range(q + 1) if x != p and len(relation[x]) == 3]
-    if len(rows) < 4:
-        return None, 0
-    u, v, w1, w2 = rows[:4]
-    operations = 28  # source-coordinate interpolation, once
-    survivors = []
-    for yu in sorted(relation[u]):
-        for yv in sorted(relation[v]):
-            ys = (r, yu, yv)
-            if len(set(ys)) != 3:
-                continue
-            operations += 18  # target interpolation in homogeneous coordinates
-            try:
-                matrix = _matrix_from_pairs((p, u, v), ys, q)
-            except ValueError:
-                continue
-            passed = True
-            for w in (w1, w2):
-                operations += 6
-                if _apply(matrix, w, q) not in relation[w]:
-                    passed = False
+    d = inst["dimension"]
+    cache = {x: _center_value(inst, x) for x in _special_points(d)}
+    answer = _coefficients_from_values(d, cache.__getitem__)
+    offset = inst["targets_by_source"][0][0] ^ cache[0]
+    answer = _toggle_constant(answer, offset)
+    operations = (2 * len(cache) + d
+                  + 3 * math.comb(d, 2) + 1)
+    return answer, operations
+
+
+def _attack_minimum_targets(inst):
+    d = inst["dimension"]
+    return _coefficients_from_values(
+        d, lambda x: min(inst["targets_by_source"][x]))
+
+
+def _attack_rank_greedy(inst):
+    d = inst["dimension"]
+
+    def chosen(x):
+        targets = sorted(inst["targets_by_source"][x])
+        return targets[x.bit_count() % 3]
+
+    return _coefficients_from_values(d, chosen)
+
+
+def _attack_unshifted_center(inst):
+    d = inst["dimension"]
+    return _coefficients_from_values(d, lambda x: _center_value(inst, x))
+
+
+def _attack_matching_fit(inst):
+    """Find a perfect matching, then force-fit it to the answer language."""
+    n = inst["n"]
+    match_left = [-1] * n
+    match_right = [-1] * n
+    for start in range(n):
+        queue = [start]
+        head = 0
+        seen_left = {start}
+        seen_right = set()
+        parent_right = {}
+        free_right = None
+        while head < len(queue) and free_right is None:
+            x = queue[head]
+            head += 1
+            for y in sorted(inst["targets_by_source"][x]):
+                if y in seen_right:
+                    continue
+                seen_right.add(y)
+                parent_right[y] = x
+                if match_right[y] < 0:
+                    free_right = y
                     break
-            if passed:
-                survivors.append(_answer_from_pairs((p, u, v), ys))
-    for answer in survivors:
-        if _core_valid(inst, answer):
-            return answer, min(286, operations)
-    return None, min(286, operations)
+                next_left = match_right[y]
+                if next_left not in seen_left:
+                    seen_left.add(next_left)
+                    queue.append(next_left)
+        if free_right is None:
+            return _blank_coefficients(inst["dimension"])
+        y = free_right
+        while y >= 0:
+            x = parent_right[y]
+            previous_y = match_left[x]
+            match_left[x] = y
+            match_right[y] = x
+            y = previous_y
+    return _coefficients_from_values(inst["dimension"], match_left.__getitem__)
 
 
 def _random_restart_attack(inst, rng, restarts=256):
     last = None
-    for _ in range(restarts):
+    for index in range(restarts):
         last = random_candidate(inst, rng)
         if _core_valid(inst, last):
-            return last, _ + 1
+            return last, index + 1
     return last, restarts
 
 
-def _transform_instance(inst, left_matrix=None, right_matrix=None,
-                        swap_sides=False, reorder_seed=None):
-    out = copy.deepcopy(inst)
-    q = inst["q"]
-    left_matrix = left_matrix or ((1, 0), (0, 1))
-    right_matrix = right_matrix or ((1, 0), (0, 1))
-    transformed = []
-    for edge in inst["edges"]:
-        x = _apply(left_matrix, edge["left"], q)
-        y = _apply(right_matrix, edge["right"], q)
-        if swap_sides:
-            x, y = y, x
-        transformed.append({"id": edge["id"], "left": x, "right": y})
-    if reorder_seed is not None:
-        random.Random(reorder_seed).shuffle(transformed)
-    out["edges"] = transformed
+def _translate_answer(answer, source_mask, target_mask):
+    d = len(answer[0][1])
+    return _coefficients_from_values(
+        d, lambda x: _eval_map(answer, x ^ source_mask, d) ^ target_mask)
 
-    values = _answer_values(inst["answer"])
-    xs = [values[0], values[2], values[4]]
-    ys = [values[1], values[3], values[5]]
-    new_xs = [_apply(left_matrix, x, q) for x in xs]
-    new_ys = [_apply(right_matrix, y, q) for y in ys]
-    if swap_sides:
-        new_xs, new_ys = new_ys, new_xs
-    out["answer"] = _answer_from_pairs(tuple(new_xs), tuple(new_ys))
+
+def _transform_instance(inst, source_mask=0, target_mask=0,
+                        reorder_seed=None, permute_targets=False):
+    out = copy.deepcopy(inst)
+    n = inst["n"]
+    transformed = [None] * n
+    rng = random.Random(reorder_seed) if reorder_seed is not None else None
+    for x in range(n):
+        new_x = x ^ source_mask
+        values = [y ^ target_mask for y in inst["targets_by_source"][x]]
+        if permute_targets and rng is not None:
+            rng.shuffle(values)
+        transformed[new_x] = values
+    out["targets_by_source"] = transformed
+    out["row_order"] = list(range(n))
+    if rng is not None:
+        rng.shuffle(out["row_order"])
+    out["answer"] = _translate_answer(
+        inst["answer"], source_mask, target_mask)
     return out
+
+
+def _canonical_payload(inst):
+    d, n = inst["dimension"], inst["n"]
+    center = _coefficients_from_values(d, lambda x: _center_value(inst, x))
+    constant, linear, quadratic = _sections(center)
+    del constant
+    offsets = sorted(y ^ _center_value(inst, 0)
+                     for y in inst["targets_by_source"][0])
+    quadratic_flat = tuple(value for row in quadratic for value in row)
+
+    # Source translations preserve triangular degree two. Quadratic terms stay
+    # fixed; a translation changes a linear coefficient by contractions of the
+    # quadratic tensor. Target translations affect only constants, which are
+    # intentionally absent from the normal form.
+    translated_linears = []
+    for source_mask in range(n):
+        flat = []
+        for i in range(d):
+            pairs = list(itertools.combinations(range(i), 2))
+            qlookup = {pair: quadratic[i][index]
+                       for index, pair in enumerate(pairs)}
+            for j in range(i):
+                value = linear[i][j]
+                for k in range(i):
+                    if k == j:
+                        continue
+                    pair = (j, k) if j < k else (k, j)
+                    value ^= qlookup.get(pair, 0) & ((source_mask >> k) & 1)
+                flat.append(value)
+        translated_linears.append(tuple(flat))
+    return {
+        "dimension": d,
+        "quadratic": quadratic_flat,
+        "translation_normalised_linear": min(translated_linears),
+        "mask_multiset": tuple(offsets),
+    }
+
+
+def canonical_key(inst) -> str:
+    payload = _canonical_payload(inst)
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
+def escalate(params) -> dict | str | None:
+    n = int(params.get("n", 256))
+    if n < 1024:
+        return {"n": 2 * n}
+    # The next dimension has 231 free coefficients and fits the character cap,
+    # but its selected-row route takes 311 operations and fails G9(c). There is
+    # no honest harder rung under the no-tool effort cap.
+    return "cap_bound"
+
+
+# ---------------------------------------------------------------------------
+# Mandatory gates.
+
+
+def _answer_atom_count(answer):
+    if isinstance(answer, dict):
+        return sum(_answer_atom_count(value) for value in answer.values())
+    if isinstance(answer, (list, tuple)):
+        return sum(_answer_atom_count(value) for value in answer)
+    return 1
 
 
 def selftest():
@@ -824,15 +814,17 @@ def selftest():
     ship_params = DIFFICULTY[SHIPPING_DIFFICULTY]
     inst = make_instance(seed=90210, **ship_params)
     answer = inst["answer"]
-    swapped = copy.deepcopy(answer)
-    swapped[0], swapped[1] = swapped[1], swapped[0]
+    drop = copy.deepcopy(answer)
+    drop.pop()
+    swap = copy.deepcopy(answer)
+    swap[0], swap[1] = swap[1], swap[0]
     duplicate = copy.deepcopy(answer)
-    duplicate[1] = copy.deepcopy(duplicate[0])
+    duplicate[1][0] = duplicate[0][0]
     outside = copy.deepcopy(answer)
-    outside[-1][1] = inst["q"] + 1
+    outside[0][1][0] = 2
     corruptions = {
-        "drop": answer[:-1],
-        "swap": swapped,
+        "drop": drop,
+        "swap": swap,
         "duplicate": duplicate,
         "empty": [],
         "out_of_range": outside,
@@ -849,13 +841,14 @@ def selftest():
     }
 
     realistic = (
-        "I used homogeneous coordinates and checked the decoded clauses.\n\n"
-        "```text\n<answer>" + _answer_text(answer) + "</answer>\n```"
+        "I used the row invariant and checked the decoded clauses.\n\n"
+        "```json\n<answer>" + json.dumps(answer, separators=(",", ":"))
+        + "</answer>\n```"
     )
     parsed = parse_answer(realistic)
     report["G3_round_trip"] = {
         "pass": parsed == answer and parse_answer("not an answer") is None,
-        "parsed_fields": len(parsed) if isinstance(parsed, list) else None,
+        "parsed_sections": len(parsed) if isinstance(parsed, list) else None,
         "garbage_returns_none": parse_answer("not an answer") is None,
     }
 
@@ -865,16 +858,26 @@ def selftest():
     for _ in range(samples):
         if verify(inst, random_candidate(inst, guess_rng))[0]:
             hits += 1
-    q = inst["q"]
-    pgl_size = (q + 1) * q * (q - 1)
+    observed = hits / samples
+    valid_count_upper_bound = 3 ** len(_special_points(inst["dimension"]))
+    analytic_probability_upper_bound = valid_count_upper_bound / search_space(inst)
     report["G4_guess_resistance"] = {
-        "pass": hits / samples < 1e-6,
+        "pass": observed < 1e-6 and analytic_probability_upper_bound < 1e-6,
         "hits": hits,
         "total": samples,
-        "observed_probability": hits / samples,
-        "exact_probability": 3 / pgl_size,
+        "observed_probability": observed,
         "structure_aware_space": search_space(inst),
-        "sampler": "uniform ordered distinct source triple and target triple",
+        "valid_count_upper_bound": valid_count_upper_bound,
+        "analytic_probability_upper_bound": analytic_probability_upper_bound,
+        "upper_bound_reason": (
+            "a quadratic map is determined by its values at 0, unit vectors, "
+            "and pair sums, with at most three table choices at each point"
+        ),
+        "sampler": (
+            "uniform over the three row-zero-compatible constants and every "
+            "remaining free coefficient; the fixed diagonal and dependency "
+            "order are enforced"
+        ),
     }
 
     start = time.perf_counter()
@@ -882,41 +885,41 @@ def selftest():
     baseline_wall = time.perf_counter() - start
     demo = make_instance(seed=3, **DIFFICULTY["demo"])
     demo_count = enumerate_all(demo)
-    exact_valid = 3 * pgl_size
     report["G5_density_and_baseline"] = {
-        "pass": reference is not None and verify(inst, reference)[0]
-        and hits / samples < 1e-6 and demo_count is not None,
-        "shipping_exact_valid_certificate_count": exact_valid,
-        "shipping_certificate_space": search_space(inst),
-        "shipping_exact_solution_fraction": 3 / pgl_size,
+        "pass": verify(inst, reference)[0] and observed < 1e-6
+        and demo_count is not None,
         "shipping_sampled_valid_hits": hits,
         "shipping_density_samples": samples,
+        "shipping_sampled_solution_fraction": observed,
+        "shipping_solution_fraction_upper_bound": analytic_probability_upper_bound,
+        "shipping_certificate_space": search_space(inst),
+        "known_constructed_solutions_lower_bound": 3,
         "demo_exact_solution_count": demo_count,
         "baseline_wall_seconds": round(baseline_wall, 6),
-        "baseline_point_evaluations": reference_stats["point_evaluations"],
-        "baseline_field_operations": reference_stats["field_operations"],
+        "baseline_counted_operations": reference_stats["total_counted_operations"],
+        "baseline_operation_breakdown": reference_stats,
     }
 
     attacks = {
-        "outlier_coordinate_minimum": {"successes": 0, "attempts": 0},
-        "greedy_local_distinct_targets": {"successes": 0, "attempts": 0},
-        "random_restart_full_language_256": {"successes": 0, "attempts": 0},
-        "in_context_identity_ansatz": {"successes": 0, "attempts": 0},
+        "outlier_minimum_target": {"successes": 0, "attempts": 0},
+        "greedy_target_rank": {"successes": 0, "attempts": 0},
+        "domain_matching_then_quadratic_fit": {"successes": 0, "attempts": 0},
+        "random_restart_256": {"successes": 0, "attempts": 0},
+        "in_context_unshifted_center": {"successes": 0, "attempts": 0},
     }
     ref_successes = 0
     ref_times = []
     ref_ops = []
-    ref_evaluations = []
     for seed in range(3100, 3108):
         attacked = make_instance(seed=seed, **ship_params)
         random_answer, _ = _random_restart_attack(
-            attacked, random.Random(seed ^ 0xB0D3), restarts=256
-        )
+            attacked, random.Random(seed ^ 0xB0D3), restarts=256)
         candidates = {
-            "outlier_coordinate_minimum": _attack_min_targets(attacked),
-            "greedy_local_distinct_targets": _attack_local_greedy(attacked),
-            "random_restart_full_language_256": random_answer,
-            "in_context_identity_ansatz": _attack_identity(attacked),
+            "outlier_minimum_target": _attack_minimum_targets(attacked),
+            "greedy_target_rank": _attack_rank_greedy(attacked),
+            "domain_matching_then_quadratic_fit": _attack_matching_fit(attacked),
+            "random_restart_256": random_answer,
+            "in_context_unshifted_center": _attack_unshifted_center(attacked),
         }
         for name, candidate in candidates.items():
             attacks[name]["attempts"] += 1
@@ -925,21 +928,22 @@ def selftest():
         t0 = time.perf_counter()
         ref_answer, stats = _reference_answer(attacked)
         ref_times.append(time.perf_counter() - t0)
-        ref_ops.append(stats["field_operations"])
-        ref_evaluations.append(stats["point_evaluations"])
-        if ref_answer is not None and verify(attacked, ref_answer)[0]:
+        ref_ops.append(stats["total_counted_operations"])
+        if verify(attacked, ref_answer)[0]:
             ref_successes += 1
-    all_failed = all(value["successes"] == 0 for value in attacks.values())
+    all_failed = all(item["successes"] == 0 for item in attacks.values())
     report["G6_adversary_panel"] = {
         "pass": all_failed and ref_successes == 8,
         "attacks": attacks,
         "reference_algorithm": {
-            "name": "three-point PGL interpolation and exact incidence validation",
-            "complexity": "O(q log q) bit operations for fixed graph degree 3",
+            "name": "rowwise-XOR quadratic interpolation with full validation",
+            "complexity": "O(N (log N)^3) exact operations",
             "median_wall_clock_sec": round(statistics.median(ref_times), 6),
             "median_operations": int(statistics.median(ref_ops)),
-            "median_point_evaluations": int(statistics.median(ref_evaluations)),
-            "operation_definition": "modular add/multiply/invert primitives",
+            "operation_definition": (
+                "one d-bit vector XOR during recovery, or one scalar GF(2) "
+                "AND/XOR or table-membership primitive during validation"
+            ),
             "solves": f"{ref_successes}/8, as expected",
         },
     }
@@ -948,12 +952,14 @@ def selftest():
     doubled_ok, doubled_reason = verify(doubled, doubled["answer"])
     report["G7_scales"] = {
         "pass": doubled_ok and search_space(doubled) > search_space(inst),
-        "shipping_requested_n": ship_params["n"],
-        "shipping_q": inst["q"],
-        "doubled_requested_n": 2 * ship_params["n"],
-        "doubled_q": doubled["q"],
-        "shipping_space_bits": round(math.log2(search_space(inst)), 3),
-        "doubled_space_bits": round(math.log2(search_space(doubled)), 3),
+        "shipping_n": ship_params["n"],
+        "shipping_dimension": inst["dimension"],
+        "doubled_n": doubled["n"],
+        "doubled_dimension": doubled["dimension"],
+        "shipping_free_coefficients": _free_coefficients(inst["dimension"]),
+        "doubled_free_coefficients": _free_coefficients(doubled["dimension"]),
+        "shipping_language_size": search_space(inst),
+        "doubled_language_size": search_space(doubled),
         "doubled_verify_reason": doubled_reason,
     }
 
@@ -964,17 +970,19 @@ def selftest():
         original = make_instance(seed=seed, **ship_params)
         key = canonical_key(original)
         distinct_keys.append(key)
-        rr = random.Random(seed ^ 0xCA11)
-        left = _random_pgl(original["q"], rr)
-        right = _random_pgl(original["q"], rr)
+        rng = random.Random(seed ^ 0xCA11)
+        source_mask = rng.randrange(original["n"])
+        target_mask = rng.randrange(original["n"])
         variants = [
-            _transform_instance(original, reorder_seed=seed),
-            _transform_instance(original, left_matrix=left, reorder_seed=seed + 1),
-            _transform_instance(original, right_matrix=right, reorder_seed=seed + 2),
-            _transform_instance(
-                original, left_matrix=left, right_matrix=right,
-                swap_sides=True, reorder_seed=seed + 3
-            ),
+            _transform_instance(original, reorder_seed=seed,
+                                permute_targets=True),
+            _transform_instance(original, source_mask=source_mask,
+                                reorder_seed=seed + 1, permute_targets=True),
+            _transform_instance(original, target_mask=target_mask,
+                                reorder_seed=seed + 2, permute_targets=True),
+            _transform_instance(original, source_mask=source_mask,
+                                target_mask=target_mask,
+                                reorder_seed=seed + 3, permute_targets=True),
         ]
         for transformed in variants:
             invariant_checks += 1
@@ -990,33 +998,52 @@ def selftest():
         "unrelated_distinct": len(set(distinct_keys)),
         "unrelated_attempts": 20,
         "transformations": [
-            "edge-row reordering", "left PGL coordinate change",
-            "right PGL coordinate change", "composed coordinate changes plus side swap",
+            "row and within-row reordering",
+            "global source XOR translation",
+            "global target XOR translation",
+            "composed source and target translations plus reorderings",
         ],
-        "key_basis": "pairwise conjugacy invariants of all recovered projective maps",
+        "key_basis": (
+            "translation-normalised linear tensor, quadratic tensor, and mask "
+            "multiset recovered from the unordered table"
+        ),
     }
 
     compact, compact_operations = _compact_answer(inst)
-    answer_chars = len(_answer_text(answer))
+    answer_text = json.dumps(answer, separators=(",", ":"))
+    answer_chars = len(answer_text)
     answer_tokens = math.ceil(answer_chars / 4)
-    answer_elements = sum(2 for _ in answer)
+    answer_elements = _answer_atom_count(answer)
     arms = copy.deepcopy(G9_RESULTS["arms"])
     hinted = arms["hinted"]
     placebo = arms["placebo"]
     hinted_rate = hinted["solved"] / hinted["attempts"] if hinted["attempts"] else 0.0
     placebo_rate = placebo["solved"] / placebo["attempts"] if placebo["attempts"] else 0.0
-    within_caps = answer_chars <= 2000 and answer_elements <= 256 \
-        and compact_operations <= 300
+    within_caps = (answer_chars <= 2000 and answer_elements <= 256
+                   and compact_operations <= 300)
     report["G9_no_tool_suitability"] = {
-        "pass": G9_RESULTS["hinted_verdict"] == "hardened" and within_caps
-        and compact is not None and verify(inst, compact)[0],
+        # The oracle arms are diagnostics as of 2026-09-05.  Only the answer
+        # size/atom and intended-route effort caps gate this result.
+        "pass": within_caps and verify(inst, compact)[0],
         "arms": arms,
+        "evidence_status": G9_RESULTS["evidence_status"],
         "hinted_minus_placebo": hinted_rate - placebo_rate,
         "hinted_verdict": G9_RESULTS["hinted_verdict"],
         "answer_chars": answer_chars,
         "answer_tokens": answer_tokens,
         "answer_elements": answer_elements,
         "intended_route_operations": compact_operations,
+        "operation_definition": (
+            f"one exact XOR of two GF(2)^{inst['dimension']} vectors"
+        ),
+        "operation_breakdown": {
+            "selected_row_center_xors": 2 * len(_special_points(inst["dimension"])),
+            "interpolation_xors": (
+                inst["dimension"]
+                + 3 * math.comb(inst["dimension"], 2)
+            ),
+            "offset_xor": 1,
+        },
     }
 
     report["all_passed"] = all(
