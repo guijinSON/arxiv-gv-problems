@@ -1,0 +1,180 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer has one coordinate; exactly two are required",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "coordinates are not primitive: gcd(|x|,|y|)=16963",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "x=18528 is outside the inclusive interval [16479,18527]",
+        "rejected": true
+      },
+      "swap_coordinates": {
+        "reason": "exact substitution gives -1090279413374379690808010520195269286213636761015257337263972372838069912351907193105859531680894128640405440116602228506983291348884248209, not +1 or -1",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      16963,
+      16618
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform over primitive pairs in the displayed box",
+    "structure_aware_space": 2553640,
+    "theorem_certified_unique_answer_density": 3.9159787597312074e-07,
+    "total": 200000,
+        "wall_clock_sec": 4.301875
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_candidate_evaluations_total_8": 65536,
+        "attack_wall_clock_sec_total_8": 0.770264,
+    "candidate_space": 2553640,
+    "demo_exact_valid_answers": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_density_at_shipping_by_Theorem_1": 3.9159787597312074e-07,
+    "exact_valid_answers_at_shipping_by_Theorem_1": 1,
+    "pass": true,
+    "reference_algorithm_lattice_evaluations_mean": 2151529,
+    "reference_algorithm_operations_mean": 8637629,
+        "reference_algorithm_wall_clock_sec_mean": 2.052341,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "random_restart_8192"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "box_landmark_outlier": {
+        "attempts": 8,
+        "successes": 0,
+                "wall_clock_sec_total_8": 0.000276
+      },
+      "local_residual_greedy_48": {
+        "attempts": 8,
+        "successes": 0,
+                "wall_clock_sec_total_8": 0.009629
+      },
+      "random_restart_8192": {
+        "attempts": 8,
+        "successes": 0,
+                "wall_clock_sec_total_8": 0.770264
+      },
+      "two_decimal_centroid_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+                "wall_clock_sec_total_8": 0.00026
+      }
+    },
+    "compact_route": {
+      "complexity": "O(log C) exact Euclidean divisions for coefficient height C",
+            "continued_fraction_steps_max": 17,
+      "count_model": "integer division/multiplication/addition in continued fractions, plus conservative fixed charges for rational setup, endpoint comparisons, gcd, bounds, and exact cubic verification",
+            "distribution_stress_solves": "10000/10000",
+            "name": "Vieta root centroid plus continued-fraction reconstruction",
+      "solves": "8/8, as expected",
+            "worst_case_exact_operations": 151
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(W^2) exact additions for a W-by-W box",
+      "lattice_evaluations_max": 3434400,
+      "lattice_evaluations_mean": 2151529,
+      "lattice_evaluations_min": 391996,
+            "name": "complete bounded exact finite-difference lattice scan",
+      "operations_max": 13787907,
+      "operations_mean": 8637629,
+      "operations_min": 1573741,
+            "paper_domain_standard_context": "Sections 3-4 use PARI/GP Thue solving and Baker-Davenport/continued-fraction reduction; Section 6 uses LLL.  Those external systems are not dependencies of this module and were not rerun.",
+            "scope": "complete reference algorithm for the emitted bounded problem",
+            "solves": "8/8, as expected",
+            "wall_clock_sec_mean": 2.052341,
+            "wall_clock_sec_total_8": 16.41873
+    }
+  },
+  "G7_scales": {
+    "doubled_candidate_space": 10208142,
+    "doubled_n": 4098,
+    "pass": true,
+    "shipping_candidate_space": 2553640,
+    "shipping_n": 2049,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 320,
+    "distinct_keys": 20,
+    "invariance_checks": 320,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "x/y variable renaming",
+      "independent coordinate sign changes",
+      "compositions of renaming and sign changes",
+      "global cubic coefficient sign normalization"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 13,
+    "answer_elements": 2,
+    "answer_tokens": 4,
+    "arms": {
+            "bare": {
+                "attempts": 2,
+        "errors": 4,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+        "hinted_verdict": "unreachable_after_bare_arm_exhausted_key_limit",
+        "intended_route_operations": 151,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:2107.03097",
+  "pass": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 2049,
+    "offset_scale": 8,
+    "paper_n": 220,
+    "scramble": true,
+    "shear_scale": 4
+  },
+  "track": "B"
+}
