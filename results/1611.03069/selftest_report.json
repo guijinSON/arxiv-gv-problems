@@ -1,0 +1,163 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "construction": "inverse generation of p(X)=X*q(X^3)",
+    "failures": [],
+    "json_native": true,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_coefficient": {
+        "reason": "expected 20 coefficients, got 19",
+        "rejected": true
+      },
+      "duplicate_one_coefficient": {
+        "reason": "expected 20 coefficients, got 21",
+        "rejected": true
+      },
+      "empty_coefficients": {
+        "reason": "expected 20 coefficients, got 0",
+        "rejected": true
+      },
+      "out_of_range_coefficient": {
+        "reason": "coefficient 0 is outside 0..1008",
+        "rejected": true
+      },
+      "swap_two_coefficients": {
+        "reason": "Hamming distance exceeds 128",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space_bits": 200,
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "structure_aware_constraints": [
+      "exactly K coefficients",
+      "every coefficient is a canonical GF(p) residue",
+      "the degree-less-than-K rule is built into the fixed vector length"
+    ],
+    "total": 200000,
+    "uniqueness_justification": "2*radius <= N-K < minimum RS distance",
+    "wall_clock_sec": 0.525489
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.045708,
+    "exact_density_denominator": 1196253784515613232980579587138772223710932783982411888708801,
+    "exact_density_numerator": 1,
+    "exact_valid_polynomial_count": 1,
+    "pass": true,
+    "reference_operation_count": 15134479,
+    "reference_wall_clock_sec": 0.552947,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density_estimate": 0.0,
+    "strongest_failing_attack": "random_restart_256_interpolations"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_degree_four_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 7.9e-05
+      },
+      "greedy_input_order_interpolation": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000607
+      },
+      "outlier_small_received_symbols": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.001077
+      },
+      "random_restart_256_interpolations": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.372451
+      }
+    },
+    "intended_compact_route": {
+      "name": "ninth-root orbit normalization plus three-point interpolation",
+      "operations": 108,
+      "solves": "by construction"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N^3) exact GF(p) operations",
+      "name": "Berlekamp-Welch error-locator linear system",
+      "operations": 15134479,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.552947
+    }
+  },
+  "G7_scales": {
+    "answer_coefficients_unchanged": 20,
+    "doubled_build_sec": 0.001504,
+    "doubled_orbits": 64,
+    "doubled_points": 576,
+    "doubled_verify_reason": "ok",
+    "escalation_after_shipping": {
+      "n": 48,
+      "orbit_order": 9,
+      "prime": 1009,
+      "q_degree": 2
+    },
+    "pass": true,
+    "shipping_orbits": 32,
+    "shipping_points": 288
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariant_relabellings": 60,
+    "pass": true,
+    "real_transformations_verified": 60,
+    "transformations": [
+      "row permutation",
+      "affine x -> u*x+t",
+      "their composition"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 64,
+    "answer_elements": 20,
+    "answer_tokens": 16,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 3
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 1.0,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 108,
+    "measured_worst_over_seeds": 1000,
+    "pass": false,
+    "within_caps": true,
+    "worst_case_answer_chars": 66,
+    "worst_case_answer_elements": 20,
+    "worst_case_answer_tokens": 17
+  },
+  "all_passed": false
+}
