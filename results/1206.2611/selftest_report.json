@@ -1,0 +1,128 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 16,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "drop_one": "wrong exponent length: expected 88, got 87",
+      "swap_two": "fingerprint mismatch in component 0",
+      "duplicate_term": "wrong term count: expected exactly one monomial",
+      "empty": "empty polynomial: expected one monomial",
+      "out_of_range": "exponent out of bounds: every exponent must lie in 0..294"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "exact_probability": 5.960464477539063e-08,
+    "candidate_space": 16777216,
+    "prior": "uniform independent choice among all eight reachable coefficient states per component",
+    "sampling_wall_seconds": 23.517568207113072
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_lexicographically_smallest_state": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_last_block_only": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256_structure_aware": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_commuting_parity": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "successive exact cubic coefficient-role mutation",
+      "complexity": "O(L) exact role swaps for expanded mutation length L",
+      "wall_clock_sec_median": 0.01951619703322649,
+      "operations_median": 1255394,
+      "mutation_symbols_median": 358108,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_density_fraction": 0.0,
+    "shipping_exact_candidate_count": 16777216,
+    "shipping_exact_valid_count": 1,
+    "demo_exact_solution_count": 1,
+    "demo_candidate_count": 8,
+    "baseline_wall_seconds_median": 0.03172285296022892,
+    "baseline_restart_iterations_median": 256,
+    "reference_wall_seconds_median": 0.01951619703322649,
+    "reference_role_swap_operations_median": 1255394
+  },
+  "G7_scales": {
+    "pass": true,
+    "ladder_expanded_work_lower_bounds": [
+      1,
+      4000,
+      28000,
+      128000
+    ],
+    "base_n": 500,
+    "doubled_n": 1000,
+    "doubled_build_seconds": 0.0002742509823292494,
+    "doubled_verify_reason": "ok",
+    "answer_atoms_unchanged": true
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "carried_witness_checks": 80,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "failures": [],
+    "transformations": "insert involution word 11; add four repetitions to powered blocks; reorder independent LP components; compose all three"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "answer_chars": 272,
+    "answer_tokens": 68,
+    "answer_elements": 90,
+    "intended_route_operations": 258
+  },
+  "track": "B",
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "n": 500,
+    "components": 8,
+    "base_len": 7
+  },
+  "all_passed": true
+}
