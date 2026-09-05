@@ -1,0 +1,151 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "expected exactly 171 right endpoints",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "right endpoints must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "right endpoints must lie in 0..170",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "position 1 is not an edge of its displayed row",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_entries": 171,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1241018070217667823424840524103103992616605577501693185388951803611996075221691752992751978120487585576464959501670387052809889858690710767331242032218484364310473577889968548278290754541561964852153468318044293239598173696899657235903947616152278558180061176365108428800000000000000000000000000000000000000000,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over all n! right-vertex permutations",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_edge_scan_operations_median": 7882.5,
+    "baseline_wall_seconds_median": 0.00040489411912858486,
+    "demo_candidate_count": 120,
+    "demo_exact_solution_count": 2,
+    "pass": true,
+    "shallow_repair_edge_scan_operations_median": 1215.0,
+    "shallow_repair_restarts_median": 1.0,
+    "shallow_repair_wall_seconds_median": 0.0014543184079229832,
+    "shipping_density_fraction": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_sampling_wall_seconds": 10.260658388957381
+  },
+  "G6_adversary_panel": {
+    "additional_reference_probe": {
+      "guaranteed": false,
+      "name": "random-order depth-2 augmenting-path repair, up to 16 restarts",
+      "operations_median_edge_scans": 1215.0,
+      "restarts_median": 1.0,
+      "solves": "8/8, as expected for Track B",
+      "wall_clock_sec_median": 0.0014543184079229832
+    },
+    "attacks": {
+      "fixed_offsets_0_plusminus1": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_first_unused_neighbor": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_minimum_column_degree": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "randomized_greedy_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(E sqrt(V))",
+      "name": "Hopcroft-Karp bipartite maximum matching",
+      "operations_median_edge_scans": 7882.5,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_median": 0.00040489411912858486
+    }
+  },
+  "G7_scales": {
+    "doubled_build_seconds": 0.004668222973123193,
+    "doubled_n": 342,
+    "doubled_verify_reason": "ok",
+    "ladder_log2_candidate_spaces": [
+      6.90689059560852,
+      938.3428240597251,
+      1026.7873054426123,
+      1192.0266648093022
+    ],
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "failures": [],
+    "invariance_checks": 80,
+    "method": "bipartite color refinement plus pairwise common-neighbor multisets",
+    "pass": true,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 745,
+    "answer_elements": 171,
+    "answer_tokens": 187,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 3
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 2
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.33333333333333337,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 231,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "degree": 20,
+    "n": 171
+  },
+  "track": "B"
+}
