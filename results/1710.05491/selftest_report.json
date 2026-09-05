@@ -1,0 +1,171 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong answer shape: expected [mask_hex, phase]",
+        "rejected": true
+      },
+      "duplicate_field": {
+        "reason": "phase must be the integer 0 or 1",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "mask must have exactly 2 lowercase hex digits",
+        "rejected": true
+      },
+      "swap_fields": {
+        "reason": "mask must be a hexadecimal string",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      "2f",
+      1
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform nonzero n-bit affine mask and uniform phase",
+    "structure_aware_space": 36893488147419103230,
+    "total": 200000,
+    "wall_clock_sec": 6.365408
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_restarts_total_8": 2048,
+    "attack_wall_clock_sec_total_8": 0.112514,
+    "candidate_space": 36893488147419103230,
+    "demo_exact_valid_answers": 2,
+    "exact_valid_answers_by_connectivity": 2,
+    "pass": true,
+    "reference_algorithm_operations_mean": 84500,
+    "reference_algorithm_wall_clock_sec_mean": 0.014255,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_density_denominator": 36893488147419103230,
+    "shipping_exact_density_numerator": 2,
+    "strongest_failing_attack": "random_affine_restart_256"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "coordinate_frequency_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.02653
+      },
+      "forward_update_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.00015
+      },
+      "greedy_column_majority": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.024744
+      },
+      "random_affine_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.112514
+      }
+    },
+    "compact_route": {
+      "name": "reverse the displayed basis-change updates",
+      "operations": 189,
+      "solves": "8/8 by the construction identity"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) scalar bit operations",
+      "name": "Gauss-Jordan elimination over GF(2)",
+      "operations_max": 93733,
+      "operations_mean": 84500,
+      "operations_min": 73539,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.014255,
+      "wall_clock_sec_total_8": 0.114044
+    }
+  },
+  "G7_scales": {
+    "answer_elements_after": 2,
+    "answer_elements_before": 2,
+    "doubled_n": 128,
+    "doubled_vertices": 340282366920938463463374607431768211456,
+    "pass": true,
+    "shipping_n": 64,
+    "shipping_vertices": 18446744073709551616,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "generator order",
+      "invertible GF(2) change of basis",
+      "Cayley translation with carried phase",
+      "ordered-side swap",
+      "compositions of affine vertex relabellings",
+      "basis-change consistency of solver-visible metadata"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 22,
+    "answer_elements": 2,
+    "answer_tokens": 6,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 2,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "incomplete_after_2_of_3_scored_then_http_403",
+    "intended_route_operations": 189,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:1710.05491",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "extras": 8,
+    "layers": 3,
+    "n": 64
+  },
+  "track": "B"
+}
