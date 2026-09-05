@@ -1,0 +1,185 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "rejections": {
+      "drop_one": {
+        "reason": "v is missing a coordinate",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "v has a duplicate or extra coordinate",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be a nonempty JSON object",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "index is outside the displayed row range",
+        "rejected": true
+      },
+      "swap_one": {
+        "reason": "coefficient c1 violates its equivalence identity",
+        "rejected": true
+      }
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "certificate_space": 52602815556,
+    "exact_density": 5.817179114190912e-09,
+    "exact_valid_certificates": 306,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "structure_aware_prior": "uniform row, nonzero v, and one of 303 admissible r values",
+    "total": 200000,
+    "wall_clock_sec": 3.60449
+  },
+  "G5_density_and_baseline": {
+    "baseline_directions_tested": 96008,
+    "baseline_scalar_operations": 5664472,
+    "baseline_wall_clock_sec": 0.514634,
+    "demo_certificate_space": 1488,
+    "demo_valid_count_enumerated": 4,
+    "pass": true,
+    "shipping_certificate_space": 52602815556,
+    "shipping_density_exact": 5.817179114190912e-09,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_valid_count_exact": 306,
+    "strongest_attack": "Proposition 2.1 exhaustive Dickson enumeration"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "base_field_twist_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_first_candidate": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_coordinate_energy": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m*p^2) projective 3-by-3 determinant tests",
+      "directions_tested": 96008,
+      "name": "Proposition 2.1 exhaustive Dickson determinant test",
+      "operations": 5664472,
+      "solves": "1/1, as expected on Track B",
+      "wall_clock_sec": 0.514634
+    }
+  },
+  "G7_scales": {
+    "doubled_p": 617,
+    "doubled_space": 866726063280,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_p": 307,
+    "shipping_space": 52602815556
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 100,
+    "distinct_keys": 20,
+    "failures": [],
+    "invariance_checks": 100,
+    "pass": true,
+    "symmetries": [
+      "candidate reordering",
+      "global Frobenius",
+      "independent nonzero input/output scaling per row",
+      "their composition"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 36,
+    "answer_elements": 5,
+    "answer_tokens": 9,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "diagnostic_not_gated": true,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 180,
+    "pass": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "coordinate_range": "0,...,p-1",
+      "index": "0 <= index < number of candidates",
+      "max_atomic_elements": 5,
+      "r_range": "0,...,p-1 subject to the displayed exclusions",
+      "v_coordinates": 3
+    },
+    "description": "A JSON object {index,v,r}: index selects one displayed polynomial; v is one nonzero GF(p^3) element as three base-p coordinates; r is a base-field integer distinct from 0 and 1 with 3r^2-3r+1 nonzero."
+  },
+  "problem_profile": {
+    "certificate_form": "exact_symbolic",
+    "computational_core": "polynomial_identity",
+    "domain_essentiality": "native",
+    "hardness_basis": "Track B: Proposition 2.1's homogeneous Dickson-matrix test enumerates p^2+p+1 projective derivative directions, O(m p^2) for m candidates; at shipping p=307, m=6 it measured 96,008 directions, at least 5,664,472 scalar additions/multiplications, and about 0.51 s, while the coefficient-invariant and one-projector Hilbert-90 change of variables take at most 180 exact finite-field operations without a CAS across the shipping ladder.",
+    "intuition_description": "A multiplicative change of variable preserves a low-degree relation among the five coefficients; without finding that relation one tests derivative maps throughout GF(p^3).",
+    "intuition_type": "change of variables",
+    "max_answer_tokens": 10,
+    "native_domain": "algebra",
+    "native_objects": [
+      "quadratic Dembowski-Ostrom polynomials over GF(p^3)",
+      "q-linearized derivative maps",
+      "multiplicative finite-field equivalence certificate"
+    ],
+    "object_regime": "finite_field",
+    "reduction": null,
+    "reduction_kind": "none",
+    "reduction_source": "paper_central",
+    "verification_operations": [
+      "exact arithmetic in GF(p^3)",
+      "five polynomial-coefficient identity comparisons",
+      "Dickson determinant factor identity over GF(p)",
+      "finite-field nonzero comparison"
+    ]
+  },
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "candidates": 6,
+    "n": 307
+  },
+  "track": "B"
+}
