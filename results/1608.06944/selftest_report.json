@@ -1,0 +1,95 @@
+{
+  "G1_planted_verifies": {"checked": 12, "failures": [], "pass": true},
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "too few flow values: expected 216, got 215", "rejected": true},
+      "duplicate_one": {"reason": "too many flow values: expected 216, got 217", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "edge 0 value 0 is outside {-2,-1,1,2}", "rejected": true},
+      "swap_two_positions": {"reason": "conservation fails at vertex 88: incident sum is -1", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {"pass": true, "verify_reason": "ok"},
+  "G4_guess_resistance": {
+    "hits": 0,
+    "measured_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform balanced degree-3 sign types and uniform magnitude-two edge choices; every degree-3 equation is already satisfied",
+    "structure_aware_space": 9969099311002567785128210212301880871969283458216957764,
+    "total": 200000,
+    "wall_clock_sec": 21.827047
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_budget_exhaustions": 8,
+    "baseline_matching_edge_scans_mean": 417.5,
+    "baseline_matching_phases_mean": 2.0,
+    "baseline_nodes_max": 2001,
+    "baseline_nodes_mean": 2001.0,
+    "baseline_pattern_checks_mean": 28001184.75,
+    "baseline_wall_clock_sec_mean": 0.013137,
+    "baseline_wall_clock_sec_total_8": 0.105095,
+    "demo_candidate_space": 486,
+    "demo_exact_valid_answers": 90,
+    "pass": false,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_solution_fraction_estimate": 0.0,
+    "strongest_attack": "exact sign-type propagation then Hopcroft-Karp matching"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "exact_type_then_hopcroft_karp": {"attempts": 8, "successes": 8, "wall_clock_sec_total_8": 0.105095},
+      "gac_dpll_2000_nodes": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 52.683499},
+      "greedy_residual_two_orders": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.006691},
+      "outlier_four_cycle_blocks": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.009114},
+      "random_restart_swap_descent": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.47783},
+      "two_stage_type_then_selector": {"attempts": 8, "successes": 0, "wall_clock_sec_total_8": 0.083577}
+    },
+    "pass": false,
+    "seeds": [0, 1, 2, 3, 4, 5, 6, 7],
+    "standard_algorithm": "exact sign-type propagation followed by Hopcroft-Karp bipartite perfect matching; this construction-aware algorithm solves the family"
+  },
+  "G7_scales": {"doubled_edges": 432, "doubled_n": 36, "pass": true, "shipping_edges": 216, "shipping_n": 18, "verify_reason": "ok"},
+  "G8_canonical_key": {
+    "failures": [],
+    "invariance_checks": 40,
+    "invariant": "multiset of individualized color-refinement quotient and BFS fingerprints",
+    "pass": true,
+    "real_transformation_witness_checks": 40,
+    "symmetries_tested": ["arbitrary vertex relabelling", "arbitrary edge reordering with carried flow", "composition of both transformations twice"],
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 541,
+    "answer_elements": 216,
+    "answer_tokens": 136,
+    "arms": {
+      "bare": {"attempts": 0, "service_errors": 4, "solved": 0},
+      "hinted": {"attempts": 0, "service_errors": 4, "solved": 0},
+      "placebo": {"attempts": 0, "service_errors": 4, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unreachable",
+    "intended_route_operations": 216,
+    "pass": true
+  },
+  "all_passed": false,
+  "certificate_language": {
+    "bounds": {
+      "alphabet": [-2, -1, 1, 2],
+      "balanced_sign_types": "exactly 2n of each type",
+      "candidate_count": "binomial(4n,2n) * 3^(4n)",
+      "degree_3_local_states": 6,
+      "length": "12n",
+      "multiplicities": {"-1": "4n", "-2": "2n", "1": "4n", "2": "2n"}
+    },
+    "description": "A JSON list of 12n integers in edge order that already obeys every degree-3 equation and the forced global multiplicities: choose exactly 2n of the 4n degree-3 vertices to have local pattern (1,1,-2), give the others (-1,-1,2), and choose the magnitude-two edge at each vertex."
+  },
+  "shipping_difficulty": "easy",
+  "shipping_params": {"n": 18},
+  "track": "A"
+}
