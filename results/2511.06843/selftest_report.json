@@ -1,0 +1,166 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "json_native_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "changed_entry": {
+        "reason": "panel 2 coefficient mismatch at index 1",
+        "rejected": true
+      },
+      "drop_one": {
+        "reason": "wrong matrix count: expected 4",
+        "rejected": true
+      },
+      "duplicate_matrix": {
+        "reason": "panel 3 coefficient mismatch at index 1",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be a JSON object",
+        "rejected": true
+      },
+      "noncanonical": {
+        "reason": "matrix 0 is not in normalized affine form",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "matrix 0 has an entry outside 0..1008",
+        "rejected": true
+      },
+      "singular": {
+        "reason": "matrix 0 is singular",
+        "rejected": true
+      },
+      "swap_panels": {
+        "reason": "panel 0 coefficient mismatch at index 1",
+        "rejected": true
+      },
+      "wrong_shape": {
+        "reason": "matrix 0 must have shape 2 by 2",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 9,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "independent uniform normalized affine matrices for every panel",
+    "sampling_seconds": 22.041514,
+    "search_space": 1070056706803987455737856,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_candidates_tested": 13071,
+    "baseline_field_operations": 1454243,
+    "baseline_solved": true,
+    "baseline_wall_seconds": 0.749569,
+    "demo_exact_valid_count": 1,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_count": null
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "coefficient_outlier_raw_ratio": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_translation_only": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "obvious_scale_only_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "uncentered_moment_ratio": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "candidates_tested": 10659,
+      "complexity": "implemented O(P*p*d + P*d^3); standard randomized finite-field factorization is polynomial in P,d,log(p)",
+      "name": "finite-field root recovery and ordered-pair affine alignment",
+      "operations": 1427306,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.666953
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_after": 16,
+    "answer_atoms_before": 16,
+    "doubled_degree": 160,
+    "doubled_verified": true,
+    "escalated_verified": true,
+    "fixed_answer_escalation": {
+      "n": 160,
+      "panels": 4,
+      "prime": 1009
+    },
+    "pass": true,
+    "shipping_degree": 80
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "failures": [],
+    "invariance_checks": 60,
+    "pass": true,
+    "relative_map_attempts": 20,
+    "relative_map_distinct": 20,
+    "transformations": [
+      "panel permutation",
+      "source/target swap with inverse witness",
+      "independent simultaneous affine coordinate changes"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 86,
+    "answer_elements": 16,
+    "answer_tokens": 22,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps_pass": true,
+    "diagnostic_complete": false,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "blocked_external",
+    "intended_route_operations": 280,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
