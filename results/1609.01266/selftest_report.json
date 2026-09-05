@@ -1,0 +1,195 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "anchor": {
+        "accepted": false,
+        "reason": "anchor used: column 0 is not an item tuple"
+      },
+      "drop_element": {
+        "accepted": false,
+        "reason": "wrong group shape: group 0 must contain 3 indices"
+      },
+      "drop_group": {
+        "accepted": false,
+        "reason": "wrong group count: expected 24, got 23"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "duplicate: an item-column index appears more than once"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty: expected a nonempty partition"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "out of range: column index 120 is invalid"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "wrong target sum: group 0 sums to 579, not 576"
+      }
+    },
+    "distinct_reasons": 7,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 20828605839205655690507335806457655417294115598336000000000000,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform set partitions of all item indices into unlabeled triples",
+    "total": 200000,
+    "wall_clock_sec": 9.50859
+  },
+  "G5_density_and_baseline": {
+    "demo_candidate_count": 280,
+    "demo_exact_solution_count": 280,
+    "demo_n": 3,
+    "pass": true,
+    "shipping_candidate_space": 20828605839205655690507335806457655417294115598336000000000000,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_attack": "algorithm_x_mrv_exact_cover",
+    "strongest_attack_nodes": 40008,
+    "strongest_attack_option_checks": 15467731,
+    "strongest_attack_wall_clock_sec": 1.338273
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "algorithm_x_mrv_exact_cover": {
+        "attempts": 8,
+        "nodes": 40008,
+        "operations": 15467731,
+        "successes": 0,
+        "wall_clock_sec": 1.338273
+      },
+      "greedy_largest_exact_pair": {
+        "attempts": 8,
+        "nodes": 0,
+        "operations": 41472,
+        "successes": 0,
+        "wall_clock_sec": 0.003098
+      },
+      "outlier_value_bands": {
+        "attempts": 8,
+        "nodes": 0,
+        "operations": 576,
+        "successes": 0,
+        "wall_clock_sec": 0.000275
+      },
+      "random_restart_exact_triples": {
+        "attempts": 8,
+        "nodes": 0,
+        "operations": 9069,
+        "successes": 0,
+        "wall_clock_sec": 0.034081
+      }
+    },
+    "construction_aware_attacks": [
+      "outlier_value_bands",
+      "greedy_largest_exact_pair",
+      "random_restart_exact_triples"
+    ],
+    "domain_standard_attack": "algorithm_x_mrv_exact_cover",
+    "domain_standard_complexity": "exponential worst case; MRV Algorithm-X search",
+    "pass": true
+  },
+  "G7_scales": {
+    "fixed_length_escalation": {
+      "filter_nodes": 10000,
+      "n": 24,
+      "random_restarts": 128
+    },
+    "ladder": [
+      {
+        "filter_nodes": 0,
+        "n": 3,
+        "preset": "demo",
+        "space": 280
+      },
+      {
+        "filter_nodes": 5000,
+        "n": 24,
+        "preset": "easy",
+        "space": 20828605839205655690507335806457655417294115598336000000000000
+      },
+      {
+        "filter_nodes": 20000,
+        "n": 36,
+        "preset": "medium",
+        "space": 345237766932222370956454035691609438244729612292104742270253987341728323729232000411238400000000000000000
+      },
+      {
+        "filter_nodes": 50000,
+        "n": 48,
+        "preset": "hard",
+        "space": 19913480300301451093463581710140424113457551120244091516775172836523365435264573358483495607481876544596486531609000220899147776000000000000000000000000
+      }
+    ],
+    "pass": true,
+    "size_doubled_params": {
+      "filter_nodes": 5000,
+      "n": 48,
+      "random_restarts": 64
+    },
+    "size_doubled_reason": "ok",
+    "size_doubled_verifies": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 40,
+    "distinct_keys": 20,
+    "invariance_checks": 40,
+    "invariance_failures": [],
+    "key_definition": "SHA-256 of the sorted tuple multiset and scalar MCW parameters",
+    "pass": true,
+    "transformations": [
+      "arbitrary input-column reordering",
+      "composition of two independent input-column reorderings"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 271,
+    "answer_elements": 72,
+    "answer_tokens": 68,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 2,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 2,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "incomplete_key_limit",
+    "intended_route_operations": 48,
+    "pass": false,
+    "within_caps": true
+  },
+  "all_passed": false,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "filter_nodes": 5000,
+    "n": 24,
+    "random_restarts": 64
+  },
+  "track": "A"
+}

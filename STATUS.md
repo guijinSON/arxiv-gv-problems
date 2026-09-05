@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **206 / 12,167** resolved (1.69%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **207 / 12,167** resolved (1.70%)
 
 | state | count |
 |---|---:|
-| ✅ done | 104 |
+| ✅ done | 105 |
 | 🚫 rejected (documented) | 102 |
-| 🔄 in progress | 90 |
+| 🔄 in progress | 89 |
 | ⚪ free | 11,871 |
 | **total** | **12,167** |
 
@@ -19,7 +19,6 @@
 | `1011.6021` | GUIJIN SON | 2026-09-05T00:24 |
 | `2410.07666` | GUIJIN SON | 2026-09-05T00:24 |
 | `2601.05272` | GUIJIN SON | 2026-09-05T00:24 |
-| `1609.01266` | GUIJIN SON | 2026-09-05T00:39 |
 | `1612.01752` | GUIJIN SON | 2026-09-05T01:04 |
 | `2501.13534` | GUIJIN SON | 2026-09-05T01:23 |
 | `2004.10873` | GUIJIN SON | 2026-09-05T01:41 |
@@ -54,7 +53,8 @@
 | `1504.08316` | GUIJIN SON | 2026-09-05T03:50 |
 | `1604.08603` | GUIJIN SON | 2026-09-05T03:50 |
 | `2310.19711` | GUIJIN SON | 2026-09-05T03:50 |
-| … 50 more | | |
+| `2212.13149` | GUIJIN SON | 2026-09-05T03:58 |
+| … 49 more | | |
 
 ## By family
 
@@ -65,7 +65,7 @@
 | algebraic decomposition | 24 | 804 |
 | integer equations | 9 | 607 |
 | reconfiguration | 12 | 551 |
-| geometric configurations | 10 | 533 |
+| geometric configurations | 11 | 533 |
 | constraint satisfaction | 10 | 508 |
 | algebraic identity solutions | 8 | 398 |
 | algebraic geometric structures | 7 | 299 |
