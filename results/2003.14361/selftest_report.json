@@ -1,0 +1,131 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "json_native_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "left quadratic rule is too short: expected 46 coefficients",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "left quadratic rule is too long: expected 46 coefficients",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be a JSON object",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "left coefficient 0 is not a bit in {0,1}",
+        "rejected": true
+      },
+      "swap_one": {
+        "reason": "cover conflict on base edge L0-R0",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 4.0389678347315804e-28,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform pairs of correctly shaped quadratic Boolean rules",
+    "sampling_seconds": 12.782166,
+    "search_space": 4951760157141521099596496896,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_attempts": 8,
+    "baseline_connected_components": [1, 1, 1, 1, 1, 1, 1, 1],
+    "baseline_operations_mean": 61866.0,
+    "baseline_solved": 8,
+    "baseline_table_cells_scanned": 20736,
+    "baseline_wall_seconds_max": 0.069142,
+    "baseline_wall_seconds_mean": 0.047045,
+    "demo_exact_valid_answer_count": 2,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_solution_fraction": 4.0389678347315804e-28,
+    "shipping_exact_valid_answer_count": 2,
+    "shipping_solution_fraction_estimate": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "affine_only_anchor_fit": {"attempts": 8, "successes": 0},
+      "constant_rule_ansatz": {"attempts": 8, "successes": 0},
+      "greedy_left_first": {"attempts": 8, "successes": 0},
+      "outlier_row_column_bias": {"attempts": 8, "successes": 0},
+      "random_restart_256": {"attempts": 8, "successes": 0},
+      "single_monomial_ansatz": {"attempts": 8, "successes": 0}
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^2 + |E|) for the displayed n-by-n table",
+      "connected_components": 1,
+      "name": "signed-graph breadth-first propagation with quadratic readout",
+      "operations": 61866,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.048558
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_after": 92,
+    "answer_atoms_before": 92,
+    "doubled_build_seconds": 0.107823,
+    "doubled_n": 288,
+    "fixed_answer_escalation": {"degree": 190, "dimension": 9, "n": 192},
+    "pass": true,
+    "shipping_n": 144
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 140,
+    "deterministic_rebuilds": 20,
+    "failures": [],
+    "invariance_checks": 140,
+    "invariant": "affine code-difference multiplicities coupled to the unlabelled base graph by deterministic colour refinement",
+    "pass": true,
+    "transformations": [
+      "independent left/right vertex reorder",
+      "independent coordinate permutations",
+      "independent code translations",
+      "independent invertible basis shears",
+      "left/right side swap",
+      "independent affine local-colour frames",
+      "composition of all six transformation classes"
+    ],
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 204,
+    "answer_elements": 92,
+    "answer_tokens": 51,
+    "arms": {
+      "bare": {"attempts": 0, "errors": 4, "solved": 0},
+      "hinted": {"attempts": 0, "errors": 4, "solved": 0},
+      "placebo": {"attempts": 0, "errors": 4, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "blocked_external",
+    "intended_route_operations": 235,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {"degree": 142, "dimension": 9, "n": 144},
+  "track": "B"
+}
