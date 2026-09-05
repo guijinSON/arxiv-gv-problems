@@ -1,0 +1,162 @@
+{
+  "G1_planted_verifies": {
+    "json_native_checks": 16,
+    "pass": true,
+    "preset_seed_checks": 16
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "digits list has the wrong length"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "digit letters must be pairwise distinct"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer object is missing a required field"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "answer contains an unknown letter"
+      },
+      "swap_two": {
+        "accepted": false,
+        "reason": "compressed word encounters an undefined transition"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 17297280,
+    "exact_density_by_construction": 5.781255781255781e-08,
+    "exact_valid_answers": 1,
+    "hits": 0,
+    "observed_valid_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform ordered n-subset of the public 2n digit class",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "candidate_space": 17297280,
+    "exact_valid_answer_count_by_construction": 1,
+    "pass": true,
+    "reference_nodes_mean": 2189.0,
+    "reference_transition_lookups_mean": 115427.625,
+    "reference_wall_clock_seconds_max": 0.01868113991804421,
+    "reference_wall_clock_seconds_mean": 0.017129516403656453,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sampled_valid_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "fixed_public_order": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "one_tick_transversal_greedy": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "single_letter_outlier": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(|Sigma|*|Q|*2^|Q|) worst-case exact",
+      "name": "breadth-first search in the power automaton (Fact 1)",
+      "nodes_mean": 2189.0,
+      "operations": 115428,
+      "shortest_word_length": 2188,
+      "solves": "8/8, as expected on Track B",
+      "transition_lookups_mean": 115427.625,
+      "wall_clock_sec_max": 0.01868113991804421,
+      "wall_clock_sec_mean": 0.017129516403656453
+    }
+  },
+  "G7_scales": {
+    "doubled_candidate_space": 3497296636753920000,
+    "doubled_expanded_length": 4782970,
+    "doubled_n": 14,
+    "doubled_planted_verifies": true,
+    "pass": true,
+    "shipping_candidate_space": 17297280,
+    "shipping_expanded_length": 2188,
+    "shipping_n": 7
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariant": "iterated color refinement of the transition ternary relation",
+    "pass": true,
+    "transformations": "arbitrary state and alphabet permutations, composed",
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 83,
+    "answer_elements": 9,
+    "answer_tokens": 21,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened_single_vendor_diagnostic",
+    "intended_route_operations": 154,
+    "pass": true
+  },
+  "all_passed": true,
+  "demo": {
+    "answer": {
+      "digits": [
+        "x07",
+        "x05",
+        "x00"
+      ],
+      "finish": "x04",
+      "start": "x02"
+    },
+    "candidate_space": 120,
+    "enumerated_valid_answers": 1,
+    "verify": [
+      true,
+      "ok"
+    ]
+  },
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 7,
+    "radix": 3
+  },
+  "track": "B"
+}
