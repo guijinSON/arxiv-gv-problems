@@ -1,0 +1,115 @@
+{
+  "paper": "1911.05032",
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {"n": 149, "orbit_count": 40},
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 16,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "empty": {"rejected": true, "reason": "answer must be a JSON array containing exactly two sets"},
+      "drop_one": {"rejected": true, "reason": "set 1 must contain exactly 74 distinct IDs"},
+      "swap_across_sets": {"rejected": true, "reason": "set 1 does not hit constraint 5"},
+      "duplicate": {"rejected": true, "reason": "set 1 contains duplicate element IDs"},
+      "out_of_range": {"rejected": true, "reason": "set 1 contains an out-of-universe ID: 149"}
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "realistic_response_parsed": true,
+    "equals_planted": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "candidate_space": 23362265873332749085315221863910685052043000,
+    "prior": "uniform over balanced ordered bipartitions; complement, sizes, and diversity are enforced"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_sampled_solution_hits": 0,
+    "shipping_sampled_solution_total": 200000,
+    "shipping_sampled_solution_fraction": 0.0,
+    "strongest_attack_wall_sec": 0.117123,
+    "strongest_attack_operations": 1281299,
+    "strongest_attack_nodes": 44,
+    "strongest_attack_solved_instances": 8,
+    "demo_exact_valid_certificate_count": 2,
+    "demo_candidate_space": 20
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_incidence_degree": {"successes": 0, "attempts": 8},
+      "greedy_online_balance": {"successes": 0, "attempts": 8},
+      "coordinate_interval_ansatz": {"successes": 0, "attempts": 8},
+      "id_parity_ansatz": {"successes": 0, "attempts": 8},
+      "random_restart_256": {"successes": 0, "attempts": 8}
+    },
+    "reference_algorithm": {
+      "name": "balanced NAE-3-SAT DPLL with unit and cardinality propagation",
+      "complexity": "O(2^|U| * |F|) worst-case exact; paper Theorem 1 gives r^2*d^(k*r)*|U|^O(1)",
+      "wall_clock_sec": 0.117123,
+      "mean_wall_clock_sec": 0.01464,
+      "operations": 1281299,
+      "mean_operations": 160162,
+      "nodes": 44,
+      "mean_nodes": 5.5,
+      "solves": "8/8, as expected",
+      "instances": [
+        {"seed": 19110, "constraints": 5920, "nodes": 6, "operations": 160941, "wall_clock_sec": 0.013464, "solved": true},
+        {"seed": 19111, "constraints": 5920, "nodes": 7, "operations": 183899, "wall_clock_sec": 0.016108, "solved": true},
+        {"seed": 19112, "constraints": 5920, "nodes": 6, "operations": 139061, "wall_clock_sec": 0.013504, "solved": true},
+        {"seed": 19113, "constraints": 5920, "nodes": 9, "operations": 274680, "wall_clock_sec": 0.021974, "solved": true},
+        {"seed": 19114, "constraints": 5920, "nodes": 6, "operations": 172685, "wall_clock_sec": 0.014426, "solved": true},
+        {"seed": 19115, "constraints": 5920, "nodes": 2, "operations": 89540, "wall_clock_sec": 0.009739, "solved": true},
+        {"seed": 19116, "constraints": 5920, "nodes": 4, "operations": 122416, "wall_clock_sec": 0.01525, "solved": true},
+        {"seed": 19117, "constraints": 5920, "nodes": 4, "operations": 138077, "wall_clock_sec": 0.012657, "solved": true}
+      ]
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n_parameter": 149,
+    "base_universe_size": 148,
+    "doubled_n_parameter": 298,
+    "doubled_universe_size": 306,
+    "base_candidate_space": 23362265873332749085315221863910685052043000,
+    "doubled_candidate_space": 5941597200766830382052873620337113495486801779749334568477712384736659175290655042024947280,
+    "doubled_planted_verifies": true
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "carried_certificate_checks": 60,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20,
+    "symmetries_tested": ["constraint-list reversal", "arbitrary universe relabelling", "composition of relabelling and reversal"],
+    "key_scope": "multiset of vertex link signatures and pair codegrees; not a complete isomorphism canonical form"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {"solved": 0, "attempts": 3},
+      "hinted": {"solved": 2, "attempts": 3},
+      "placebo": {"solved": 3, "attempts": 3}
+    },
+    "diagnostic_complete": true,
+    "hinted_minus_placebo": -0.33333333333333337,
+    "hinted_verdict": "too_easy",
+    "answer_chars": 489,
+    "answer_tokens": 123,
+    "answer_elements": 148,
+    "intended_route_operations": 222,
+    "caps": {"chars": 2000, "elements": 256, "operations": 300}
+  },
+  "all_passed": true
+}
