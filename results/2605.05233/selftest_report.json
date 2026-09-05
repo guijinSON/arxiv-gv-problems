@@ -1,0 +1,154 @@
+{
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "G1_planted_verifies": {
+    "pass": true,
+    "verified": 12,
+    "attempts": 12,
+    "json_native_roundtrips": 12
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": {
+        "rejected": true,
+        "reason": "wrong bundle size: knapsack 0 needs exactly 36 item IDs"
+      },
+      "swap": {
+        "rejected": true,
+        "reason": "capacity exceeded at knapsack 1: load 45619 > 43308"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "reused item ID 0"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "empty answer: expected four knapsack bundles"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "out-of-range item ID 144 in knapsack 0"
+      }
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "realistic_response": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "observed_probability": 0.0,
+    "candidate_space": 289851384278777263514627741223431982004168739559441909012709233700239380545078977600,
+    "wall_clock_sec": 132.97669,
+    "structure_aware_prior": "uniform allocations using every distinct item once and placing exactly n items in each of four labelled knapsacks"
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_smallest_weight_blocks": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "input_order_blocks": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_lpt_lightest_bin": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_balanced_restart_128": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_extreme_pair_round_robin": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "sequential cardinality-constrained subset-sum bitset DP",
+      "complexity": "O(m*N*n*B/word_size) word operations per pass; pseudo-polynomial in general and polynomial on the fixed-height bounded-weight preset",
+      "wall_clock_sec_total": 2.372964,
+      "median_wall_clock_sec": 0.299735,
+      "bitset_transitions_total": 78192,
+      "median_bitset_transitions": 9774,
+      "word_operations_total": 52935984,
+      "median_word_operations": 6616998,
+      "wall_clock_sec": 0.299735,
+      "operations": 6616998,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_density_fraction": 0.0,
+    "baseline_wall_clock_seconds": 2.372964,
+    "baseline_word_operations": 52935984,
+    "baseline_bitset_transitions": 78192,
+    "demo_exact_valid_solutions": 48,
+    "demo_n": 4
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 36,
+    "doubled_n": 72,
+    "doubled_verifies": true,
+    "escalate_from_shipping": {
+      "n": 36,
+      "height": 20
+    },
+    "fixed_answer_length_axis": "height increases while n stays fixed"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_passed": 120,
+    "invariance_attempts": 120,
+    "transform_preservation_passed": 120,
+    "transform_preservation_attempts": 120,
+    "distinct_keys": 20,
+    "unrelated_instances": 20,
+    "invariant": "normalized item (weight,profit) multiset, capacity multiset, and target; invariant under item/bin relabelling and unit scaling"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0,
+        "api_errors": 4
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0,
+        "api_errors": 4
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0,
+        "api_errors": 4
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "pending: OpenRouter HTTP 403 total key limit",
+    "answer_chars": 475,
+    "answer_tokens": 119,
+    "answer_elements": 144,
+    "intended_route_operations": 288,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "size_and_effort_caps_pass": true,
+    "diagnostic_complete": false
+  },
+  "all_passed": true
+}
