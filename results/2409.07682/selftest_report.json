@@ -1,0 +1,159 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "expected exactly 7 terms, got 6",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "row indices must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "row in term 1 is outside 0 <= row < n",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "coefficient mismatch in term 1",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_candidate_space": 1156576495205226332160,
+    "exact_unique_solution_density": "1/1156576495205226332160",
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "total": 200000,
+    "wall_clock_sec": 30.414348
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.031762,
+    "demo_exact_solution_count_by_enumeration": 1,
+    "pass": true,
+    "reference_operation_count": 13319,
+    "reference_wall_clock_sec": 0.013314,
+    "shipping_exact_solution_count": 1,
+    "shipping_exact_solution_density": "1/1156576495205226332160",
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sampled_solution_density": 0.0,
+    "strongest_failing_attack": "random_restart_256"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "direct_unit_decode_without_relabellings": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000103
+      },
+      "greedy_largest_weight_sign_peeling": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 9.2e-05
+      },
+      "outlier_low_hamming_rows": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.044343
+      },
+      "outlier_spectral_extrema": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000138
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.254097
+      }
+    },
+    "intended_compact_route": {
+      "name": "affine-unmasking plus Walsh unit-character decoding",
+      "operations_upper_bound": 161,
+      "solves": "8/8",
+      "wall_clock_sec": 0.000445
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n (log n + rounds)) exact integer operations",
+      "modular_inverse_euclidean_divisions": 13,
+      "name": "exact fast Walsh-Hadamard inversion after affine reindexing",
+      "operations": 13319,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.013314
+    }
+  },
+  "G7_scales": {
+    "candidate_space_doubled": 149572493072801277050880,
+    "candidate_space_shipping": 1156576495205226332160,
+    "doubled_build_sec": 0.053503,
+    "doubled_n": 2048,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 1024
+  },
+  "G8_canonical_key": {
+    "invariance_attempts": 140,
+    "invariant_relabellings": 140,
+    "pass": true,
+    "real_transformation_attempts": 140,
+    "real_transformations_verified": 140,
+    "transformations": [
+      "reordering the listed spectral coordinates",
+      "affine relabelling of visible Walsh rows with carried witness",
+      "affine relabelling of visible spectral coordinates",
+      "all nonempty compositions of those three"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 148,
+    "answer_elements": 21,
+    "answer_tokens": 37,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 161,
+    "pass": true,
+    "worst_case_answer_chars": 155,
+    "worst_case_answer_tokens": 39
+  },
+  "all_passed": true
+}
