@@ -1,0 +1,117 @@
+{
+  "paper": "2405.16539",
+  "track": "A",
+  "shipping_difficulty": "hard",
+  "shipping_params": {"n": 23, "q": 16, "k": 7, "extra_cols": 5, "r": 8},
+  "G1_planted_verifies": {
+    "pass": true,
+    "successes": 12,
+    "attempts": 12,
+    "json_native_roundtrips": 12
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": {"rejected": true, "reason": "wrong coefficient-row count: expected 7, got 6"},
+      "swap": {"rejected": true, "reason": "residual rank 23 exceeds bound 8"},
+      "duplicate": {"rejected": true, "reason": "wrong coefficient-row count: expected 7, got 8"},
+      "empty": {"rejected": true, "reason": "answer cannot be empty"},
+      "out_of_range": {"rejected": true, "reason": "coefficient row 0 is not canonical lowercase hexadecimal"}
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "realistic_response_recovered": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "candidate_space": 72999049881955123498258745691204661198291656115976958889267080286388402675338838184094604981077942396458276953177510516971019275542007007972042581115555427012031914789764239201325987075945660416,
+    "exact_probability": 1.369880843130252e-194,
+    "prior": "uniform over all k-by-n GF(q) coefficient matrices; every stated shape and field constraint enforced",
+    "uniqueness_basis": "Gabidulin distance n-k+1 and 2r < n-k+1"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_exact_valid_certificates": 1,
+    "shipping_candidate_space": 72999049881955123498258745691204661198291656115976958889267080286388402675338838184094604981077942396458276953177510516971019275542007007972042581115555427012031914789764239201325987075945660416,
+    "shipping_exact_solution_fraction": 1.369880843130252e-194,
+    "shipping_sampled_solution_hits": 0,
+    "shipping_sampled_solution_total": 200000,
+    "shipping_sampled_solution_fraction": 0.0,
+    "strongest_attack": "one exact restart of Section 6.2 kernel attack",
+    "strongest_attack_wall_clock_sec_mean": 1.1645614571170881,
+    "strongest_attack_wall_clock_sec_max": 2.1366701188962907,
+    "strongest_attack_field_operations_mean": 5441545,
+    "strongest_attack_restarts_per_instance": 1,
+    "strongest_attack_solved_instances": 0,
+    "demo_exact_valid_certificates": 1,
+    "demo_candidate_space": 8
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_single_basis_correlation": {"successes": 0, "attempts": 8},
+      "greedy_hamming_left_to_right": {"successes": 0, "attempts": 8},
+      "random_restart_256": {"successes": 0, "attempts": 8},
+      "kernel_attack_one_restart": {"successes": 0, "attempts": 8}
+    },
+    "standard_algorithm": {
+      "name": "Section 6.2 kernel attack",
+      "paper_complexity": "O(q^(r*ceil(K/m))*K^omega)",
+      "shipping_parameters": {"q": 16, "r": 8, "K": 161, "m": 23, "guessed_kernel_vectors": 7},
+      "bounded_run": [
+        {"seed": 81000, "solved": false, "wall_clock_sec": 0.76833, "restarts": 1, "guessed_kernel_vectors": 7, "linear_equations": 161, "field_operations": 5454189, "linear_system_solved": true},
+        {"seed": 81001, "solved": false, "wall_clock_sec": 1.517194, "restarts": 1, "guessed_kernel_vectors": 7, "linear_equations": 161, "field_operations": 5444293, "linear_system_solved": true},
+        {"seed": 81002, "solved": false, "wall_clock_sec": 0.678578, "restarts": 1, "guessed_kernel_vectors": 7, "linear_equations": 161, "field_operations": 5434841, "linear_system_solved": true},
+        {"seed": 81003, "solved": false, "wall_clock_sec": 1.313275, "restarts": 1, "guessed_kernel_vectors": 7, "linear_equations": 161, "field_operations": 5444677, "linear_system_solved": true},
+        {"seed": 81004, "solved": false, "wall_clock_sec": 2.13667, "restarts": 1, "guessed_kernel_vectors": 7, "linear_equations": 161, "field_operations": 5425853, "linear_system_solved": true},
+        {"seed": 81005, "solved": false, "wall_clock_sec": 1.445376, "restarts": 1, "guessed_kernel_vectors": 7, "linear_equations": 161, "field_operations": 5449840, "linear_system_solved": false},
+        {"seed": 81006, "solved": false, "wall_clock_sec": 1.115116, "restarts": 1, "guessed_kernel_vectors": 7, "linear_equations": 161, "field_operations": 5447371, "linear_system_solved": true},
+        {"seed": 81007, "solved": false, "wall_clock_sec": 0.341952, "restarts": 1, "guessed_kernel_vectors": 7, "linear_equations": 161, "field_operations": 5431303, "linear_system_solved": true}
+      ]
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 23,
+    "doubled_n": 46,
+    "base_candidate_space": 72999049881955123498258745691204661198291656115976958889267080286388402675338838184094604981077942396458276953177510516971019275542007007972042581115555427012031914789764239201325987075945660416,
+    "doubled_candidate_space": 5328861283668172329945723047610411795771014270600552860323385523406647326552760472582266594166949982639319866344591875989188385919141614032967632182106788230617154308807280817035869875026730777842155223320417183340387162699544821179884800708832389269366962629279314344211669291534466869589107113928150426545698929768007946765669598970231274510785562045304927693165937003804520022389293056,
+    "doubled_build_sec": 106.52634663507342,
+    "doubled_planted_verifies": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 40,
+    "real_transformation_witness_checks": 40,
+    "unrelated_instances": 20,
+    "unrelated_distinct_keys": 20,
+    "failures": [],
+    "symmetries_tested": ["matrix-row relabelling", "matrix-column relabelling", "public-basis reordering with carried coefficients", "composition of all three"],
+    "invariant": "target histogram plus sorted per-basis entry/joint-with-target histograms"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {"solved": 0, "attempts": 0},
+      "hinted": {"solved": 0, "attempts": 0},
+      "placebo": {"solved": 0, "attempts": 0}
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "diagnostic_pending",
+    "answer_chars": 183,
+    "answer_tokens": 46,
+    "answer_elements": 161,
+    "intended_route_operations": 161,
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "oracle_blocker": "OpenRouter returned HTTP 403 key limit exceeded for Anthropic, Google, and xAI; no error was scored as an attempt"
+  },
+  "all_passed": true,
+  "external_hardening_status": "blocked: no scored oracle calls; llm_loop_transcript.jsonl contains only script-recorded HTTP 403 errors"
+}
