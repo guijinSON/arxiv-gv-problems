@@ -1,0 +1,188 @@
+{
+  "track": "B",
+  "problem_profile": {
+    "native_domain": "combinatorics",
+    "object_regime": "finite_field",
+    "computational_core": "graph",
+    "certificate_form": "matrix_certificate",
+    "native_objects": [
+      "3-partite 3-uniform hypergraph with vertices in GF(2)^d",
+      "type-1 vertex set S",
+      "S-absorbing hyperedge"
+    ],
+    "verification_operations": [
+      "exact coordinate permutations over GF(2)",
+      "exact GF(2) matrix-vector products",
+      "hyperedge membership and disjointness checks",
+      "direct check of the paper's S-absorbing-edge definition"
+    ],
+    "domain_essentiality": "native",
+    "reduction_kind": "none",
+    "reduction": null,
+    "reduction_source": "paper_central",
+    "intuition_type": "change of variables",
+    "intuition_description": "The three part-specific coordinate permutations feed one shared linear syndrome, and the target-set XOR equals the syndrome difference of the two V1 vertices, so three cross-part XORs produce an absorber.",
+    "hardness_basis": "Track B: Section 3's absorbing-edge definition can be searched in this finite-field family by GF(2) Gaussian elimination in O(r^2 d) bit operations (18,088 bit operations and 0.0017--0.0032 s per instance across repeated eight-run local measurements); the shared-syndrome change of variables uses exactly 3d = 240 XORs.",
+    "max_answer_tokens": 63
+  },
+  "certificate_language": {
+    "description": "A JSON list of three fixed-width binary row strings [x,y,z], encoding one GF(2)^d vertex from each labeled part, required up front to be disjoint from S and to be an edge.",
+    "bounds": {
+      "rows": "exactly 3 binary strings",
+      "columns": "exactly the instance dimension d=n bits per string",
+      "entries": "characters 0 and 1 only",
+      "structural_constraints": "disjoint from S and already a hyperedge"
+    }
+  },
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 80,
+    "rank": 16,
+    "target_count": 21
+  },
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "distinct_reasons": 5,
+    "rejections": {
+      "drop_one": {
+        "rejected": true,
+        "reason": "answer is missing a part vector"
+      },
+      "swap_two": {
+        "rejected": true,
+        "reason": "candidate triple is not a hyperedge"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "answer contains an extra part vector"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "answer is empty"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "binary strings may contain only characters 0 and 1"
+      }
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed_matches": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "candidate_space": 566158880010163435688005443564815567574036143874954027768548815798272,
+    "prior": "uniform over all S-disjoint hyperedges, with edge membership enforced",
+    "sampling_wall_seconds": 3.2498807329684496
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_candidate_space": 566158880010163435688005443564815567574036143874954027768548815798272,
+    "enumerate_all_shipping": null,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "shipping_observed_valid_fraction": 0.0,
+    "density_sampling_wall_seconds": 3.2498807329684496,
+    "demo_exact_valid_solution_count": 10240,
+    "reference_successes": 8,
+    "reference_wall_seconds": 0.016875562956556678,
+    "reference_wall_seconds_mean": 0.0021094453695695847,
+    "reference_bit_operations": 144704,
+    "reference_bit_operations_mean": 18088.0
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_minimum_hamming_weight": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_complete_lowest_edge": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256_edges": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_raw_coordinate_xor": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "GF(2) Gaussian elimination followed by three syndrome solves",
+      "complexity": "O(r^2 d) exact bit operations",
+      "wall_clock_sec": 0.016875562956556678,
+      "wall_clock_sec_mean": 0.0021094453695695847,
+      "operations": 144704,
+      "operations_mean": 18088.0,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_dimension": 80,
+    "shipping_part_size": 1208925819614629174706176,
+    "doubled_dimension": 160,
+    "doubled_part_size_bits": 160,
+    "doubled_verifies": true,
+    "doubled_reason": "ok",
+    "doubled_build_and_verify_seconds": 0.003989601042121649
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 100,
+    "invariance_expected": 100,
+    "real_transformation_verify_checks": 100,
+    "distinct_unrelated_keys": 20,
+    "unrelated_instances": 20,
+    "shipping_distinct_unrelated_keys": 20,
+    "shipping_unrelated_instances": 20,
+    "shipping_key_seconds": 8.287897683912888,
+    "symmetries": [
+      "simultaneous bit-coordinate relabeling with carried witnesses",
+      "arbitrary invertible syndrome-basis change",
+      "kernel-preserving translations across the three parts",
+      "one-part translations with the induced target-set translation",
+      "composition with V1-name swap, V2/V3 swap, and target reordering"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "pending",
+    "answer_chars": 250,
+    "answer_tokens": 63,
+    "answer_elements": 240,
+    "answer_bits": 240,
+    "intended_route_operations": 240,
+    "diagnostic_recorded": false,
+    "oracle_evidence_status": "blocked before any scored attempt: bare, structural-hint, and placebo harden.py runs all received OpenRouter HTTP 403 key-limit errors"
+  },
+  "all_passed": true
+}
