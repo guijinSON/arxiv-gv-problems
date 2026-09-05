@@ -1,0 +1,216 @@
+{
+  "paper": "arXiv:0803.0845",
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 13,
+    "q_bits": 104,
+    "quotient_bits": 768
+  },
+  "G1_planted_verifies": {
+    "pass": true,
+    "successes": 20,
+    "attempts": 20,
+    "json_native_roundtrips": 20,
+    "finite_difference_identity_checks": 20,
+    "gcd_uniqueness_checks": 20
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": {
+        "rejected": true,
+        "reason": "missing certificate field: last_remainder"
+      },
+      "swap": {
+        "rejected": true,
+        "reason": "certificate fields appear swapped"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "unexpected certificate field: duplicate_q"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "empty certificate: q and last_remainder are required"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "candidate q is outside the stated half-open interval"
+      }
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "realistic_response_recovered": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "candidate_space": 10141204801825835211973625643008,
+    "exact_valid_count": 1,
+    "exact_probability": 9.860761315262648e-32,
+    "prior": "uniform q over the stated half-open interval; last_remainder is recomputed, so the sampler enforces the answer's freely deducible field"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_sampled_solution_hits": 0,
+    "shipping_sampled_solution_total": 200000,
+    "shipping_sampled_solution_fraction": 0.0,
+    "shipping_exact_valid_certificate_count": 1,
+    "shipping_exact_solution_fraction": 9.860761315262648e-32,
+    "strongest_attack_wall_sec": 0.001617,
+    "strongest_attack_euclidean_divisions": 3848,
+    "strongest_attack_bit_operation_proxy": 1100876215,
+    "strongest_attack_solved_instances": 8,
+    "demo_exact_valid_certificate_count": 1
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "single_equation_scale_outlier": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_smallest_legal_q_64": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "truncated_by_hand_euclid_8": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "finite_difference_without_ordering": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "multi-integer Euclidean GCD on every w-r",
+      "complexity": "O(n L^2) bit operations with schoolbook integer arithmetic",
+      "wall_clock_sec": 0.001617,
+      "mean_wall_clock_sec": 0.000202,
+      "operations": 1100876215,
+      "euclidean_divisions": 3848,
+      "mean_euclidean_divisions": 481.0,
+      "solves": "8/8, as expected",
+      "instances": [
+        {
+          "seed": 8100,
+          "solved": true,
+          "wall_clock_sec": 0.000196,
+          "euclidean_divisions": 469,
+          "bit_operation_proxy": 126299758
+        },
+        {
+          "seed": 8101,
+          "solved": true,
+          "wall_clock_sec": 0.000216,
+          "euclidean_divisions": 509,
+          "bit_operation_proxy": 147914773
+        },
+        {
+          "seed": 8102,
+          "solved": true,
+          "wall_clock_sec": 0.000201,
+          "euclidean_divisions": 473,
+          "bit_operation_proxy": 134598765
+        },
+        {
+          "seed": 8103,
+          "solved": true,
+          "wall_clock_sec": 0.000196,
+          "euclidean_divisions": 469,
+          "bit_operation_proxy": 135281321
+        },
+        {
+          "seed": 8104,
+          "solved": true,
+          "wall_clock_sec": 0.000196,
+          "euclidean_divisions": 468,
+          "bit_operation_proxy": 135841841
+        },
+        {
+          "seed": 8105,
+          "solved": true,
+          "wall_clock_sec": 0.000202,
+          "euclidean_divisions": 480,
+          "bit_operation_proxy": 145248397
+        },
+        {
+          "seed": 8106,
+          "solved": true,
+          "wall_clock_sec": 0.000204,
+          "euclidean_divisions": 490,
+          "bit_operation_proxy": 136090272
+        },
+        {
+          "seed": 8107,
+          "solved": true,
+          "wall_clock_sec": 0.000206,
+          "euclidean_divisions": 490,
+          "bit_operation_proxy": 139601088
+        }
+      ]
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 13,
+    "doubled_n": 26,
+    "base_adjusted_integer_bits_max": 885,
+    "doubled_adjusted_integer_bits_max": 898,
+    "base_answer_elements": 2,
+    "doubled_answer_elements": 2,
+    "doubled_planted_verifies": true
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "carried_certificate_checks": 60,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20,
+    "symmetries_tested": [
+      "arbitrary reorder of exact equations",
+      "reversal of exact equations",
+      "composition of arbitrary reorder and reversal"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "diagnostic_pending",
+    "answer_chars": 61,
+    "answer_tokens": 16,
+    "answer_elements": 2,
+    "intended_route_operations": 23,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true
+}
