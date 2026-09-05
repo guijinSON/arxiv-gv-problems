@@ -1,0 +1,159 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "pass": true,
+    "successes": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer is missing coordinates: expected 128",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "answer has too many coordinates: expected 128",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must not be empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "every coordinate must lie in F_3={0,1,2}",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "the first nonzero coordinate must be 1",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "json_native": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 5895092288869291585760436430706259332839105796137920554548480,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform normalized projective vectors in F_3^n",
+    "total": 200000
+  },
+  "G5_density_baseline": {
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) exact field operations",
+      "name": "Gauss-Jordan nullspace elimination over F_3",
+      "operations_max": 919446,
+      "operations_mean": 833553.375,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 1.0290163829922676,
+      "wall_clock_sec_mean": 0.5930865246045869
+    },
+    "shipping_candidate_space": 5895092288869291585760436430706259332839105796137920554548480,
+    "shipping_exact_density": 1.6963262846421104e-61,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_count": 1,
+    "strongest_attack_iterations": 2048,
+    "strongest_attack_wall_clock_sec": 2.58228366705589,
+    "strongest_failing_attack": {
+      "iterations": 2048,
+      "name": "random_restart_256 plus construction-aware probes",
+      "successes": 0,
+      "wall_clock_sec_total_8_seeds": 2.58228366705589
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_component_majority": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_all_ones": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "sparse_first_triple": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "unmasked_missing_walsh": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) exact field operations",
+      "name": "Gauss-Jordan nullspace elimination over F_3",
+      "operations_max": 919446,
+      "operations_mean": 833553.375,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 1.0290163829922676,
+      "wall_clock_sec_mean": 0.5930865246045869
+    }
+  },
+  "G7_scales": {
+    "candidate_space_increased": true,
+    "doubled_n": 256,
+    "doubled_planted_verifies": true,
+    "pass": true,
+    "shipping_n": 128
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 140,
+    "carried_witness_successes": 140,
+    "distinct_unrelated_keys": 20,
+    "invariance_attempts": 140,
+    "invariance_successes": 140,
+    "pass": true,
+    "transformations": [
+      "triple reordering",
+      "message-component permutation",
+      "independent nonzero component scaling",
+      "compositions of these maps"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 384,
+    "answer_elements": 128,
+    "answer_tokens": 96,
+    "arms": {
+    "bare": {
+      "api_errors": 0,
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "api_errors": 4,
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "api_errors": 4,
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "arms_recorded_not_gated": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run_api_unreachable",
+    "intended_route_operations": 147,
+    "pass": true
+  },
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
