@@ -1,0 +1,142 @@
+{
+  "G1_planted_verifies": {
+    "failures": [],
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "reason": "row 1 must contain exactly 3 card IDs",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "the nine card IDs must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "card ID 64 is outside 1..63",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "degree equation fails at row 1, column 1: got 27858, expected 27936",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "direct_recovered": true,
+    "model_style_recovered": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "estimated_probability": 0.0,
+    "hits": 0,
+    "pass": true,
+    "sampler_prior": "uniform over distinct 9-card target-sum subsets and permutations",
+    "structure_aware_space": 10648350357120,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_attempts": 8,
+    "baseline_operations_max": 113558,
+    "baseline_operations_mean": 82292.75,
+    "baseline_successes": 8,
+    "baseline_wall_clock_sec_max": 0.1935774909798056,
+    "baseline_wall_clock_sec_mean": 0.11795900360448286,
+    "demo_certificate_space": 362880,
+    "demo_exact_valid_answer_count": 72,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_sorted_additive_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_target_sum": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_central_value": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(p^3+B) integer operations, B=bucket-collision work",
+      "name": "exact ordered-triple hash-join CSP",
+      "operations_max": 113558,
+      "operations_mean": 82292.75,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.1935774909798056,
+      "wall_clock_sec_mean": 0.11795900360448286
+    }
+  },
+  "G7_scales": {
+    "doubled_cards": 126,
+    "doubled_search_space": 3773441678952960,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_cards": 63,
+    "shipping_search_space": 10648350357120
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated": 20,
+    "failures": [],
+    "invariance_checks": 40,
+    "pass": true,
+    "transformations": [
+      "arbitrary public card relabelling",
+      "row cycle composed with column cycle and transposition"
+    ],
+    "transformed_witness_checks": 40,
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 32,
+    "answer_elements": 9,
+    "answer_tokens": 8,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 207,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "2205.13905",
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
