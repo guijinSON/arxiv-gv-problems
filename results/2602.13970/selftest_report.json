@@ -1,0 +1,164 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "generation_route": "sample Venn atoms, then carry them through an exact inverse permutation",
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "the three list lengths do not sum to m",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "T contains duplicate words",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must have exactly the keys S, T, R",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "S contains a word of the wrong width",
+        "rejected": true
+      },
+      "swap_categories": {
+        "reason": "S word 61168 is not in A\\C",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 4.204893930489346e-48,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform m-subset of the three tagged n-bit universes; shape and total size are pre-enforced",
+    "structure_aware_space": 237818127289509243242201197685175961551566929920,
+    "total": 200000,
+    "wall_clock_sec": 3.906651
+  },
+  "G5_density_and_baseline_cost": {
+    "candidate_space": 237818127289509243242201197685175961551566929920,
+    "demo_exact_valid_answers_by_enumeration": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "mathematically_valid_answers": 1,
+    "pass": true,
+    "reference_algorithm_operations_mean": 35651584,
+    "reference_algorithm_wall_clock_sec_mean": 1.563374,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_attack_candidate_tests_total_8": 32768,
+    "strongest_attack_wall_clock_sec_total_8": 0.060778,
+    "strongest_failing_attack": "random_restart_4096"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_forward_as_inverse": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000154
+      },
+      "greedy_prefix_512": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.007028
+      },
+      "numeric_outlier_smallest": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 3.6e-05
+      },
+      "random_restart_4096": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.060778
+      }
+    },
+    "compact_route": {
+      "count_model": "per word: pre/post XOR plus add, rotate, XOR-constant, and XOR-left per round; three setup checks",
+      "name": "reverse the Feistel coordinate on each usable interval word",
+      "solves": "8/8, as expected",
+      "worst_case_exact_operations": 275
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(2^n * rounds) exact word operations for the succinct universe",
+      "coordinate_evaluations_mean": 1048576,
+      "name": "linear enumeration of the three usable Venn regions (Lemma 11 proof)",
+      "operations_mean": 35651584,
+      "round_evaluations_mean": 8388608,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 1.563374,
+      "wall_clock_sec_total_8": 12.506993
+    }
+  },
+  "G7_scales": {
+    "answer_elements_unchanged": true,
+    "doubled_n": 40,
+    "doubled_universe": 1099511627776,
+    "pass": true,
+    "shipping_n": 20,
+    "shipping_universe": 1048576,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "completeness_basis": "three labelled finite sets are isomorphic exactly when all eight Venn-atom sizes agree",
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "global XOR relabelling of every universe element",
+      "reordering the six input Venn-atom blocks",
+      "composition of relabelling and block reordering"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 83,
+    "answer_elements": 8,
+    "answer_tokens": 21,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 275,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:2602.13970",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "m": 8,
+    "n": 20,
+    "rounds": 8
+  },
+  "track": "B"
+}
