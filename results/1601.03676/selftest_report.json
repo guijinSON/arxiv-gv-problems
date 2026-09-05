@@ -1,0 +1,124 @@
+{
+  "G1_planted_verifies": {"checks": 12, "errors": [], "pass": true},
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "reasons": {
+      "drop_one": "expected exactly 32 group-option pairs, received 31",
+      "duplicate_group": "group 0 is selected more than once",
+      "empty": "answer is empty",
+      "out_of_range": "entry 31 has a group or option outside its stated range",
+      "swap_options": "selected sets for groups 0 and 7 alpha-conflict: their shared positive weight exceeds 0"
+    }
+  },
+  "G3_round_trip": {"parsed_equals_answer": true, "pass": true},
+  "G4_guess_resistance": {
+    "candidate_space": 79228162514264337593543950336,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over q^n one-option-per-group assignments",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_compatibility_cells_mean": 7168.0,
+    "baseline_component_nodes_mean": 32.0,
+    "baseline_conflict_marks_mean": 6272.0,
+    "baseline_incidence_reads_mean": 13056.0,
+    "baseline_operations_max": 27616,
+    "baseline_operations_mean": 27616.0,
+    "baseline_wall_clock_sec_mean": 0.0070007292670197785,
+    "demo_candidate_count": 729,
+    "demo_exact_solution_count": 3,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_observed_solution_fraction": 0.0,
+    "shipping_solution_count_known_by_construction": 8
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "equal_local_option_ansatz": {"attempts": 8, "successes": 0},
+      "greedy_left_to_right": {"attempts": 8, "successes": 0},
+      "local_option_zero_plurality": {"attempts": 8, "successes": 0},
+      "outlier_weight_and_label_sum": {"attempts": 8, "successes": 0},
+      "random_restart_256": {"attempts": 8, "successes": 0}
+    },
+    "compact_route_audit": {
+      "complexity": "O(n) exact modular operations after recognizing the invariant",
+      "name": "anchor weight residue modulo q to global sheet zero",
+      "operations_max": 64,
+      "operations_mean": 64.0,
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "compatibility_cells_mean": 7168.0,
+      "complexity": "O(L + |E| q^2) exact operations on this distribution",
+      "component_nodes_mean": 32.0,
+      "conflict_marks_mean": 6272.0,
+      "incidence_reads_mean": 13056.0,
+      "name": "positive-element incidence index plus component propagation",
+      "operations_max": 27616,
+      "operations_mean": 27616.0,
+      "solves": "8/8, as expected for Track B",
+      "wall_clock_sec_mean": 0.0070007292670197785
+    }
+  },
+  "G7_scales": {
+    "base_n": 32,
+    "base_space_bits": 96,
+    "cap_bound_answer_atoms": 256,
+    "cap_bound_parameters": {
+      "degree": 123,
+      "n": 128,
+      "q": 12
+    },
+    "doubled_n": 64,
+    "doubled_space_bits": 192,
+    "doubled_verify_reason": "ok",
+    "first_escalation": {
+      "degree": 9,
+      "n": 32,
+      "q": 8
+    },
+    "first_escalation_keeps_answer_atoms": true,
+    "steps_until_cap_bound": 68,
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "carried_answer_verifications": 40,
+    "distinct_unrelated_keys": 20,
+    "errors": [],
+    "invariance_checks": 40,
+    "pass": true,
+    "transformations": [
+      "universe-element relabelling",
+      "element order within sets",
+      "independent option relabelling",
+      "group relabelling",
+      "constraint-edge order and orientation",
+      "answer-pair order",
+      "positive-weight magnitude normalization at threshold zero"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 215,
+    "answer_elements": 64,
+    "answer_tokens": 54,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "pending: all harden arms hit OpenRouter HTTP 403 key total limit",
+    "intended_route_operations": 64,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "1601.03676",
+  "track": "B"
+}
