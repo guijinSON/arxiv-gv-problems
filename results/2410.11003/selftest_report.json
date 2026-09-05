@@ -1,0 +1,161 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "tests": {
+      "drop_one": {
+        "reason": "too few weights: expected exactly four",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "weights must be pairwise distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer object is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "modulus is outside the required bit range",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "weighted checksum identity fails",
+        "rejected": true
+      }
+    }
+  },
+  "G3_round_trip": {
+    "garbage_rejected": true,
+    "pass": true,
+    "realistic_response_parsed": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sample_wall_seconds": 1.801416,
+    "search_space": 146655953289216,
+    "structure_aware": true,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attempts": 8,
+    "baseline_operations_max": 469373,
+    "baseline_operations_median": 434744,
+    "baseline_successes": 8,
+    "baseline_wall_seconds_max": 0.110635,
+    "baseline_wall_seconds_median": 0.101356,
+    "demo_certificate_space": 218112,
+    "demo_exact_valid_count": 4,
+    "pass": true,
+    "shipping_density_samples": 200000,
+    "shipping_sampled_density": 0.0,
+    "shipping_valid_hits": 0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_first_64_relations": {
+        "attempts": 8,
+        "operations_max": 448,
+        "successes": 0
+      },
+      "in_context_symmetric_ansatz": {
+        "attempts": 8,
+        "operations_max": 168,
+        "successes": 0
+      },
+      "local_edge_gcd": {
+        "attempts": 8,
+        "operations_max": 144,
+        "successes": 0
+      },
+      "outlier_degree_gcd": {
+        "attempts": 8,
+        "operations_max": 3177,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "operations_max": 256,
+        "successes": 0
+      }
+    },
+    "graph_only_standard_algorithm": "enumerate transversal K4s and run Algorithm X; not placed among failing attacks because Track B openly supplies a successful exact certificate algorithm",
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(B^3 + B*n) exact operations for four parts",
+      "name": "complete bounded checksum-relation enumeration",
+      "operations_max": 469373,
+      "solves": "8/8, as expected on Track B",
+      "wall_clock_sec_max": 0.110635
+    }
+  },
+  "G7_scales": {
+    "base_part_size": 23,
+    "doubled_build_seconds": 0.003982,
+    "doubled_part_size": 46,
+    "doubled_verify_reason": "ok",
+    "doubled_vertex_count": 184,
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 20,
+    "carried_witness_passed": 20,
+    "distinct_keys": 20,
+    "invariance_attempts": 20,
+    "invariance_passed": 20,
+    "pass": true,
+    "transformations": [
+      "within-part vertex permutations",
+      "permutations of four parts",
+      "compositions of both"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 44,
+    "answer_elements": 5,
+    "answer_tokens": 11,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "compact_route_verified": true,
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 36,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:2410.11003",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "coefficient_bound": 32,
+    "modulus_bits": 31,
+    "n": 23,
+    "perturb_ppm": 66000,
+    "tag_bits": 43
+  },
+  "track": "B"
+}
