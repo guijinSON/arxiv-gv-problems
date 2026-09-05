@@ -1,0 +1,142 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "independent_compact_route_checks": 12,
+    "json_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_term": {
+        "reason": "certificate is missing one of the two required terms",
+        "rejected": true
+      },
+      "duplicate_term": {
+        "reason": "extra polynomial terms are not permitted",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer polynomial must be nonempty",
+        "rejected": true
+      },
+      "out_of_range_denominator": {
+        "reason": "term 0 denominator must be exactly 1",
+        "rejected": true
+      },
+      "swap_terms": {
+        "reason": "term 0 exponent must be [177] in descending order",
+        "rejected": true
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 2.822316969475126e-87,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over the two fixed exponents, unit denominators, forced signs, and the exact printed Hadamard coefficient bounds",
+    "structure_aware_space": 354318813519366196293213694696033499148547695819185177253427818661887797067778120073280,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "demo_exact_solution_count": 1,
+    "pass": true,
+    "reference_median_operations": 11825836,
+    "reference_median_wall_seconds": 8.819489,
+    "shipping_density_samples": 200000,
+    "shipping_exact_solution_count": 1,
+    "shipping_exact_solution_fraction": 2.822316969475126e-87,
+    "shipping_observed_solution_fraction": 0.0,
+    "shipping_valid_hits": 0,
+    "strongest_attack": "expanded-matrix trace/Newton"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_first_row_effective_root": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_unscaled_quadratic_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_diagonal_only": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "complexity": "O(1) exact big-integer arithmetic for fixed offsets 3,4",
+      "median_operations": 30,
+      "median_wall_clock_sec": 5.15e-06,
+      "name": "conference quadratic identity and two-term factor expansion",
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(v^3) exact integer arithmetic",
+      "median_operations": 11825836,
+      "median_wall_clock_sec": 8.819489,
+      "name": "expanded-matrix trace/Newton characteristic coefficients",
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "doubled_matrix_order": 360,
+    "doubled_n": 358,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "reference_operation_growth_factor": 8.0,
+    "shipping_matrix_order": 180,
+    "shipping_n": 179
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 60,
+    "key_basis": "SHA-256 of q, diagonal, scale, and requested degrees after quotienting the displayed permutation and signs; never the seed or render text",
+    "pass": true,
+    "symmetries": "two simultaneous input reorderings, two diagonal sign congruences, and their compositions",
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 115,
+    "answer_elements": 6,
+    "answer_tokens": 29,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0,
+    "hinted_verdict": "not_run_openrouter_key_limit",
+    "intended_route_operations": 30,
+    "pass": true,
+    "worst_case_answer_chars": 116,
+    "worst_case_answer_tokens": 29
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "track": "B"
+}
