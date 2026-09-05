@@ -1,0 +1,126 @@
+{
+  "G1_planted_verifies": {
+    "failures": [],
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong_pivot_count: expected 73 pivots",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "duplicate_base_entry: base indices must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "empty_answer: the plan object is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "out_of_range: indices must lie in 0..149",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "pivot_max: stage 0 has A[118,49]=15, but row-118 maximum on R is 30",
+        "rejected": true
+      }
+    },
+    "distinct_reason_classes": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_pivots": 73,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_prior": "uniform at each stage over ordered distinct current triples, then uniform over final base orders",
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "search_space": 178498082489947434237105046949039029461769694029434135061509175070328025090541904069999396627203414250062677236312864961456820936073618010784792285405062586296050473150718674551698878322531224224241176640632830588309830479847494837488728512861431673197305191054895826323873953087215951922233460124530566190545962385948069015256716330978508800000000000000000000000000000000000000000000000000000,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_attempts": 8,
+    "baseline_comparisons": 289451,
+    "baseline_wall_clock_sec": 0.02135121324681677,
+    "demo_candidate_count": 2880,
+    "demo_exact_valid_count": 54,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_observed_valid_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_display_order": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_row_statistics": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_32": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "static_max_partner_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) exact comparisons",
+      "name": "constructive minimum/row-maximum pivot scan from Theorem 3.2",
+      "operations": 289451,
+      "solves": "8/8, as expected on Track B",
+      "wall_clock_sec": 0.02135121324681677
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 300,
+    "doubled_verification": "ok",
+    "pass": true,
+    "shipping_n": 150
+  },
+  "G8_canonical_key": {
+    "carried_witnesses_verified": 40,
+    "invariant_relabellings": 40,
+    "pass": true,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 1119,
+    "answer_elements": 223,
+    "answer_tokens": 448,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.6666666666666666,
+    "hinted_verdict": "too_easy (2/3 solved at the shipping preset)",
+    "intended_route_operations": 224,
+    "pass": true
+  },
+  "all_passed": true
+}
