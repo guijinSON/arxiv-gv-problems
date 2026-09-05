@@ -1,0 +1,110 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "json_roundtrips": 16,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {"reason": "cycle omits one or more panels", "rejected": true},
+      "duplicate": {"reason": "a panel id is duplicated", "rejected": true},
+      "empty": {"reason": "cycle must not be empty", "rejected": true},
+      "out_of_range": {"reason": "panel id is out of range", "rejected": true},
+      "swap": {"reason": "panels 113 and 18 do not share a hinge", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over permutations after enforcing all stated shape, range, distinctness, rotation, and reversal-normalisation constraints",
+    "structure_aware_space_bits": 1660,
+    "total": 200000,
+    "wall_clock_sec": 9.337841
+  },
+  "G5_density_and_baseline": {
+    "baseline_attack": "randomized Euler 2-factor extraction plus two-edge cycle merging",
+    "baseline_operations": 17646497,
+    "baseline_restarts": 9,
+    "baseline_success": true,
+    "baseline_wall_clock_sec": 2.343813,
+    "demo_candidate_space": 60,
+    "demo_exact_valid_answers": 16,
+    "pass": true,
+    "shipping_candidate_space_bits": 1660,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_solution_fraction_estimate": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_fewest_exits": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.000142},
+      "in_context_fixed_face_order": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.000064},
+      "outlier_geometric_sort": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.000095},
+      "random_restart_256_walks": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.021145},
+      "smallest_neighbor_pairing": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.000061}
+    },
+    "compact_route": {
+      "name": "attachment-chain five-face splicing",
+      "operations": 186,
+      "solves": "8/8",
+      "wall_clock_sec_median": 0.012484
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(R*F^3) worst-case for R Euler-tour restarts",
+      "name": "randomized Euler 2-factor extraction plus two-edge cycle merging",
+      "operations_max": 166296780,
+      "operations_median": 7506977,
+      "restarts_max": 90,
+      "restarts_median": 4,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 21.634453,
+      "wall_clock_sec_median": 0.89821
+    }
+  },
+  "G7_scales": {
+    "doubled_panel_count": 506,
+    "doubled_params": {"n": 126},
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "escalate_result": "cap_bound",
+    "named_panel_counts": [6, 190, 222, 254],
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 20,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "pass": true,
+    "transformations": "composed panel relabeling, cube-row reordering, translation, coordinate permutation, and coordinate reflection",
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 907,
+    "answer_elements": 254,
+    "answer_tokens": 227,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 186,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
