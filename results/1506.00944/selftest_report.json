@@ -1,0 +1,141 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "explicit_demo_graph_check": true,
+    "json_roundtrips": 12,
+    "pass": true,
+    "successes": 12
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "reasons": {
+      "drop_one": "add and remove must have equal lengths",
+      "duplicate": "add offsets must be distinct",
+      "empty": "answer is empty",
+      "out_of_range": "remove offset outside 1..n-1",
+      "swap_one": "an add offset is already present in D"
+    }
+  },
+  "G3_round_trip": {
+    "parsed": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 31975613861574072638948,
+    "candidate_space_bits": 74,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over all statement-compliant equal-size add/remove offset sets",
+    "total": 200000,
+    "wall_clock_sec": 3.09837205382064
+  },
+  "G5_density_and_baseline_cost": {
+    "demo_exact_valid_answer_count": 3,
+    "pass": true,
+    "reference_algorithm_operations": 41184,
+    "reference_algorithm_wall_clock_sec": 0.010229642037302256,
+    "reference_valid_subspaces": 1,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "strongest_failing_attack_hits": 0,
+    "strongest_failing_attack_samples": 4096,
+    "strongest_failing_attack_wall_clock_sec": 0.05993955489248037
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "coordinate_low_bits_subspace": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "first_independent_basis_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_numeric_extremes": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "efficient_distribution_decoder": {
+      "complexity": "O(|D|^2 + 2^r) exact",
+      "name": "XOR-pair support followed by a four-generator span",
+      "operations": 129,
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(C(|D|,r) * (r^2 + 2^r + |D|)) exact",
+      "name": "exhaustive displayed-basis decoding with exact span checks",
+      "operations": 41866,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.011721754912286997
+    }
+  },
+  "G7_scales": {
+    "doubled_space_bits": 80,
+    "doubled_vertices": 16384,
+    "pass": true,
+    "shipping_space_bits": 74,
+    "shipping_vertices": 8192
+  },
+  "G8_canonical_key": {
+    "carried_witness_attempts": 40,
+    "carried_witnesses_valid": 40,
+    "distinct_unrelated_keys": 20,
+    "distinctness_attempts": 20,
+    "draws_needed_for_20_unrelated_keys": 20,
+    "invariance_attempts": 40,
+    "invariant_relabellings": 40,
+    "pass": true,
+    "symmetries_tested": [
+      "arbitrary invertible GF(2) coordinate changes",
+      "connection-record reordering",
+      "vertex translations (offset representation is unchanged)",
+      "global layer swap (offset representation is unchanged)",
+      "compositions of these symmetries"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 79,
+    "answer_elements": 12,
+    "answer_tokens": 20,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 3
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run_bare_budget_bound",
+    "intended_route_operations": 129,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "errors": 6,
+    "n": 4096,
+    "subspace_dim": 4
+  },
+  "track": "B"
+}
