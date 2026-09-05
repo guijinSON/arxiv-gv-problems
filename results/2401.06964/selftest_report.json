@@ -1,0 +1,164 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "deterministic_rebuilds": 12,
+    "failures": [],
+    "json_native_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "expected exactly 24 elements",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "elements must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "an element lies outside 0..12288",
+        "rejected": true
+      },
+      "swap_one": {
+        "reason": "moment 1 mismatch: got 5782, expected 5781",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 5.540962918418153e-71,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over distinct k-subsets of F_p conditioned on moment 1",
+        "sampling_seconds": 9.154211,
+    "search_space": 18047404660948034198227183393246166305331701270031151080597415682199040,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_attempts": 8,
+    "baseline_field_elements_scanned": 12289,
+    "baseline_operations_mean": 590496.0,
+    "baseline_solved": 8,
+        "baseline_wall_seconds_max": 0.118762,
+        "baseline_wall_seconds_mean": 0.081825,
+    "compact_route_attempts": 8,
+    "compact_route_operation_bound": 146,
+    "compact_route_solved": 8,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_solution_fraction": 5.540962918418153e-71,
+    "shipping_exact_valid_answer_count": 1,
+    "shipping_solution_fraction_estimate": 0.0,
+    "uniqueness_reason": "Newton identities determine the monic root polynomial because k<p"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_first_moment_completion": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_closest_to_mean": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "ratio_only_additive_block_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(k^2 + p*k) exact finite-field operations",
+      "field_elements_scanned": 12289,
+      "name": "Newton identities plus exhaustive full-field root scan",
+      "operations": 590496,
+      "solves": "8/8, as expected",
+            "wall_clock_sec": 0.139327
+    }
+  },
+  "G7_scales": {
+    "answer_atoms_after": 24,
+    "answer_atoms_before": 24,
+        "doubled_build_seconds": 0.000162,
+    "doubled_field_p": 65537,
+    "doubled_n": 24578,
+    "fixed_answer_escalation": {
+      "n": 24578,
+      "template": "three"
+    },
+    "pass": true,
+    "shipping_field_p": 12289,
+    "shipping_n": 12289
+  },
+  "G8_canonical_key": {
+        "carried_witness_checks": 120,
+    "deterministic_rebuilds": 20,
+    "failures": [],
+        "invariance_checks": 120,
+    "invariant": "all centered moments normalized by the scale t_2/t_3",
+    "pass": true,
+    "transformations": [
+      "global field translation",
+      "nonzero field scaling",
+            "composed affine change x -> u*x+t",
+            "moment-equation order permutation",
+            "answer-order permutation",
+            "affine change composed with equation and answer permutations"
+    ],
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 124,
+    "answer_elements": 24,
+    "answer_tokens": 31,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "blocked_external_openrouter_403",
+    "intended_route_operations": 146,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "n": 12289,
+    "template": "two"
+  },
+  "track": "B"
+}
