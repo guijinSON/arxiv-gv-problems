@@ -1,0 +1,132 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "rejections": {
+      "drop_one": "answer is missing its alpha-coordinate",
+      "swap_order": "wrong preimage: F(candidate)=[278017, 239105], target=[347706, 397758]",
+      "duplicate": "wrong preimage: F(candidate)=[205313, 239105], target=[347706, 397758]",
+      "empty": "answer is empty",
+      "out_of_range": "a coordinate is outside the closed range 0,...,p-1"
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed_matches": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "exact_probability": 3.999856003887906e-12,
+    "prior": "uniform over all p^2 field elements, exactly the answer language",
+    "candidate_space": 250009000081,
+    "sampling_wall_seconds": 0.7797282610554248
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_exact_valid_fraction": 3.999856003887906e-12,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "shipping_candidate_space": 250009000081,
+    "baseline_wall_seconds": 0.015593579038977623,
+    "baseline_iterations": 4096,
+    "baseline_successes": 0,
+    "demo_exact_solution_count": 1,
+    "enumerate_all_shipping": null
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_small_or_displayed_residues": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_visible_linear_terms_only": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_512_structure_aware": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_ordinary_integer_cube_root_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "Theorem-3.1 coordinate reduction plus exhaustive z scan",
+      "complexity": "O(layers*p) exact base-field trials",
+      "wall_clock_sec": 0.898238502908498,
+      "mean_wall_clock_sec": 0.11227981286356226,
+      "iterations": 7411656,
+      "mean_iterations": 926457,
+      "operations": 29647356,
+      "mean_operations": 3705919,
+      "solves": "8/8, as expected"
+    },
+    "compact_structural_route": {
+      "name": "pure-cube exponentiation and linear recovery",
+      "complexity": "O(layers*log p) exact operations",
+      "maximum_operations": 231,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 500000,
+    "doubled_n": 1000000,
+    "doubled_prime": 1000037,
+    "doubled_layers": 5,
+    "doubled_verify": "ok",
+    "candidate_space_growth_factor": 4.000151998707997
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "invariance_attempts": 60,
+    "transformed_witness_checks": 60,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "trace-zero basis scaling, conjugation, and compositions of two basis scalings"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "answer_chars": 14,
+    "answer_tokens": 14,
+    "answer_elements": 2,
+    "intended_route_operations": 228
+  },
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 500000,
+    "layers": 4
+  },
+  "all_passed": true
+}
