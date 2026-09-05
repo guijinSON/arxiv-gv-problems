@@ -1,0 +1,293 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "presets": {
+      "demo": [
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 0,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 1,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 2,
+          "verified": true
+        }
+      ],
+      "easy": [
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 0,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 1,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 2,
+          "verified": true
+        }
+      ],
+      "hard": [
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 0,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 1,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 2,
+          "verified": true
+        }
+      ],
+      "medium": [
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 0,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 1,
+          "verified": true
+        },
+        {
+          "json": true,
+          "reason": "ok",
+          "seed": 2,
+          "verified": true
+        }
+      ]
+    }
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "partition does not cover every variable vertex exactly once"
+      },
+      "duplicate_across_parts": {
+        "accepted": false,
+        "reason": "red and blue overlap at a vertex"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty answer: expected red and blue parts"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "vertex index out of range: allowed range is 1..198"
+      },
+      "swap_between_parts": {
+        "accepted": false,
+        "reason": "monochromatic hyperedge e1"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "surrounding_prose_and_fence": true,
+    "verify_reason": "ok"
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 200867255532373784442745261542645325315275374222849104412671,
+    "hits": 0,
+    "measured_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over all n-bit partitions after quotienting global colour exchange",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "demo_candidate_space": 31,
+    "demo_exact_solution_fraction": 0.41935483870967744,
+    "demo_exact_valid_answer_count": 13,
+    "edge_inspections": 52920,
+    "flips": 2688,
+    "pass": false,
+    "restarts_budget": 128,
+    "restarts_used": 2,
+    "shipping_baseline": "greedy/noisy NAE-WalkSAT with 128 restarts",
+    "shipping_baseline_solved": true,
+    "shipping_baseline_wall_clock_sec": 0.012398,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_solution_fraction_estimate": 0.0,
+    "steps_per_restart": 1980
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_left_to_right": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "nae_dpll_unit_propagation_4000": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "outlier_local_cooccurrence": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "random_restart_min_conflicts_256": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "spectral_pair_relaxation": {
+        "attempts": 8,
+        "results": [
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate",
+          "no candidate"
+        ],
+        "successes": 0
+      },
+      "walksat_greedy_noise_128": {
+        "attempts": 8,
+        "results": [
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok"
+        ],
+        "successes": 8
+      }
+    },
+    "pass": false,
+    "standard_algorithm": "DPLL on the two monotone 3-CNF clauses equivalent to each NAE hyperedge, implemented directly with forced-third-vertex propagation; the panel also records the successful construction-aware WalkSAT attack"
+  },
+  "G7_scales": {
+    "base_candidate_space": 200867255532373784442745261542645325315275374222849104412671,
+    "base_n": 198,
+    "doubled_build_sec": 0.004325,
+    "doubled_candidate_space": 80695308690215893426747474125094121072803306025913234775958104891895238188026287332176417290004307232371974124148359167,
+    "doubled_n": 396,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "complete_isomorphism_canonizer": false,
+    "invariance_checks": 40,
+    "invariance_failures": [],
+    "invariant": "ten-round rooted Weisfeiler-Leman deck of the incidence graph",
+    "pass": true,
+    "real_transformation_witness_checks": 40,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 702,
+    "answer_elements": 198,
+    "answer_tokens": 176,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": null
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": null
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": null
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "diagnostic_recorded_not_gated": true,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unavailable",
+    "intended_route_operations": 198,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": false,
+  "paper": "2505.00298",
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "degree": 6,
+    "n": 198
+  },
+  "track": "A"
+}
