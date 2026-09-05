@@ -1,0 +1,209 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "demo_candidate_game_tree_cross_checks": 168,
+    "failures": [],
+    "pass": true,
+    "unique_winner_checks": 444
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer has too few symbols: expected 48",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "answer has too many symbols: expected 48",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "symbol 0 names a vertex outside 0..30",
+        "rejected": true
+      },
+      "swap_two": {
+        "reason": "entry 0 is not a three-round winning first move",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_symbols": 48,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 2.597997303370568e-72,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform over words with exactly one in-range vertex symbol per target game; length, alphabet, and per-game arity are enforced",
+    "structure_aware_space": 384911869886326803597351844737651131424133495862387386084832227353008641,
+    "total": 200000,
+    "wall_clock_sec": 2.814046
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_candidate_restarts_total_8": 2048,
+    "attack_wall_clock_sec_total_8": 0.02855,
+    "candidate_space_at_shipping": 384911869886326803597351844737651131424133495862387386084832227353008641,
+    "demo_exact_valid_answers": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_density_at_shipping": 2.597997303370568e-72,
+    "exact_valid_answers_at_shipping": 1,
+    "pairwise_wl_operations_mean": 86645,
+    "pairwise_wl_wall_clock_sec_mean": 0.01006023,
+    "pass": true,
+    "reference_algorithm_operations_mean": 74524,
+    "reference_algorithm_wall_clock_sec_mean": 0.00938065,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "random_restart_256"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "cyclic_shift_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 6.5e-05
+      },
+      "greedy_maximum_degree": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.001479
+      },
+      "greedy_minimum_degree": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.001347
+      },
+      "largest_two_neighborhood": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.020591
+      },
+      "one_layer_shared_degree_map": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.00021
+      },
+      "outlier_degree_extreme": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.00264
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.02855
+      },
+      "single_game_degree_match": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000661
+      },
+      "unchanged_label_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 3.7e-05
+      }
+    },
+    "compact_route": {
+      "count_model": "read the displayed degrees in q reference and q target graphs, then perform one relabelling-table lookup for each requested move",
+      "name": "shared degree-profile relabelling transport",
+      "solves": "8/8, as expected",
+      "worst_case_exact_operations": 296
+    },
+    "construction_aware_reference_algorithm": {
+      "complexity": "O(g*n*(n+m)*log(n)) for the simple at-most-n-round implementation",
+      "name": "pairwise one-dimensional Weisfeiler-Leman transport",
+      "operations_max": 91944,
+      "operations_mean": 86645,
+      "operations_min": 83880,
+      "refinement_rounds_mean": 319.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.01006023,
+      "wall_clock_sec_total_8": 0.080482
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "candidates_tested_mean": 788.375,
+      "complexity": "O(g*n^3) exact adjacency operations",
+      "name": "Proposition 10 exhaustive first-move scan",
+      "operations_max": 79946,
+      "operations_mean": 74524,
+      "operations_min": 69286,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.00938065,
+      "wall_clock_sec_total_8": 0.075045
+    }
+  },
+  "G7_scales": {
+    "doubled_logical_vertices": 5952,
+    "doubled_n": 62,
+    "pass": true,
+    "shipping_logical_vertices": 2976,
+    "shipping_n": 31,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "canonicalization_caveat": "the key uses a multiset of rooted-reference/unrooted-target Weisfeiler-Leman fingerprints; it is a strong invariant, not a complete graph-isomorphism canonical form",
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "one common vertex relabelling across all reference graph layers",
+      "one common vertex relabelling across all target graph layers",
+      "independent vertex relabellings of every reference and target graph",
+      "pair-list reordering",
+      "composition of independent relabellings with pair reordering"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 50,
+    "answer_elements": 48,
+    "answer_tokens": 50,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 2
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_rerun_after_bare_cap_bound",
+    "intended_route_operations": 296,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:2409.11328",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "games": 48,
+    "n": 31,
+    "profile_graphs": 4
+  },
+  "track": "B"
+}
