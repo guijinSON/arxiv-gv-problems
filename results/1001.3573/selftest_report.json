@@ -1,0 +1,100 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {"reason": "answer must contain exactly two coordinates", "rejected": true},
+      "duplicate": {"reason": "the two coordinates cannot be equal within these bounds", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "Y magnitude is outside the inclusive bound", "rejected": true},
+      "swap": {"reason": "X magnitude is outside the inclusive bound", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [27254648, 204933741296119269911097138156882213533253633],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 120000000,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform |X| and independent signs, with |Y|=floor(sqrt(k+X^6))",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_exact_square_tests_median": 3431143,
+    "baseline_wall_seconds_median": 2.890992620610632,
+    "baseline_x_values_visited_median": 24308149,
+    "pass": true,
+    "shipping_candidate_count": 120000000,
+    "shipping_exact_solution_density": null,
+    "shipping_exact_valid_answers": null,
+    "shipping_sample_density": 0.0,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sampling_wall_seconds": 0.44953891704790294
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_small_rational_scale_ansatz": {"attempts": 8, "successes": 0},
+      "greedy_unscaled_root_window": {"attempts": 8, "successes": 0},
+      "outlier_height_landmarks": {"attempts": 8, "successes": 0},
+      "random_restart_4096": {"attempts": 8, "successes": 0}
+    },
+    "compact_route": {
+      "max_exact_arithmetic_operations": 212,
+      "name": "neighboring-square gap followed by an exact sixth root",
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n M(log k)) exact bit operations up to multiplication factors",
+      "median_exact_square_tests_after_sieve": 3431143,
+      "name": "congruence-sieved bounded integral-height enumeration",
+      "operations_median_x_values_visited": 24308149,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_median": 2.890992620610632
+    }
+  },
+  "G7_scales": {
+    "answer_atomic_elements_unchanged": true,
+    "doubled_build_seconds": 2.4860026314854622e-05,
+    "doubled_n": 60000000,
+    "doubled_verify_reason": "ok",
+    "named_n": [6, 10000000, 30000000, 100000000],
+    "pass": true
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "failures": [],
+    "invariance_checks": 60,
+    "method": "hash of k and absolute-coordinate bounds; X/Y sign involutions removed",
+    "pass": true,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 56,
+    "answer_elements": 2,
+    "answer_tokens": 14,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 0},
+      "hinted": {"attempts": 3, "solved": 1},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "hinted_minus_placebo": 0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 212,
+    "pass": false
+  },
+  "all_passed": false,
+  "shipping_difficulty": "medium",
+  "shipping_params": {"n": 30000000},
+  "track": "B"
+}
