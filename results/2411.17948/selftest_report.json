@@ -1,0 +1,93 @@
+{
+  "G1_planted_verifies": {"attempts": 12, "failures": [], "pass": true},
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {"accepted": false, "reason": "wrong number of test IDs: expected 19, got 18"},
+      "duplicate": {"accepted": false, "reason": "test IDs must be distinct"},
+      "empty": {"accepted": false, "reason": "answer is empty"},
+      "out_of_range": {"accepted": false, "reason": "test ID out of range 0..119"},
+      "swap": {"accepted": false, "reason": "selected support masks have rank 18, not 19, over F_2"}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {"garbage_returns_none": true, "parsed_matches": true, "pass": true, "realistic_wrapper": true},
+  "G4_guess_resistance": {
+    "candidate_space": 5834104414094383310520,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over all d-subsets of listed tests; exact answer length, distinctness, range, and order-indifference are already enforced",
+    "total": 200000,
+    "wall_clock_sec": 2.153119
+  },
+  "G5_density_and_baseline": {
+    "demo_exact_solution_count": 12,
+    "demo_n": 9,
+    "pass": true,
+    "reference_algorithm_operations": 120779,
+    "reference_algorithm_wall_clock_sec": 0.006189,
+    "shipping_candidate_space": 5834104414094383310520,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "random_restart_256",
+    "strongest_failing_attack_steps": 2048,
+    "strongest_failing_attack_wall_clock_sec": 0.022529
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_coordinate_novelty": {"attempts": 8, "steps": 152, "successes": 0, "wall_clock_sec": 0.001379},
+      "outlier_coordinate_frequency": {"attempts": 8, "steps": 152, "successes": 0, "wall_clock_sec": 0.0014},
+      "random_restart_256": {"attempts": 8, "steps": 2048, "successes": 0, "wall_clock_sec": 0.022529},
+      "single_anchor_cycle_orbit": {"attempts": 8, "steps": 152, "successes": 0, "wall_clock_sec": 0.001227}
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations_per_instance": 15097,
+      "complexity": "O(n*d^2) exact bit operations",
+      "name": "incremental Gaussian elimination over F_2",
+      "operations": 120779,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.006189
+    }
+  },
+  "G7_scales": {
+    "doubled_candidate_space": 6625402520911780689255429600,
+    "doubled_n": 240,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "fixed_answer_axis": {"dimension": 19, "n": 120, "subspace_dimension": 11},
+    "fixed_answer_reason": "ok",
+    "fixed_answer_verifies": true,
+    "pass": true,
+    "preset_candidate_spaces": {"demo": 36, "easy": 5834104414094383310520, "hard": 75768596997543969288000, "medium": 21955357473882018032000}
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "distinct_keys": 20,
+    "invariance_checks": 60,
+    "invariance_failures": [],
+    "pass": true,
+    "transformations": ["arbitrary test reorder", "arbitrary coordinate-name relabelling carrying the marked order", "composition of both"],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 76,
+    "answer_elements": 19,
+    "answer_tokens": 19,
+    "arms": {"bare": {"attempts": 0, "solved": 0}, "hinted": {"attempts": 0, "solved": 0}, "placebo": {"attempts": 0, "solved": 0}},
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "compact_route_measured_operations": 141,
+    "compact_route_verifies": true,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "blocked_by_openrouter_key_limit",
+    "intended_route_operations": 267,
+    "pass": true,
+    "within_caps": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {"dimension": 19, "n": 120, "subspace_dimension": 12},
+  "track": "B"
+}
