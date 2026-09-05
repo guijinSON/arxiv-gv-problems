@@ -1,0 +1,157 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "dropped_pair": {
+        "reason": "answer is too short: got 77, expected 78",
+        "rejected": true
+      },
+      "duplicated_index": {
+        "reason": "a variable index is duplicated",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range_bit": {
+        "reason": "an assigned bit is outside the inclusive range 0..1",
+        "rejected": true
+      },
+      "swapped_pair_order": {
+        "reason": "variable pairs are not in exact increasing index order",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_prior": "uniform Boolean bits with forced ordered indices",
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "search_space": 302231454903657293676544,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_iterations_max": 20,
+    "baseline_operations_max": 63960,
+    "baseline_successes": 8,
+    "baseline_wall_clock_seconds_max": 0.006254,
+    "density_sampling_seconds": 6.36353,
+    "pass": true,
+    "shipping_density_fraction": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_no_backtracking": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "literal_degree_sign_majority": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_greedy_restart_2": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "simple_affine_address_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "exact_general_algorithm": {
+      "complexity": "O(2^n*m) worst case",
+      "name": "exact DPLL with NAE unit propagation",
+      "nodes_max": 40,
+      "operations_max": 140388,
+      "operations_mean": 75180.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.019147,
+      "wall_clock_sec_mean": 0.010309
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "candidates_max": 20,
+      "complexity": "O((n+m) log^2 n) Boolean operations",
+      "name": "exhaustive quadratic coordinate-pair testing",
+      "operations_max": 63960,
+      "operations_mean": 46770.75,
+      "solves": "8/8, guaranteed by construction",
+      "wall_clock_sec_max": 0.006254,
+      "wall_clock_sec_mean": 0.00336
+    },
+    "successful_distribution_algorithm": {
+      "complexity": "O(restarts*n*m) clause evaluations at the fixed budget",
+      "flips_max": 143,
+      "name": "WalkSAT-style best-flip local search",
+      "operations_max": 1072656,
+      "solves": "8/8, as expected on Track B",
+      "wall_clock_sec_max": 0.097459
+    }
+  },
+  "G7_scales": {
+    "doubled_graph_vertices": 26521,
+    "doubled_n": 156,
+    "pass": true,
+    "shipping_graph_vertices": 13261,
+    "shipping_n": 78,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariance_attempts": 80,
+    "invariance_passed": 80,
+    "pass": true,
+    "real_transform_attempts": 80,
+    "real_transform_verifications": 80,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 537,
+    "answer_elements": 156,
+    "answer_tokens": 135,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 3
+      },
+      "placebo": {
+        "attempts": 3,
+        "errors": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 1.0,
+    "hinted_verdict": "too_easy_at_shipping_diagnostic_only",
+    "intended_route_operations": 162,
+    "pass": true
+  },
+  "all_passed": true
+}
