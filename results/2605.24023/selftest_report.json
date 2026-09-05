@@ -1,0 +1,187 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer has too few hexadecimal digits",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "answer has too many hexadecimal digits",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "answer value is outside the n-bit range",
+        "rejected": true
+      },
+      "swap_two_unequal_digits": {
+        "reason": "direction 3 in block 7 is uncovered",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": "1f724055a2b7e3f",
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability_from_unique_cyclic_system": 3.469446951953614e-18,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform over the 2^n one-projection-per-private-pair words; budget, shape, pair coverage, no repeats, and range are already enforced",
+    "structure_aware_space": 288230376151711744,
+    "total": 200000,
+    "wall_clock_sec": 0.92552
+  },
+  "G5_density_and_baseline_cost": {
+    "attack_wall_clock_sec_total_8": 1.963424,
+    "candidate_space": 288230376151711744,
+    "demo_exact_valid_answers": 1,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_density_at_shipping": 3.469446951953614e-18,
+    "exact_valid_answers": 1,
+    "pass": true,
+    "reference_algorithm_operations_mean": 189997,
+    "reference_algorithm_wall_clock_sec_mean": 0.00319495,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_attack_candidate_or_flip_evaluations_total_8": 27376,
+    "strongest_failing_attack": "paper_style_pairwise_greedy"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "balanced_incidence_outlier": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.015192
+      },
+      "low_period_by_hand_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.004618
+      },
+      "numeric_step_one_recurrence": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.001178
+      },
+      "paper_style_pairwise_greedy": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 1.963424
+      },
+      "random_restart_8192": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.225799
+      },
+      "two_sweep_local_improvement": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 1.959037
+      }
+    },
+    "compact_route": {
+      "count_model": "two XORs and two cyclic index updates per recurrence edge, one possible n-bit complement, and eight setup/check operations",
+      "name": "cancel adjacent cyclic windows to one step-three recurrence",
+      "solves": "8/8, as expected",
+      "worst_case_exact_operations": 298
+    },
+    "paper_standard_exact_standin": {
+      "complexity": "O(2^n * z) worst case",
+      "decisions_mean": 8.5,
+      "literal_evaluations_max": 96881,
+      "literal_evaluations_mean": 63287,
+      "literal_evaluations_min": 21635,
+      "name": "DPLL with unit propagation on the exact coverage clauses",
+      "nodes_mean": 9.5,
+      "relation_to_paper": "dependency-free exact integer-feasibility stand-in; the paper uses MILP branch-and-cut with LP bounds",
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.00931675,
+      "wall_clock_sec_total_8": 0.074534
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O((n+decoys)*n^2) scalar bit operations",
+      "name": "decode parity quartets plus Gauss-Jordan elimination over GF(2)",
+      "operations_max": 218025,
+      "operations_mean": 189997,
+      "operations_min": 168897,
+      "row_xors_mean": 2896,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.00319495,
+      "wall_clock_sec_total_8": 0.02556
+    }
+  },
+  "G7_scales": {
+    "doubled_directions": 1764,
+    "doubled_n": 116,
+    "pass": true,
+    "shipping_directions": 1242,
+    "shipping_n": 58,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "canonicalization": "recover the doubled-block cycle, minimize decoy triples over its dihedral labellings, and normalize independent truth labels",
+    "carried_witness_checks": 40,
+    "distinct_keys": 20,
+    "invariance_checks": 40,
+    "invariance_failures": [],
+    "pass": true,
+    "symmetries_tested": [
+      "arbitrary projection-pair renumbering",
+      "independent 0/1 swaps inside every projection pair",
+      "block/direction/covering-set storage permutations",
+      "composition of all preceding maps"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 17,
+    "answer_elements": 58,
+    "answer_tokens": 5,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 2
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": -0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 298,
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "arXiv:2605.24023",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "decoys": 180,
+    "n": 58
+  },
+  "track": "B"
+}
