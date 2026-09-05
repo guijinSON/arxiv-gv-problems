@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **146 / 12,167** resolved (1.20%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **147 / 12,167** resolved (1.21%)
 
 | state | count |
 |---|---:|
-| ✅ done | 71 |
+| ✅ done | 72 |
 | 🚫 rejected (documented) | 75 |
-| 🔄 in progress | 45 |
+| 🔄 in progress | 44 |
 | ⚪ free | 11,976 |
 | **total** | **12,167** |
 
@@ -15,7 +15,6 @@
 | paper | who | claimed |
 |---|---|---|
 | `2505.16105` | Wongi-Jang | 2026-09-03T06:57 |
-| `1512.08995` | GUIJIN SON | 2026-09-04T17:46 |
 | `1609.05136` | GUIJIN SON | 2026-09-04T19:53 |
 | `1604.01757` | GUIJIN SON | 2026-09-04T20:58 |
 | `1402.1813` | GUIJIN SON | 2026-09-04T21:15 |
@@ -54,13 +53,14 @@
 | `2505.09165` | GUIJIN SON | 2026-09-05T00:39 |
 | `1209.1842` | GUIJIN SON | 2026-09-05T00:39 |
 | `2508.16963` | GUIJIN SON | 2026-09-05T00:39 |
-| … 5 more | | |
+| `2306.00140` | GUIJIN SON | 2026-09-05T00:39 |
+| … 4 more | | |
 
 ## By family
 
 | family | resolved | total |
 |---|---:|---:|
-| graph structures | 32 | 5,559 |
+| graph structures | 33 | 5,559 |
 | designs and codes | 15 | 1,022 |
 | algebraic decomposition | 17 | 804 |
 | integer equations | 5 | 607 |
@@ -73,4 +73,4 @@
 | words and permutations | 5 | 237 |
 | finite field constructions | 11 | 235 |
 
-_regenerated 2026-09-05 01:14Z by `scripts/status.sh --write`_
+_regenerated 2026-09-05 01:15Z by `scripts/status.sh --write`_
