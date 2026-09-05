@@ -1,12 +1,12 @@
 # Status
 
-`█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **461 / 12,167** resolved (3.79%)
+`█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **462 / 12,167** resolved (3.80%)
 
 | state | count |
 |---|---:|
-| ✅ done | 262 |
+| ✅ done | 263 |
 | 🚫 rejected (documented) | 199 |
-| 🔄 in progress | 151 |
+| 🔄 in progress | 150 |
 | ⚪ free | 11,554 |
 | **total** | **12,167** |
 
@@ -54,7 +54,7 @@
 | `2401.02846` | GUIJIN SON | 2026-09-05T04:53 |
 | `2412.13392` | GUIJIN SON | 2026-09-05T04:53 |
 | `2404.12907` | GUIJIN SON | 2026-09-05T04:53 |
-| … 111 more | | |
+| … 110 more | | |
 
 ## By family
 
@@ -63,7 +63,7 @@
 | graph structures | 172 | 5,559 |
 | designs and codes | 44 | 1,022 |
 | algebraic decomposition | 39 | 804 |
-| integer equations | 21 | 607 |
+| integer equations | 22 | 607 |
 | reconfiguration | 26 | 551 |
 | geometric configurations | 20 | 533 |
 | constraint satisfaction | 21 | 508 |
@@ -73,4 +73,4 @@
 | words and permutations | 7 | 237 |
 | finite field constructions | 19 | 235 |
 
-_regenerated 2026-09-05 08:20Z by `scripts/status.sh --write`_
+_regenerated 2026-09-05 08:21Z by `scripts/status.sh --write`_
