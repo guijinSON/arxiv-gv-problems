@@ -1,0 +1,170 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_basis": {
+        "reason": "answer must contain exactly 6 transversal bases",
+        "rejected": true
+      },
+      "drop_one_slot": {
+        "reason": "transversal basis 0 must contain exactly 18 slots",
+        "rejected": true
+      },
+      "empty_answer": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "transversal basis 0 contains an out-of-range slot",
+        "rejected": true
+      },
+      "reuse_colored_slot": {
+        "reason": "color B_1 reuses a slot across transversal bases",
+        "rejected": true
+      },
+      "swap_basis_order": {
+        "reason": "transversal bases are not in canonical B_0-slot order",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 6,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "json_chars": 277,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform canonical k-by-n slot matrices: columnwise disjointness and strict B_0 ordering are enforced before exact rank tests",
+    "structure_aware_space": 257478229887441395698881862214612242598396466860013081601024195465906149638286651987562758810405909956866867200000000000000000,
+    "total": 200000,
+    "wall_clock_sec": 59.934446
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attempts_or_iterations": 2048,
+    "baseline_wall_clock_sec_total_8": 0.597735,
+    "candidate_space_at_shipping": 257478229887441395698881862214612242598396466860013081601024195465906149638286651987562758810405909956866867200000000000000000,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_demo_candidate_space": 10368,
+    "exact_demo_enumeration_wall_clock_sec": 0.212001,
+    "exact_demo_valid_answers": 308,
+    "pass": true,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "random_restart_256"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "diagonal_slot_rule": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 4.8e-05
+      },
+      "fixed_slot_columns": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 3.5e-05
+      },
+      "head_magnitude_alignment": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.000579
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.597735
+      },
+      "support_size_then_slot": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec_total_8": 0.001993
+      }
+    },
+    "compact_route": {
+      "count_model": "one target-direction update per output entry, two n-term setup passes, and eight modular setup operations",
+      "name": "affine quotient-direction schedule",
+      "solves": "by inverse-generation identity",
+      "worst_case_exact_operations": 152
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3 + kn) exact coordinate tests/lookups",
+      "name": "exact support-frequency quotient extraction plus cyclic 1-factorization",
+      "operations_max": 11772,
+      "operations_mean": 11772,
+      "operations_min": 11772,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 0.00376968,
+      "wall_clock_sec_total_8": 0.030157
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 36,
+    "doubled_vector_count": 1296,
+    "fixed_k": 6,
+    "original_n": 18,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witnesses_valid": 120,
+    "failures": [],
+    "invariant_relabellings": 120,
+    "pass": true,
+    "transformations": [
+      "color_permutation",
+      "slot_permutations",
+      "projective_scalings",
+      "coordinate_permutation",
+      "unimodular_shear",
+      "full_composition"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 283,
+    "answer_elements": 108,
+    "answer_tokens": 71,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "answer_chars": 283,
+      "answer_elements": 108,
+      "intended_route_operations": 152
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "infrastructure_error",
+    "intended_route_operations": 152,
+    "pass": true
+  },
+  "paper": "arXiv:1810.07462",
+  "pass": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "head_levels": 6,
+    "k": 6,
+    "n": 18
+  },
+  "track": "B"
+}
