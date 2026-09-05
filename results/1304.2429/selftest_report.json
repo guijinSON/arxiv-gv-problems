@@ -1,0 +1,124 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "generation_route": "inverse generation of equally valid affine factors",
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "attempts": 5,
+    "cases": {
+      "drop_one_map": {"reason": "answer must contain exactly 6 affine maps", "rejected": true},
+      "duplicate_map": {"reason": "duplicate affine maps are not allowed", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "a coefficient is outside the displayed field range", "rejected": true},
+      "swap_coefficients": {"reason": "different slopes intersect, so the proposed factors are not edge-disjoint", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true,
+    "surrounding_prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 2.522619010020375e-08,
+    "exact_valid_certificates": 300500200,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_rule": "uniform common nonzero slope and uniform k-subset of distinct intercepts",
+    "structure_aware_space": 11912230852393872,
+    "total": 200000,
+    "wall_clock_sec": 1.638006
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_wall_clock_sec_total_8": 0.104047,
+    "candidate_space_at_shipping": 11912230852393872,
+    "demo_candidate_space": 126,
+    "demo_exact_valid_answers": 3,
+    "density_hits": 0,
+    "density_samples": 200000,
+    "exact_density_at_shipping": 2.522619010020375e-08,
+    "exact_valid_answers_at_shipping": 300500200,
+    "pass": true,
+    "reference_operations_mean": 256030,
+    "reference_wall_clock_sec_mean": 0.01612888,
+    "sampled_density_at_shipping": 0.0,
+    "strongest_failing_attack": "edge_difference_outlier",
+    "baseline_work_units_total_8": 325760
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "edge_difference_outlier": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.104047, "work_units_total_8": 325760},
+      "greedy_sorted_row_pairing": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.069437, "work_units_total_8": 1280},
+      "in_context_ordinary_average": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.069224, "work_units_total_8": 1280},
+      "random_restart_256": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.017013, "work_units_total_8": 2048},
+      "single_edge_translation_ansatz": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.06941, "work_units_total_8": 640}
+    },
+    "compact_route": {
+      "name": "finite-field first difference of neighbor sums",
+      "solves": "8/8, as expected",
+      "worst_case_exact_operations": 186
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(d^2 p) exact finite-field operations",
+      "name": "enumerate affine maps from N(0) x N(1), then verify on F_p",
+      "operations_max": 256380,
+      "operations_mean": 256030,
+      "operations_min": 255692,
+      "solves": "8/8, as expected",
+      "valid_maps_per_instance": [80, 80, 80, 80, 80, 80, 80, 80],
+      "wall_clock_sec_mean": 0.01612888,
+      "wall_clock_sec_total_8": 0.129031
+    }
+  },
+  "G7_scales": {
+    "doubled_answer_maps": 6,
+    "doubled_edges": 81520,
+    "doubled_n": 1019,
+    "pass": true,
+    "shipping_answer_maps": 6,
+    "shipping_edges": 40720,
+    "shipping_n": 509,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 40,
+    "distinct_keys": 20,
+    "failures": [],
+    "invariance_checks": 40,
+    "pass": true,
+    "symmetries_tested": [
+      "adjacency-row and neighbor reordering",
+      "independent affine relabellings of left and right F_p coordinates",
+      "swapping the bipartition sides",
+      "composition of all preceding maps"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 53,
+    "answer_elements": 12,
+    "answer_tokens": 14,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 0},
+      "hinted": {"attempts": 3, "solved": 1},
+      "placebo": {"attempts": 3, "solved": 1}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 186,
+    "pass": true
+  },
+  "all_passed": true,
+  "family": "affine packing of K_2-factors",
+  "paper": "arXiv:1304.2429",
+  "pass": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {"layers": 80, "n": 509, "required": 6},
+  "track": "B"
+}
