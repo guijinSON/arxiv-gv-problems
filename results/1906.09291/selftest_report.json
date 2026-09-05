@@ -1,0 +1,114 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "json_roundtrips": 12,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "answer must contain exactly five integers", "rejected": true},
+      "duplicate": {"reason": "cycle vertices must be distinct", "rejected": true},
+      "empty": {"reason": "answer is empty", "rejected": true},
+      "out_of_range": {"reason": "a vertex label is outside 0..p", "rejected": true},
+      "swap_two": {"reason": "vertices 0-1 are not an edge of factor A", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed": [1, 716468, 539269, 1145248, 385658],
+    "pass": true,
+    "realistic_response_round_trip": true
+  },
+  "G4_guess_resistance": {
+    "exact_probability": 5.550412173608012e-07,
+    "exact_valid_ordered_answers": 4,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "paper_case_exhaustion_cycles": 1,
+    "pass": true,
+    "sampler": "uniform row and start vertex; the first three alternating edges are forced",
+    "structure_aware_space": 7206672,
+    "total": 200000,
+    "wall_clock_sec": 2.710013
+  },
+  "G5_density_and_baseline_cost": {
+    "demo_exact_valid_ordered_answers": 4,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_exact_valid_fraction": 5.550412173608012e-07,
+    "shipping_exact_valid_ordered_answers": 4,
+    "shipping_sampled_valid_fraction": 0.0,
+    "strongest_failing_attack_restarts": 4096,
+    "strongest_failing_attack_wall_seconds": 0.054521
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_smallest_center_gap": {"attempts": 8, "successes": 0},
+      "in_context_infinity_component": {"attempts": 8, "successes": 0},
+      "in_context_midpoint_ansatz": {"attempts": 8, "successes": 0},
+      "outlier_beta_magnitude": {"attempts": 8, "successes": 0},
+      "random_restart_4096": {"attempts": 8, "successes": 0}
+    },
+    "compact_route": {
+      "complexity": "O(r log q) modular multiplications by binary exponentiation",
+      "median_operations": 265,
+      "median_wall_clock_sec": 2.109e-05,
+      "name": "Lemma 2.1 centered branch equation",
+      "operation_definition": "modular adds/multiplies, counting every binary-power square and multiply",
+      "operations": 265,
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(q+r*q) exact operations and O(q) memory",
+      "median_operations": 18376459,
+      "median_partner_steps": 4434936,
+      "median_wall_clock_sec": 1.897647,
+      "name": "quadratic-residue table plus alternating-cycle traversal",
+      "operation_definition": "one residue-table square or four primitive modular operations per mate step",
+      "operations": 18376459,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "doubled_prime": 2466263,
+    "doubled_structure_aware_space": 14797584,
+    "doubled_verify_reason": "ok",
+    "next_parameters": {"n": 2400014, "prime_span": 100000, "rows": 7},
+    "pass": true,
+    "shipping_prime": 1201111,
+    "shipping_structure_aware_space": 7206672
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 80,
+    "key_basis": "prime and sorted beta-orbits under inversion; never seed or rendered text",
+    "pass": true,
+    "symmetries": "independent affine row relabelings, A/B swaps, row permutations, and compositions",
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 35,
+    "answer_elements": 5,
+    "answer_measurement_instances": 201,
+    "answer_tokens": 9,
+    "arms": {
+      "bare": {"attempts": 3, "solved": 0},
+      "hinted": {"attempts": 3, "solved": 0},
+      "placebo": {"attempts": 3, "solved": 0}
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 265,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
