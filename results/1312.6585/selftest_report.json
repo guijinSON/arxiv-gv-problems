@@ -1,0 +1,136 @@
+{
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 2048,
+    "r": 8,
+    "k": 16
+  },
+  "G1_planted_verifies": {
+    "pass": true,
+    "verified": 12,
+    "attempts": 12,
+    "json_roundtrips": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "empty": "answer is empty",
+      "dropped": "too few vertices: expected 16",
+      "swapped": "vertices are not in increasing inverse-mixed coordinate order",
+      "duplicated": "vertex labels must be distinct",
+      "out_of_range": "vertex label outside 0..2047"
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "model_style_roundtrip": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "structure_aware": true,
+    "sampler": "uniform k-subset with mandatory coordinate ordering",
+    "candidate_space": 4316664142993405907323829349566015897472,
+    "wall_clock_sec": 10.9900303829927
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_valid_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_density_estimate": 0.0,
+    "demo_exact_valid_answer_count": 1,
+    "demo_candidate_count": 120,
+    "baseline_wall_clock_sec": 0.01023283798713237,
+    "baseline_operations": 19709
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_radius_neighborhood": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "outlier_degree": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_max_uncovered": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "in_context_boundary_phase": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "deepest-undominated-vertex greedy for distance domination on trees",
+      "complexity": "O(k(n+m)+n) for this direct exact implementation",
+      "wall_clock_sec_median": 0.01023283798713237,
+      "operations_median": 19709,
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "inverse-coordinate path-block centers",
+      "operations": 242,
+      "solves": "8/8"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 2048,
+    "doubled_n": 4096,
+    "shipping_decoy_leaves": 1776,
+    "doubled_decoy_leaves": 3824,
+    "answer_length_both": 16,
+    "doubled_verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "carried_witness_checks": 60,
+    "distinct_unrelated_keys": 20,
+    "unrelated_attempts": 20,
+    "failures": [],
+    "method": "exact AHU unlabelled-tree canonical form"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not_run",
+    "answer_chars": 72,
+    "answer_tokens": 18,
+    "answer_elements": 16,
+    "intended_route_operations": 242,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true
+}
