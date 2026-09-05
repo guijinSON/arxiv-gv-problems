@@ -25,14 +25,8 @@ from typing import Any
 
 TRACK = "A"
 
-_REDUCTION_CITATION = (
-    "Section 4.1, Theorem 1: equal-power heroes with size-two, threshold-two, "
-    "equal-bonus alliances are represented by the alliance graph and fixed-size "
-    "densest subgraph"
-)
-
 PROBLEM_PROFILE = {
-    "native_domain": "combinatorics",
+    "native_domain": "optimization",
     "object_regime": "finite_discrete",
     "computational_core": "graph",
     "certificate_form": "integer_tuple",
@@ -46,9 +40,9 @@ PROBLEM_PROFILE = {
         "pair-alliance membership lookups",
         "exact integer team-power comparison",
     ],
-    "domain_essentiality": "licensed_reduction",
-    "reduction_kind": "paper_licensed",
-    "reduction": _REDUCTION_CITATION,
+    "domain_essentiality": "native",
+    "reduction_kind": "none",
+    "reduction": None,
     "reduction_source": "paper_central",
     "intuition_type": "constraint propagation",
     "intuition_description": (
@@ -58,13 +52,12 @@ PROBLEM_PROFILE = {
     ),
     "hardness_basis": (
         "Track A: Theorem 1 proves hardness for equal-power heroes with "
-        "size-two, threshold-two, equal-bonus alliances; shipping uses n=24 "
-        "pools, 40 heroes per pool, and degree 29 in a planted regular "
-        "multipartite regime, "
+        "size-two, threshold-two, equal-bonus alliances; shipping uses the "
+        "planted regular multipartite regime stated by the selected preset, "
         "where no efficient exact recovery method is known and the measured "
         "centered-spectral and 300,000-node CSP baselines are reported by G5/G6."
     ),
-    "max_answer_tokens": 50,
+    "max_answer_tokens": 96,
 }
 
 NATIVE = {
@@ -79,10 +72,7 @@ NATIVE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 4, "pool_size": 4, "degree": 2, "mix_rounds": 3},
     "easy": {"n": 24, "pool_size": 40, "degree": 29, "mix_rounds": 3},
-    "medium": {"n": 24, "pool_size": 48, "degree": 35, "mix_rounds": 3},
-    "hard": {"n": 24, "pool_size": 56, "degree": 40, "mix_rounds": 3},
 }
 SHIPPING_DIFFICULTY = "easy"
 
@@ -161,10 +151,10 @@ _DPLL_NODE_BUDGET = 300_000
 
 # Filled after the script-owned bare, structural, and placebo hardening runs.
 _ORACLE_EVIDENCE = {
-    "bare": {"solved": 0, "attempts": 3},
-    "hinted": {"solved": 0, "attempts": 3},
-    "placebo": {"solved": 0, "attempts": 3},
-    "hinted_verdict": "hardened",
+    "bare": {"solved": 0, "attempts": 0},
+    "hinted": {"solved": 0, "attempts": 0},
+    "placebo": {"solved": 0, "attempts": 0},
+    "hinted_verdict": "pending",
 }
 
 
