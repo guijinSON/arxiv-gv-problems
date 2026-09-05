@@ -1,12 +1,12 @@
 # Status
 
-`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **181 / 12,167** resolved (1.49%)
+`░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **182 / 12,167** resolved (1.50%)
 
 | state | count |
 |---|---:|
 | ✅ done | 88 |
-| 🚫 rejected (documented) | 93 |
-| 🔄 in progress | 44 |
+| 🚫 rejected (documented) | 94 |
+| 🔄 in progress | 43 |
 | ⚪ free | 11,941 |
 | **total** | **12,167** |
 
@@ -50,17 +50,17 @@
 | `1703.00606` | GUIJIN SON | 2026-09-05T02:26 |
 | `1709.02873` | GUIJIN SON | 2026-09-05T02:26 |
 | `1407.6556` | GUIJIN SON | 2026-09-05T02:26 |
-| `2504.11450` | GUIJIN SON | 2026-09-05T02:26 |
 | `1003.3704` | GUIJIN SON | 2026-09-05T02:26 |
 | `2405.15663` | GUIJIN SON | 2026-09-05T02:35 |
 | `1404.4442` | GUIJIN SON | 2026-09-05T02:35 |
-| … 4 more | | |
+| `2312.10599` | GUIJIN SON | 2026-09-05T02:45 |
+| … 3 more | | |
 
 ## By family
 
 | family | resolved | total |
 |---|---:|---:|
-| graph structures | 42 | 5,559 |
+| graph structures | 43 | 5,559 |
 | designs and codes | 17 | 1,022 |
 | algebraic decomposition | 24 | 804 |
 | integer equations | 6 | 607 |
