@@ -1,0 +1,169 @@
+{
+  "G1_planted_verifies": {
+    "answer_json_native": true,
+    "attempts": 12,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "corruptions": {
+      "drop": {
+        "reason": "minpoly must contain exactly k+1 coefficients",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "interval endpoints violate 0 <= L < U <= 2(n-1)",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be an object with exactly minpoly and interval",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "a minpoly coefficient is outside the declared height bound",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "minpoly does not match the graph-derived Perron polynomial",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response_recovered": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 178810688259066833581255031165179052997816366388515831245980328315179277683206691970171823983689545,
+    "exact_probability": 4.183195128225628e-96,
+    "exact_valid_certificate_count": 748,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform monic degree-k bounded coefficient vectors and uniformly chosen ordered integer endpoint pairs; all syntax, degree, monicity, height, and interval-order constraints are enforced",
+    "sampling_wall_clock_sec": 1.572643,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_operation_count_max": 16765266,
+    "baseline_operation_count_mean": 16141202,
+    "baseline_wall_clock_sec_max": 0.93765,
+    "baseline_wall_clock_sec_mean": 0.859335,
+    "pass": true,
+    "shipping_exact_density": 4.183195128225628e-96,
+    "shipping_exact_valid_certificate_count": 748,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sampled_density": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_average_row_sum": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 2.1e-05
+      },
+      "obvious_row_sum_factor_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 1.7e-05
+      },
+      "outlier_max_row_sum": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 5.2e-05
+      },
+      "perron_bound_midpoint_ansatz": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 1.5e-05
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.016192
+      }
+    },
+    "intended_compact_route": {
+      "name": "equal-row equitable decomposition and Perron rational equation",
+      "operations": 226,
+      "solves": "1/1 audited symbolically"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^4) exact scalar operations",
+      "name": "exact Faddeev-LeVerrier characteristic polynomial, rational-root deflation, and Sturm isolation",
+      "operations_max": 16765266,
+      "operations_mean": 16141202,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.93765,
+      "wall_clock_sec_mean": 0.859335
+    }
+  },
+  "G7_scales": {
+    "doubled_answer_elements": 12,
+    "doubled_build_sec": 0.003109,
+    "doubled_candidate_space": 265040017234200037815369895327037756807115654298058400642006353587795382943165003418258534156838690290008621931041,
+    "doubled_n": 112,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_answer_elements": 12,
+    "shipping_candidate_space": 178810688259066833581255031165179052997816366388515831245980328315179277683206691970171823983689545,
+    "shipping_n": 56
+  },
+  "G8_canonical_key": {
+    "invariant_attempts": 60,
+    "invariant_relabellings": 60,
+    "pass": true,
+    "real_transformation_attempts": 60,
+    "real_transformations_verified": 60,
+    "transformations": [
+      "uniform random vertex permutation",
+      "vertex-order reversal",
+      "random permutation composed with reversal"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 111,
+    "answer_elements": 12,
+    "answer_tokens": 28,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "errors": 0,
+        "preset": "easy n=56",
+        "solved": 2,
+        "target_attempts": 3
+      },
+      "hinted": {
+        "attempts": 0,
+        "errors": 4,
+        "preset": "obsolete easy run before cap_bound",
+        "solved": 0,
+        "target_attempts": 3
+      },
+      "placebo": {
+        "attempts": 0,
+        "errors": 4,
+        "preset": "obsolete easy run before cap_bound",
+        "solved": 0,
+        "target_attempts": 3
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unavailable_http_403_key_limit",
+    "intended_route_operations": 226,
+    "pass": true
+  },
+  "all_passed": true
+}
