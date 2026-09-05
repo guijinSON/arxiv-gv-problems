@@ -1,13 +1,13 @@
 # Status
 
-`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **633 / 12,167** resolved (5.20%)
+`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **634 / 12,167** resolved (5.21%)
 
 | state | count |
 |---|---:|
-| ✅ done | 394 |
+| ✅ done | 395 |
 | 🚫 rejected (documented) | 239 |
 | 🔄 in progress | 143 |
-| ⚪ free | 11,385 |
+| ⚪ free | 11,384 |
 | **total** | **12,167** |
 
 ## In progress
@@ -24,7 +24,6 @@
 | `2409.15713` | GUIJIN SON | 2026-09-05T04:02 |
 | `1905.08621` | GUIJIN SON | 2026-09-05T04:54 |
 | `1906.05611` | GUIJIN SON | 2026-09-05T04:54 |
-| `0809.3476` | GUIJIN SON | 2026-09-05T04:54 |
 | `1005.0488` | GUIJIN SON | 2026-09-05T04:55 |
 | `1804.06328` | GUIJIN SON | 2026-09-05T04:57 |
 | `1104.1293` | GUIJIN SON | 2026-09-05T04:57 |
@@ -54,6 +53,7 @@
 | `2305.15917` | GUIJIN SON | 2026-09-05T08:37 |
 | `2110.04973` | GUIJIN SON | 2026-09-05T08:37 |
 | `2001.02665` | GUIJIN SON | 2026-09-05T08:37 |
+| `1810.08734` | GUIJIN SON | 2026-09-05T08:37 |
 | … 103 more | | |
 
 ## By family
@@ -70,7 +70,7 @@
 | algebraic identity solutions | 15 | 398 |
 | algebraic geometric structures | 17 | 299 |
 | schedules and allocations | 21 | 259 |
-| words and permutations | 11 | 237 |
+| words and permutations | 12 | 237 |
 | finite field constructions | 25 | 235 |
 
-_regenerated 2026-09-05 13:11Z by `scripts/status.sh --write`_
+_regenerated 2026-09-05 15:28Z by `scripts/status.sh --write`_

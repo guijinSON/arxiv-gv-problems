@@ -1,0 +1,208 @@
+{
+  "paper": "0809.3476",
+  "track": "B",
+  "shipping_difficulty": "easy",
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 16,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "empty": {
+        "rejected": true,
+        "reason": "answer object is empty"
+      },
+      "drop_one": {
+        "rejected": true,
+        "reason": "product certificate must contain exactly 6 factors"
+      },
+      "swap_two": {
+        "rejected": true,
+        "reason": "product factors must be in strictly increasing order"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "product factors must be distinct"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "product factor is outside the permitted range [2,423]"
+      },
+      "wrong_product": {
+        "rejected": true,
+        "reason": "factor product does not equal the exact class count"
+      }
+    },
+    "distinct_reasons": 6
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "realistic_response_parsed": true,
+    "equals_planted": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "candidate_space": 5736085959633562,
+    "prior": "uniform over the union of both fully constrained certificate forms"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_sampled_solution_hits": 0,
+    "shipping_sampled_solution_total": 200000,
+    "shipping_sampled_solution_fraction": 0.0,
+    "strongest_attack_wall_sec": 0.577266,
+    "strongest_attack_operations": 361472,
+    "strongest_attack_solved_instances": 8,
+    "demo_exact_valid_certificate_count": 2
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_largest_lengths": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_smallest_factors": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "independent_open_slots": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "shifted_rising_product": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "generic Lukasiewicz-prefix dynamic programming",
+      "complexity": "O(2^m * m * R) exact additions; O(2^m * R) memory",
+      "wall_clock_sec": 0.577266,
+      "mean_wall_clock_sec": 0.072158,
+      "operations": 361472,
+      "mean_operations": 45184,
+      "solves": "8/8, as expected",
+      "instances": [
+        {
+          "seed": 8100,
+          "rank": 106,
+          "operations": 54720,
+          "wall_clock_sec": 0.0708,
+          "solved": true
+        },
+        {
+          "seed": 8101,
+          "rank": 77,
+          "operations": 39872,
+          "wall_clock_sec": 0.080241,
+          "solved": true
+        },
+        {
+          "seed": 8102,
+          "rank": 76,
+          "operations": 39360,
+          "wall_clock_sec": 0.054992,
+          "solved": true
+        },
+        {
+          "seed": 8103,
+          "rank": 139,
+          "operations": 71616,
+          "wall_clock_sec": 0.191361,
+          "solved": true
+        },
+        {
+          "seed": 8104,
+          "rank": 78,
+          "operations": 40384,
+          "wall_clock_sec": 0.049468,
+          "solved": true
+        },
+        {
+          "seed": 8105,
+          "rank": 98,
+          "operations": 50624,
+          "wall_clock_sec": 0.04701,
+          "solved": true
+        },
+        {
+          "seed": 8106,
+          "rank": 64,
+          "operations": 33216,
+          "wall_clock_sec": 0.030416,
+          "solved": true
+        },
+        {
+          "seed": 8107,
+          "rank": 61,
+          "operations": 31680,
+          "wall_clock_sec": 0.052977,
+          "solved": true
+        }
+      ]
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 24,
+    "doubled_n": 48,
+    "base_space": 3363849583166521,
+    "doubled_space": 19569644228132370,
+    "base_answer_elements": 6,
+    "doubled_answer_elements": 6
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "carried_certificate_checks": 60,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20,
+    "symmetries_tested": [
+      "input reversal",
+      "cyclic input reorder",
+      "composition"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 1
+      }
+    },
+    "diagnostic_complete": false,
+    "diagnostic_note": "The placebo arm has one scored attempt; four subsequent HTTP 403 records show that the OpenRouter key reached its total quota.",
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "answer_chars": 37,
+    "answer_tokens": 10,
+    "answer_elements": 6,
+    "intended_route_operations": 21,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true
+}
