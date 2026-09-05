@@ -1,0 +1,157 @@
+{
+  "G1_planted_verifies": {
+    "checks": 20,
+    "failures": [],
+    "json_native_checks": 20,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "wrong_length_expected_217"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "duplicate_label"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty_answer"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "unknown_or_expansion_vertex"
+      },
+      "swap_two": {
+        "accepted": false,
+        "reason": "labels_not_strictly_increasing"
+      }
+    },
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response_round_trips": true,
+    "renderer_example_parses": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform over one choice from every variable pair and, independently, one omitted vertex from every clause triangle; this enforces every stated shape constraint but not semantic attachment coverage",
+    "structure_aware_space": 106748147985992990311681632712121697115039031504142336,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_decoded_equations": 24,
+    "baseline_scalar_gf2_xors": 3466,
+    "baseline_wall_seconds": 0.00036,
+    "count_justification": "the nonsingular parity system has one variable assignment; in each four-clause parity block three clauses have one true literal and one clause has three, giving exactly 3^n accepted output lists",
+    "demo_bruteforce_assignment_projection_count": 1,
+    "enumerate_all_result": null,
+    "pass": true,
+    "shipping_density_samples": 200000,
+    "shipping_exact_solution_count": 282429536481,
+    "shipping_exact_solution_fraction": 2.6457558450387274e-42,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_structure_aware_space": 106748147985992990311681632712121697115039031504142336
+  },
+  "G6_adversary_panel": {
+    "additional_domain_algorithm": {
+      "complexity": "O(2^n * n) worst case",
+      "median_literal_checks": 2225,
+      "median_nodes": 6,
+      "median_wall_clock_sec": 0.000508,
+      "name": "DPLL with unit propagation and occurrence branching",
+      "solves": "8/8, as expected"
+    },
+    "attacks": {
+      "greedy_clause_satisfaction": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_one_pass_parity_repair": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_incidence_degree": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route_validation": {
+      "median_exact_operations": 119,
+      "name": "incidence peeling and four-variable core identity",
+      "solves": "8/8, as expected"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) scalar GF(2) operations",
+      "median_operations": 2678,
+      "median_wall_clock_sec": 0.000298,
+      "name": "decode parity blocks, then Gaussian elimination over GF(2)",
+      "operation_definition": "one scalar GF(2) XOR",
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 48,
+    "doubled_space_bits": 352,
+    "doubled_verify_reason": "ok",
+    "note": "the doubled build demonstrates scaling; it exceeds the output cap and is not a shipping preset",
+    "pass": true,
+    "shipping_n": 24,
+    "shipping_space_bits": 176
+  },
+  "G8_canonical_key": {
+    "canonicalization_strength": "stable colored 1-WL quotient invariant",
+    "carried_witness_checks": 60,
+    "invariance_checks": 60,
+    "pass": true,
+    "transformations": [
+      "variable/block/clause/triangle/input-edge reorder",
+      "arbitrary source-vertex relabeling with carried witness",
+      "arbitrary relabeling composed with all input reorderings"
+    ],
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 1002,
+    "answer_elements": 217,
+    "answer_tokens": 251,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps_pass": true,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "pending",
+    "intended_route_operations": 119,
+    "pass": true,
+    "worst_case_answer_chars": 1085,
+    "worst_case_answer_tokens": 272
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 24
+  },
+  "track": "B"
+}
