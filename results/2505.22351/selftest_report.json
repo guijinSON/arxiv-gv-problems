@@ -1,0 +1,188 @@
+{
+  "G1_planted_verifies": {
+    "answer_independence_checks": 12,
+    "json_round_trips": 12,
+    "pass": true,
+    "preset_sizes": {
+      "demo": {
+        "edges": 90,
+        "search_space": 64,
+        "vertices": 30
+      },
+      "easy": {
+        "edges": 204,
+        "search_space": 8388608,
+        "vertices": 68
+      },
+      "hard": {
+        "edges": 252,
+        "search_space": 8388608,
+        "vertices": 84
+      },
+      "medium": {
+        "edges": 228,
+        "search_space": 8388608,
+        "vertices": 76
+      }
+    },
+    "probe_split_structure_checks": 12,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "drop": "coefficient vector is too short",
+      "duplicate": "coefficient vector is too long",
+      "empty": "empty coefficient vector",
+      "out_of_range": "coefficient outside GF(2)",
+      "swap": "polynomial does not have the required terminal orientation"
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "pass": true,
+    "realistic_response": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform terminal-oriented affine polynomials over F_2",
+    "structure_aware_space": 8388608,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations": 23224,
+    "baseline_wall_clock_sec": 0.0004774699918925762,
+    "exact_demo_candidates": 64,
+    "exact_demo_valid_answers": 1,
+    "pass": true,
+    "shipping_density": {
+      "hits": 0,
+      "observed_fraction": 0.0,
+      "total": 200000
+    },
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "strongest_attack_shipping": {
+      "bfs_rounds": 3,
+      "bit_operations": 23224,
+      "edge_scans": 2273,
+      "flow": 2,
+      "name": "unit-capacity Ford-Fulkerson plus exact GF(2) elimination",
+      "pivot_tests": 73,
+      "row_xors": 803,
+      "verified": true,
+      "wall_clock_sec": 0.0004774699918925762
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "equal_degree_outlier": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "one_sweep_greedy": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "sparse_affine_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_kernel_route": {
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(k(n+m)+n*b^2) exact",
+      "name": "unit-capacity Ford-Fulkerson plus exact GF(2) elimination",
+      "operations_median": 23275,
+      "solves": "8/8, as expected",
+      "spectral_audit": {
+        "complexity": "O(T(n+m)+n*b^2)",
+        "name": "lazy-adjacency spectral bisection plus GF(2) fitting",
+        "operations_median": 92857,
+        "solves": "8/8, expected on Track B",
+        "wall_clock_sec_median": 0.003918706555850804
+      },
+      "wall_clock_sec_median": 0.0004948899149894714
+    },
+    "sparse_masks_tested_range": [
+      126,
+      156
+    ]
+  },
+  "G7_scales": {
+    "answer_atoms": [
+      25,
+      25
+    ],
+    "edges": [
+      204,
+      408
+    ],
+    "pass": true,
+    "reference_operations": [
+      23224,
+      47120
+    ],
+    "vertices": [
+      68,
+      136
+    ]
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 60,
+    "invariance_checks": 80,
+    "pass": true,
+    "symmetries": [
+      "vertex relabelling",
+      "edge and P/N list reordering",
+      "invertible GF(2) change of basis",
+      "global label translation",
+      "compositions of these maps"
+    ],
+    "unrelated_distinct": 20,
+    "unrelated_total": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 51,
+    "answer_elements": 25,
+    "answer_tokens": 13,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 1
+      }
+    },
+    "caps_only_are_gated": true,
+    "error_records": {
+      "bare": 0,
+      "hinted": 0,
+      "placebo": 0
+    },
+    "hinted_minus_placebo": -0.3333333333333333,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 228,
+    "oracle_status": "completed",
+    "pass": true
+  },
+  "all_gates_pass": true,
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "track": "B"
+}
