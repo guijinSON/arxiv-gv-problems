@@ -1,0 +1,110 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 20,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {"reason": "table length must be exactly 128", "rejected": true},
+      "duplicate_one": {"reason": "table is not injective (a value is repeated)", "rejected": true},
+      "empty": {"reason": "kind must be 'affine_xor' or 'table'", "rejected": true},
+      "out_of_range": {"reason": "table entry outside 0..127", "rejected": true},
+      "swap_one": {"reason": "fixed point at vertex 0", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": {"a": 2, "d": 9, "kind": "affine_xor", "rows": [4, 4, 1, 1]},
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 141861847555808115616691643328012294849931571327001605539882768879355222798670073183023627574763811574247086084549371343796670447077457989946144512128294947964900479967284101942792955548140064382389011146131508474625,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform over the disjoint table/affine encoding language; table candidates are uniform fixed-point-free permutations",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_bfs_phases_mean": 2.75,
+    "baseline_edge_scans_max": 12613,
+    "baseline_edge_scans_mean": 10769.75,
+    "baseline_wall_clock_sec_max": 0.0010908001568168402,
+    "baseline_wall_clock_sec_mean": 0.0009314646304119378,
+    "demo_candidate_space": 14857,
+    "demo_valid_certificate_count": 83,
+    "pass": true,
+    "shipping_candidate_space": 141861847555808115616691643328012294849931571327001605539882768879355222798670073183023627574763811574247086084549371343796670447077457989946144512128294947964900479967284101942792955548140064382389011146131508474625,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "shipping_observed_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "copy_format_example": {"attempts": 8, "successes": 0},
+      "by_hand_first_basis_ansatz": {"attempts": 8, "successes": 0},
+      "greedy_low_degree_neighbor": {"attempts": 8, "successes": 0},
+      "modal_affine_displacement": {"attempts": 8, "successes": 0},
+      "outlier_constant_xor": {"attempts": 8, "successes": 0},
+      "random_restart_512": {"attempts": 8, "successes": 0}
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "augmentations_mean": 128.0,
+      "bfs_phases_mean": 2.75,
+      "complexity": "O(E sqrt(V))",
+      "dfs_calls_mean": 136.75,
+      "edge_scans_max": 12613,
+      "edge_scans_mean": 10769.75,
+      "name": "Hopcroft-Karp on the bipartite double cover",
+      "paper_basis": "Introduction: graph derangements are equivalent to Q-factors and the Hall-type neighborhood condition",
+      "queue_pops_mean": 224.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.0010908001568168402,
+      "wall_clock_sec_mean": 0.0009314646304119378
+    }
+  },
+  "G7_scales": {
+    "doubled_answer_elements": 7,
+    "doubled_n": 256,
+    "doubled_space": 315573523820054809858968724582764365396083509073688034172914495761751300649752005995142792923234931467560281785224048342820411056588105245880565974970551657900406206701249860844656744206920159837960296073320218332396534348062380141469205910714678517470162566537590443235321664609652601164524170093577634112591283603772017972881056978019724403239607869704710216433788767176244448847705664777491389486835691738750136763020855789935910987085257109215055250990004904500979092855816009722855389536769571198395905,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_answer_elements": 7,
+    "shipping_n": 128,
+    "shipping_space": 141861847555808115616691643328012294849931571327001605539882768879355222798670073183023627574763811574247086084549371343796670447077457989946144512128294947964900479967284101942792955548140064382389011146131508474625
+  },
+  "G8_canonical_key": {
+    "composed_reordering_checks": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "pass": true,
+    "real_transformation_checks": 20,
+    "transformations": [
+      "arbitrary vertex renumbering with carried explicit permutation",
+      "edge-list reordering and endpoint reversal composed with vertex renumbering"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 51,
+    "answer_elements": 7,
+    "answer_tokens": 13,
+    "arms": {
+      "bare": {"attempts": 0, "solved": 0},
+      "hinted": {"attempts": 0, "solved": 0},
+      "placebo": {"attempts": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "oracle_unreachable_http_403_key_limit",
+    "intended_route_operations": 136,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
