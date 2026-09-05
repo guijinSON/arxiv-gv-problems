@@ -1,0 +1,183 @@
+{
+  "G1_planted_verifies": {
+    "checks": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "attempts": 6,
+    "cases": {
+      "drop_one": {
+        "reason": "wrong length: expected 48 vertex entries",
+        "rejected": true
+      },
+      "duplicate_internal": {
+        "reason": "a vertex is repeated before the closing root",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "answer contains an out-of-range vertex",
+        "rejected": true
+      },
+      "swap_adjacent_internal": {
+        "reason": "missing directed arc at step 1: 16->26",
+        "rejected": true
+      },
+      "wrong_prescribed_start": {
+        "reason": "the first vertex is not the prescribed root",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 6,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true,
+    "surrounding_prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 5502622159812088949850305428800254892961651752960000000000,
+    "candidate_space_log2": 191.81002067730145,
+    "hits": 0,
+    "observed_probability": 0,
+    "pass": true,
+    "prior": "uniform permutation of all non-root vertices, with the rooted closing shape enforced",
+    "total": 200000,
+    "wall_clock_sec": 10.612823
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_arc_prefix_checks": 527,
+    "baseline_candidate_checks": 256,
+    "baseline_hits": 0,
+    "baseline_wall_clock_sec": 0.014375,
+    "demo_candidate_space": 720,
+    "demo_exact_valid_answers": 17,
+    "pass": true,
+    "reference_operation_count": 10787,
+    "reference_wall_clock_sec": 0.003929,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_seed": 271828,
+    "shipping_solution_density": 0,
+    "strongest_failing_attack": "256 uniform rooted-permutation restarts"
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_lowest_outneighbor": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000768
+      },
+      "in_context_raw_coordinate_translation": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.002546
+      },
+      "outlier_equal_degree_then_id": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.000047
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0,
+        "wall_clock_sec": 0.180455
+      }
+    },
+    "intended_compact_route": {
+      "name": "centered inversion followed by field translation",
+      "operations_max": 278,
+      "operations_per_instance": [
+        275,
+        274,
+        275,
+        274,
+        276,
+        274,
+        277,
+        278
+      ],
+      "solves": "8/8"
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) adjacency lookups after O(n^2 log n) exact arc materialization",
+      "name": "constructive Camion algorithm for strong tournaments",
+      "operation_unit": "Euclidean/arithmetic/membership operations in displayed arc materialization plus adjacency lookups across eight shipping instances",
+      "operations": 86264,
+      "per_instance_operations": [
+        10830,
+        10780,
+        10739,
+        10810,
+        10790,
+        10784,
+        10747,
+        10784
+      ],
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.037471
+    }
+  },
+  "G7_scales": {
+    "candidate_space_log2_doubled": 498.27715779390303,
+    "candidate_space_log2_shipping": 191.81002067730145,
+    "doubled_n": 97,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 47
+  },
+  "G8_canonical_key": {
+    "caveat": "affine Cayley normal form, not a complete tournament-isomorphism canonical labelling",
+    "failures": [],
+    "invariance_checks": 160,
+    "pass": true,
+    "real_transformations_verified": 160,
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 135,
+    "answer_elements": 48,
+    "answer_tokens": 34,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": null
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": null
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": null
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "oracle_unreachable_http_403_key_limit",
+    "intended_route_operations": 276,
+    "pass": true,
+    "within_caps": true,
+    "worst_case_answer_chars": 135,
+    "worst_case_answer_tokens": 34
+  },
+  "all_passed": true,
+  "family": "rooted Hamiltonian one-loop subdivisions in regular oriented tournaments",
+  "paper": "arXiv:2407.06675",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 47
+  },
+  "track": "B"
+}
