@@ -1,0 +1,153 @@
+{
+  "G1_planted_verifies": {
+    "failures": [],
+    "pass": true,
+    "payoff_bound_instances": 12,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "left must contain exactly 4 terms (got 3)"
+      },
+      "duplicate_id": {
+        "accepted": false,
+        "reason": "left player IDs must be distinct"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer must be an object with exactly keys left and right"
+      },
+      "out_of_range_weight": {
+        "accepted": false,
+        "reason": "right signed numerators must use absolute weights [3, 4, 8, 20]"
+      },
+      "swap_across_sides": {
+        "accepted": false,
+        "reason": "left term 0 uses player 1270 outside the left group"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_cases_rejected": 4,
+    "pass": true,
+    "prose_and_fence": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampling_wall_clock_sec": 6.41427,
+    "structure_aware_space": 1194825427695764898840576,
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "compact_route_operation_count": 165,
+    "compact_route_wall_clock_sec": 0.000254,
+    "demo_enumerated_solution_count": 1,
+    "exact_language_density_denominator": 1194825427695764898840576,
+    "pass": true,
+    "reference_operation_count": 24576,
+    "reference_wall_clock_sec": 0.002924,
+    "shipping_density_samples": 200000,
+    "shipping_sampled_solution_fraction": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "strongest_failing_attack_budget": 2048,
+    "strongest_failing_attack_wall_clock_sec": 0.387942,
+    "unique_full_support_solution_count": 1
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_uniform_best_response": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "identity_bilinear_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_absolute_force": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "compact_route": {
+      "name": "superincreasing basis-row decoder",
+      "operations": 165,
+      "solves": "8/8",
+      "wall_clock_sec": 0.000254
+    },
+    "failing_attacks_wall_clock_sec": 0.387942,
+    "pass": true,
+    "random_candidates_tested": 2048,
+    "reference_algorithm": {
+      "complexity": "O(n log n) exact",
+      "name": "generalized fast Walsh-Hadamard inversion",
+      "operations": 24576,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.002924
+    }
+  },
+  "G7_scales": {
+    "doubled_n_per_side": 2048,
+    "doubled_space_bits": 88,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n_per_side": 1024,
+    "shipping_space_bits": 80
+  },
+  "G8_canonical_key": {
+    "invariance_checks": 120,
+    "pass": true,
+    "real_transformation_verifications": 120,
+    "transformations": [
+      "input reordering",
+      "player-ID permutation",
+      "public-action relabelling",
+      "simultaneous GF(2) coordinate permutation",
+      "left/right group swap",
+      "composition of all five"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 165,
+    "answer_elements": 24,
+    "answer_tokens": 42,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300,
+      "tokens": 500
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 165,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
