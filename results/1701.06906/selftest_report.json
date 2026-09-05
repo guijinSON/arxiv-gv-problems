@@ -1,0 +1,143 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "expected exactly 32 output rows"
+      },
+      "duplicate_one": {
+        "accepted": false,
+        "reason": "block 1 coordinate 0 does not match the exact coefficient identity"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer must not be empty"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "block 31 coordinate 1 is outside 0,...,100402"
+      },
+      "swap_two": {
+        "accepted": false,
+        "reason": "block 0 coordinate 0 does not match the exact coefficient identity"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_matches": true,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G4_guess_resistance": {
+    "candidate_space": "129356462569398812344964321620301693552515894844594422277930053760766382339617301977999127635995280716944929332998185991248959815948633554931197897615951611069367723116350485413774118629487850270684057301862356187345387586914459435584478028627040938567375840448787125026296400766254211860390487443284568832122865249460481",
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "uniform over (k/2)-by-2 matrices in F_p^k",
+    "total": 200000
+  },
+  "G5_density_and_baseline_cost": {
+    "exact_valid_answer_count": 1,
+    "pass": true,
+    "reference_binomial_terms": 2053947,
+    "reference_field_operations": 12825889,
+    "reference_verify_reason": "ok",
+    "reference_wall_clock_sec": 1.35904,
+    "shipping_density_estimate": 0.0,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "all_source_coefficients_one": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "all_source_coefficients_zero": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "parity_on_every_query": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "uniform_random_coefficient_matrix": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "unsigned_boundary_only": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "binomial_terms_mean": 2139710,
+      "complexity": "O(k*p) exact field operations and O(p) memory",
+      "name": "direct factorial-recurrence binomial coefficient accumulation",
+      "operations_mean": 13342769,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 2.26963,
+      "wall_clock_sec_mean": 1.755121
+    }
+  },
+  "G7_scales": {
+    "doubled_answer_elements": 64,
+    "doubled_p": 202817,
+    "pass": true,
+    "shipping_answer_elements": 64,
+    "shipping_p": 100403,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks_passed": 20,
+    "invariance_checks_passed": 20,
+    "pass": true,
+    "symmetries": [
+      "block permutation",
+      "swap of the two queries with matrix-column swap",
+      "global exchange of u and v",
+      "independent GL(2,p) output-coordinate changes"
+    ],
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 421,
+    "answer_elements": 64,
+    "answer_size_samples": 10000,
+    "answer_size_worst_seed": 1075,
+    "answer_tokens": 106,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "blocked_api_key_limit",
+    "intended_route_operations": 288,
+    "pass": true
+  },
+  "all_passed": true
+}
