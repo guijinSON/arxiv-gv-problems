@@ -1,0 +1,127 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 12,
+    "compact_route_crosschecks": 12,
+    "json_native_checks": 12
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": "wrong coefficient count: expected 96",
+      "swap": "coefficients are not in canonical increasing index order",
+      "duplicate": "duplicate coefficient index",
+      "empty": "answer is empty",
+      "out_of_range": "coefficient index out of range"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "model_style_response_parsed": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "observed_probability": 0.0,
+    "certificate_space": 79228162514264337593543950336,
+    "sampling_prior": "uniform over canonical n-bit symbolic keys"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_sampled_density": 0.0,
+    "demo_exact_solution_count": 1,
+    "demo_certificate_space": 16,
+    "baseline_wall_seconds": 0.0009575958829373121,
+    "baseline_bit_operations": 83678
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_per_coordinate_majority": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_one_pass_lowest_bit_repair": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "in_context_low_period_and_direct_rhs_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "generic GF(2) Gauss-Jordan elimination",
+      "complexity": "O(m*n^2), hence O(n^3) for m=Theta(n), exact",
+      "wall_clock_sec": 0.30305459117516875,
+      "operations": 119459,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "shipping_n": 96,
+    "shipping_vertices": 1002,
+    "doubled_n": 192,
+    "doubled_vertices": 2076
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 100,
+    "problem_preserving_transform_checks": 100,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "symmetries_tested": [
+      "vertex renaming",
+      "arc/edge/terminal/component/constraint input reordering",
+      "endpoint-order reversal with bias transport",
+      "flip/stacked-flip outer-role reflection",
+      "their composition"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4,
+        "status": "unmeasured: OpenRouter total key limit exceeded"
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4,
+        "status": "unmeasured: OpenRouter total key limit exceeded"
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 0,
+        "errors": 4,
+        "status": "unmeasured: OpenRouter total key limit exceeded"
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unmeasured: OpenRouter total key limit exceeded",
+    "answer_chars": 663,
+    "answer_tokens": 166,
+    "answer_elements": 192,
+    "intended_route_operations": 288,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "all_passed": true
+}
