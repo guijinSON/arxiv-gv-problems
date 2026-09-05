@@ -1,0 +1,172 @@
+{
+  "G1_planted_verifies": {
+    "checks": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong number of face diagonals: expected 32",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "entry 2 duplicates an earlier edge",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "entry 1 has an out-of-range vertex",
+        "rejected": true
+      },
+      "swap_endpoints": {
+        "reason": "entry 1 is not in canonical u<v order",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "model_style_round_trip": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "declared_space": 4294967296,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform independent choice between the two radial diagonals in every face",
+    "total": 200000,
+    "wall_clock_sec": 72.090142
+  },
+  "G5_density_and_baseline_cost": {
+    "demo_candidate_space": 8,
+    "demo_exact_solution_count": 2,
+    "pass": true,
+    "shipping_exact_valid_answers_by_structure": 2,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sampled_density": 0.0,
+    "strongest_failing_attack_restarts": 2048,
+    "strongest_failing_attack_seed_successes": 0,
+    "strongest_failing_attack_wall_sec": 0.188418
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_sentinel_frequency": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "in_context_clockwise_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_endpoint_degree": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(N(N+E)) exact, dominated by unweighted all-pairs BFS",
+      "name": "binary sentinel-clause extraction, tree propagation, and all-pairs BFS verification",
+      "operations_max": 858334,
+      "operations_mean": 858334,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.714315,
+      "wall_clock_sec_mean": 0.443747
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 64,
+    "doubled_space_bits": 64,
+    "doubled_verify_reason": "ok",
+    "fixed_answer_length_escalation": {
+      "decoys": 48,
+      "n": 32,
+      "tail_length": 3
+    },
+    "pass": true,
+    "shipping_n": 32,
+    "shipping_space_bits": 32
+  },
+  "G8_canonical_key": {
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 60,
+    "pass": true,
+    "transformations": [
+      "arbitrary vertex relabelling",
+      "input/face reordering plus dihedral boundary symmetry",
+      "composition of all transformations"
+    ],
+    "unrelated_instances": 20,
+    "witness_preserving_transform_checks": 60
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 383,
+    "answer_elements": 64,
+    "answer_size_seeds_measured": 500,
+    "answer_tokens": 96,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 63,
+    "pass": true
+  },
+  "all_passed": true,
+  "profile": {
+    "certificate_language": {
+      "bounds": {
+        "candidate_count": "2^n",
+        "choices_per_face": 2,
+        "entries_per_edge": 2,
+        "length": "n"
+      },
+      "description": "A JSON list in displayed face order containing exactly one canonical undirected radial diagonal [smaller_endpoint,larger_endpoint] for each of the n marked pentagons.  Each face has exactly two such choices."
+    },
+    "reference_algorithm": {
+      "complexity": "O(N(N+E)) exact, dominated by unweighted all-pairs BFS",
+      "name": "binary sentinel-clause extraction, tree propagation, and all-pairs BFS verification",
+      "operations_max": 858334,
+      "operations_mean": 858334,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.714315,
+      "wall_clock_sec_mean": 0.443747
+    },
+    "shipping_difficulty": "easy",
+    "shipping_params": {
+      "decoys": 16,
+      "n": 32,
+      "tail_length": 3
+    },
+    "track": "B"
+  }
+}
