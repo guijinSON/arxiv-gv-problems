@@ -1,0 +1,161 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "independent_exact_demo_swap_checks": 4225,
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "answer is incomplete: open_id is missing",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "the two facility IDs must be distinct",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "a facility ID is outside the stated range",
+        "rejected": true
+      },
+      "swap_order": {
+        "reason": "close_id is not currently open",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed": [
+      2217075,
+      3943406
+    ],
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "exact_fraction": 3.999918401664606e-07,
+    "hits": 0,
+    "pass": true,
+    "prior": "uniform complementary-pair flips; cross-pair swaps excluded",
+    "sampled_fraction": 0.0,
+    "structure_aware_space": 2500051,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_algorithm": "Frobenius-gcd finite-field root isolation",
+    "baseline_iteration_unit": "degree-3 polynomial multiplications",
+    "baseline_iterations": 32,
+    "baseline_operation_count": 872,
+    "baseline_wall_seconds": 0.000135,
+    "exhaustive_scan_comparison": {
+      "iterations": 1090108,
+      "operation_count": 14171404,
+      "verified": true,
+      "wall_seconds": 0.780521
+    },
+    "pass": true,
+    "shipping_exact_density": 3.999918401664606e-07,
+    "shipping_sample_hits": 1,
+    "shipping_sample_total": 200000,
+    "shipping_sampled_fraction": 5e-06,
+    "shipping_valid_answer_count": 1
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_prefix_8": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_leading_coefficient": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "linearized_cubic_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_pair_statistics": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(log p) arithmetic on degree-3 polynomials over F_p",
+      "exhaustive_scan_comparison": {
+        "complexity": "O(n) complementary-swap evaluations",
+        "iterations": 2351528,
+        "operations": 30569864,
+        "wall_clock_sec": 1.353991
+      },
+      "iteration_unit": "degree-3 polynomial multiplications",
+      "iterations": 32,
+      "name": "Frobenius-gcd root isolation of the rendered cubic",
+      "operations": 878,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.000496
+    }
+  },
+  "G7_scales": {
+    "answer_elements_after": 2,
+    "answer_elements_before": 2,
+    "from": {
+      "n": 2500049
+    },
+    "pass": true,
+    "to": {
+      "n": 5000111
+    },
+    "verification": "ok"
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 20,
+    "distinct_unrelated_keys": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "pass": true,
+    "transformations_per_check": [
+      "arbitrary facility-ID permutation",
+      "arbitrary ordinary-pair permutation",
+      "their composition"
+    ],
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 17,
+    "answer_elements": 2,
+    "answer_tokens": 5,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 2,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "incomplete_api_limit",
+    "intended_route_operations": 62,
+    "intended_route_verification": "ok",
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "medium",
+  "track": "B"
+}
