@@ -1,0 +1,133 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "B and C must each have length 83",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "B must be a permutation with no repeated or omitted vertex",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer must be a JSON object with exactly the keys B and C",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "every B and C entry must lie in 0..82",
+        "rejected": true
+      },
+      "swap": {
+        "reason": "row 0 is not a triangle: edge B[33]-C[73] is absent",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_equals_answer": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "structure_aware_space": "1556715939564026492499206413386514266933492560641691597818036790991944952040203389703809881263229458549229734363105075123091611212274202299563158762424978242588646688889578562109683224159552670743172353993631334400000000000000000000000000000000000000",
+    "total": 200000,
+    "wall_clock_sec": 10.468660731101409
+  },
+  "G5_density_and_baseline": {
+    "baseline_nodes": 122,
+    "baseline_operations": 1836548,
+    "baseline_wall_clock_sec": 0.1630143471993506,
+    "demo_exact_solution_count": 758,
+    "pass": true,
+    "shipping_density_estimate": 0.0,
+    "shipping_samples": 200000,
+    "shipping_valid_hits": 0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_tag_magnitude_or_decimal_rank": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_lexicographic": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_regular_degree_index_alignment": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_64_local_swap": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) preprocessing plus exponential worst-case search",
+      "name": "triangle enumeration plus exact-cover backtracking (Algorithm X)",
+      "nodes": 695,
+      "operations": 13838336,
+      "randomized_valid_triangle_greedy": {
+        "complexity": "O(R*n^3) with at most 64 restarts",
+        "edge_probes": 22704267,
+        "restarts": 39,
+        "solves": "8/8, as expected on Track B",
+        "wall_clock_sec": 1.4090705506969243
+      },
+      "solves": "8/8, as expected on Track B",
+      "wall_clock_sec": 1.2658087201416492
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 166,
+    "doubled_search_space_bits": 1980,
+    "doubled_verification": "ok",
+    "pass": true,
+    "shipping_n": 83,
+    "shipping_search_space_bits": 828
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 40,
+    "distinct_unrelated": 20,
+    "failures": [],
+    "invariance_checks": 40,
+    "pass": true,
+    "unrelated_attempts": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 491,
+    "answer_elements": 166,
+    "answer_tokens": 341,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "intended_route_operations": 249,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping": "easy",
+  "track": "B"
+}
