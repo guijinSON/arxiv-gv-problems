@@ -1,0 +1,111 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 16,
+    "construction": "sample normalized x, evaluate x^q+x, then apply M=I+uv^T",
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {"reason": "answer is missing hexadecimal digits (expected 15)", "rejected": true},
+      "duplicate": {"reason": "answer has extra hexadecimal digits (expected 15)", "rejected": true},
+      "empty": {"reason": "answer must not be empty", "rejected": true},
+      "out_of_range": {"reason": "unused high bits must be zero", "rejected": true},
+      "swap": {"reason": "equation r0 has parity 1, expected 0", "rejected": true}
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {"parsed_equals_answer": true, "pass": true},
+  "G4_guess_resistance": {
+    "fraction": 0.0,
+    "hits": 0,
+    "pass": true,
+    "sampling_prior": "uniform normalized GF(2^n) words with x_0=0",
+    "space_bits": 58,
+    "structure_aware_space": 288230376151711744,
+    "total": 200000,
+    "wall_clock_sec": 0.235209
+  },
+  "G5_density_and_baseline_cost": {
+    "baseline_attack": "random_restart_256",
+    "baseline_attack_iterations": 256,
+    "baseline_attack_wall_clock_sec": 0.000185,
+    "demo_exact_solution_count": 1,
+    "exact_shipping_density": "1/2^58 (unique normalized solution)",
+    "pass": true,
+    "reference_operation_count": 38445,
+    "reference_wall_clock_sec": 0.000229,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_solution_density": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "direct_rhs_as_coordinates": {"attempts": 8, "successes": 0, "wall_clock_sec": 9e-06},
+      "discrepancy_indicator_ansatz": {"attempts": 8, "successes": 0, "wall_clock_sec": 7e-06},
+      "greedy_display_order": {"attempts": 8, "successes": 0, "wall_clock_sec": 8e-06},
+      "obvious_unmixed_cycle_ansatz": {"attempts": 8, "successes": 0, "wall_clock_sec": 8e-06},
+      "outlier_dense_row_vote": {"attempts": 8, "successes": 0, "wall_clock_sec": 1.4e-05},
+      "random_restart_256": {"attempts": 8, "successes": 0, "wall_clock_sec": 0.001483}
+    },
+    "intended_compact_route": {
+      "name": "rank-one unmixing plus one Frobenius-cycle recurrence",
+      "operation_model": "2 discrepancy-bit toggles + 4(n-1) recurrence/parity XORs + n RHS-unmixing XORs; row recognition is comparison, not arithmetic",
+      "operations_upper_bound": 293,
+      "solves": "8/8",
+      "wall_clock_sec": 3.9e-05
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^3) bit operations",
+      "name": "exact GF(2) Gaussian elimination with normalization row",
+      "operations": 38445,
+      "pivot_tests": 3937,
+      "row_xors": 575,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.000229
+    }
+  },
+  "G7_scales": {
+    "doubled_build_sec": 7e-05,
+    "doubled_n": 118,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_n": 59,
+    "space_bits_doubled": 117,
+    "space_bits_shipping": 58
+  },
+  "G8_canonical_key": {
+    "invariant_relabellings": 140,
+    "pass": true,
+    "real_transformations_verified": 140,
+    "transformations": [
+      "displayed equation-row reordering",
+      "invertible elementary output-row addition",
+      "cyclic change of normal-basis generator with carried normalization",
+      "all nonempty compositions of those three"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct_keys": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 17,
+    "answer_elements": 1,
+    "answer_tokens": 5,
+    "arms": {
+      "bare": {"attempts": 3, "service_errors": 0, "solved": 1},
+      "hinted": {"attempts": 0, "service_errors": 0, "solved": 0},
+      "placebo": {"attempts": 0, "service_errors": 0, "solved": 0}
+    },
+    "caps": {"chars": 2000, "elements": 256, "operations": 300},
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not_run_after_cap_bound",
+    "intended_route_operations": 293,
+    "pass": true,
+    "semantic_field_coordinates": 59,
+    "worst_case_answer_chars": 17,
+    "worst_case_answer_tokens": 5
+  },
+  "all_passed": true
+}
