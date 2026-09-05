@@ -1,0 +1,132 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "checks": 12,
+    "failures": []
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "rejections": {
+      "drop_one": "answer must contain exactly 33 terms",
+      "swap_two": "terms must be in strictly increasing exponent order",
+      "duplicate_exponent": "answer contains a duplicate exponent",
+      "empty": "answer is empty",
+      "out_of_range": "a coefficient coordinate is out of range"
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "parsed_matches": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "prior": "uniform over every GF(p^2) coefficient on the exact fixed support printed in the statement",
+    "candidate_space": 56942489382928449349101875329507797825750098609889604976201189949553905842466077335338435170852850126288759613447464719898041499829825310959381617848409839336756476622517841616390260719698102255256093642506264586972334844369674465869048923766331291327029253598654513543389403745576618786736204862927670386575372510360669733614245079941121,
+    "sampling_wall_seconds": 21.902193440124393
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_observed_valid_fraction": 0.0,
+    "shipping_density_sample_count": 200000,
+    "shipping_valid_hits": 0,
+    "shipping_candidate_space": 56942489382928449349101875329507797825750098609889604976201189949553905842466077335338435170852850126288759613447464719898041499829825310959381617848409839336756476622517841616390260719698102255256093642506264586972334844369674465869048923766331291327029253598654513543389403745576618786736204862927670386575372510360669733614245079941121,
+    "unique_inverse_count": 1,
+    "baseline_wall_seconds": 0.4283993679564446,
+    "baseline_iterations": 4096,
+    "baseline_successes": 0,
+    "reference_wall_seconds": 0.04280541907064617,
+    "reference_operation_count": 129575,
+    "reference_rows_examined": 33,
+    "demo_exact_solution_count": 1,
+    "enumerate_all_shipping": null
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_extreme_orbit_representative": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_coefficientwise_inverse": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256_structure_aware": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "linearized_part_only_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "restricted-support evaluation/interpolation with exact RREF",
+      "complexity": "O(m^3 + r*m*log(p*m)) GF(p^2) operations after r rows, with r<=p^2; m=33 at shipping",
+      "wall_clock_sec": 0.30116553301922977,
+      "mean_wall_clock_sec": 0.03764569162740372,
+      "operations": 1036539,
+      "mean_operations": 129567,
+      "rows_examined": 264,
+      "mean_rows_examined": 33.0,
+      "solves": "8/8, as expected"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 131071,
+    "doubled_valid_n": 524287,
+    "doubled_verify": "ok",
+    "answer_terms_unchanged": true
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 60,
+    "invariance_attempts": 60,
+    "transformed_witness_checks": 60,
+    "unrelated_distinct": 20,
+    "unrelated_attempts": 20,
+    "transformations": "input term reordering, GF(p^2)/GF(p) conjugation, and their composition"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 1,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 2,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": -0.3333333333333333,
+    "hinted_verdict": "too_easy",
+    "answer_chars": 690,
+    "answer_tokens": 173,
+    "answer_elements": 99,
+    "intended_route_operations": 119,
+    "caps": {
+      "chars": 2000,
+      "tokens": 500,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 131071,
+    "term_count": 5
+  },
+  "all_passed": true
+}
