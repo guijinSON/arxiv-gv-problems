@@ -1,0 +1,144 @@
+{
+  "G1_planted_verifies": {
+    "pass": true,
+    "instances": 16,
+    "generation_route": "inverse generation: sample d, then set b=A*d"
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "reasons": {
+      "empty": "answer must not be empty",
+      "drop_one": "answer must have exactly 42 coordinates",
+      "out_of_range": "coordinate 41 is outside 0..2147483646",
+      "swap_two": "equation row 0 gives 456578312, expected 377149853",
+      "duplicate": "equation row 0 gives 1847352795, expected 377149853"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "json_native": true,
+    "answer_elements": 42
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "exact_valid_answers": 1,
+    "structure_aware_space": 87308061564067976067084371632266751308174872877048488686700680509163867810845589536160002869990848332062112002560905641900496916734680204934410211222578772671480308477734855709060056278251918954526879390503772977028837998762898992890485058404248346625756258097537280507051590343863869675724129388004693753441535047837914283779176817664021433017948637511939769703415214685618436860037780471809,
+    "exact_probability": {
+      "numerator": 1,
+      "denominator": 87308061564067976067084371632266751308174872877048488686700680509163867810845589536160002869990848332062112002560905641900496916734680204934410211222578772671480308477734855709060056278251918954526879390503772977028837998762898992890485058404248346625756258097537280507051590343863869675724129388004693753441535047837914283779176817664021433017948637511939769703415214685618436860037780471809
+    },
+    "exact_log10_probability": -391.94105434600965,
+    "prior": "uniform vectors in F_p^n; shape and residue bounds enforced"
+  },
+  "G5_density_and_baseline_cost": {
+    "pass": true,
+    "shipping_sample_hits": 0,
+    "shipping_sample_total": 200000,
+    "shipping_sample_fraction": 0.0,
+    "shipping_exact_solution_count": 1,
+    "shipping_exact_density": {
+      "numerator": 1,
+      "denominator": 87308061564067976067084371632266751308174872877048488686700680509163867810845589536160002869990848332062112002560905641900496916734680204934410211222578772671480308477734855709060056278251918954526879390503772977028837998762898992890485058404248346625756258097537280507051590343863869675724129388004693753441535047837914283779176817664021433017948637511939769703415214685618436860037780471809
+    },
+    "shipping_exact_log10_density": -391.94105434600965,
+    "demo_exact_solution_count": 1,
+    "demo_candidate_count": 343,
+    "reference_max_wall_seconds": 0.009905461221933365,
+    "reference_mean_wall_seconds": 0.008129438501782715,
+    "reference_max_field_operations": 78477,
+    "reference_attempts": 8,
+    "failing_restart_wall_seconds": 0.03791231429204345,
+    "failing_restart_candidates": 2048
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "per_coordinate_diagonal_only": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_sequential_row_repair": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_uniform_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "by_hand_copy_right_hand_side": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "dense Gaussian elimination over F_p",
+      "complexity": "O(n^3) exact field operations",
+      "wall_clock_sec_max": 0.009905461221933365,
+      "wall_clock_sec_mean": 0.008129438501782715,
+      "operations": 78477,
+      "solves": "8/8, as expected"
+    },
+    "compact_route": {
+      "name": "normalized rank-one update formula",
+      "operations": 254,
+      "solves": "8/8"
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 42,
+    "doubled_n": 84,
+    "base_matrix_entries": 1764,
+    "doubled_matrix_entries": 7056,
+    "planted_verifies": true,
+    "fixed_length_escalation_axis": "larger p after the named hard preset"
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "real_transform_checks": 200,
+    "distinct_unrelated": 20,
+    "unrelated_total": 20,
+    "symmetries": "equation reorder/rescale, coordinate permutation, global vertex translation, and their composition",
+    "key_invariant": "p, n, and the decoy-star fiber width"
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 0,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "hardened",
+    "rung_history": {
+      "easy_bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "easy_hinted": {
+        "solved": 1,
+        "attempts": 3
+      },
+      "action": "used the single G9(b)-permitted move to medium"
+    },
+    "answer_chars": 450,
+    "answer_tokens": 113,
+    "answer_elements": 42,
+    "intended_route_operations": 254,
+    "token_measure": "ceil(compact JSON characters / 4)"
+  },
+  "all_passed": true
+}
