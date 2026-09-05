@@ -1,0 +1,336 @@
+In this section, we use the hardness result for \outofk Approximate Symmetric \Sperner to obtain a hardness result for the cake-cutting problem. 
+In \Cref{sec:making-almost-everyone-happy}, we focus on the relaxation allowing some (or even most) agents to envy others.  Subsequently, we extend our hardness result to include the relaxation allowing redundant cuts \Cref{sec:three-agents-non-contiguous}.
+
+
+
+
+
+
+\subsection{Making Almost Every Agent Envy-Free}\label{sec:making-almost-everyone-happy}
+
+In this section, we assume that there are $p = k + 1$ agents and $k$ cuts. Additionally, we assume that each agent is allocated exactly one piece of the cake.
+
+\begin{definition}[\mccc]
+Let $\vec{x}$ be a $k$-cut. We say $\vec{x}$ is a \mccs{} if there exists a permutation $\pi: [p] \rightarrow [p]$ and a subset of agents $S \subseteq [p]$ consisting of at least three agents such that for each agent $d \in S$, it holds $u_d(\vec{x}, X_{\pi(d)}) + \eps \geq u_d(\vec{x}, X_{i})$ for any $i$. 
+\end{definition}
+
+
+Our approach involves constructing the utility function and preference list for the \mccs{} problem from the hard instance of \outofk Approximate Symmetric \Sperner (\Cref{thm:main}). Then, we show that if we can find a solution for the \mccs{} problem, the corresponding point representing the $k$-cut lies within a base simplex with at least three colors in the hard instance of \Cref{thm:main}, indicating the problem's PPAD-hardness. It is important to note that we use the same preference for each agent, denoted as $P$, and their utility as $u$.
+
+
+\paragraph{Obtaining preference and utility from the simplex colors:} 
+\begin{itemize}
+    \item \textbf{Preference and Utility on discrete points:} Let $N = 2^n - 1$. For $\vec{x} \in \Delta^k_n$, we let $P(\vec{x}) = C(\vec{x})$, i.e.~the preference of agents for $k$-cut $\vec{x}$ is the color of point $\vec{x}$ in the hard instance of \Cref{thm:main}.  We first define a {\em pseudo-utility} $u'$, i.e.~the value of a piece depends on the entire $k$-cut instead of the equivalent class of the $k$-cut. We use $u'(\vec{x}, X_i)$ to denote the pseudo-utility of piece $X_i$. We let $u'(\vec{x}, X_{P(\vec{x})}) = 1/(2N)$. Also, if $X_i$ is empty, we let $u'(\vec{x}, X_i) = 0$. For all other pieces $X_j$, we let $u'(\vec{x}, X_j) = 1/(10k^2N)$. 
+    \item \textbf{Interpolation:} Up to this point, we have only selected preferences and utilities for points whose coordinates are multiples of $1/N$, i.e.~nodes in the discretized simplex. Let $\vec{x}$ be a point within a base simplex with corners $\vec{x^{(0)}}, \vec{x^{(1)}}, \ldots, \vec{x^{(k)}}$. Since $\vec{x}$ is inside this base simplex, it can be written uniquely as a convex combination of its corners, i.e.~$\vec{x} = \sum_{i=0}^k \alpha_i \cdot \vec{x^{(i)}}$ such that $\sum_{i=0}^k \alpha_i = 1$. For piece $X_j$, we let $u'(\vec{x}, X_j) = \sum_{i=0}^k \alpha_i \cdot u'(\vec{x^{(i)}}, X^{(i)}_j)$. Finally, for an equivalent class $\eqClass{\vec{x}}$ we let $u(\eqClass{\vec{x}}, X_i) = u'(\vec{x}, X_i)$ where $\vec{x}$ is an arbitrary vector in this equivalent class. We will later (statement in \Cref{prt:first-symmetry} and proved in \Cref{lem:satisfying-the-first-property}) show that for two $k$-cuts that are equivalent, the pseudo-utility of the similar pieces is going to be equal anyway. 
+Now, we prove that the utility that we defined has both the nonnegativity and Lipschitz conditions.
+\end{itemize}
+ 
+
+
+
+\begin{claim}\label{clm:majority-lipschitz-holds}
+    The defined utility function $u$ 
+    is Lipschitz.
+\end{claim}
+\begin{proof}
+    Consider the $j$-th piece for two distinct points $\vec{x}, \vec{y} \in \Delta^k_n$. First, we have $\norm{\vec{x} - \vec{y}}{1} \geq 1/N$. Also, $|u(\eqClass{\vec{x}}, X_j) - u(\eqClass{\vec{y}}, Y_j)| \leq 1/(2N)$ since the utility of a piece cannot be larger than $1/(2N)$ by the definition of the utility function. Hence, we have $|u(\eqClass{\vec{x}}, X_j) - u(\eqClass{\vec{y}}, Y_j)| \leq \norm{\vec{x} - \vec{y}}{1}$. Now we prove the claim for two points within the same base simplex. Let $\vec{x}$ and $\vec{y}$ be two points within the base simplex with corners $\vec{z^{(0)}}, \vec{z^{(1)}}, \ldots, \vec{z^{(k)}}$. Thus, $\vec{x} = \sum_{i=0}^k \alpha_i \vec{z^{(i)}}$ and $\vec{y} = \sum_{i=0}^k \beta_i \vec{z^{(i)}}$ s.t. $\sum_{i=0}^k \alpha_i = \sum_{i=0}^k \beta_i = 1$. For the $j$-th piece, 
+    \begin{align*}
+        \left| u(\eqClass{\vec{x}}, X_j) - u(\eqClass{\vec{y}}, Y_j)\right| = \left| \sum_{i=0}^k \alpha_i u(\eqClass{\vec{z^{(i)}}}, X^{(i)}_j) - \sum_{i=0}^k \beta_i u(\eqClass{\vec{z^{(i)}}}, X^{(i)}_j) \right| &=  \left|\sum_{i=0}^k  u(\eqClass{\vec{z^{(i)}}}, X^{(i)}_j) \cdot (\alpha_i - \beta_i)\right|\\
+        & \leq \sum_{i=0}^k  u(\eqClass{\vec{z^{(i)}}}, X^{(i)}_j) \cdot \left|\alpha_i - \beta_i \right|\\
+        & \leq \frac{1}{2N} \sum_{i=0}^k \left| \alpha_i - \beta_i \right|.
+    \end{align*}
+    Since points $\vec{z^{(0)}}, \vec{z^{(1)}}, \ldots, \vec{z^{(k)}}$ are corners of a base simplex $\Delta^k_n$, without loss of generality we can assume that there exists a permutation $\pi \in \mathcal{S}_k$ such that $\vec{z^{(i)}} = \vec{z^{(0)}}+\sum_{\ell=1}^i 1/N \cdot \vec{e_{\pi(\ell)}}$. Then, we have 
+    \begin{align*}
+         \norm{\vec{x} - \vec{y}}{1} = \sum_{\ell=1}^k \left| \sum_{i=0}^k  \alpha_i z^{(i)}_\ell - \sum_{i=0}^k  \beta_i z^{(i)}_\ell\right| &= \sum_{\ell=1}^k \left| \sum_{i=0}^k   z^{(i)}_\ell (\alpha_i - \beta_i)  \right|\\
+         & = \sum_{\ell=1}^k \left| \sum_{i=0}^k   z^{(i)}_{\pi(\ell)} (\alpha_i - \beta_i)  \right|\\
+         & = \sum_{\ell=1}^k \left| \sum_{i=0}^{\ell - 1}   z^{(0)}_{\pi(\ell)} (\alpha_i - \beta_i) +  \sum_{i=\ell}^{k}   (z^{(0)}_{\pi(\ell)} + \frac{1}{N})\cdot (\alpha_i - \beta_i) \right|\\
+         & = \sum_{\ell=1}^k \left|z^{(0)}_{\pi(\ell)} \sum_{i=0}^{k}    (\alpha_i - \beta_i) +  \frac{1}{N}\sum_{i=\ell}^{k}  (\alpha_i - \beta_i) \right|\\
+         & = \frac{1}{N} \sum_{\ell=1}^k \left| \sum_{i=\ell}^{k}  (\alpha_i - \beta_i) \right|,
+    \end{align*}
+    where the last equality is followed by $\sum_{i=0}^k (\alpha_i - \beta_i) =0$. Further,
+    \begin{align*}
+        \sum_{\ell=0}^k \left| \alpha_\ell - \beta_\ell \right| = \sum_{\ell = 0}^k \left| \sum_{i=\ell}^k (\alpha_i - \beta_i) - \sum_{i=\ell+1}^k (\alpha_i - \beta_i)\right| &\leq \sum_{\ell = 0}^k \left| \sum_{i=\ell}^k (\alpha_i - \beta_i) \right|  + \left| \sum_{i=\ell+1}^k (\alpha_i - \beta_i)\right|\\
+        & \leq \sum_{\ell = 0}^k \left| 2\sum_{i=\ell}^k (\alpha_i - \beta_i) \right|\\
+        & = 2\sum_{\ell = 1}^k \left| \sum_{i=\ell}^k (\alpha_i - \beta_i) \right|
+    \end{align*}
+    where the last equality is followed by the fact that for $\ell = 0$, we have $\sum_{i=\ell}^k (\alpha_i - \beta_i) =0$. Combining the above bounds, we obtain
+    \begin{align*}
+         \left| u(\eqClass{\vec{x}}, X_j) - u(\eqClass{\vec{y}}, Y_j)\right| \leq \frac{1}{2N} \sum_{i=0}^k \left| \alpha_i - \beta_i \right| \leq \frac{1}{N}\sum_{\ell = 1}^k \left| \sum_{i=\ell}^k \alpha_i - \beta_i \right| = \norm{\vec{x} - \vec{y}}{1},
+    \end{align*}
+    which completes the proof for two points $\vec{x}$ and $\vec{y}$ within the same base simplex. For two points $\vec{x}$ and $\vec{y}$ that are not in the same base simplex, suppose that there are $r > 1$ base simplices between them (including simplices that $\vec{x}$ and $\vec{y}$ belongs to) to reach $\vec{y}$ from $\vec{x}$ in the closest path. Hence, there exist points $\vec{z^{(1)}}, \vec{z^{(2)}}, \ldots, \vec{z^{(r-1)}}$ such that point $\vec{z^{(i)}}$ is on both the $i$-th and $(i+1)$-th simplices and
+    \begin{align*}
+        \norm{\vec{x} - \vec{y}}{1} = \sum_{i=1}^{r} \norm{\vec{z^{(i-1)}}-\vec{z^{(i)}}}{1},
+    \end{align*}
+    if we define $\vec{z^{(0)}} = \vec{x}$ and $\vec{z^{(r)}} = \vec{y}$. Moreover, since $\vec{z^{(i)}}$ and $\vec{z^{(i+1)}}$ are within the same base simplex, we have $\left|u(\eqClass{\vec{z^{(i)}}}, Z^i_j) - u(\eqClass{\vec{z^{(i + 1)}}}, Z^i_j)\right| \leq  \norm{\vec{z^{(i)}}-\vec{z^{(i+1)}}}{1}$. Therefore,
+    \begin{align*}
+         \left| u(\eqClass{\vec{x}}, X_j) - u(\eqClass{\vec{y}}, Y_j)\right| &=  \left| \sum_{i=1}^r u(\eqClass{\vec{z^{(i)}}}, Z^{(i)}_j) - u(\eqClass{\vec{z^{(i-1)}}}, Z^{(i-1)}_j) \right|\\
+         & \leq  \sum_{i=1}^r \left| u(\eqClass{\vec{z^{(i)}}}, Z^{(i)}_j) - u(\eqClass{\vec{z^{(i-1)}}}, Z^{(i-1)}_j) \right|\\
+         & \leq \sum_{i=1}^r \norm{\vec{z^{(i)}} - \vec{z^{(i-1)}}}{1}\\
+         & =  \norm{\vec{x} - \vec{y}}{1},
+    \end{align*}
+    which concludes the proof.
+\end{proof}
+
+
+\begin{claim}\label{clm:majority-nonnegativity-holds}
+    The defined utility function $u$ for the \mccs{} problem satisfies the nonnegativity condition.
+\end{claim}
+\begin{proof}
+    For points $\vec{x} \in \Delta^k_n$, the utility of a piece is equal to zero if and only if it is an empty piece according to the way that we define the utility function. Now let $\vec{x} \in \Delta^k$ and $\vec{x^{(0)}}, \vec{x^{(1)}}, \ldots, \vec{x^{(k)}}$ be the corner of base simplex that it belongs to. So we have $\vec{x} = \sum_{i=0}^k \alpha_i \vec{x^{(i)}}$ s.t. $\sum_{i=0}^k \alpha_i = 1$.  
+    
+    
+    Let $i_1, \ldots, i_r$ be the indices such that the $j$-th piece of $\vec{x^{(i_1)}}, \ldots, \vec{x^{(i_r)}}$ is empty, i.e.~for each $i \in \{i_1, \ldots, i_r\}$, we have $x^{(i)}_j = x^{(i)}_{j-1}$ since the $j$-th piece is empty. Moreover,
+    \begin{align*}
+        x_j - x_{j-1} = \sum_{i = 0}^k \alpha_i x^{(i)}_j - \sum_{i = 0}^k \alpha_i x^{(i)}_{j-1} &= \sum_{i \in \{i_1, \ldots, i_r\}} \alpha_i x^{(i)}_j + \sum_{i \notin \{i_1, \ldots, i_r\}} \alpha_i x^{(i)}_j - \sum_{i \in \{i_1, \ldots, i_r\}} \alpha_i x^{(i)}_{j-1} - \sum_{i \notin \{i_1, \ldots, i_r\}} \alpha_i x^{(i)}_{j-1}\\
+        &= \left(\sum_{i \in \{i_1, \ldots, i_r\}} \alpha_i (x_j^{(i)} - x_{j-1}^{(i)}) \right) + \left( \sum_{i \notin \{i_1, \ldots, i_r\}} \alpha_i (x_j^{(i)} - x_{j-1}^{(i)})\right).
+    \end{align*}
+    Note that in second term, we have $x^{(i)}_j \neq x^{(i)}_{j-1}$ which implies that if there exists a non-zero $\alpha_i$ in the second term, then $x_j - x_{j-1} > 0$. Thus, $j$-th piece is empty if and only if there exists no $i \in \{0, \ldots, k\} \setminus \{i_1, \ldots, i_r\}$ where $\alpha_i > 0$. Further,
+    \begin{align*}
+        u(\eqClass{\vec{x}}, X_j) = \sum_{i=0}^k \alpha_i \cdot u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_j) &= \left(\sum_{i \in \{i_1, \ldots, i_r\}} \alpha_i \cdot u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_j) \right) + \left( \sum_{i \notin \{i_1, \ldots, i_r\}} \alpha_i \cdot u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_j) \right)\\
+        & = \left( \sum_{i \notin \{i_1, \ldots, i_r\}} \alpha_i \cdot u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_j) \right),
+    \end{align*}
+    where we have the last equality because $u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_j) = 0$ for $i \in \{i_0, \ldots, i_r\}$. On the other hand, $u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_j) > 0$  for $i \in \{i_1, \ldots, i_r\}$. Finally, since $j$-th piece is empty if and only if there exists no $i \in \{0, \ldots, k\} \setminus \{i_1, \ldots, i_r\}$ where $\alpha_i > 0$, we have the utility of piece $X_j$ is equal to zero if and only if it is empty.
+\end{proof}
+
+
+The way that we defined our utility functions enables us to show that if corners of a base simplex are colored with at most two colors, then none of the points inside this base simplex is a solution for the \mccs{} problem. As a corollary, if we can find a \mccs{}, the corresponding point in the simplex must be within a base simplex that has at least three colors.
+
+
+
+\begin{lemma}\label{lem:envy-free-colors-base}
+    Let $\vec{x} \in \Delta^k $ be a $k$-cut that is within a base simplex with corners $\vec{x^{(0)}}, \vec{x^{(1)}}, \ldots, \vec{x^{(k)}} \in \Delta^k_n$. If \begin{align*}
+        \left|\{P(\vec{x^{(0)}}), P(\vec{x^{(1)}}), \ldots, P(\vec{x^{(k)}})\}\right| \leq 2,
+    \end{align*} 
+    then $\vec{x}$ is not a solution for \mccs{} problem when $\eps \leq 1/(10N)$.
+\end{lemma}
+
+\begin{proof}
+    We can write $\vec{x} = \sum_{i=0}^k \alpha_i \vec{x^{(i)}}$ s.t. $\sum_{i=0}^k \alpha_i=1$. Let $\mathcal{P} = \{P(\vec{x^{(0)}}), P(\vec{x^{(1)}}), \ldots, P(\vec{x^{(k)}})\}$ and $\overline{\mathcal{P}} = \{0, 1, \ldots, k\} \setminus \mathcal{P}$. For $j' \in \overline{\mathcal{P}}$, we have $u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_{j'}) \leq 1/(10k^2N)$ by the definition of our utility function. Thus, 
+    \begin{align*}
+        u(\eqClass{\vec{x}}, X_{j'}) = \sum_{i=0}^k \alpha_i \cdot u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_{j'}) \leq \frac{1}{10k^2 N} \sum_{i=0}^k \alpha_i =  \frac{1}{10k^2 N}.
+    \end{align*}
+    On the other hand, since $|\mathcal{P}| \leq 2$, by pigeonhole principle there exists a $j \in \mathcal{P}$ such that $\sum_{i \text{ and } P(\vec{x^{(i)}}) = j} \alpha_i \geq 1/2$ which implies that 
+    \begin{align*}
+        u(\eqClass{\vec{x}}, X_{j}) = \sum_{i=0}^k \alpha_i \cdot u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_{j}) \geq \sum_{i \text{ and } P(\vec{x^{(i)}}) = j} \alpha_i \cdot u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_{j}) &=   \sum_{i \text{ and } P(\vec{x^{(i)}}) = j} \alpha_i \cdot u(\eqClass{\vec{x^{(i)}}}, X^{(i)}_{P(\vec{x^{(i)}})}) \\ 
+        & = \frac{1}{2N} \cdot \sum_{i \text{ and } P(\vec{x^{(i)}}) = j} \alpha_i\\
+        &\geq \frac{1}{4N},
+    \end{align*}
+    where the last equality follows by the fact that $u(\eqClass{\vec{x^{(i)}}}, X^i_{P(\vec{x^{(i)}})}) = 1/(2N)$. For any $j' \in \overline{\mathcal{P}}$, by combining the last two bounds for the specific $j$ in the last bound, we obtain
+    \begin{align*}
+        u(\eqClass{x}, X_{j'}) + \frac{1}{10N} \leq \frac{1}{10k^2 N} + \frac{1}{10N} < \frac{1}{4N} \leq u(\eqClass{\vec{x}}, X_j).
+    \end{align*}
+    Therefore, when $\eps \leq 1/(10N)$, there exists a piece in $\mathcal{P}$ whose utility is greater than that of pieces in $\overline{\mathcal{P}}$ by a margin larger than $\eps$. Consequently, as $|\mathcal{P}| \leq 2$, there are at most two pieces where agents do not envy each other if we ignore the $\eps$ gap in their utilities. This implies that $\vec{x}$ cannot be a solution for the \mccs{} problem when $\eps \leq 1/(10N)$.
+\end{proof}
+
+
+
+\subsubsection*{Properties of the Utility Function} 
+
+Note that when constructing utilities and preferences, we must satisfy several properties to accurately model our cake-cutting problem. The first property is the {\em boundary property}, which means that for a point $\vec{x}$, if $X_i$ represents an empty piece, then the utility of that piece should be equal to zero. It is easy to see that this property is satisfied due to \Cref{clm:majority-nonnegativity-holds}.
+
+
+
+
+\begin{property}[Boundary]\label{prt:boundry-condition}
+    Let $\vec{x} \in \Delta^k$ be a $k$-cut and $X = (X_0, X_1, \ldots, X_k)$ be its corresponding pieces of cake. If $X_i$ is an empty piece of cake, then $u(\eqClass{\vec{x}}, X_i) = 0$ and $P(\vec{x}) \neq i$. 
+\end{property}
+
+
+The second property that needs to be satisfied is that the facets of the simplex should resemble one another under permutations of colors. This property is referred to as the {\em symmetry property}. To see why such a property is necessary, let us consider the case with 3 agents and 2 cuts. Consider two distinct vectors, $\vec{x} = (0, 0.5)$ and $\vec{y} = (0.5, 1)$, which correspond to two different sets of 2-cuts. It is important to note that the pieces obtained from $\vec{x}$ and $\vec{y}$ are exactly alike, but their order differs, i.e., $X_1 = Y_0$ and $X_2 = Y_1$. Consequently, it must hold that $u'(\vec{x}, X_1) = u'(\vec{y}, Y_0)$ and $u'(\vec{x}, X_2) = u'(\vec{y}, Y_1)$. From the preference viewpoint, if we have $P(\vec{x}) = 1$, then $P(\vec{y}) = 0$ due to this similarity. As a result of this property, for two $k$-cuts that are equivalent, the utility of a similar piece is equal.
+
+
+\begin{property}[Symmetry]\label{prt:first-symmetry}
+Let $\vec{x}, \vec{y} \in \Delta^k$ be two $k$-cuts and $X = (X_0, X_1, \ldots, X_k)$ and $Y = (Y_0, Y_1, \ldots, Y_k)$ be their corresponding pieces of cake. Suppose that there exists a permutation $\pi: \{0, \ldots k\} \rightarrow \{0, \ldots k\}$ such that $X_i = Y_{\pi(i)}$ for all $i \in \{0, \ldots, k\}$. Then, $u'(\vec{x}, X_i) = u'(\vec{y}, Y_{\pi(i)})$ for each $i$.
+\end{property}
+
+
+Any coloring of simplex that we use to construct our utility function and preference must satisfy the symmetry property (\Cref{prt:first-symmetry}). It is worth noting that when aiming to achieve $\eps$-approximate envy-free cake cutting for all agents, similar to \cite{DBLP:journals/ior/DengQS12}, this property loses its significance. This is because in the facets of the simplex, there exists no solution, and therefore satisfying this property cannot hurt the hard instance. On the other hand, in the \mccs, there indeed exists a solution on the facets of the simplex. 
+Therefore, we must be careful in how we color the simplex to ensure it satisfies the symmetry property. In \Cref{lem:satisfying-the-first-property}, we show that our utility function that is obtained from the hard instance in \Cref{thm:main} satisfies the symmetry property.
+
+
+\begin{claim}\label{clm:swapping-empty-peice}
+    Let $\vec{x}, \vec{y} \in \Delta^k_n$ be two $k$-cuts in a $k$-dimensional simplex that satisfies the symmetric condition in \Cref{def:approx-symmetric-kd-sperner}. Let $i \in [k]$ and suppose that $X_j = Y_j$ for $j \in \{0, \ldots, k\} \setminus \{i-1, i\}$. Moreover, let $X_{i-1} = Y_i$, $X_i = Y_{i-1}$, and $X_{i-1}$ be an empty piece. Then, $P(\vec{y}) = P(\vec{x})$ if $P(\vec{x}) \neq i$, and $P(\vec{y})=i-1$, otherwise.
+\end{claim}
+\begin{proof}
+    Note that $\vec{x}$ and $\vec{y}$ satisfy the symmetric condition in \Cref{def:approx-symmetric-kd-sperner} by the definition. This is because all pieces except the $i$-th and $(i-1)$-th pieces are exactly similar, with one of them being empty. Consequently, the claim holds true.
+\end{proof}
+
+
+\begin{lemma}\label{lem:satisfying-the-first-property}
+The proposed utility function $u$ for the \mccs{} problem satisfies the symmetric condition.
+\end{lemma}
+\begin{proof}
+Note that it suffices to show that the utility function satisfies the symmetry property solely for points in $\Delta^k_n$. Subsequently, as the pseudo-utilities are a convex combination of the corners of base simplices, it holds for all points in $\Delta^k$. Further, it is enough to show that if $P(\vec{x}) = i$, then $P(\vec{y}) = \pi(i)$. This is because the pseudo-utility of empty pieces is zero in both cuts, the pseudo-utility of the preferred piece is $1/(2N)$, and all other non-empty pieces have a pseudo-utility of $1/(10k^2 N)$ for points in $\Delta^k_n$.
+
+
+Let $\vec{x}, \vec{y} \in \Delta^k_n$ where there exists a permutation $\pi: \{0, \ldots k\} \rightarrow \{0, \ldots k\}$ such that $X_i = Y_{\pi(i)}$ for all $i \in \{0, \ldots, k\}$. First, by the boundary property, the preference of agents cannot be an empty piece. Thus, we only need to show that for permutations that map the non-empty pieces from one cut to the other cut, the preference of agents does not change. Let $X_{i_0}, X_{i_1}, \ldots, X_{i_r}$ be the non-empty pieces of $X$ such that $i_0 < i_1 < \ldots < i_r$. Similarly, let $Y_{j_0}, Y_{j_1}, \ldots Y_{j_r}$ be the non-empty pieces of $Y$ such that $j_0 < j_1 < \ldots < j_r$. Note that for permutation $\pi$ such that $\pi(i_d) = j_d$ and arbitrary maps empty pieces to each other, we have $X_i = Y_{\pi(i)}$ for all $i \in \{0, \ldots, k\}$. Now, we need to show that if $P(\vec{x}) = i_d$, then $P(\vec{y}) = \pi(i_d)$ since empty pieces cannot be a preferred piece.
+
+
+Let $\vec{z} \in \Delta^k_n$ to be a point in the simplex which has this property that $Z_{d}$ is empty if $d > r$ and otherwise, $Z_d = X_{i_d} = Y_{j_d}$. Basically, empty pieces are the rightmost pieces in $Z$. We claim that if $P(\vec{x}) = i_{d}$ for some $d \leq r$, then $P(\vec{z}) = d$. We prove this claim step by step. In each step, we swap two consecutive pieces where the left piece is empty and the right piece is not empty. Note that by doing this process a finite number of times, we will finally end up with $Z$ where all empty pieces are in the rightmost positions. Let $X^{(0)}, X^{(1)}, \ldots ,X^{(t)}$ be the different configurations of the pieces that we see in this process and $\vec{x^{(0)}}, \vec{x^{(1)}},\ldots, \vec{x^{(t)}}$ be their corresponding $k$-cuts vectors. So we have $X^{(0)} = X$ and $X^{(t)} = Z$. Note that $P(\vec{x^{(0)}}) = i_d$ and every time that we convert $X^{(i)}$ to $X^{{(i+1)}}$, if we swap $P(\vec{x^{(i)}})$ and an empty piece, then we have $P(\vec{x^{{(i+1)}}}) = P(\vec{x^{(i)}}) - 1$ by \Cref{clm:swapping-empty-peice}. We call this type of swap as {\em critical swap}. By the definition of $Z$, during this process, we have exactly $i_d - d$ critical swaps. Therefore, we have
+\begin{align*}
+    P(\vec{z}) = P(\vec{x^{(t)}}) = P(\vec{x^{(0)}}) - (i_d - d) = P(\vec{x}) - (i_d - d) = d,
+\end{align*}
+which completes the proof of the claim. With a similar argument, we can show that if $P(\vec{z}) = d$ for some $d \leq r$, then $P(\vec{y}) = j_d$. Now assume that $P(\vec{x}) = i_d$. By the above claim, we have $P(\vec{z}) = d$ and consequently, $P(\vec{y}) = j_d$. Since $\pi(i_d) = j_d$, we have $P(\vec{y}) = \pi(i_d)$ which conclude the proof.
+\end{proof}
+
+
+Now we are ready to prove our main theorem for the \mccs{} problem.
+
+
+
+\begin{theorem}
+    For any constant $\eps$ such that $k < \log^{1-\delta}(1/\eps)$ for some constant $\delta > 0$, the problem of finding the \mccs{} for $k$ cuts and $k + 1$ agents is \PPAD-complete. Further, it requires a query complexity of $(1/\eps)^{\Omega(1/k)} / \polylog(1/\eps)$.
+\end{theorem}
+\begin{proof}
+    We assume that the utilities of all agents are as defined at the beginning of this subsection. By \Cref{clm:majority-lipschitz-holds} and \Cref{clm:majority-nonnegativity-holds}, the Lipschitz and nonnegativity conditions hold for utility functions. Further, by \Cref{clm:majority-nonnegativity-holds} and \Cref{lem:satisfying-the-first-property}, we have both the boundary and symmetry properties (\Cref{prt:boundry-condition} and \Cref{prt:first-symmetry}). Hence, the utility function is a valid utility function for the cake-cutting problem.
+
+    
+    We defined our utilities and preferences based on the circuit $C: \Delta^k_n \rightarrow \{0, \ldots, k\}$ that is constructed in \Cref{thm:main}. We know that $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem is in \PPAD{} by \cite{DBLP:journals/ior/DengQS12}. If we can find an allocation that is a solution for the \mccs, we can convert the allocation to its corresponding point in the simplex. Further, by \Cref{lem:envy-free-colors-base}, if we can find a solution for \mccs{} when $\eps \leq 1/(10N)$, then the corresponding point in the simplex is in a trichromatic base simplex. Thus, we can find a solution for the \outofk Approximate Symmetric \Sperner problem. By \Cref{thm:main}, \outofk Approximate Symmetric \Sperner is \PPAD-hard, and therefore, the \mccs{} problem is \PPAD-hard.
+
+    To get the query complexity, consider $N = 2^{4kn}$. Thus, we have $nk = \Theta(\log N)$ and $n = \Theta(\log N/ k)$. Plugging $k < \log^{1-\delta}(N)$, we have $n = \polylog(N)$ and $k = \poly(n)$. Also, we have $N = \Theta(1/\eps)$. Therefore, by \Cref{thm:main}, the query complexity is at least $(1/\eps)^{\Omega(1/k)}/\polylog(1/\eps)$.
+\end{proof}
+
+
+
+
+\subsection{Beyond Connected Pieces}\label{sec:three-agents-non-contiguous}
+
+
+In this section, we consider both relaxations: (1) finding three agents who do not envy others, and (2) allowing agents to have more than one piece. More formally, we have $p$ agents where $p \leq k + 1$, and our objective is to find a bundling of $k + 1$ pieces into $p$ bundles.  The goal is to allocate each agent one of these bundles in such a way that the allocation is $\epsilon$-approximate envy-free for at least three agents.
+
+\poutofqcakecut*
+
+
+Our approach for this subsection is very similar to the previous one. We first extend the utility function for multiple pieces. Then, we demonstrate that if we can find a solution for the $\eps$-approximate 3-out-of-$p$-envy-free cake cut, the corresponding point representing the $k$-cut lies within a base simplex with at least three colors in the hard instance of \Cref{thm:main}, indicating the problem's PPAD-hardness. 
+
+
+\paragraph{Extending the utility function to multiple pieces:} We let $u'(\vec{x}, B)$ be equal to the sum of the utilities of the pieces that belong to bundle $B$. Since we defined the pseudo-utility function the same as the previous section, for two $k$-cuts that are equivalent, the pseudo-utility of the similar pieces is going to be equal with a similar argument (formalized in \Cref{prt:first-symmetric-2} and \Cref{clm:first-symmetric-hold-2}). Finally, we let $u(\eqClass{\vec{x}}, B)$ be equal to the sum of the utilities of the pieces that belong to bundle $B$. Since the utility function is defined the same way as the previous subsection, we have both the Lipschitz and nonnegativity conditions. We repeat the statements for the usage of this subsection.
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{claim}\label{clm:three-agent-lipschitz-holds}
+    The defined utility function $u$ for the $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem is Lipschitz.
+\end{claim}
+
+
+\begin{claim}\label{clm:three-agent-nonnegativity-holds}
+    The defined utility function $u$ for the $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem satisfies the nonnegativity condition.
+\end{claim}
+
+
+
+
+We now show that for the extended utility function, any cut that is an $\eps$-approximate 3-out-of-$p$-envy-free cake cut implies that the corresponding point in the simplex must lie within a trichromatic base simplex.
+
+
+\begin{lemma}\label{lem:envy-free-colors-base-2}
+    Let $\vec{x} \in \Delta^k $ be a $k$-cut that is within a base simplex with corners $\vec{x^{(0)}}, \vec{x^{(1)}}, \ldots, \vec{x^{(k)}} \in \Delta^k_n$. If \begin{align*}
+        \left|\{P(\vec{x^{(0)}}), P(\vec{x^{(1)}}), \ldots, P(\vec{x^{(k)}})\}\right| \leq 2,
+    \end{align*} 
+    then, there exists no bundling for the point $\vec{x}$ that serves as a solution for the $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem when $\epsilon \leq 1/(10N)$.
+\end{lemma}
+\begin{proof}
+    We use almost the same approach as proof of \Cref{lem:envy-free-colors-base}. We can write $\vec{x} = \sum_{i=0}^k \alpha_i \vec{x^{(i)}}$ s.t. $\sum_{i=0}^k \alpha_i=1$.
+    Let $\mathcal{P} = \{P(\vec{x^{(0)}}), P(\vec{x^{(1)}}), \ldots, P(\vec{x^{(k)}})\}$ and $\overline{\mathcal{P}} = \{0, 1, \ldots, k\} \setminus \mathcal{P}$. For $j' \in \overline{\mathcal{P}}$, with the same argument as the proof of \Cref{lem:envy-free-colors-base}, we have $u(\eqClass{\vec{x}}, X_{j'}) \leq 1/(10k^2 N)$. Therefore, if a bundle $B_{d'}$ only contains pieces that are in $\overline{\mathcal{P}}$, we have that $u(\eqClass{\vec{x}}, B_{d'}) \leq (k+1)/(10k^2N)$ since the bundle has at most $k+1$ of these pieces and each of them has a utility of at most $1/(10k^2 N)$.
+    
+    
+    On the other hand, since $|\mathcal{P}| \leq 2$, by pigeonhole principle there exists a $j \in \mathcal{P}$ such that $\sum_{i \text{ and } P(\vec{x^{(i)}}) = j} \alpha_i \geq 1/2$ which implies that $u(\vec{x}, X_{j}) \geq 1/(4N)$ for the same $j$, again using the same argument as \Cref{lem:envy-free-colors-base}. Now consider bundle $B_d$ that contains this piece. We have that $u(\eqClass{\vec{x}}, B_d) \geq 1/(4N)$. 
+
+
+    As $|\mathcal{P}| \leq 2$, at most two bundles can have a utility larger than or equal to $1/(4N)$. By the above argument, there exists a bundle with a utility of at least $1/(4N)$. Additionally, there exist $p - 2$ bundles, each with a utility of at most $(k+1)/(10k^2N)$. Hence, when $\eps \leq 1/(10N)$, this implies that $\vec{x}$ cannot be a solution for the $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem, as at least $p-2$ agents would envy others.
+\end{proof}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+We need to satisfy the boundary and symmetry properties when we have bundling similar to that in \Cref{sec:making-almost-everyone-happy}. We redefine these two properties for the $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem. Regarding the boundary property, any bundle of a $k$-cut vector that is empty must have a utility equal to zero.
+
+
+\begin{property}[Boundary]\label{prt:boundary-condition-2}
+    Let $\vec{x}$ be a $k$-cut and $\mathcal{B} = \{B_0, B_1, \ldots, B_{p-1} \}$ be a bundling of its pieces into $p$ bundles. If $B_i$ is empty, then $u(\vec{x}, B_i) = 0$. 
+\end{property}
+
+\begin{claim}\label{clm:boundary-condition-hold-2}
+    The proposed utility function $u$ 
+    satisfies the boundary property.    
+\end{claim}
+
+\begin{proof}
+    Let $B_i$ be an empty bundle consisting of pieces $ X_{i_1}, \ldots, X_{i_r}$. Since $B_i$ is empty, all pieces $X_{i_1}, \ldots, X_{i_r}$ are empty pieces. Thus,
+    \begin{align*}
+        u(\eqClass{\vec{x}}, B_i) = \sum_{j=1}^r u(\eqClass{\vec{x}}, X_{i_j}) = 0,
+    \end{align*}
+    where the last equality is followed by \Cref{clm:three-agent-nonnegativity-holds}.
+\end{proof}
+
+
+
+
+
+
+
+
+
+
+
+The symmetry property is also very similar to the symmetry property (\Cref{prt:first-symmetry}) in \Cref{sec:making-almost-everyone-happy}, with slight modifications to suit our application in this section.
+
+
+\begin{property}[symmetry]\label{prt:first-symmetric-2}
+    Let $\vec{x}$ and $\vec{y}$ be two $k$-cuts. Suppose that there exists a permutation $\pi: \{0, \ldots, k\} \rightarrow \{0, \ldots, k\}$ such that $X_i = Y_{\pi(i)}$ for all $i$. Let $\mathcal{B}^{(x)} = \{B^{(x)}_0, \ldots, B^{(x)}_{p-1} \}$ and $\mathcal{B}^{(y)} = \{B^{(y)}_0, \ldots, B^{(y)}_{p-1} \}$ be bundling of the pieces $X$ and $Y$, respectively. Suppose that $B^{(x)}_i = \{X_{i_1}, \ldots, X_{i_r}  \}$ and $B^{(y)}_j = \{Y_{\pi(i_1)}, \ldots, Y_{\pi(i_r)} \}$. Then, $u'(\vec{x}, B^{(x)}_i) = u'(\vec{y}, B^{(y)}_j)$.
+\end{property}
+
+
+\begin{claim}\label{clm:first-symmetric-hold-2}
+    The proposed utility function $u$ for the $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem satisfies the symmetry property.    
+\end{claim}
+
+\begin{proof}
+    Let $\vec{x}$ and $\vec{y}$ be two $k$-cuts with the condition in the premise of \Cref{prt:first-symmetric-2}. Since we use the exact the same utility function as the \mccs{} problem, by \Cref{lem:satisfying-the-first-property}, we have $u'(\vec{x}, X_i) = u'(\vec{y}, Y_{\pi(i)})$. Therefore, we can conclude the proof since
+    \begin{align*}
+        u'(\vec{x}, B^{(x)}_i) = \sum_{d=1}^r u'(\vec{x}, X_{i_d}) = \sum_{d=1}^r u'(\vec{y}, Y_{\pi(i_d)}) = u'(\vec{y}, B^{(y)}_j). & \qedhere
+    \end{align*}
+\end{proof}
+
+
+
+
+
+Now we are ready to prove our main theorem for the $\eps$-Approximate 3-out-of-$p$-envy-free cake cut problem.
+
+
+\cakecuttingtheorem*
+
+\begin{proof}
+
+We assume that the utilities of all agents are as defined at the beginning of this subsection. By \Cref{clm:three-agent-lipschitz-holds} and \Cref{clm:three-agent-nonnegativity-holds}, the Lipschitz and non-negativity conditions for utility functions are satisfied. Moreover, according to \Cref{clm:boundary-condition-hold-2} and \Cref{clm:first-symmetric-hold-2}, we observe that both the boundary and symmetry properties (\Cref{prt:boundary-condition-2} and \Cref{prt:first-symmetric-2}) hold. Hence, the utility function is a valid utility function for the cake-cutting problem.
+
+
+We have defined our utilities and preferences based on the circuit $C: \Delta^k_n \rightarrow \{0, \ldots, k\}$ constructed in \Cref{thm:main}. We know that $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem is in \PPAD{} by \cite{DBLP:journals/ior/DengQS12}. Moreover, as stated in \Cref{lem:envy-free-colors-base-2}, if a solution for the $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem is found when $\epsilon \leq 1/(10N)$, then the corresponding point in the simplex lies within a trichromatic base simplex. Thus, we can solve the \outofk Approximate Symmetric \Sperner problem. Since \outofk Approximate Symmetric \Sperner is proven to be \PPAD-hard by \Cref{thm:main}, it follows that the $\eps$-approximate 3-out-of-$p$-envy-free cake cut problem is also \PPAD-hard.
+
+
+To get the query complexity, consider $N = 2^{4kn}$. Thus, we have $nk = \Theta(\log N)$ and $n = \Theta(\log N/ k)$. Plugging $k < \log^{1-\delta}(N)$, we have $n = \polylog(N)$ and $k = \poly(n)$. Also, we have $N = \Theta(1/\eps)$. Therefore, by \Cref{thm:main}, the query complexity is at least $(1/\eps)^{\Omega(1/k)}/\polylog(1/\eps)$.
+\end{proof}
+
+
+
+

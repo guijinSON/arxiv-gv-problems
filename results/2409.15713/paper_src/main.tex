@@ -1,0 +1,162 @@
+\documentclass[letterpaper,11pt]{article}
+
+\input{macro}
+
+\title{Hardness of Approximate Sperner and Applications to Envy-Free Cake Cutting}
+\author[1]{Ruiquan Gao}
+\author[1]{Mohammad Roghani}
+\author[1]{Aviad Rubinstein}
+\author[1]{Amin Saberi}
+\affil[1]{Stanford University, \url{{ruiquan, roghani, aviad, saberi}@stanford.edu}}
+\date{}
+
+\begin{document}
+
+ \begin{titlepage}
+    \maketitle
+     \thispagestyle{empty}
+     \begin{abstract}
+Given a so called ``Sperner coloring'' of a triangulation of the $D$-dimensional simplex, Sperner's lemma guarantees the existence of a {\em rainbow simplex}, i.e.~a simplex colored by all $D+1$ colors. 
+However, finding a rainbow simplex was the first problem to be proven \PPAD-complete in Papadimitriou's classical paper introducing the class \PPAD~\cite{DBLP:journals/jcss/Papadimitriou94}.
+In this paper, we prove that the problem does not become easier if we relax ``all $D+1$ colors'' to allow some fraction of missing colors: in fact, for any constant $D$, finding even a simplex with just three colors remains \PPAD-complete!
+
+
+Our result has an interesting application for the envy-free cake cutting from fair division. 
+It is known that if agents value pieces of cake using general continuous functions satisfying a simple boundary condition (``a non-empty piece is better than an empty piece of cake''),  there exists an envy-free allocation with connected pieces. We show that for any constant number of agents it is \PPAD-complete to find an allocation --even using any constant number of possibly disconnected pieces-- that makes just three agents envy-free. 
+
+Our results extend to super-constant dimension, number of agents, and number of pieces, as long as they are asymptotically bounded by any $\log^{1-\Omega(1)}(\eps)$, where $\eps$ is the precision parameter (side length for Sperner and approximate envy-free for cake cutting). 
+
+     
+     \end{abstract}
+ \end{titlepage}
+
+ \newpage
+
+\section{Introduction}
+
+Sperner's lemma is a fundamental result in combinatorics with important applications including topology (Brouwer's fixed point theorem), game theory (Nash equilibrium), economics (market equilibrium), and fair division (envy-free cake cutting). The lemma is stated in terms of a {\em large} $D$-dimensional simplex, a partition of the simplex into disjoint {\em small} $D$-dimensional simplices, and a $D+1$-{\em Sperner coloring} of the vertices of the small simplices which has to satisfy appropriate boundary conditions%
+\footnote{Namely that each vertex of the large simplex has a different color, and any small-simplex-vertex on a large-simplex-facet shares a color with one of the large-simplex-vertices of that facet.}
+. The lemma says that there always exists a small {\em rainbow simplex}, i.e.~a small simplex whose vertices are colored by all $D+1$ colors. 
+
+Sperner's existence result does not come with an efficient algorithm. Indeed, when the coloring is given by a circuit, finding a rainbow simplex is \PPAD-complete, even for the case of $D+1=3$ colors~\cite{DBLP:journals/tcs/ChenD09} (for $D+1=2$ colors, a bichromatic simplex (edge) can be found easily by a binary search). The \PPAD-completeness of Sperner's lemma has been used to show analogous hardness results for all its aforementioned applications (Brouwer~\cite{DBLP:journals/jcss/Papadimitriou94}, Nash~\cite{DBLP:journals/siamcomp/DaskalakisGP09}, market equilibrium~\cite{DBLP:journals/jacm/VaziraniY11,DBLP:journals/jacm/ChenPY17}, cake-cutting~\cite{DBLP:journals/ior/DengQS12,DBLP:conf/focs/HollenderR23}, and more~\cite{DBLP:conf/focs/KintaliPRST09,DBLP:journals/teco/OthmanPR16,DBLP:journals/jcss/GoldbergH21}). 
+
+Given the hardness of finding a small rainbow simplex, in this work we ask whether we the problem becomes easier when relaxing the problem to only requiring the small simplex to have most of the colors. Our main technical contribution is a strong impossibility result for this relaxation of Sperner's lemma:
+\begin{theorem}[informal version of \cref{thm:main}]
+For any $D>0$, given circuit (resp.~oracle) access to a $D$-dimensional Sperner coloring with $\eps^D$-side-length small simplices, finding even a trichromatic small simplex is \PPAD-complete (resp.~requires $\poly(1/\eps)$ oracle queries).
+\end{theorem}
+Note that this result is tight in the sense that as mentioned earlier, finding a bichromatic simplex is easy (using binary search). It is also interesting that even though the number of colors in the existence result grows linearly with $D$, the number of colors we can find algorithmically does not grow at all.
+
+\subsubsection*{Cake cutting}
+
+It is interesting to understand what consequences we can get from \cref{thm:main} for \PPAD-complete applications of Sperner's lemma. In this work, we focus on the envy-free cake cutting problem from the study of fair division: how can we fairly partition and allocate a heterogeneous ``cake'' over the unit-interval between $n$ agents?
+
+Briefly (details deferred to \Cref{sec:cake-cutting}), in the cake cutting  model each agent has a value function mapping a partition%
+\footnote{We use the following terminology: (i) a configuration of {\em cuts}, is just a finite subset of $[0,1]$; (ii) the {\em partition} of the cake into disjoint, connected pieces as determined the cuts; (iii) the {\em bundling} of the pieces into disjoint subsets; and finally (iv) the {\em allocation} which determines which agent receives which subset.} of the cake to a value in $[0,1]$ for each of the pieces. An allocation of cake is {\em envy-free} if no agent envies another agent's allocation. A classical result (e.g.~\cite{Su99-rental-harmony} using Sperner's lemma) shows that an envy-free allocation always exists even if we insist on giving each agent a single contiguous (or {\em connected}) piece of cake.
+This result holds for a general class of value functions, that are only required to (i) be continuous in the location of the cuts and (ii) assign value $0$ to a piece if and only if it has length $0$. In particular, the value for a piece of cake may be non-monotone (i.e.~less cake is sometimes better), and more generally depend on the entire partition, not just the cuts at its endpoints. 
+
+While an envy-free allocation with connected pieces always exists, it is not clear how to algorithmically find it. In order to cast this problem in a standard computational model, \cite{DBLP:journals/ior/DengQS12} propose studying the complexity of {\em $\varepsilon$-EF} cake cutting, i.e.~we want an allocation where no agent envies another agent's allocation by more than an additive $\varepsilon$. (To make the additive guarantee meaningful we normalize the values to $[0,1]$ and insist that the value functions are Lipschitz.)
+They prove that $\varepsilon$-EF cake cutting is indeed \PPAD-complete, like the problem associated with Sperner's lemma.
+
+In this work we use our main technical theorem to show that  $\varepsilon$-EF cake cutting continues to be \PPAD-complete even under two natural relaxations of the problem:
+\begin{description}
+    \item[Can almost everyone be almost envy-free?] Given that it is intractable to find an allocation where no agent has $\varepsilon$-envy, it would be desirable to find an allocation where at least most agents are envy-free. Unfortunately, we show that for any constant number of agents, it is \PPAD-complete to find an allocation where even $3$ agents do not envy any other agents. 
+    \item[Beyond connected pieces\footnotemark]\footnotetext{We thank Alexandros Hollender for suggesting to us the connection between our notion of approximate Sperner's Lemma and cake cutting with disconnected pieces.} In most applications it is desirable to have as few cuts as possible (e.g.~when the cake models a resource like a computing cluster or vacation home shared across time), but connected pieces may not be a strict requirement. Indeed, in the (important) special case of additive value functions, finding efficient algorithms with {\em general}, i.e.~possibly disconnected, pieces has been a famous open problem for several decades. A celebrated breakthrough of~\cite{DBLP:journals/cacm/AzizM20} shows that for any constant number of agents, there is an efficient algorithm that finds an envy-free allocation with a constant number of cuts --- this is in contrast to connected pieces where a $\polylog(1/\varepsilon)$-time algorithm was only recently given for $n=4$ agents~\cite{DBLP:conf/focs/HollenderR23}, and $n\ge 5$ agents remain an open problem. Here we show that for more general value functions, the problem becomes \PPAD-complete, even with $3$ agents and any constant number of cuts. 
+\end{description}
+
+\begin{theorem}[Informal version of \cref{thm:cake-main}]
+For any number $k \ge 3$ of agents and cuts, it is \PPAD-hard to find an $\varepsilon^k$-EF allocation (of possibly disconnected pieces) that makes even $3$ agents envy-free.    
+\end{theorem}
+
+
+Our \PPAD-completeness result imply $\poly(1/\eps)$ lower bounds on the number of value queries (respectively, color queries for Sperner's lemma). We remark also that our lower bounds for cake cutting hold for the special case where all agents have the same value function.
+
+
+\subsection{Closely related work}
+
+Our result on approximate Sperner's lemma is most closely related to works on approximate Brouwer fixed point~\cite{DBLP:journals/jc/HirschPV89, DBLP:journals/siamcomp/Rubinstein18, DBLP:conf/innovations/BabichenkoPR16, DBLP:conf/focs/Rubinstein16, DBLP:journals/siamcomp/FilosRatsikasHSZ23}. In particular, \cite{DBLP:conf/focs/Rubinstein16} proves that in the regime of asymptotically large dimension, it is \PPAD-complete to find a small simplex with $1-\delta$ fraction of the colors (for a small, unspecified constant%
+\footnote{An earlier result of~\cite{DBLP:journals/siamcomp/Rubinstein18} proved a weaker result where only the side length is a small unspecified constant; the constants in that paper were recently dramatically improved in~\cite{DBLP:journals/siamcomp/FilosRatsikasHSZ23}. However, neither of those works has any non-trivial guarantee on the fraction of colors in the small simplex; this fraction is the focus of our paper.}
+$\delta > 0$) even when the small simplex has constant side length%
+\footnote{The domain in~\cite{DBLP:conf/focs/Rubinstein16} and other related works on approximate Brouwer fixed point is the hypercube rather than the simplex. While in constant dimension this makes little difference, in $n$-dimensions the simplex is exponentially smaller. Our comparison here is informal, possibly erring on the side of giving earlier work too much credit.}
+$\varepsilon >0$.  
+This result is incomparable to our result which holds in constant dimension but requires the small simplex to be asymptotically small. In terms of the fraction of colors, we show that $3$-vs-$\omega(1)$ is already hard, compared to $(1-\delta)n$-vs-$n$ in~\cite{DBLP:conf/focs/Rubinstein16}. Our recursive construction is technically completely different from the error correcting code technique of~\cite{DBLP:conf/focs/Rubinstein16}; it is an interesting direction for future work to explore whether our result on approximate Sperner coloring can have interesting implications for approximate equilibria in games (main goal of~\cite{DBLP:conf/focs/Rubinstein16}), equilibria in other domains (e.g.~markets),  or even the PCP Conjecture for \PPAD~\cite{DBLP:conf/innovations/BabichenkoPR16}. 
+
+
+For cake-cutting with additive valuations, the problem of envy-free cake cutting has been studied in the Robertson-Webb oracle model, where in addition to value queries, the algorithm can also ask the oracle for a piece that agent $i$ values at $\alpha$. 
+For additive $\varepsilon$-EF allocations, \cite{DBLP:conf/nips/BranzeiN22} show that cut queries can be simulated with $\Theta(\log(1/\varepsilon))$ value queries, so the models are equivalent up to these log factors. Cut queries have a natural extension to monotone value functions (see e.g.~\cite{DBLP:conf/focs/HollenderR23}), but it is not clear how to extend them to our model of general value functions.
+
+
+In the Robertson-Webb oracle model, one can ask for exact EF allocations.
+For connected pieces, even in the Robertson-Webb oracle model no algorithm can find an EF allocation in finite time~\cite{DBLP:journals/combinatorics/Stromquist08} (demonstrating a strong separation between the connected and general pieces). 
+For general pieces, the celebrated breakthrough of~\cite{DBLP:journals/cacm/AzizM20} gives an efficient algorithm that runs in constant time (and hence a constant number of cuts) for a constant number of agents. However, the dependence on the number of agents $n$ is poor: a six-power tower; in contrast, the best lower bound is only $\Omega(n^2)$~\cite{DBLP:conf/ijcai/Procaccia09}, and closing the gap is a famous open problem. Our result suggests that it would be impossible to find better algorithms by only exploiting the topology of the problem. 
+
+Our hardness on making most agents envy-free is related to a result of~\cite{DBLP:conf/innovations/BabichenkoPR16} who showed, assuming the PCP Conjecture for \PPAD, a similar-flavor notion of hardness for approximately fair allocation of courses to students in the A-CEEI framework. (The techniques are completely different, and they focus on the regime of asymptotically large number of agents/students.)
+
+\cite{DBLP:conf/focs/HollenderR23} study the complexity of $\varepsilon$-EF cake cutting with $4$ agents. They show that an efficient protocol with monotone value functions, and \PPAD, query, and communication complexity hardness for non-monotone functions. Their notion of non-monotone functions is less general than our notion of value functions in the sense that in~\cite{DBLP:conf/focs/HollenderR23} the value of a piece only depends on the locations of the cuts that define it. It is an interesting open problem whether our results can be extended to this notion of value functions, and/or to communication complexity (see also~\cite{DBLP:conf/ec/BranzeiN19} on communication complexity in cake cutting).
+
+Many other problems in fair division are known to be complete for \PPAD~(e.g.~\cite{DBLP:journals/teco/OthmanPR16,DBLP:journals/corr/abs-2008-00285}), or related classes such as \PPA~\cite{DBLP:conf/stoc/Filos-RatsikasG18, DBLP:conf/stoc/DeligkasFHM22, DBLP:journals/ai/DeligkasFH22}, \PLS~\cite{DBLP:conf/sagt/GoldbergHH23}, \PPA-$k$~\cite{DBLP:conf/soda/Filos-RatsikasH21}, and likely also  for $\PPAD \cap \PLS$~\cite{DBLP:conf/soda/Arunachaleswaran19}; see also the recent survey of~\cite{DBLP:journals/ai/AmanatidisABFLMVW23}. In particular, \cite{DBLP:conf/stoc/DeligkasFHM22} extend a \PPA-completeness result of fair division (``consensus halving'') with $n$ cuts to allow a small fraction of redundant cuts, namely $n+n^{1-\delta}$; in comparison, we show hardness of $3$-vs-$\omega(1)$ cuts. 
+
+\section{Overview of techniques}
+To prove hardness of approximate Sperner (\cref{thm:main}) we use a combination of a recursive construction and the hard $2$-dimensional instance of~\cite{DBLP:journals/tcs/ChenD09}.
+At the base of our recursion we consider a $D=1$-dimensional instance, which is simply a line with two colors.  We assume wlog that the line is colored with blue for all the point left of the midpoint, and red on the right. 
+
+The recursive step builds on a construction of~\cite{DBLP:journals/tcs/ChenD09} who showed that given a Sperner coloring in $D=2$ dimensions, it is \PPAD-complete to find a small trichromatic simplex. We can think of their construction as extending a $1$-dimensional base case to a $2$-dimensional instance. We use their construction almost black box, except again for the assumption (which can be easily seen to hold in their construction) that the base case is colored with blue up to the midpoint, and red thereafter. 
+
+\subsubsection*{The key idea}
+
+At a high level, for going from a generic $D$ to $D+1$ dimensions, we consider all the points where two colors meet. Locally, consider the line segment perpendicular to the manifold between the two colors, and observe that it looks just like a shrunk version of our $1$-dimensional base case (one color up to the midpoint, then a different color). So we can extend it in the $(D+1)$-th dimension from a line segment to a $2$-dimensional simplex by pasting a shrunk copy of \cite{DBLP:journals/tcs/ChenD09}'s construction. By default, all other points with a non-trivial component in the $(D+1)$-th dimension are colored with the $(D+1)$-th color. 
+
+Suppose by induction that it is \PPAD-hard to find a point simultaneously close to $3$ colors in the $D$-dimensional instance. The base case is trivial as clearly with $D+1 = 2$ colors there are no trichromatic regions at all. For the induction step, we need to argue that it is hard to find a point in the $(D+1)$-dimensional instance that is simultaneously close to the new $(D+1)$-th color and two of the other $D$ colors. However, any point close to two of the $D$ colors is covered by a shrunk copy of the $3$-color, $2$-dimensional \cite{DBLP:journals/tcs/ChenD09}-instance, where it is again \PPAD-complete to find a trichromatic point!
+
+
+\subsubsection*{Challenge: maintaining consistency with empty pieces}
+The most interesting challenge in implementing the above proof plan has to do with the inherent symmetries of the cake cutting applications. Consider for example the case where we only try to make some agents envy-free (a similar challenge arises for redundant cuts): in this case, it is acceptable to completely sacrifice the happiness of one agent and give them an empty piece. Now there are $D-1$ configurations of $D$ cuts that correspond to the same allocation of $D+1$ cake pieces with one of them being empty. 
+For the cake cutting application, we would like to ensure that the agents' values for all those allocations to are identical.
+
+Geometrically, ``$i$-th piece is empty'' corresponds to a tight constraint on the location of the cuts, or equivalently a facet of the simplex. So in order to correspond to a feasible value function, the Sperner coloring has to satisfy an unusual symmetry constraint: 
+\begin{quote}
+    For every $d<D$, the coloring on every $d$-dimensional the facets is identical, up to a permutation of the colors. 
+\end{quote}
+
+Notice that this issue comes up specifically because of the relaxed notion of envy-free with respect to some agents that we study in this paper: in contrast, for every-agent-envy-free cake cutting with connected pieces, we can assume wlog that every piece is nonempty (equivalently, there is no rainbow simplex on the boundary) --- for any  agent that receives it will envy other agents.
+
+Recall that the $D-1$ dimensional construction is constructed from shrunk copies of the $2$-dimensional instance. When we recurse to add more dimensions, the copies have to shrink exponentially, resulting in different {\em shrinking factors}. Thus our Sperner  construction has different shrinking factors for different facets --- failing to satisfy the symmetry condition. 
+
+To overcome this, we modify our $D$-dimensional construction to first have a copy of the $D-1$-dimensional construction on each facet. Then in the regions near the boundary we interpolate between this original copy and the copy with smaller shrinking factors. 
+
+\section{Preliminaries}
+\label{sec:prelim}
+\input{prelim}
+
+\section{Approximate High-dimensional Sperner: Formulation and Statement of Result}
+\label{sec:3color}
+\input{3color}
+
+\section{Cake Cutting: Formal Model and Statement of Result}
+\input{model}
+
+
+\section{Warmup: PPAD-Hardness of Approximate (Unconstrained) Sperner}
+\label{sec:warmup-proof-for-approx-sperner}
+\input{hardness-warmup.tex}
+
+\section{PPAD-Hardness of Approximate Symmetric Sperner}
+\label{sec:final-proof-for-approx-sperner}
+\input{hardness-final.tex}
+
+\section{Applications: Envy-Free Cake-Cutting}
+\label{sec:cake-cutting}
+\input{cake}
+
+
+\section*{Acknowledgement}
+This research was partially supported by NSF grants CCF-2112824, CCF-2209520, and CCF-2312156, ONR under award N000142212771, a Stanford Graduate Fellowship, Dantzig-Lieberman Operations Research Graduate Fellowship, and the David and Lucile Packard Foundation Fellowship.
+
+\printbibliography
+
+\appendix
+
+\section{Deferred Proofs}
+\label{app:omitted-new}
+\input{app-proof-new}
+
+\end{document}

@@ -1,0 +1,945 @@
+In this section, we give a more elaborate reduction that guarantees the desired symmetry properties required by \cref{def:approx-symmetric-kd-sperner}, and prove the \PPAD-completeness of the Approximate Symmetric $k$D-\Sperner problem (i.e., our main technical result \cref{thm:main}).
+We will construct a different chain of instances $\Csym{2},\Csym{3},\dots, \Csym{k}$.
+At a high level we make the following two modifications inside the warm-up construction from \cref{sec:warmup-proof-for-approx-sperner}:
+(1) We construct two distinct $2${\rm D}-\Sperner instances: $\Csym{2}$ which is used as the basis of our recursive construction,  
+and $C$ which is used for lifting each $\Csym{i}$ to $\Csym{i+1}$. (2) The actual constructions of $2${\rm D}-\Sperner instances are more delicate, especially the coordinate converters.
+As in \cref{sec:warmup-proof-for-approx-sperner}, we will use $2^{-n}$ and $\eps$ interchangeably in this section.
+We restate our main technical we will prove as follows.
+
+\mainthm*
+
+As in \cref{sec:warmup-proof-for-approx-sperner}, our instances will be constructed in continuous space instead of discrete space. 
+We will establish the following hardness result:
+\begin{theorem}
+    \label{thm:continuous-symmetry-main}
+    There exists a chain of functions $\{\Csym{k}: \Delta^k \to [k+1]\}_{k\geq 2}$ that satisfy the symmetry defined in \cref{def:approx-symmetric-kd-sperner} and can be computed in $\poly(|\vec{x}|)$ time for each $\vec{x}\in \Delta^k$, where $|\vec{x}|$ is the bit complexity of $\vec{x}$ and satisfies the following property. 
+    For any $k\geq 2$, it is \PPAD-hard 
+    to find three points $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}\in \Delta^{k}$ such that 
+    \begin{itemize}[itemsep=0.2em, topsep=0.5em]
+        \item {\bf they are close enough to each other:} for any $i,j\in [3]$, $\normtxt{\vec{x}^{(i)}-\vec{x}^{(j)}}{\infty}\leq 2^{-4kn}$, 
+        \item {\bf they induce a trichromatic triangle:} $|\settxt{C^{(k)}(\vec{x}^{(i)}):i\in [3]}|=3$. 
+    \end{itemize}
+    In particular, if $\Csym{k}$ is black-box, it requires a query complexity of $2^{\Omega(n)}/\poly(n,k)$ to find a solution satisfying the above two properties. 
+\end{theorem}
+
+\begin{remark}
+    The \PPAD-hardness and query complexity lower bound for the continuous \outofk Approximate Symmetric \Sperner instances can be easily generalized for the discrete ones that follow \cref{def:approx-symmetric-kd-sperner}.
+    The reduction from the continuous cases to discrete cases is as follows: for any $\vec{x}\in \Delta_{4kn}^{k}$, we define 
+    \begin{align*}
+        C^{(k)}_{\sf sym,dis}(\vec{x}) := \Csym{k}(\vec{x})~,
+    \end{align*}
+    where any trichromatic tuple $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}$ in $C^{(k)}_{\sf sym,dis}$ is 
+    simply a trichromatic tuple in $\Csym{k}$. 
+\end{remark}
+
+Our plan in this section is to prove \cref{thm:continuous-symmetry-main} and its roadway is as follows. 
+We will first introduce our new coordinate converter in \cref{subsec:more-elaborate-coordinate-converter}. 
+Then, we will (slightly) adjust our previous hard two-dimensional instances $C^{(2)}$ so that they satisfy the symmetry constraints in \cref{subsec:symmetric-2d}.
+Combining this new coordinate converter and these different hard $2${\rm D}-\Sperner instances with previous recursive construction framework for three or higher dimensions, we have finished all the constructions.
+We will show the new three or higher dimensional instances (under the new combination) are symmetric and still \PPAD-hard in \cref{subsec:symmetric-kd}.
+Finally, we will establish the query complexity of the instances in \cref{subsec:query-complexity}.
+In the entire section, we assume that the base instance $C$ is fixed and any function in consideration will have oracle access to $C$.
+
+\subsection{A more elaborate coordinate converter}
+\label{subsec:more-elaborate-coordinate-converter}
+In this subsection, we provide a more elaborate coordinate converter.  
+Recall that in our hard instances for the \outofk Approximate (Unconstrained) \Sperner problem, 
+we define the coordinate convertersimply via each point's $\ell_{\infty}$-nearest neighbor with a different color. 
+However, using this coordinate converter, we cannot guarantee the desired symmetry (\cref{def:approx-symmetric-kd-sperner}) even in the $3${\rm D}-instances.
+Consider the following two facets: $\settxt{(x,y,z,0):x+y+z=1}$ and $\settxt{(x,y,0,z):x+y+z=1}$. 
+In our construction in \cref{sec:warmup-proof-for-approx-sperner}, we let $C^{(3)}(x,y,z,0)$ be  the $C(x,y,z)$-th color in the palette $(1,2,3)$. 
+In contrast, for $C^{(3)}(x,y,0,z)$, we use the $C((1-z)\cdot (1-\tilde{y}),(1-z)\cdot \tilde{y},z)$-th color in the palette $(1,2,4)$, where $\tilde{y}=\rel(\frac{x}{1-z},\frac{y}{1-z},0)$. 
+To ensure the symmetry between $C^{(3)}(x,y,z,0)$ and $C^{(3)}(x,y,0,z)$, 
+one natural way is to guarantee that we use the same point in the 2{\rm D}-\Sperner instance for $(x,y,z,0)$ and $(x,y,0,z)$, i.e., 
+\[y=(1-z)\cdot \tilde{y}=(1-z)\cdot \rel\left(1-\frac{y}{1-z},\frac{y}{1-z},0\right)~,\]
+which can hold if the coordinate converter is the identity on the bottom $1$-simplex, i.e., $\rel(1-y,y,0)=y$. 
+
+Therefore, our primary motivation for using a more elaborate coordinate converteris to ensure that it gives an identity mapping on the bottom $1$-simplex. We also have to carefully interpolate between this boundary constraint and maintaining the desiderata of the existing construction on the interior. 
+
+\paragraph{Interpolation.} To interpolate the coordinate converter, we define the following {\em shrinking factor} 
+for the distance, which depends only on the third coordinate of each point and will be applied on the second coordinate when computing the distance.
+The formula \cref{eqn:shrinking-factor} of this shrinking factor can be viewed as an interpolation between $z=0$ and $z=0.05$ using exponential functions so that we will shrink distances of points with $z=0$ by a small factor of $2\eps^2$. We do not shrink the distances (i.e., $\alpha(\cdot)=1$) for those with $z\geq 0.05$. 
+See \cref{lem:shrinking-factor-basics} for the details.
+\begin{align}
+    \label{eqn:shrinking-factor}
+    \alpha(z) = \exp\left( -20(2n-1)\ln 2 \cdot (0.05-z)_+ \right).
+\end{align}
+The intuition of our new definition is that with the distance shrunk, the hot regions expand.
+Therefore, the above issue of asymmetry between the bottom $2$-simplex and the other three $2$-simplices in the $3${\rm D}-instances could be resolved. 
+The key properties of this new coordinate convertertowards proving the symmetry are concluded in the following lemma.
+\begin{lemma}
+    \label{lem:shrinking-factor-basics}
+    The shrinking factor $\alpha$ satisfies:
+    \begin{enumerate}[topsep=0.5em, itemsep=0.1em]
+        \item $\alpha(0)=2^{-2n+1}=2\eps^{2}$.
+        \item For any $z\geq 0.05$, $\alpha(z)=1$.
+        \item Lipschitz: for any $z,z'\in [0,1]$ such that $|z-z'|\leq \eps$, $\abstxt{\alpha(z)-\alpha(z')}\leq O(n)\cdot |z-z'|$. 
+    \end{enumerate}
+\end{lemma}
+\begin{proof}
+    The first two bullets can be easily obtained via simple calculations. 
+    Further, because of the second bullet, it remains to show the third bullet for $0\leq z\leq z' \leq 0.05$ such that $|z-z'|\leq 2^{-\Omega(n)}$:
+    \begin{align*}
+        \abs{\alpha(z)-\alpha(z')} &= \abs{
+            \exp\left( -20(2n-1)\ln 2 \cdot (0.05-z) \right)
+            -
+            \exp\left( -20(2n-1)\ln 2 \cdot (0.05-z') \right)
+        }
+        \\
+        &=
+        \abs{
+            \exp\left( -20(2n-1)\ln 2 \cdot (0.05-z) \right) 
+            \cdot
+            \left(
+                1-\exp\left( 20(2n-1)\ln 2 \cdot (z'-z) \right)
+            \right)
+        }
+        \\
+        &\leq
+        \exp\left( 20(2n-1)\ln 2 \cdot (z'-z) \right)-1
+        \\
+        &\leq 
+        20(2n-1)\ln 2\cdot (z'-z) + O(n^2(z'-z)^2) 
+        \\
+        &= O(n)\cdot |z-z'|~.
+        \qedhere
+    \end{align*}
+\end{proof}
+
+Now we're ready to define the following (asymmetric) {\em shrunk quasimetric} 
+based on the shrinking factor, 
+\begin{align}
+    \label{eqn:shrinking-distance}
+    d^{\alpha}(\vec{x}, \vec{x'}) = \max\set{\alpha(x_3)\cdot \abstxt{x_2-x_2'},\ \abstxt{x_3-x_3'}}
+\end{align}
+
+\paragraph{The coordinate converter.} The definition of the coordinate converter follows the previous section's steps. 
+More specifically, for each point $\vec{x}\in \Delta^2$, we find the infimum shrunk distance from $\vec{x}$ to all points with a fixed color $c\neq C(\vec{x})$:  
+\begin{align*}
+    d_{\min}^{\alpha}(\vec{x}, c) = \inf_{\vec{y}\in \Delta^2: C(\vec{y})=c} 
+    d^{\alpha}(\vec{x},\vec{y})
+    ~.
+\end{align*}
+Then, our definitions of the neighboring color and the nearest neighbor are modified accordingly as follows: 
+\begin{align}
+    \label{eqn:cnn-and-nn-for-symmetric}
+    \begin{split}
+    C_{\sf nn}^{\alpha}(\vec{x}) &= \argmin_{c\in [3]:c\neq C(\vec{x})} \left(d^{\alpha}_{\min}(\vec{x}, c),\ c\right)~,
+    \\
+    \nna(\vec{x}) &= \arginf_{\vec{y}\in \Delta^2: C(\vec{y})=C_{\sf nn}(\vec{x})} d^{\alpha}(\vec{x},\vec{y})~.
+    \end{split}
+\end{align}
+We will continue to use the notions of {\em hot/warm/cold regions}, where the definitions are nearly the same as in \cref{sec:warmup-proof-for-approx-sperner} (replacing $d$ by $d^{\alpha}$). 
+\begin{itemize}[itemsep=0.2em,topsep=0.5em]
+    \item The {\em hot} region consists of points having a shrunk distance to the nearest neighbor strictly less than $\eps^2$, i.e., points $\vec{x}$ with $d^\alpha(\vec{x}, \nna(\vec{x}))<\eps^2$; we say that points in this region are {\em hot}.
+    \item The {\em warm} region consists of points having a shrunk distance to the nearest neighbor between $\eps^2$ (inclusive) and $2\eps^2$ (exclusive), i.e., points $\vec{x}$ with $d^{\alpha}(\vec{x}, \nna(\vec{x}))\in [\eps^2,2\eps^2)$; we say that points in this region are {\em warm}.
+    \item The {\em cold} region consists of points having a shrunk distance to the nearest neighbor no less than $2\eps^2$, i.e., points $\vec{x}$ with $d^\alpha(\vec{x}, \nna(\vec{x}))\geq 2\eps^2$; we say that points in this region are {\em cold}.
+\end{itemize}
+Finally, the new coordinate converter is in the form as the previous one \cref{eqn:coordinate-converter} except that we use everything with a shrinking factor.
+\begin{align}
+    \label{eqn:new-coordinate-converter}
+    \rela(\vec{x}) = \begin{cases}
+        \hfill \left(0.5 - 0.5\eps^{-2} \cdot d^\alpha(\vec{x}, \nna(\vec{x}))
+        \right)_+ \hfill & \text{if $\vec{x}$ is {\em hot\,/\,warm} and $C^\alpha_{\sf nn}(\vec{x})>C(\vec{x})$,}\\
+        \left(0.5 + 0.5\eps^{-2} \cdot d^\alpha(\vec{x}, \nna(\vec{x}))\right)_- & \text{if $\vec{x}$ is {\em hot\,/\,warm} and $C^\alpha_{\sf nn}(\vec{x})<C(\vec{x})$,}\\
+        \hfill 0 \hfill & \text{if $\vec{x}$ is {\em cold} and $C(\vec{x})=1$,}\\
+        \hfill 1 \hfill & \text{if $\vec{x}$ is {\em cold} and $C(\vec{x})\in \{2,3\}$.}
+    \end{cases}
+\end{align}
+Because we have $\alpha(x_3)=1$ for any $\vec{x}$ such that $x_3\geq 0.05$, it is easy to observe that the coordinate converter, along with every intermediate function for its definition, does not change for those points.
+This observation will help us continue to use a huge fraction of the properties we have established in \cref{sec:warmup-proof-for-approx-sperner}.
+\begin{observation}
+    \label{lem:same-def-for-converted-coordinate}
+    Consider any $\vec{x}\in \Delta^2$ such that $x_3\geq 0.05$.
+    We have 
+    \begin{itemize}[itemsep=0em, topsep=0.3em]
+        \item $d^{\alpha}(\vec{x}, \vec{x'})=d(\vec{x}, \vec{x'})$ for any $\vec{x'}\in \Delta^2$;
+        \item $C^{\alpha}_{\sf nn}(\vec{x}) = C_{\sf nn}(\vec{x})$;
+        \item $\nna(\vec{x})=\nn(\vec{x})$;
+        \item $\rela(\vec{x})=\rel(\vec{x})$.
+    \end{itemize}
+\end{observation}
+
+\subsubsection{Key properties}
+Next, we establish the key properties of this new coordinate converter on this family of instances.
+The only new property we will establish is that this new function is an identity on the base $1$-simplex.
+In addition, we will prove the analogs of all the properties we use in \cref{sec:warmup-proof-for-approx-sperner} (\cref{lem:poly-time-oracle-and-converter,,lem:symmetry-on-converted-coordinates,,lem:lipschitz-of-the-converter,,lem:trivial-converter}) for this new coordinate converter. 
+
+\paragraph{Property I: identity on the base}
+With the new definition of the coordinate converter, we can prove that the coordinate converter is simply an identity function for points on the base 1-simplex. 
+Moreover, we characterize the neighbor coloring on the base 1-simplex.
+\begin{lemma}
+    \label{lem:new-converted-coordinates-on-base-1-simplex}
+    Points on the segment $(1-x_2,x_2,0)$ (for $x_2\in (0,1)$) are hot. 
+    More specifically, for any $x_2\in [0,1]$, we have $\rela(1-x_2,x_2,0)=x_2$, and
+    \begin{align*}
+        C_{\sf nn}^{\alpha}(1-x_2,x_2,0)=\begin{cases}
+            1 & \text{if $x_2> 0.5$,}\\
+            2 & \text{if $x_2\leq 0.5$.}
+        \end{cases}
+    \end{align*}
+\end{lemma}
+\begin{proof}
+    Let $\vec{x}=(1-x_2,x_2,0)$.
+    According to \cref{lem:shrinking-factor-basics,,eqn:shrinking-distance}, we have 
+    \begin{align*}
+        d^{\alpha}((1-x_2,x_2,0), \vec{x'}) = \max\set{2\eps^2 \cdot |x_2-x'_2|, |x'_3|}. 
+    \end{align*}
+    Note that in our base instance $C$, we have 
+    \begin{align*}
+        \forall \vec{x'}\in \Delta^2, \quad
+        \begin{cases}
+        C(\vec{x'}) = 1 & \quad \text{if } x'_3\leq 0.1, x'_2 \leq 0.5~,\\
+        C(\vec{x'}) = 2 & \quad \text{if } x'_3\leq 0.1, x'_2 > 0.5~.
+        \end{cases}
+    \end{align*}
+    
+    If we have $x_2\leq 0.5$ here, any point $\vec{x'}$ with a different color with $C(\vec{x})=1$ has either $x'_2>0.5$ or $x'_3>0.1$. 
+    For the second condition ($x'_3>0.1$), we have $d^{\alpha}(\vec{x}, \vec{x'})>0.1>2\eps^2$.
+    On the other hand, it is easy to observe that $(0.5, 0.5, 0)$ has the minimum distance $d^{\alpha}(\vec{x},\vec{x'})$ among those points with $x'_3\leq 0.1, x'_2\geq 0.5$. 
+    Therefore, $\nna(\vec{x})=(0.5,0.5,0)$ and $C^{\alpha}_{\sf nn}(\vec{x})=2$.
+    In particular, according to \cref{lem:shrinking-factor-basics}, we have $d^{\alpha}(\vec{x}, (0.5, 0.5, 0))=2\eps^2 \cdot(0.5-x_2)$. 
+    According to \cref{eqn:new-coordinate-converter}, because $C^{\alpha}_{\sf nn}(\vec{x})>C(\vec{x})$,
+    \begin{align*}
+        \rela(\vec{x}) &= \left(0.5-0.5\eps^{-2} \cdot d^{\alpha}\left(\vec{x}, \nna(\vec{x})\right)\right)_+
+        \\
+        &= \left(0.5-0.5\eps^{-2} \cdot d^{\alpha}\left(\vec{x}, (0.5,0.5,0)\right)\right)_+
+        \\
+        &= \left(0.5-(0.5-x_2)\right) = x_2~.
+    \end{align*}
+    Hence, when $x_2\in (0,0.5]$, $\vec{x}$ is in the hot region.
+
+    Similarly, if we have $x_2> 0.5$ here, we have $C(\vec{x})=2$, $\nna(\vec{x})=(0.5,0.5,0)$ and $C_{\sf nn}^{\alpha}(\vec{x})=1$. 
+    According to \cref{lem:shrinking-factor-basics}, we have $d^{\alpha}(\vec{x}, (0.5, 0.5, 0))=2\eps^2 \cdot(x_2-0.5)$. 
+    According to \cref{eqn:new-coordinate-converter}, because $C_{\sf nn}^\alpha(\vec{x})<C(\vec{x})$,
+    \begin{align*}
+        \rela(\vec{x}) &= \min\set{0.5+0.5\eps^{-2}\cdot d^{\alpha}(\vec{x}, \nna(\vec{x})),\ 1}
+        \\
+        &= \min\set{0.5+0.5\eps^{-2}\cdot d^{\alpha}(\vec{x}, (0.5,0.5,0)),\ 1}
+        \\
+        &= \min\set{0.5+(x_2-0.5),\ 1} = x_2~.
+    \end{align*}
+    Hence, when $x_2\in (0.5,1)$, $\vec{x}$ is in the hot region.
+    
+    In conclusion, for any $x_2\in (0,1)$, the point $\vec{x}$ is in the hot region.
+\end{proof}
+
+\paragraph{Property II: Polynomial time computation}
+As in \cref{sec:warmup-proof-for-approx-sperner}, we show that we can always output the true converted coordinate $\rela(\vec{x})$ and, whenever $\vec{x}$ is hot or warm (i.e., $d^\alpha(\vec{x}, \nna(\vec{x}))<2\eps^2$), we can also output the neighboring color $C^\alpha_{\sf nn}(\vec{x})$.
+\begin{lemma}
+    \label{lem:poly-time-oracle-and-converter-for-symmetry}
+    Given oracle access to $C$, there is a polynomial-time algorithm that takes any $\vec{x}\in \Delta^2$ as input and that outputs $\rela(\vec{x})$.
+    Furthermore, if $d^\alpha(\vec{x}, \nna(\vec{x}))<2\eps^2$, the algorithm can also compute $C^\alpha_{\sf nn}(\vec{x})$ in polynomial time.
+\end{lemma}
+\begin{proof}
+    Note that the converted coordinates are the same for any $\vec{x}$ with $x_3\geq 0.05$ (\cref{lem:same-def-for-converted-coordinate}), we only need to show for $x_3\leq 0.05$ because we have established \cref{lem:poly-time-oracle-and-converter}.
+    W.l.o.g., we suppose that the input $\vec{x}\in \Delta^2$ satisfies $x_3\leq 0.05$. 
+    
+    As in the proof of \cref{lem:poly-time-oracle-and-converter}, it suffices to show how to compute $d^\alpha(\vec{x}, \nna(\vec{x}))$ and $C^\alpha_{\sf nn}(\vec{x})$ when $\vec{x}$ is hot or warm.
+    Note that in our base instance $C$, we have 
+    \begin{align*}
+        \forall \vec{x'}\in \Delta^2, \quad
+        \begin{cases}
+        C(\vec{x'}) = 1 & \quad \text{if } x'_3\leq 0.1, x'_2 \leq 0.5~,\\
+        C(\vec{x'}) = 2 & \quad \text{if } x'_3\leq 0.1, x'_2 > 0.5~.
+        \end{cases}
+    \end{align*}
+    Also, note that our shrinking distance can be lower bounded by the difference on the third coordinate:
+    \begin{align*}
+        d^{\alpha}(\vec{x}, \vec{x'}) = \max\set{\alpha(x_3)\cdot \abstxt{x_2-x_2'},\ \abstxt{x_3-x_3'}} \geq |x_3-x'_3|~.
+    \end{align*}
+    We have $d^{\alpha}(\vec{x}, \nna(\vec{x})) < 2\eps^2$ only when $nn_3^{\alpha}(\vec{x})\leq 0.05+2\eps^2<0.1$. 
+    Among points $\vec{x'}$ such that $x'_3<0.1$, the nearest \footnote{Here, it may be possible that the nearest differently colored point of $\vec{x}$ is given by the limit of a sequence of infinite many points that have different colors with $\vec{x}$.}
+    differently colored point of $\vec{x}$ is clearly $(0.5-x_3,0.5,x_3)$. 
+    Therefore, when $\vec{x}$ is hot or warm, we have $\nna(\vec{x})=(0.5-x_3,0.5,x_3)$.
+    Because of this simple characterization of $\nna(\cdot)$ for hot and warm points, we can compute $d^{\alpha}(\vec{x}, (0.5-x_3,0.5,x_3))$ to decide if $\vec{x}$ is hot or warm and then compute the value of $d^\alpha(\vec{x}, \nna(\vec{x}))$. 
+    In addition, for hot and warm points, $C^\alpha_{\sf nn}(\vec{x})$ equals the color in $\{1,2\}$ that does not equal $C(\vec{x})$. 
+    $C^{\alpha}_{\sf nn}(\vec{x})$ is also easy to compute when $\vec{x}$ is hot or warm. 
+\end{proof}
+
+
+
+\paragraph{Property III: Symmetry} Recall \cref{lem:symmetry-on-converted-coordinates}, where we give a complete characterization of the temperature of each point on the line segments $(1-x_3,0,x_3)$ and $(0,1-x_3,x_3)$.
+In the complete characterization, the set of hot and warm points consists of those with $x_3\in 0.1\pm 2\eps^2$. 
+Here, we generalize it to a (slightly) incomplete characterization under the new coordinate converter, where $\vec{x}$ has the same characterization as in \cref{sec:warmup-proof-for-approx-sperner} if $x_3\in 0.1\pm 2\eps^2$, and $\vec{x}$ is not hot otherwise.
+\begin{lemma}
+    \label{lem:symmetry-on-converted-coordinates-for-symmetric-sperner}
+    For points on the line segments $(1-x_3, 0,x_3)$ and $(0, 1-x_3,x_3)$, we have 
+    \begin{itemize}[itemsep=0.2em, topsep=0.5em]
+        \item if $x_3\notin 0.1\pm 2\eps^2$, then $(1-x_3,0,x_3)$ and $(0,1-x_3,x_3)$ are either cold or warm;
+        \item otherwise, if $x_3\in 0.1\pm 2\eps^2$, then
+        \begin{align}
+            \label{eqn:stronger-symmetry-on-converted-coordinates-for-symmetry}
+            \rela(1-x_3, 0,x_3) = \left(1/2 + \frac{x_3-0.1}{2 \eps^2}\right)_{[0,1]} =\rela(0, 1-x_3, x_3)~,
+        \end{align}
+        and the neighboring color is characterized as follows
+        \begin{align*}
+            C^\alpha_{\sf nn}(1-x_3,0,x_3) = \begin{cases}
+                3 & \text{if $x_3\leq 0.1$,}\\
+                1 & \text{if $x_3>0.1$,}
+            \end{cases}
+            \quad
+            \text{and}
+            \quad
+            C^\alpha_{\sf nn}(0,1-x_3,x_3) = \begin{cases}
+                3 & \text{if $x_3\leq 0.1$,}\\
+                2 & \text{if $x_3>0.1$.}
+            \end{cases}
+        \end{align*}
+    \end{itemize}
+    In particular, we have $\rela(1-x_3,0,x_3) \simrel \rela(0,1-x_3,x_3) \simrel (0.5+0.5\eps^{-2}\cdot (x_3-0.1))_{[0,1]}$ for any $x_3\in [0,1]$.
+\end{lemma}
+
+\begin{proof}
+    Because of \cref{lem:same-def-for-converted-coordinate}, the characterization is the same for any $z\geq 0.05$, we only need to show for $z\leq 0.05$ because we have established \cref{lem:symmetry-on-converted-coordinates}.
+    That is, we want to show that for any $x_3\leq 0.05$, 
+    \[
+        \rela(1-x_3, 0, x_3),~\rela(0, 1-x_3, x_3)\in \{0,1\}~.
+    \]
+    According to our new coordinate converter \cref{eqn:new-coordinate-converter}, it suffices to show that for any $x_3\leq 0.05$ and any $\vec{x}\in \{(1-x_3,0,x_3), (0,1-x_3,x_3)\}$, 
+    \begin{align}
+        d^{\alpha}(\vec{x},\ \nna(\vec{x})) &\geq \eps^{2} ~.
+        \label{eqn:far-from-z}
+    \end{align}
+    Note that in our base instance $C$, we have 
+    \begin{align*}
+        \forall \vec{x'}\in \Delta^2, \quad
+        \begin{cases}
+        C(\vec{x'}) = 1 & \quad \text{if } x'_3\leq 0.1, x'_2 \leq 0.5~,\\
+        C(\vec{x'}) = 2 & \quad \text{if } x'_3\leq 0.1, x'_2 > 0.5~.
+        \end{cases}
+    \end{align*}
+    
+    First, we consider the case when $\vec{x}=(1-x_3,0,x_3)$ for $x_3\leq 0.05$.
+    We have $C(\vec{x})=1$, and for any $\vec{x'}\in \Delta^2$, $C(\vec{x})\neq C(\vec{x'})$ only if $x'_2\geq 0.5$ or $x'_3\geq 0.1$.
+    Since $d^{\alpha}(\vec{x},\vec{x'})\geq |x_3-x'_3|$, if $x'_3\geq 0.1$, we have $d^{\alpha}(\vec{x},\vec{x'})\geq 0.05>\eps^2$.
+    On the other hand, if $x'_2\geq 0.5$, because of \cref{lem:shrinking-factor-basics}, we have 
+    \begin{align*}
+        d^{\alpha}(\vec{x}, \vec{x'}) \geq \alpha(x_3)\cdot |0-x'_2| \geq \alpha(0) \cdot 0.5 = \eps^2.
+    \end{align*}
+    Therefore, we have $d^{\alpha}(\vec{x}, \vec{x'})$ for any $C(\vec{x'})\neq C(\vec{x})$, and thus we have proved \cref{eqn:far-from-z} for this case.
+
+    Second, we consider the case when $\vec{x}=(0,1-x_3,x_3)$ for $x_3\leq 0.05$.
+    We have $C(\vec{x})=2$, and for any $\vec{x'}\in \Delta^2$, $C(\vec{x})\neq C(\vec{x'})$ only $x'_2\leq 0.5$ or $x'_3\geq 0.1$.
+    Since $d^{\alpha}(\vec{x},\vec{x'})\geq |x_3-x'_3|$, if $x'_3\geq 0.1$, we have $d^{\alpha}(\vec{x},\vec{x'})\geq 0.05>\eps^2$.
+    On the other hand, if $x'_2\leq 0.5$, because of \cref{lem:shrinking-factor-basics}, we have 
+    \begin{align*}
+        d^{\alpha}(\vec{x}, \vec{x'}) &= \alpha(x_3) \cdot |(1-x_3)-x'_2| 
+        \\
+        &\geq \alpha(x_3)\cdot (0.5-x_3)
+        \\
+        &= \exp\left( -20(2n-1)\ln 2 \cdot (0.05-x_3) \right) \cdot (0.5-x_3)
+        \\
+        &=
+        2^{-2n+1} \cdot \exp\left( 20(2n-1)\ln 2 \cdot x_3 \right) \cdot (0.5-x_3)
+        \\
+        &\geq 
+        2^{-2n+1} \cdot (1+20(2n-1)\ln 2\cdot x_3) \cdot (0.5-x_3)\
+        \\
+        &\geq 
+        2^{-2n+1} \cdot 0.5 
+        =2^{-2n}
+        =\eps^2
+        \tag{$x_3\leq 0.05$}
+    \end{align*}
+    Hence, we complete the proof.
+\end{proof}
+
+\paragraph{Property IV: Lipshitzness} We prove that the new coordinate converter is Lipschitz in the same sense as \cref{lem:lipschitz-of-the-converter}, but with a slightly larger Lipschitz factor.
+\begin{lemma}
+    \label{lem:lipschitz-of-the-converter-for-symmetry}
+    For any point $\vec{x}, \vec{x'}$, at least one of the following properties is satisfied:
+    \begin{itemize}[itemsep=0em]
+        \item {\bf one is in a trichromatic region:} there are three different colors in $\mathcal{N}(\vec{x})$ or $\mathcal{N}(\vec{x'})$;
+        \item {\bf Lipschitz in the hot\&warm regions:} $|\rela(\vec{x})-\rela(\vec{x'})|\leq \eps^{-3}\cdot \normtxt{\vec{x}-\vec{x'}}{\infty}$; 
+        \item {\bf both are in the warm\&cold regions:} $\rela(\vec{x}),\rela(\vec{x'})\in \{0,1\}$;
+    \end{itemize}
+\end{lemma}
+\begin{proof}
+    Because of \cref{lem:same-def-for-converted-coordinate} and \cref{lem:lipschitz-of-the-converter}, we have established this lemma if $x_3,x'_3\geq 0.05$.
+    If $|x'_3-x_3|\geq \eps^3$, the second property trivially holds. 
+    Therefore, it suffices to establish this lemma for the case where $x_3,x'_3\leq 0.06$ to finish its proof.
+
+    We will use the following fact about the shrunk distance to each point's nearest neighbor and the new coordinate converter, where the proof is based on simple calculations and deferred to \cref{proof:new-coordinate-converter-at-the-bottom-part}.
+    \begin{restatable}[]{fact}{repiii}
+        \label{fact:new-coordinate-converter-at-the-bottom-part}
+        Consider an auxillary function $g(\vec{y}) = \alpha(y_3) \cdot (y_2-0.5)$.
+        For any $\vec{y}\in \Delta^2$ such that $y_3\leq 0.06$, warm and hot points satisfies $g(\vec{y})\in \pm 2\eps^2$. Furthermore, 
+        \begin{align*}
+            d^\alpha(\vec{y}, \nna(\vec{y})) = |g(\vec{y})|~, \quad \text{ and } \quad 
+            \rela(\vec{y}) = \left(0.5 + 0.5\eps^{-2} \cdot g(\vec{y}) \right)_{[0,1]}~.
+        \end{align*}
+    \end{restatable}
+
+    Similarly as in the proof of \cref{lem:lipschitz-of-the-converter}, we only need to show that the Lipschitz property, $|\rela(\vec{x})-\rela(\vec{x'})|\leq \eps^{-3}\cdot \normtxt{\vec{x}-\vec{x'}}{\infty}$, under the following two assumptions\footnote{We don't need the earlier assumption that $\mathcal{N}(\vec{x})$ and $\mathcal{N}(\vec{x'})$ are both at most bichromatic here. This is because \cref{lem:all-solutions-of-C-are-in-the-core} ensures that $\vec{x}, \vec{x'}$ here are not in a trichromatic region.}: 
+    (1) $\normtxt{\vec{x}-\vec{x'}}{\infty} \leq \eps^3$; and 
+    (2) $\vec{x}$ is hot, i.e., $\rela(\vec{x})\in (0,1)$.
+
+    Under the first assumption, we have 
+    \begin{align*}
+        |g(\vec{x}) - g(\vec{x'})| &= \abs{\alpha(x_3)\cdot (x_2-0.5) - \alpha(x'_3)\cdot (x'_2-0.5)}\\
+        &\leq \alpha(x_3) \cdot \abs{x_2-x'_2} + \abs{\alpha(x_3)-\alpha(x'_3)} \cdot |x'_2-0.5| \\
+        &\leq \abs{x_2-x'_2} + O(n)\cdot \abs{x_3-x'_3} 
+        \tag{$\alpha$ is increasing and \cref{lem:shrinking-factor-basics}}
+        \\
+        &\leq O(n)\cdot \norm{\vec{x}-\vec{x'}}\infty~.\tag{\cref{lem:shrinking-factor-basics}}
+    \end{align*}
+
+    First, we show that $\vec{x'}$ is hot or warm. According to \cref{fact:new-coordinate-converter-at-the-bottom-part}, because $\vec{x}$ is hot and $0.5+0.5\eps^{-2}\cdot g(\vec{x})\in (0,1)$ only when $g(\vec{x})\in \eps^2$, $g(\vec{x'})\leq O(n)\normtxt{\vec{x}-\vec{x'}}\infty + g(\vec{x}) < O(n)\cdot \eps^{3} +\eps^2 < 2\eps^2$.
+    Then, we establish the Lipschitz property for $\vec{x}$ and $\vec{x'}$ under the two assumptions. 
+    Because of \cref{fact:new-coordinate-converter-at-the-bottom-part} and the fact that $|(a)_{[0,1]}-(b)_{[0,1]}| \leq |a-b|$, we have 
+    \begin{align*}
+        \abs{\rela(\vec{x}) - \rela(\vec{x'})} &\leq
+        \abs{ 0.5\eps^{-2} \cdot g(\vec{x}) -   0.5\eps^{-2} \cdot g(\vec{x'}) }
+        \\
+        &=
+        0.5\eps^{-2} \cdot \abs{g(\vec{x})-g(\vec{x'})}
+        \leq \eps^{-3} \cdot \norm{\vec{x}-\vec{x'}}\infty~.
+        \qedhere
+    \end{align*}
+\end{proof}
+
+Similar as \cref{lem:lipschitz-of-the-converter-on-boundaries}, we can prove Lipschitzness for the converted coordinates on the left/right boundaries by \cref{lem:symmetry-on-converted-coordinates-for-symmetric-sperner}.
+\begin{lemma}
+    \label{lem:lipschitz-of-the-converter-on-boundaries-for-symmetry}
+    For any $z,z'\in [0,1]$ and any pair of points $\vec{x}, \vec{x'}$ such that $\vec{x}\in \{(0,1-z,z),\, (1-z,0,z)\}$ and $\vec{x'}\in \{(0,1-z',z'),\, (1-z',0,z')\}$, at least one of the following properties is satisfied:
+    \begin{itemize}[itemsep=0em]
+        \item {\bf Lipschitz in the hot\&warm regions:} $|\rela(\vec{x})-\rela(\vec{x'})|\leq \eps^{-2}\cdot |z-z'|$; 
+        \item {\bf both are in the warm\&cold regions:} $\rela(\vec{x}),\rela(\vec{x'})\in \{0,1\}$. 
+    \end{itemize}
+\end{lemma}
+
+\paragraph{Property V: Cold on the top} 
+Finally, we prove that the converted coordinates are trivial for the points with reasonably high values on the third dimension ($x_3>0.5$). 
+Because $\rel(\vec{x})=\rela(\vec{x})$ for those $x_3>0.5$, this fact holds trivially for the new coordinate converterbecause of our earlier \cref{lem:trivial-converter}.
+\begin{fact}
+    \label{lem:trivial-converter-for-symmetry}
+    For any $\vec{x}\in \Delta^{2}$ such that $x_3\geq 0.5$, we have $\rela(\vec{x})=1$. 
+\end{fact}
+
+\subsection{Hard instances with two dimensions}
+\label{subsec:symmetric-2d}
+In this subsection, we present our symmetric construction for $k=2$. 
+Our construction converts a point of the $2$-simplex to points on another $2$-simplex and uses the color of the converted coordinates to guarantee symmetry. 
+Given a point $\vec{x}$ in the $2$-simplex, we first project it onto the base $1$-simplex. 
+Suppose the projection gives $(1-y_0,y_0)$. 
+We define a continuous and piecewise linear mapping from the $1$-simplex to itself: 
+\begin{align*}
+    \tilde{y}_0 =  \begin{cases}
+        \hfill 0 \hfill & \text{if } y_0 \leq 0.1 - \eps^2, \\
+        0.5 + 0.5\eps^{-2} \cdot (y_0-0.1) & \text{if } y_0 \in 0.1 \pm  \eps^2, \\
+        \hfill 1 \hfill & \text{if } y_0 \geq 0.1 + \eps^2.
+    \end{cases}
+\end{align*}
+Finally, we use $((1-x_3)\cdot (1-\tilde{y}_0), (1-x_3)\cdot \tilde{y}_0, x_3)$ as the intermediate projection $\vec{y}^{(2)}$ of $\vec{x}$ and define the color of $\Csym{2}(\vec{x})$ as the color of $\vec{y}^{(2)}$ in the base instance $C$.
+The first \ref{line:first-intermediate-projection} lines of \cref{alg:approx-symmetric-sperner-kgeq3} concludes our symmetric construction for $k=2$.
+
+\begin{algorithm2e}[t]
+    \caption{\outofk Approximate Symmetric \Sperner Instance $\Csym{k}(\vec{x})$}
+    \label{alg:approx-symmetric-sperner-kgeq3}
+
+    \DontPrintSemicolon
+    \SetKwInOut{Input}{Input}
+    \SetKwInOut{Output}{Output}
+
+    \Input{~vector $\vec{x}\in \Delta^k$}
+
+    \Output{~color $c\in [k+1]$}
+
+    $\eps\gets 2^{-n}$
+
+        $y_0 \gets P_2^{(k-1)}(\vec{x})$ 
+    
+    $\tilde{y}_0 \gets \left(0.5 + 0.5\eps^{-2} \cdot (y_0-0.1)\right)_{[0,1]}$ \tcp*{convert $\vec{x}$'s projection to the base $1$-simplex}
+    \label{line:first-converted-coordinate}
+
+    $z \gets P_3^{(k-2)}(\vec{x})$
+    
+    $\vec{y}^{(2)}\gets ((1-z)\cdot (1-\tilde{y}_0), (1-z)\cdot \tilde{y}_0, z)$ 
+    \label{line:first-intermediate-projection}
+    
+    \tcp*{initiate $\vec{y}$ by the convertion and $\vec{x}$'s projection to the base $2$-simplex}
+
+    $\vec{c}^{(2)}\gets (1,2,3)$ \tcp*{initiate the set of 3 colors}
+
+
+    \For{$i\in \{3,\dots, k\}$}{
+        $y_3^{(i)} \gets P_{i+1}^{(k-i)}(\vec{x})$
+        \label{line:symmetric-y^{(i)}_3}
+        \tcp*{find the new $z$-coordinate from the projection of $\vec{x}$}
+
+        $y_2^{(i)} \gets (1-y_3^{(i)}) \cdot \rela ( \vec{y}^{(i-1)} )$
+        \label{line:symmetric-y^{(i)}_2}
+
+        $y_1^{(i)} \gets (1-y_3^{(i)}) \cdot (1-\rela ( \vec{y}^{(i-1)} ))$
+        \label{line:symmetric-y^{(i)}_1}
+        \tcp*{convert $\vec{y}$ to a point on the $2$-simplex}
+
+        $j_1\gets \min \left\{C(\vec{y}^{(i-1)}),\ \hat{C}^\alpha_{\sf nn}(\vec{y}^{(i-1)})\right\}$
+
+        $j_2\gets \max \left\{C(\vec{y}^{(i-1)}),\ \hat{C}^\alpha_{\sf nn}(\vec{y}^{(i-1)})\right\}$
+
+        $\vec{c}^{(i)} \gets (c_{j_1}^{(i-1)}, c_{j_2}^{(i-1)}, i+1)$
+        \label{line:obtain-new-set-of-colors-for-symmetry}
+        \tcp*{obtain the new set of 3 colors}
+    }
+
+    $j \gets C \left(\vec{y}^{(k)}\right)$
+            
+    \Return{$c_j^{(k)}$}
+\end{algorithm2e}
+
+\paragraph{Symmetry.} For the 2-dimensional instances, the symmetry results from the simple calculation of the colors on the three $1$-simplices on the boundary.
+
+\begin{lemma}
+\label{lem:2d-symmetry}
+\cref{alg:approx-symmetric-sperner-kgeq3} gives a valid \outofk Approximate Symmetric \Sperner instance for $k=2$. 
+\end{lemma}
+\begin{proof}
+    We will give a complete characterization of the coloring on the three boundaries: for any $x\in [0,1]$,
+    \begin{align}
+        \Csym{2}(x,1-x,0)&=1+\ind(x<0.9)~, \label{eqn:2d-symmetry-xy}\\
+        \Csym{2}(x,0,1-x)&=1+2\cdot \ind(x<0.9)~, \label{eqn:2d-symmetry-xz}\\
+        \Csym{2}(0,x,1-x)&=2+\ind(x<0.9)~. \label{eqn:2d-symmetry-yz}
+    \end{align}
+    This directly implies $(x,1-x,0)\sim_{\Csym{2}}(x,0,1-x)\sim_{\Csym{2}}(0,x,1-x)$ for any $x\in [0,1]$. 
+
+    For $(x,1-x,0)$, the projection is trivially $(x,1-x)$. Then, we discuss three cases to prove \cref{eqn:2d-symmetry-xy}:
+    \begin{itemize}[itemsep=0.2em, topsep=0.5em]
+        \item If $x\in 0.9\pm \eps^2$, $0.5\eps^{-2}\cdot (y_0-0.1)\in \pm 0.5$ and thus $\tilde{y}_0=0.5+0.5\eps^{-2} \cdot (0.9-x)$. The projection $\vec{y}^{(2)}$ in consideration, is then 
+        \[
+            \left(0.5-0.5\eps^{-2} \cdot (0.9-x),\ 0.5+0.5\eps^{-2} \cdot (0.9-x),\ 0\right)~. 
+        \]
+        If $x<0.9$, $y_{2}^{(2)}>0.5$. Otherwise if $x\geq 0.9$, $y_{2}^{(2)}\leq 0.5$. 
+        Since $C(1-y, y,0) = 1+\ind(y > 0.5)$ (\cref{lem:base-instance-bottom-slice}), we have $\Csym{2}(x, 1-x, 0)=1+\ind(x<0.9)$ for this subcase.
+        \item If $x>0.9+\eps^2$, $0.5\eps^{-2}\cdot (y_0-0.1)<-0.5$ and thus $\tilde{y}_0=0$. The intermediate projection $\vec{y}^{(2)}$ in consideration, is then $(1,0,0)$. Since $C(1,0,0)=1$ (\cref{lem:base-instance-lr-boundaries}), we have $\Csym{2}(x, 1-x, 0)=1$ in this subcase.
+        \item If $x<0.9-\eps^2$, $0.5\eps^{-2}\cdot (y_0-0.1)>0.5$ and thus $\tilde{y}_0=1$. The intermediate projection $\vec{y}^{(2)}$ in consideration, is then $(0,1,0)$. Since $C(0,1,0)=2$ (\cref{lem:base-instance-lr-boundaries}), we have $\Csym{2}(x, 1-x, 0)=2$ in this subcase.
+    \end{itemize}
+
+    For $(x,0,1-x)$, the projection is $(1,0)$. Therefore, $\tilde{y}_0=0$ and the intermediate projection $\vec{y}^{(2)}=(x,0,1-x)$.
+    According to \cref{lem:base-instance-lr-boundaries}, $\Csym{2}(x,0,1-x)=C(x,0,1-x)=1+2\cdot \ind(x<0.9)$, matching \cref{eqn:2d-symmetry-xz}.
+
+    For $(0,x,1-x)$, the projection is $(0,1)$.
+    Therefore, $\tilde{y}_0=1$ and the intermediate projection $\vec{y}^{(2)}=(0,x,1-x)$.
+    According to \cref{lem:base-instance-lr-boundaries}, $\Csym{2}(0,x,1-x)=C(0,x,1-x)=2+ \ind(x<0.9)$, matching \cref{eqn:2d-symmetry-yz}.
+\end{proof}
+
+\paragraph{Hardness.} Note that we embed a \PPAD-hard 
+instance $C$ inside $\Csym{2}$ with a scaling factor of $2^{-2n+1}=2\eps^2$ on the first and the second  coordinates.
+It is then easy to obtain the following \PPAD-hardness result for $\Csym{2}$.
+
+\begin{lemma}
+    It is \PPAD-hard to find three points $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}$ such that 
+    \begin{itemize}[itemsep=0.2em,topsep=0.5em]
+        \item {\bf they are close enough to each other:} for any $i,j\in [3]$, $\normtxt{\vec{x}^{(i)}-\vec{x}^{(j)}}{\infty}\leq 2^{-3n}=\eps^3$, 
+        \item {\bf they induce a trichormatic triangle:} $|\settxt{\Csym{2}(\vec{x}^{(i)}):i\in [3]}|=3$. 
+    \end{itemize}
+\end{lemma}
+
+\subsection{Hard instances with three or more dimensions}
+\label{subsec:symmetric-kd}
+For three or higher dimensions, we use almost the same recursive definition as in \cref{sec:warmup-proof-for-approx-sperner}.
+We repeat it in \cref{alg:approx-symmetric-sperner-kgeq3} for convenience. 
+In the rest of this subsection, we will show that our construction is symmetric and still \PPAD-hard.
+Here, we use the same way to define the {\em modified neighboring color}:
+\begin{align}
+    \label{eqn:modified-neighboring-color-symmetry}
+    \hat{C}^\alpha_{\sf nn}(\vec{x}) = \begin{cases}
+        C^\alpha_{\sf nn}(\vec{x}) & \text{if $d^\alpha(\vec{x}, \nna(\vec{x}))< 2\eps^2$,}\\
+        \hfill 2 \hfill & \text{if $d^\alpha(\vec{x}, \nna(\vec{x}))\geq 2\eps^2$ and $C(\vec{x})=1$,}\\
+        \hfill 1 \hfill & \text{if $d^\alpha(\vec{x}, \nna(\vec{x}))\geq 2\eps^2$ and $C(\vec{x})\in \{2,3\}$.}
+    \end{cases}
+\end{align}
+\begin{fact}
+\label{fact:modified-neighboring-color-for-symmetry}
+    For any $\vec{x}\in \Delta^2$, we have $C(\vec{x})<\hat{C}^\alpha_{\sf nn}(\vec{x})$ if $\rela(\vec{x})=0$, and $C(\vec{x})>\hat{C}^\alpha_{\sf nn}(\vec{x})$ if $\rela(\vec{x})=1$.
+\end{fact}
+
+
+We continue to use $\vec{y}^{(i)}(\vec{x}) = (y^{(i)}_1(\vec{x}), y^{(i)}_2(\vec{x}), y^{(i)}_3(\vec{x}))$
+to denote the intermediate projections we compute in \cref{alg:approx-symmetric-sperner-kgeq3} when the input is $\vec{x}$, and use
+$\vec{c}^{(i)}(\vec{x}) = (c^{(i)}_1(\vec{x}), c^{(i)}_2(\vec{x}), c^{(i)}_3(\vec{x}))$ 
+to denote the intermediate palettes we use in \cref{alg:approx-symmetric-sperner-kgeq3}.
+In addition, we introduce a new notation $\tilde{y}_0(\vec{x})$ for the converted coordinate we compute on \cref{line:first-converted-coordinate}.
+Because the subscripts we will use for $\vec{c}^{(i)}$ can be very complicated, we will use $c_j^{(i)}(\vec{x})$ and $c^{(i)}(\vec{x}, j)$ interchangeably for better presentation.
+For any vector $\vec{y}\in \Delta^2$, we use $i^*(\vec{y})$ to denote the first non-zero index of $\vec{y}$, i.e., 
+\begin{align*}
+    i^*(\vec{y}) = \begin{cases}
+        1 & \text{if $y_1>0$,}\\
+        2 & \text{if $y_1=0$ and $y_2>0$,}\\
+        3 & \text{otherwise.}
+    \end{cases}
+\end{align*}
+
+\subsubsection{Symmetry}
+To show that $C^{(k)}$ are valid \outofk Approximate Symmetric \Sperner instances, we consider a stronger symmetry property of our construction 
+for our induction hypothesis.
+In this stronger symmetry, we consider the following two colors for each point $\vec{x}$:
+\begin{enumerate}[itemsep=0.2em, topsep=0.5em]
+    \item {\bf the output color:} 
+    $\Csym{k}(\vec{x}) = c^{(k)}(\vec{x},\, C(\vec{y}^{(k)}(\vec{x})))$ (by definition of \cref{alg:approx-symmetric-sperner-kgeq3}). 
+    \item {\bf the final neighboring color:} we use $C^{(k)}_{\sf nn}(\vec{x})$ to denote the intermediate color $c^{(k)}(\vec{x},\, \hat{C}_{\sf nn}^{\alpha}(\vec{y}^{(k)}(\vec{x})))$, which further equals to $c^{(k)}(\vec{x},\, C_{\sf nn}^{\alpha}(\vec{y}^{(k)}(\vec{x})))$ when $\vec{y}^{(k)}(\vec{x})$ is hot.
+\end{enumerate}
+
+The stronger symmetry states that symmetric points $\vec{x}^{(1)}, \vec{x}^{(2)}$ on the boundaries are symmetric both in the output color and the final neighboring color.
+Further, if we try to convert their last intermediate projections, $\vec{y}^{(k)}(\vec{x}^{(1)})$ and $\vec{y}^{(k)}(\vec{x}^{(2)})$, we can obtain equivalent converted coordinates. 
+For convenience, we also restate the definition of the symmetry property we are going to establish.
+\symmetrydef*
+\symsperner*
+\begin{lemma}
+    \label{lem:stronger-symmetry}
+    Consider any $k\geq 2$, any two indices $j_1,j_2\in [k+1]$ and any $\vec{x}^{(1)}, \vec{x}^{(2)}\in \Delta^{k}$ such that $x^{(1)}_{j_1}=x^{(2)}_{j_2}=0$ and $\vec{x}^{(1)}_{-j_1} = \vec{x}^{(2)}_{-j_2}$.  
+    $\vec{x}^{(1)}$ and $\vec{x}^{(2)}$ are
+    \begin{itemize}[itemsep=0.2em, topsep=0.5em]
+        \item {\bf symmetric in the output color:} $\vec{x}^{(1)}\sim_{\Csym{k}} \vec{x}^{(2)}$;
+        \item {\bf their subsequent converted coordinates are equivalent:} $\rela(\vec{y}^{(k)}(\vec{x}^{(1)})) \simrel \rela(\vec{y}^{(k)}(\vec{x}^{(2)}))$; and
+        \item {\bf symmetric in the final neighboring color:} $\vec{x}^{(1)} \sim_{C^{(k)}_{\sf nn}} \vec{x}^{(2)}$ if $\vec{y}^{(k)}(\vec{x}^{(1)}), \vec{y}^{(k)}(\vec{x}^{(2)})$ are hot. 
+    \end{itemize}
+\end{lemma}
+\noindent
+Note that, in this lemma, the first bullet directly implies the symmetry property we desire for Symmetric \Sperner instances (\cref{def:approx-symmetric-kd-sperner}). 
+\begin{corollary}
+    For any $k\geq 2$, $\Csym{k}$ constructed by $\cref{alg:approx-symmetric-sperner-kgeq3}$ is a valid \outofk Approximate Symmetric \Sperner instance.
+\end{corollary}
+
+Next, we establish this stronger symmetry by induction. 
+The base case is when $k=2$, which we will prove by simple calculations. 
+Later, we will establish this stronger symmetry for $k=k_0\geq 3$ under the assumption that we have established it for every $k<k_0$.
+More specifically, we shall discuss three cases on the indices $j_1,j_2$ of asymmetric zero entries of $\vec{x}^{(1)}, \vec{x}^{(2)}$: 
+\begin{quote}
+(1) $j_1,j_2\leq k$; \hfill (2) $j_1=k$ and $j_2=k+1$; \hfill (3) $j_1<k$ and $j_2=k+1$. 
+\end{quote}
+Case (1) can be interpreted as appending a same $k+1$-th coordinate to two vectors $\vec{x}^{(1)}_{-(k+1)}, \vec{x}^{(2)}_{-(k+1)}$ that are symmetric in the smaller instance defined on $\Delta^{k-1}$.
+We will use our induction hypothesis to establish this case. 
+Case (2) can be interpreted as appending a same (possibly non-zero) coordinate and a zero coordinate to the same vector $\vec{x}^{(1)}_{1:k-1}=\vec{x}^{(2)}_{1:k-1}$ but in different orders for $\vec{x}^{(1)}$ and $\vec{x}^{(2)}$.
+We will simulate the algorithm to establish this case.
+Finally, Case (3) include all the other cases and can be decomposed into a piece of Case (1) and a piece of Case (2), by finding an intermediate vector $\vec{x}^{(3)}$ such that the symmetry between $\vec{x}^{(1)}, \vec{x}^{(3)}$ follows Case (1) and the symmetry between $\vec{x}^{(2)}, \vec{x}^{(3)}$ follows Case (2).
+We will simply establish this case by the fact that symmetry is an equivalence relation (\cref{lem:symmetry-is-equiv-relation}). 
+
+One useful lemma is that the symmetry between points is preserved under the max/min operations on the colorings. 
+\begin{lemma}
+    \label{lem:symmetry-preserved-under-max/min}
+    For any two colorings $C_1,C_2$ and two vectors $\vec{x}, \vec{y}$, if $\vec{x}\sim_{C_1} \vec{y}$ and $\vec{x}\sim_{C_2}\vec{y}$, they are also symmetric in their max-coloring $\max(C_1,C_2)$ (i.e., $\max(C_1,C_2)(\vec{x}) = \max\settxt{C_1(\vec{x}), C_2(\vec{x})}$ for any $\vec{x}$) and min-coloring $\min(C_1,C_2)$ (resp., $\max(C_1,C_2)(\vec{x}) = \max\settxt{C_1(\vec{x}), C_2(\vec{x})}$ for any $\vec{x}$). 
+\end{lemma}
+\begin{proof}
+    According to \cref{def:symmetry-in-coloring}, the given symmetries both imply $|\mathcal{I}_{>0}(\vec{x})| = |\mathcal{I}_{>0}(\vec{y})|$. 
+    For simplicity, we let $\mathcal{I}_x = \mathcal{I}_{>0}(\vec{x})$ and $\mathcal{I}_y = \mathcal{I}_{>0}(\vec{y})$. 
+    In addition, $\vec{x}\sim_{C_1} \vec{y}$ implies $\idx(\mathcal{I}_{x}, C_1(\vec{x})) = \idx(\mathcal{I}_{y}, C_1(\vec{y}))$, while $\vec{x}\sim_{C_2} \vec{y}$ implies $\idx(\mathcal{I}_{x}, C_2(\vec{x})) = \idx(\mathcal{I}_{y}, C_2(\vec{y}))$.
+    If $C_1(\vec{x})=C_2(\vec{x})$, we have $C_1(\vec{y})=C_2(\vec{y})$ and the lemma trivially holds. 
+    W.l.o.g., we suppose $C_1(\vec{x})< C_2(\vec{x})$ next. 
+    Note that, according to \cref{def:indexing}, for any increasing array with positive integer entries $\vec{a}$, $\idx(\vec{a}, v)$ is a strictly increasing function for $v\in \vec{a}$. 
+    We have $\idx(\mathcal{I}_{x}, C_1(\vec{x}))<\idx(\mathcal{I}_{x}, C_2(\vec{x}))$ and thus $\idx(\mathcal{I}_{y}, C_1(\vec{y}))<\idx(\mathcal{I}_{y}, C_2(\vec{y}))$.
+    The later inequality further implies $C_1(\vec{y})<C_2(\vec{y})$. 
+    Therefore, $\min(C_1,C_2)(\vec{x})=C_1(\vec{x})$ and $\min(C_1, C_2)(\vec{y})=C_1(\vec{y})$. 
+    We have $\idx(\mathcal{I}_{x}, min(C_1,C_2)(\vec{x})) = \idx(\mathcal{I}_{y}, \min(C_1,C_2)(\vec{y}))$.
+    According to \cref{def:symmetry-in-coloring}, we have $\vec{x}\sim_{\min(C_1,C_2)} \vec{y}$.
+    Similarly, we have $\max(C_1,C_2)(\vec{x})=C_2(\vec{x})$ and $\max(C_1, C_2)(\vec{y})=C_2(\vec{y})$, and $\vec{x}\sim_{\max(C_1,C_2)} \vec{y}$.
+\end{proof}
+
+
+\paragraph{The base case ($k=2$).}
+The first bullet for the base case has been established by \cref{lem:2d-symmetry}.
+Next, we consider any fixed $z\in [0,1]$.
+We will establish the second and the third bullet for $\vec{x}^{(1)}, \vec{x}^{(2)}$ that are in the set $\settxt{(1-z,z,0),\, (1-z,0,z),\, (0,1-z,z)}$.
+According to the first two lines of \cref{alg:approx-symmetric-sperner-kgeq3}, $\tilde{y}_0(1-z,z,0)=(0.5+0.5\eps^{-2}\cdot(z-0.1))_{[0,1]}$, $\tilde{y}_0(1-z,0,z)=0$ and $\tilde{y}_0(0,1-z,z)=1$. 
+Therefore, we have
+\begin{align*}
+    \vec{y}^{(2)}(1-z,z,0) &= \left(\left(0.5 - 0.5\eps^{-2}\cdot(z-0.1)\right)_{[0,1]},\, \left(0.5 + 0.5\eps^{-2}\cdot(z-0.1)\right)_{[0,1]},\, 0\right)~,
+    \\
+    \vec{y}^{(2)}(1-z,0,z) &= (1-z,0,z)~,\\
+    \vec{y}^{(2)}(0,1-z,z) &= (0,1-z,z)~.
+\end{align*}
+According to \cref{lem:new-converted-coordinates-on-base-1-simplex,,lem:symmetry-on-converted-coordinates-for-symmetric-sperner}, we can obtain the second bullet for $k=2$: 
+\begin{align*}
+    \rela(\vec{y}^{(2)}(1-z,0,z)) \,\simrel\,
+    \rela(\vec{y}^{(2)}(0,1-z,z)) &\,\simrel\,
+    \\
+    \rela(\vec{y}^{(2)}(1-z,z,0)) &\,=\,
+    \left(0.5 + 0.5\eps^{-2}\cdot(z-0.1)\right)_{[0,1]}~.
+\end{align*}
+This equivalence on the subsequent converted coordinate implies that $\vec{y}^{(2)}(\vec{x}^{(1)}), \vec{y}^{(2)}(\vec{x}^{(2)})$ are hot if and only if $z\in 0.1\pm \eps^2$. 
+Further, according to \cref{def:symmetry-in-coloring}, \cref{lem:new-converted-coordinates-on-base-1-simplex,,lem:symmetry-on-converted-coordinates-for-symmetric-sperner}, it is easy to obtain $(1-z,z,0)\sim_{C_{\sf nn}^{(2)}} (1-z,0,z) \sim_{C_{\sf nn}^{(2)}} (0,1-z,z)$. 
+
+\paragraph{General case 1 ($k\geq 3$ and $j_1,j_2\leq k$).}
+In this subcase, we have $x^{(1)}_{k+1}=x^{(2)}_{k+1}$.
+We can w.l.o.g. assume that $x^{(1)}_{k+1}<1$ because otherwise $\vec{x}^{(1)}=\vec{x}^{(2)}$ and this stronger symmetry trivially holds.
+Let $\vec{\hat{x}}^{(1)} = \vec{P}(\vec{x}^{(1)})$ and $\vec{\hat{x}}^{(2)} = \vec{P}(\vec{x}^{(2)})$.
+According to the definition of projection operation $\vec{P}$ (\cref{def:projection}), we have 
+\begin{align*}
+    \vec{\hat{x}}^{(1)} &= \frac{\vec{x}^{(1)}_{1:k}}{1-x^{(1)}_{k+1}}~, \\
+    \vec{\hat{x}}^{(2)} &= \frac{\vec{x}^{(2)}_{1:k}}{1-x^{(2)}_{k+1}} = \frac{\vec{x}^{(2)}_{1:k}}{1-x^{(1)}_{k+1}}~. 
+\end{align*}
+Hence, they satisfy the same symmetry as $\vec{x}^{(1)}$ and $\vec{x}^{(2)}$, i.e.,
+we have $\hat{x}^{(1)}_{j_1}=\hat{x}^{(2)}_{j_2}=0$ and $(\vec{\hat{x}}^{(1)})_{-j_1}=(\vec{\hat{x}}^{(2)})_{-j_2}$. 
+An observation is that the first $k-2$ intermediate projections we use for any input $\vec{x}\in \Delta^k$ 
+are exactly the same as those for its one-step projection $\vec{P}(\vec{x})\in \Delta^{k-1}$ (in a different run of \cref{alg:approx-symmetric-sperner-kgeq3} on a $k-1$-dimensional simplex).
+\begin{observation}
+    \label{obs:equal-y-on-projection}
+    For any $k\geq 3$, any $\vec{x}\in \Delta^k$ and any $i\in [k-1]$, we have $\vec{y}^{(i)}(\vec{x}) = \vec{y}^{(i)}(\vec{P}(\vec{x}))$. 
+\end{observation}
+\noindent Using this observation and the second bullet of our induction hypothesis for $k-1$, we can easily obtain the equivalence between the converted coordinates of the $(k-1)$-th intermediate projections $\vec{y}^{(k-1)}(\cdot)$ of $\vec{x}^{(1)}$ and $\vec{x}^{(2)}$.
+\begin{align}
+    \rela\left(\vec{y}^{(k-1)}(\vec{x}^{(1)})\right) 
+    = 
+    \rela\left(\vec{y}^{(k-1)}(\vec{\hat{x}}^{(1)})\right) 
+    \simrel
+    \rela\left(\vec{y}^{(k-1)}(\vec{\hat{x}}^{(2)})\right) 
+    = 
+    \rela\left(\vec{y}^{(k-1)}(\vec{x}^{(2)})\right).
+    \label{eqn:symmetric-converted-induction-hypothesis}
+\end{align}
+Since \cref{line:symmetric-y^{(i)}_3} gives $y^{(k)}_3(\vec{x}^{(1)}) = x^{(1)}_{k+1}$ and $y^{(k)}_3(\vec{x}^{(2)}) = x^{(2)}_{k+1}$, we clearly have $y^{(k)}_3(\vec{x}^{(1)})=y^{(k)}_3(\vec{x}^{(2)})$.
+For simplicity, we let $z=y^{(k)}_3(\vec{x}^{(1)})$ next. 
+According to \cref{line:symmetric-y^{(i)}_2,,line:symmetric-y^{(i)}_1} of \cref{alg:approx-symmetric-sperner-kgeq3} and
+because of \cref{eqn:symmetric-converted-induction-hypothesis}, we also have either 
+\begin{itemize}[itemsep=0em,topsep=0.5em]
+    \item $y^{(k)}_2(\vec{x}^{(1)}) = y^{(k)}_2(\vec{x}^{(2)})\in (0,1-z)$, which implies $\vec{y}^{(k)}(\vec{x}^{(1)}) = \vec{y}^{(k)}(\vec{x}^{(2)})$, or 
+    \item $y^{(k)}_2(\vec{x}^{(1)}),\ y^{(k)}_2(\vec{x}^{(2)}) \in \{0,1-z\}$.
+\end{itemize} 
+According to \cref{lem:symmetry-on-converted-coordinates-for-symmetric-sperner}, we have $\rela(\vec{y}^{(k)}(\vec{x}^{(1)})) \simrel \rela(\vec{y}^{(k)}(\vec{x}^{(2)}))$, the second bullet of \cref{lem:stronger-symmetry}. 
+Next, we prove the first bullet and the third bullet by further discussing these two subcases.
+Recall the following definitions:
+\begin{align*}
+    \Csym{k}(\vec{x}) &:= c^{(k)}\left(\vec{x},\ C(\vec{y}^{(k)}(\vec{x}))\right)~,
+    \\
+    C_{\sf nn}^{(k)}(\vec{x}) &:= c^{(k)}\left(\vec{x},\ C_{\sf nn}^{\alpha}(\vec{y}^{(k)}(\vec{x}))\right)~, \quad \text{when $\vec{y}^{(k)}(\vec{x})$ is hot}~.
+\end{align*}
+
+\paragraph{~~}
+First, we consider the subcase in the earlier first bullet. 
+That is, we suppose that $y^{(k)}_2(\vec{x}^{(1)}) = y^{(k)}_2(\vec{x}^{(2)})\in (0,1-z)$, which implies $\vec{y}^{(k)}(\vec{x}^{(1)}) = \vec{y}^{(k)}(\vec{x}^{(2)})$.
+According to \cref{line:symmetric-y^{(i)}_2}, we have 
+\begin{align*}
+    \rela(\vec{y}^{(k-1)}(\vec{x}^{(1)})),\ \rela(\vec{y}^{(k-1)}(\vec{x}^{(2)}))\in (0,1)~,
+\end{align*}
+and thus the $(k-1)$-th intermediate projections $\vec{y}^{(k-1)}(\vec{x}^{(1)})$ and $\vec{y}^{(k-1)}(\vec{x}^{(2)})$ are hot.
+Recall that our induction hypothesis gives that $\vec{\hat{x}}^{(1)}\sim_{\Csym{k-1}}\vec{\hat{x}}^{(2)}$ and $\vec{\hat{x}}^{(1)}\sim_{C_{\sf nn}^{(k-1)}} \vec{\hat{x}}^{(2)}$. 
+According to \cref{line:obtain-new-set-of-colors-for-symmetry}, the first colors in the intermediate color palette $\vec{c}^{(k)}$ of any $\vec{x}$ form the set $\{\Csym{k-1}(\vec{P}(\vec{x})), C^{(k-1)}_{\sf nn}(\vec{P}(\vec{x}))\}$, in an order where $c_1^{(k)}(\vec{x})<c_2^{(k)}(\vec{x})$.
+Because min/max operations on the two colorings preserve their symmetry (\cref{lem:symmetry-preserved-under-max/min}),
+$\vec{x}^{(1)}$ and $\vec{x}^{(2)}$ are symmetric in the intermediate colors $c^{(k)}_1(\cdot)$ and $c^{(k)}_2(\cdot)$, i.e., 
+\begin{align*}
+    \vec{x}^{(1)} \sim_{c^{(k)}_1(\cdot)} \vec{x}^{(2)}~,
+    \quad \text{ and } \quad
+    \vec{x}^{(1)} \sim_{c^{(k)}_2(\cdot)} \vec{x}^{(2)}~.
+\end{align*}
+Note that $c_3^{(k)}(\vec{x}^{(1)})=k+1=c_3^{(k)}(\vec{x}^{(2)})$.
+Then, we clearly have the first and the third bullet of \cref{lem:stronger-symmetry}, $\vec{x}^{(1)}\sim_{\Csym{k}} \vec{x}^{(2)}$ and $\vec{x}^{(1)}\sim_{C^{(k)}_{\sf nn}} \vec{x}^{(2)}$ (when $\vec{y}^{(k)}(\vec{x}^{(1)})$ and $\vec{y}^{(k)}(\vec{x}^{(2)})$ are hot), because we trivially have $C(\vec{y}^{(k)}(\vec{x}^{(1)}))=C(\vec{y}^{(k)}(\vec{x}^{(2)}))$ and $C_{\sf nn}^{\alpha}(\vec{y}^{(k)}(\vec{x}^{(1)}))=C_{\sf nn}^{\alpha}(\vec{y}^{(k)}(\vec{x}^{(2)}))$ by $\vec{y}^{(k)}(\vec{x}^{(1)})=\vec{y}^{(k)}(\vec{x}^{(2)})$.
+
+\paragraph{~~}
+On the other hand, we consider the subcase in the earlier second bullet. That is, we suppose that $y^{(k)}_2(\vec{x}^{(1)}),\ y^{(k)}_2(\vec{x}^{(2)}) \in \{0,1-z\}$ (i.e., we have $\vec{y}^{(k)}(\vec{x}^{(1)}), \vec{y}^{(k)}(\vec{x}^{(2)})\in \{(1-z,0,z), (0,1-z,z)\}$).
+Our induction hypothesis only gives us $\vec{\hat{x}}^{(1)}\sim_{\Csym{k-1}}\vec{\hat{x}}^{(2)}$ here. 
+According to \cref{line:symmetric-y^{(i)}_2}, we have 
+\begin{align*}
+    \rela(\vec{y}^{(k-1)}(\vec{x}^{(1)})),\ \rela(\vec{y}^{(k-1)}(\vec{x}^{(2)}))\in \{0,1\}~,
+\end{align*} 
+and thus the $(k-1)$-th intermediate projections $\vec{y}^{(k-1)}(\vec{x}^{(1)})$ and $\vec{y}^{(k-1)}(\vec{x}^{(2)})$ are not hot.
+Note that we have $\Csym{k-1}(\vec{\hat{x}}^{(1)}) = c^{(k-1)}(\vec{x}^{(1)}, C(\vec{y}^{(k-1)}(\vec{x}^{(1)})))<c^{(k-1)}(\vec{x}^{(1)}, \hat{C}^{\alpha}_{\sf nn}(\vec{y}^{(k-1)}(\vec{x}^{(1)})))$ if and only if $y_2^{(k)}(\vec{x}^{(1)})=0$ (similarly, for $\vec{x}^{(2)}$).
+Therefore, according to \cref{line:obtain-new-set-of-colors-for-symmetry} of \cref{alg:approx-symmetric-sperner-kgeq3}, we have
+\begin{align*}
+ c^{(k)}(\vec{x}^{(1)}, i^*(\vec{y}^{(k)}(\vec{x}^{(1)})))=\Csym{k-1}(\vec{\hat{x}}^{(1)}) 
+ \quad \text{and} \quad 
+ c^{(k)}(\vec{x}^{(2)}, i^*(\vec{y}^{(k)}(\vec{x}^{(2)})))=\Csym{k-1}(\vec{\hat{x}}^{(2)})~.
+\end{align*}
+Note we have $C(1-z,0,z)=1,C(0,1-z,z)=2$ (i.e., $C(1-z,0,z)=i^*(1-z,0,z)$ and $C(0,1-z,z)=i^*(0,1-z,z)$), or $C(1-z,0,z)=C(0,1-z,z)=3$ for any fixed $z\in [0,1]$ (\cref{lem:base-instance-lr-boundaries}), and the same thing holds if we replace $C$ by $C_{\sf nn}^{\alpha}$ (\cref{lem:symmetry-on-converted-coordinates-for-symmetric-sperner}) and we have $\rela(1-z,0,z)\in (0,1)$.
+Because $\Csym{k}(\vec{x})$ is defined as $c^{(k)}(\vec{x}, C(\vec{y}^{(k)}(\vec{x})))$ and because of our induction hypothesis that $\vec{\hat{x}}^{(1)} \sim_{\Csym{k-1}} \vec{\hat{x}}^{(2)}$, we have $\vec{x}^{(1)} \sim_{\Csym{k}} \vec{x}^{(2)}$ and $\vec{x}^{(1)} \sim_{C^{(k)}_{\sf nn}} \vec{x}^{(2)}$ if $\vec{y}^{(k)}(\vec{x}^{(1)})$ is hot (i.e., $\rela(\vec{y}^{(k)}(\vec{x}^{(1)}))\in (0,1)$).
+
+
+
+\paragraph{General case 2 ($k\geq 3$, $j_1=k$ and $j_2=k+1$).} 
+In this case, we have $x^{(1)}_{k+1}=x^{(2)}_{k}$ and $x^{(1)}_{k}=x^{(2)}_{k+1}=0$. 
+Let $\vec{\hat{x}}^{(1)}=\vec{P}^{(2)}(\vec{x}^{(1)})$ and $\vec{\hat{x}}^{(2)}=\vec{P}^{(2)}(\vec{x}^{(2)})$. 
+According to the definition of the projection step $\vec{P}$ (\cref{def:projection}), we have 
+\begin{align*}
+    \vec{\hat{x}}^{(1)}&=\frac{\vec{x}^{(1)}_{1:k-1}}{1-x^{(1)}_{k+1}}~,\\
+    \vec{\hat{x}}^{(2)}&=\frac{\vec{x}^{(2)}_{1:k-1}}{1-x^{(2)}_{k}}=\frac{\vec{x}^{(2)}_{1:k-1}}{1-x^{(1)}_{k+1}}~.
+\end{align*}
+Because $\vec{x}^{(1)}_{-(k+1)}=\vec{x}^{(2)}_{-k}$, which implies $\vec{x}^{(1)}_{1:k-1}=\vec{x}^{(2)}_{1:k-1}$, we have $\vec{\hat{x}}^{(1)}=\vec{\hat{x}}^{(2)}$. 
+
+Note that $k\geq 3$.
+We have $\vec{\hat{x}}^{(1)}, \vec{\hat{x}}^{(2)}\in \Delta^{k-2}$.
+Therefore, we have $\vec{P}^{(k-2)}(\vec{x}^{(1)})=\vec{P}^{(k-2)}(\vec{x}^{(2)})$ and further $\tilde{y}_0(\vec{x}^{(1)})=\tilde{y}_0(\vec{x}^{(2)})$. 
+In addition, we trivially have $\vec{c}^{(2)}(\vec{x}^{(1)}) = (1,2,3) = \vec{c}^{(2)}(\vec{x}^{(2)})$. 
+Similarly, according to \cref{obs:equal-y-on-projection}, we can prove that $\vec{y}^{(k-2)}(\vec{x}^{(1)})=\vec{y}^{(k-2)}(\vec{x}^{(2)})$ and $\vec{c}^{(k-1)}(\vec{x}^{(1)})=\vec{c}^{(k-1)}(\vec{x}^{(2)})$ if $k\geq 4$ (because \cref{alg:approx-symmetric-sperner-kgeq3} computes $\vec{c}^{(k-1)}(\vec{x})$ only based on $\vec{y}^{(k-2)}(\vec{x})$). 
+
+For simplicity, we let $\tilde{y} = \rela(\vec{y}^{(k-2)}(\vec{x}^{(1)}))$ if $k\geq 4$ and let $\tilde{y} = \tilde{y}_0(\vec{x}^{(1)})$ if $k=3$.
+According to our previous discussions, we have $\tilde{y}=\rela(\vec{y}^{(k-2)}(\vec{x}^{(2)}))$ if $k\geq 4$ and $\tilde{y} = \tilde{y}_0(\vec{x}^{(2)})$ if $k=3$.
+Further we let $z:=x^{(1)}_{k+1}$ and $(c_1,c_2,c_3):=\vec{c}^{(k-1)}(\vec{x}^{(1)})\in [k]^{3}$, which clearly gives $c_3=k$ according to \cref{line:obtain-new-set-of-colors-for-symmetry} of \cref{alg:approx-symmetric-sperner-kgeq3}.  
+Again, according to our previous discussion, we have $z=x^{(2)}_k$ and $\vec{c}^{(k-1)}(\vec{x}^{(2)})=(c_1,c_2,c_3)$. 
+Also, recall that $x_{k}^{(1)}=x_{k+1}^{(2)}=0$.
+Finally, we use $\vec{y}^*:=((1-z)\cdot (1-\tilde{y}),\; (1-z)\cdot \tilde{y},\; z)$ to denote a key vector in our following proof, and use $\tilde{y}^*:=\rela(\vec{y^*})$ to denote its converted coordinate. 
+
+
+First, we prove the second bullet of \cref{lem:stronger-symmetry}, $\rela(\vec{y}^{(k)}(\vec{x}^{(1)})) = \rela(\vec{y}^{(k)}(\vec{x}^{(2)}))$, by the following simple simulations for \cref{alg:approx-symmetric-sperner-kgeq3}, where
+we prove that $\rela(\vec{y}^{(k)}(\vec{x}^{(1)})) = \rela(\vec{y}^{(k)}(\vec{x}^{(2)}))=\tilde{y}^*$.
+\begin{itemize}[itemsep=0.2em, topsep=0.5em]
+    \item For $\vec{x}^{(1)}$, we have $\vec{y}^{(k-1)}(\vec{x}^{(1)})=(1-\tilde{y}, \tilde{y}, 0)$. According to \cref{lem:new-converted-coordinates-on-base-1-simplex}, $\rela(\vec{y}^{(k-1)}(\vec{x}^{(1)})) = \tilde{y}$. 
+    Therefore, we have $\vec{y}^{(k)}(\vec{x}^{(1)}) = ((1-z)\cdot (1-\tilde{y}), (1-z)\cdot \tilde{y}, z)=\vec{y^*}$ and thus $\rela(\vec{y}^{(k)}(\vec{x}^{(1)}))=\tilde{y}^*$. 
+    \item For $\vec{x}^{(2)}$, we have $\vec{y}^{(k-1)}(\vec{x}^{(2)})=((1-z)\cdot (1-\tilde{y}), (1-z) \cdot \tilde{y}, z)=\vec{y^*}$.
+    According to our definition of $\tilde{y}^*$, $\rela(\vec{y}^{(k)}(\vec{x}^{(2)}))=\tilde{y}^*$ and thus $\vec{y}^{(k)}(\vec{x}^{(2)})=(1-\tilde{y}^*,\tilde{y}^*,0)$.
+    According to \cref{lem:new-converted-coordinates-on-base-1-simplex}, we have $\rela(\vec{y}^{(k)}(\vec{x}^{(2)}))=\tilde{y}^*$.
+\end{itemize}
+
+Next, we prove the first and the third bullet of \cref{lem:stronger-symmetry}, $\vec{x}^{(1)} \sim_{\Csym{k}} \vec{x}^{(2)}$ and $\vec{x}^{(1)}\sim_{C^{(k)}_{\sf nn}} \vec{x}^{(2)}$.
+Our proof is also based on simulations for \cref{alg:approx-symmetric-sperner-kgeq3}, where we give characterizations of $\Csym{k}(\vec{x}^{(1)}), C^{(k)}_{\sf nn}(\vec{x}^{(1)})$ and $\Csym{k}(\vec{x}^{(2)}), C^{(k)}_{\sf nn}(\vec{x}^{(2)})$ by \cref{eqn:colors-of-x1-on-symmetry-gc2,,eqn:colors-of-x2-on-symmetry-gc2}, respectively.
+\begin{itemize}[itemsep=0.2em, topsep=0.5em]
+    \item For $\vec{x}^{(1)}$, according to our previous calculations, $\vec{y}^{(k-1)}(\vec{x}^{(1)})=(1-\tilde{y}, \tilde{y}, 0)$ and $\vec{y}^{(k)}(\vec{x}^{(1)})=\vec{y^*}$. 
+    Because of \cref{lem:base-instance-bottom-slice,,lem:new-converted-coordinates-on-base-1-simplex,,eqn:modified-neighboring-color-symmetry}, $\vec{y}^{(k-1)}(\vec{x}^{(1)})$ is either hot or warm, and we have $C(\vec{y}^{(k-1)}(\vec{x}^{(1)})),$ $\hat{C}_{\sf nn}^{\alpha}(\vec{y}^{(k-1)}(\vec{x}^{(1)})) \in \{1,2\}$. 
+    Therefore, $\vec{c}^{(k)}(\vec{x}^{(1)}) = (c_1,c_2,k+1)$.
+    The colors $\Csym{k}$ and $C^{(k)}_{\sf nn}$ of $\vec{x}^{(1)}$ are then characterized as follows:
+    \begin{align}
+        \label{eqn:colors-of-x1-on-symmetry-gc2}
+        \Csym{k}(\vec{x}^{(1)}) = \begin{cases}
+            \hfill c_1 \hfill  & \text{if $C(\vec{y}^*)=1$,} \\
+            \hfill c_2 \hfill & \text{if $C(\vec{y}^*)=2$,} \\
+            k+1 & \text{if $C(\vec{y}^*)=3$;}
+        \end{cases}
+        \quad
+        \text{ and }
+        \quad 
+        C_{\sf nn}^{(k)}(\vec{x}^{(1)}) = \begin{cases}
+            \hfill c_1 \hfill  & \text{if $\hat{C}^{\alpha}_{\sf nn}(\vec{y}^*)=1$,} \\
+            \hfill c_2 \hfill & \text{if $\hat{C}^{\alpha}_{\sf nn}(\vec{y}^*)=2$,} \\
+            k+1 & \text{if $\hat{C}^{\alpha}_{\sf nn}(\vec{y}^*)=3$.}
+        \end{cases}
+    \end{align}
+    \item For $\vec{x}^{(2)}$, according to our previous calculations, $\vec{y}^{(k-1)}(\vec{x}^{(2)})=\vec{y^*}$ and $\vec{y}^{(k)}(\vec{x}^{(2)}) =(1-\tilde{y}^*, \tilde{y}^*, 0)$. 
+    We have $c^{(k)}_1(\vec{x}^{(2)}), c^{(k)}_2(\vec{x}^{(2)}) \in \{c_i: i\in \{C(\vec{y^*}), \hat{C}_{\sf nn}^{\alpha}(\vec{y^*})\}\}$.
+    Because of \cref{lem:base-instance-bottom-slice,,lem:new-converted-coordinates-on-base-1-simplex,,eqn:modified-neighboring-color-symmetry},
+    $(\tilde{y}^*, 1-\tilde{y}^*, 0)$ is either hot or warm, and we have $C(1-\tilde{y}^*,\tilde{y}^*,0) \neq \hat{C}^{\alpha}_{\sf nn}(1-\tilde{y}^*,\tilde{y}^*,0) \in \{1,2\}$. 
+    Also, note that we have $C(1-\tilde{y}^*,\tilde{y}^*,0)=1$ if and only if $\tilde{y}^*\leq 0.5$ if and only if $C(\vec{y^*})<\hat{C}_{\sf nn}^{\alpha}(\vec{y^*})$ (\cref{eqn:new-coordinate-converter,,fact:modified-neighboring-color}) if and only if $c_1^{(k)}(\vec{x}^{(2)})=c_\ell$ for $\ell=C(\vec{y^*})$. 
+    Because $\Csym{k}(\vec{x}^{(2)})=c_{\ell}^{(k)}(\vec{x}^{(2)})$ for $\ell=C(1-\tilde{y}^*,\tilde{y}^*,0)$ and $C^{(k)}_{\sf nn}(\vec{x}^{(2)})=c_{\ell'}^{(k)}(\vec{x}^{(2)})$ for $\ell'=\hat{C}^{\alpha}_{\sf nn}(1-\tilde{y}^*,\tilde{y}^*,0)$, we have $\Csym{k}(\vec{x}^{(2)})=c_{\ell}$ for $\ell=C(\vec{y^*})$ and $C^{(k)}_{\sf nn}(\vec{x}^{(2)})=c_{\ell'}$ for $\ell'=\hat{C}_{\sf nn}^{\alpha}(\vec{y^*})$.
+    Note that $c_3=k$.
+    We can characterize the colors $\Csym{k}$ and $C^{(k)}_{\sf nn}$ of $\vec{x}^{(2)}$ as follows:
+    \begin{align}
+        \label{eqn:colors-of-x2-on-symmetry-gc2}
+        \Csym{k}(\vec{x}^{(2)}) = \begin{cases}
+            \hfill c_1 \hfill  & \text{if $C(\vec{y}^*)=1$,} \\
+            \hfill c_2 \hfill & \text{if $C(\vec{y}^*)=2$,} \\
+            \hfill k \hfill & \text{if $C(\vec{y}^*)=3$;}
+        \end{cases}
+        \quad
+        \text{ and }
+        \quad 
+        C_{\sf nn}^{(k)}(\vec{x}^{(2)}) = \begin{cases}
+            \hfill c_1 \hfill  & \text{if $\hat{C}^{\alpha}_{\sf nn}(\vec{y}^*)=1$,} \\
+            \hfill c_2 \hfill & \text{if $\hat{C}^{\alpha}_{\sf nn}(\vec{y}^*)=2$,} \\
+            \hfill k \hfill & \text{if $\hat{C}^{\alpha}_{\sf nn}(\vec{y}^*)=3$.}
+        \end{cases}
+    \end{align}
+\end{itemize}
+
+\paragraph{General case 3 ($k\geq 3$, $j_1<k$ and $j_2=k+1$).} This case can be easily derived by the equivalence for the earlier two cases and the fact the symmetry in any coloring is an equivalence relation (\cref{lem:symmetry-is-equiv-relation}). 
+That is, letting $\vec{x}=\vec{x}^{(2)}_{1:k}$ and $\vec{x}^{(3)}=(\vec{x}_{1:k-1},0,x_{k})$, the previous two general cases have already given us 
+\begin{align*}
+    &\vec{x}^{(1)} \sim_{\Csym{k}} \vec{x}^{(3)} \sim_{\Csym{k}} \vec{x}^{(2)}~,\\
+    &\rela\left(\vec{y}^{(k)}(\vec{x}^{(1)})\right) \simrel \rela\left(\vec{y}^{(k)}(\vec{x}^{(3)})\right) \simrel \rela\left(\vec{y}^{(k)}(\vec{x}^{(2)})\right)~,\\
+    &\vec{x}^{(1)} \sim_{C_{\sf nn}^{(k)}} \vec{x}^{(3)} \sim_{C_{\sf nn}^{(k)}} \vec{x}^{(2)} \qquad \text{if $\rela\left(\vec{y}^{(k)}(\vec{x}^{(1)})\right)\in (0,1)$}~.
+\end{align*}
+
+\subsubsection{Hardness}
+It suffices to show \PPAD-hardness of the \outofk Approximate Symmetric \Sperner problem by showing that we can always recover a solution for the $2${\rm D}-\Sperner instance $C$ in polynomial time. 
+
+\begin{restatable}[]{lemma}{repiv}
+    \label{lem:poly-time-recovery-symmetry}
+    Given oracle access to a $2${\rm D}-\Sperner instance $C$ and a tuple of points $(\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)})$ which satisfy $\normtxt{\vec{x}^{(i)}-\vec{x}^{(j)}}{\infty}\leq 2^{-4kn}$ for any $i,j\in [3]$, and which are trichromatic in the \outofk Approximate Symmetric \Sperner instance $\Csym{k}$ constructed by \cref{alg:approx-symmetric-sperner-kgeq3},
+    then there is a polynomial-time algorithm that finds a tuple of points $(\vec{\hat{x}}^{(1)}, \vec{\hat{x}}^{(2)}, \vec{\hat{x}}^{(3)})$ which satsify $\normtxt{\vec{\hat{x}}^{(i)}-\vec{\hat{x}}^{(j)}}{\infty}\leq 2^{-n}$ for any $i,j\in [3]$ and which are trichromatic in the $2${\rm D}-\Sperner instance $C$.
+\end{restatable}
+
+The proof for the polynomial-time recovery algorithm (\cref{alg:recover-2d-sol-symmetry}) is almost the same as that in the warm-up \cref{sec:warmup-proof-for-approx-sperner},
+as we have established all the analogs of the key lemmas used in the warm-up \cref{sec:warmup-proof-for-approx-sperner}. 
+The only differences are 
+\begin{enumerate}[itemsep=0em,topsep=0.5em]
+    \item We are showing hardness for side-length $2^{-4kn}$ instead of $2^{-3kn}$ (caused by \cref{lem:lipschitz-of-the-converter-for-symmetry} vs. \cref{lem:lipschitz-of-the-converter}).
+    \item Proving the Lipschitzness for $\vec{y}^{(2)}(\vec{x})$ (as $\vec{y}^{(2)}$ on \cref{line:first-intermediate-projection} of \cref{alg:approx-symmetric-sperner-kgeq3} is more sophisticated).
+    \item Resolving with the issues caused by the fact that $d^{\alpha}(\cdot,\cdot)$ is no longer a metric. As we only use the fact $d(\cdot,\cdot)$ is a metric when we argue in \cref{lem:characterization-of-intermediate-colors} that points close to a hot point is hot or warm, we prove this argument in \cref{lem:close-to-hot-points} to resolve the issue.
+\end{enumerate}
+We defer the technical proofs to \cref{proof:poly-time-recovery-symmetry}.
+
+\begin{algorithm2e}[t]
+    \caption{Recover a $2${\rm D}-\Sperner solution from \outofk Approximate Symmetric \Sperner solutions}
+    \label{alg:recover-2d-sol-symmetry}
+
+    \DontPrintSemicolon
+    \SetKwInOut{Input}{Input\,}
+    \SetKwInOut{Output}{Output\,}
+
+    \Input{~vectors $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}\in \Delta^k$}
+
+    \Output{~vectors $\vec{\hat{x}}^{(1)}, \vec{\hat{x}}^{(2)}, \vec{\hat{x}}^{(3)}\in \Delta^2$}
+
+    \For{$i\in \{2,3,\dots,k-1\}$}{
+        \For{$j\in [3]$}{
+
+            \If{$C$ has $3$ different colors in $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ }{
+                $\vec{\hat{x}}^{(1)}, \vec{\hat{x}}^{(2)}, \vec{\hat{x}}^{(3)} \gets $ any 3 points colored differently by $C$ in $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$
+                \tcp*{the definition of $\vec{y}^{(i)}(\vec{x}^{(j)})$ follows \cref{alg:approx-symmetric-sperner-kgeq3}}
+
+                \Return{$\vec{\hat{x}}^{(1)}, \vec{\hat{x}}^{(2)}, \vec{\hat{x}}^{(3)}$} \tcp*{trichromatic triangle found while simulation}
+            }
+        }
+    }
+    \Return{$\vec{y}^{(k)}(\vec{x}^{(1)}), \vec{y}^{(k)}(\vec{x}^{(2)}), \vec{y}^{(k)}(\vec{x}^{(3)})$}
+    \tcp*{trichromatic triangle found when lifting $C^{(k-1)}$ to $C^{(k)}$}
+\end{algorithm2e}
+
+\subsection{Query Complexity}
+\label{subsec:query-complexity}
+Finally, in this subsection, we will establish the query complexity of the continuous version of the \outofk Approximate Symmetric \Sperner problem, which is $2^{\Omega(n)}/\poly(n,k)$ (\cref{thm:continuous-symmetry-main}). 
+Our proof will be a careful step-by-step examination on our reduction.
+Recall that our reduction consists of the following steps:
+\begin{enumerate}[itemsep=0.2em,topsep=0.5em]
+    \item the reduction from the 2{\rm D}-\rect\Sperner problem (instance $C_{\rect}$) to the continuous (triangular) version of the 2{\rm D}-\Sperner problem (the base instance $C$), 
+    \item the reduction from the continuous version of the 2{\rm D}-\Sperner problem (the base instance $C$) to the continuous version of the \outofk Approximate Symmetric \Sperner problem (instance $\Csym{k}$).
+\end{enumerate}
+
+\paragraph{Step 1: reduction from $C_{\rect}$ to $C$.}
+Recall that our construction of the base instance $C$ is transforming each point of $C_{\rect}$ to a $1.6\eps\times 1.6\eps$ square and putting it in the corresponding position in the core region of the triangle. To implement the oracle $C$ for a point inside the core region, we only need to query its corresponding point in $C_{\rect}$. For points outside the core region, we can output according to \cref{alg:base-instance}, without any query to $C_{\rect}$. 
+Then, when we receive a small trichromatic triangle in $C$, which is always inside the core region according to \cref{lem:all-solutions-of-C-are-in-the-core}, we can compute the corresponding points of the small triangle in $C_{\rect}$ to obtain a solution of $C_{\rect}$ (again, without any query to $C_{\rect}$). 
+
+Because the query complexity of $C_{\rect}$ is $2^{\Omega(n)}$ according to \cref{thm:previous-result},
+we can easily obtain a lower bound of $2^{\Omega(n)}$ for the query complexity of the base instance $C$.
+\begin{lemma}
+    \label{lem:query-complexity-of-2D}
+    Suppose $C$ is constructed by \cref{alg:base-instance} using a black-box of $C_{\rect}$ with side-length of $2^{-(n-3)}$.
+    Then, it requires a query complexity of $2^{\Omega(n)}$ (using oracle $C$) to find a trichromatic region in $C$. 
+\end{lemma}
+
+\paragraph{Step 2: reduction from $C$ to $\Csym{k}$.} Recall our construction \cref{alg:approx-symmetric-sperner-kgeq3}.
+We use a total number of $O(k)$ queries to the following functions that require oracle access to $C$:
+\begin{itemize}[itemsep=0em, topsep=0.2em]
+    \item $C(\vec{x})$: the coloring of the base $2${\rm D}-\Sperner instance;
+    \item $\hat{C}_{\sf nn}^{\alpha}(\vec{x})$: the modified neighboring color; and 
+    \item $\rela(\vec{x})$: the coordinate converter. 
+\end{itemize}
+Recall that $\hat{C}_{\sf nn}^{\alpha}(\vec{x})$ is defined as $C_{\sf nn}^{\alpha}(\vec{x})$ when $\vec{x}$ is not cold, and defined according to $C(\vec{x})$ otherwise (see \cref{eqn:modified-neighboring-color-symmetry}).
+Recall that \cref{lem:poly-time-oracle-and-converter-for-symmetry}, where we prove that $\rela(\vec{x})$ and $C^{\alpha}(\vec{x})$ (when $\vec{x}$ is hot or warm) can be computed in polynomial-time with oracle access to $C$.
+This implies that the 
+last two functions, each $\rela(\vec{x})$ and $\hat{C}_{\sf nn}^{\alpha}(\vec{x})$, can be computed with a $\poly(n)$ queries to $C$. 
+Therefore, we can construct the instances $\Csym{k}$ with a total number of $k\cdot \poly(n)$ queries to $C$. 
+
+On the other hand, in the recovery algorithm \cref{alg:recover-2d-sol-symmetry}, we have oracle access to $C$ for the following process:
+\begin{itemize}[itemsep=0em,topsep=0.5em]
+    \item simulating \cref{alg:approx-symmetric-sperner-kgeq3} for the given solution $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}$ for $\Csym{k}$; and
+    \item computing $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ for each $i\in \{2,3,\dots,k-1\}$ and $j\in [3]$. 
+\end{itemize}
+According to earlier discussions, the simulation part can be done in a total number of $\poly(n,k)$ queries to $C$. 
+Recall the definition of the neighborhood (\cref{def:neighbourhood}), where the neighbourhood of each point is an $\eps\times \eps$ square. 
+Because $C$ is constructed by transforming each point in $C_{\rect}$ to a $1.6\eps\times 1.6\eps$ square, we only need to look at at most 8 points in $C_{\rect}$ to characterize each $\mathcal{N}(\cdot)$. 
+Note that, according to \cref{alg:base-instance}, each $C_{\rect}(\cdot)$ can be computed by 1 query to $C$.
+Hence, each step in \cref{alg:recover-2d-sol-symmetry} using $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ can be done with a constant number of queries to $C$.
+In total, we can recover a solution for the base instance $C$ from a solution to $\Csym{k}$ using a total number of $\poly(n,k)$ queries to $C$. 
+
+Suppose the query complexity of finding a trichromatic region in $\Csym{k}$ is $f(n,k)$.
+According to our previous discussion, we can use our construction algorithm \cref{alg:approx-symmetric-sperner-kgeq3} and recovery algorithm \cref{alg:recover-2d-sol-symmetry} to find a trichrmatic region in $C$ in a total number of $\poly(n,k)\cdot f(n,k) + \poly(n,k)$ queries to $C$. 
+Because finding a trichromatic region in $C$ requires a query complexity of $2^{\Omega(n)}$ (\cref{lem:query-complexity-of-2D}), we have 
+\begin{align*}
+    \poly(n,k)\cdot f(n,k) + \poly(n,k) \geq 2^{\Omega(n)} \quad \Longrightarrow \quad f(n,k)  \geq 2^{\Omega(n)}/\poly(n,k)~.
+\end{align*}
+
+All of the above discussions can be concluded by the following lemma, which directly implies the query complexity lower-bound in \cref{thm:continuous-symmetry-main} together with \cref{lem:query-complexity-of-2D}. 
+
+\begin{lemma}
+    \label{lem:query-complexity-of-approx-kD}
+    Suppose $\Csym{k}$ is constructed by \cref{alg:approx-symmetric-sperner-kgeq3} using a black-box of $C$ in \cref{lem:query-complexity-of-2D}.
+    Then, it requires a query complexity of $2^{\Omega(n)}/\poly(n,k)$ (using oracle $\Csym{k}$) to find a trichromatic region in $\Csym{k}$. 
+\end{lemma}

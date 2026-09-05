@@ -1,0 +1,409 @@
+\subsection{Proof of \cref{lem:all-solutions-of-C-are-in-the-core}}
+\label{proof:all-solutions-of-C-are-in-the-core}
+
+\repi*
+
+    Let $\eps=2^{-n}, \eps_0=1.6\eps$.
+    Let $\mathcal{D}=\settxt{(x,y,z)\in \Delta^2: y\in 0.5\pm 0.1, z\in 0.2\pm 0.1}$ denote the core region.
+    We are going to show that $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}\in \mathcal{D}$.
+    We prove this fact by contradiction. 
+    W.l.o.g., we suppose that $\vec{x}^{(1)}$ violates this condition.
+    Since $\normtxt{\vec{x}^{(i)}-\vec{x}^{(j)}}{\infty}\leq \eps$, all of them are inside the following subset:
+    \begin{align*}
+        \overline{\mathcal{D}} = \set{\vec{y}\in \Delta^2: y_2\notin [0.4+\eps,0.6-\eps] \text{ or } y_3\notin [0.1+\eps,0.3-\eps]} ~.
+    \end{align*}
+    According to \cref{alg:base-instance} and \cref{def:rect-sperner}, we have 
+    \begin{align*}
+        \forall \vec{y}\in \overline{\mathcal{D}}, \quad C(\vec{y}) = \begin{cases}
+            \hfill 1 \hfill & \text{if $y_2\leq 0.5$ and $y_3\leq 0.1$,} 
+            \\
+            \hfill 2 \hfill & \text{if $y_2> 0.5$ and $y_3\leq 0.1$,}\\
+            \hfill 1 \hfill & \text{if $y_2\in [0.4,0.4+\eps_0)$ and $y_3\in [0.1, 0.1+\eps_0)$, }\\
+            \hfill 2 \hfill & \text{if $y_2\in [0.6-\eps_0,0.6)$ and $y_3\in [0.1, 0.1+\eps_0)$, } \\
+            1\text{ or }2 & \text{if $y_2\in [0.4+\eps_0, 0.6-\eps_0)$ and $y_3\in [0.1, 0.1+\eps]$,} \\
+            \hfill 3 \hfill & \text{otherwise.}
+        \end{cases}
+    \end{align*}
+    Next, we discuss several cases on where $\vec{x}^{(1)}\notin D$ is to establish the fact.
+    \begin{enumerate}[itemsep=0em,topsep=0.5em]
+        \item If $x^{(1)}_2\leq 0.4$, we have $C(\vec{x}^{(1)})\in \{1,3\}$. However, as any $\vec{y}\in \overline{\mathcal{D}}$ such that $C(\vec{y})=2$ has $y_2\geq 0.4+\eps_0>0.4+\eps$, the triangle formed by $\vec{x}^{(1)},\vec{x}^{(2)},\vec{x}^{(3)}$ cannot be trichromatic. 
+        \item If $x^{(1)}_2\geq 0.6$, we have $C(\vec{x}^{(1)})\in \{2,3\}$. However, as any $\vec{y}\in \overline{\mathcal{D}}$ such that $C(\vec{y})=1$ has $y_2<0.6-\eps_0<0.6-\eps$, the triangle formed by $\vec{x}^{(1)},\vec{x}^{(2)},\vec{x}^{(3)}$ cannot be trichromatic. 
+        \item If $x^{(1)}_3 \leq 0.1$, we have $C(\vec{x}^{(1)})\in \{1,2\}$. Note that any $\vec{y}\in \overline{\mathcal{D}}$ such that $C(\vec{y})=3$ and $y_3\leq 0.1+\eps$ has $y_2\notin [0.4,0.6]$. If the triangle formed by $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}$ is trichromatic, we should further have $x_2^{(1)}, x_2^{(2)}, x_2^{(3)}\leq 0.4+\eps$ or have $x_2^{(1)}, x_2^{(2)}, x_2^{(3)}\geq 0.6-\eps$. However, as discussed above, we cannot find $C(\vec{x}^{(j)})=2$ with the first condition and we cannot find $C(\vec{x}^{(j)})=1$ with the second condition. The triangle formed by $\vec{x}^{(1)},\vec{x}^{(2)},\vec{x}^{(3)}$ cannot be trichromatic. 
+        \item If $x_3^{(1)}\geq 0.3$, we have $C(\vec{x}^{(1)})=3$. Note that there is no $\vec{y}\in \overline{\mathcal{D}}$ such that $y_3>0.2$. The triangle formed by $\vec{x}^{(1)},\vec{x}^{(2)},\vec{x}^{(3)}$ cannot be trichromatic. 
+    \end{enumerate}
+
+
+\subsection{Proof of \cref{lem:lipschitz-of-the-converter-on-boundaries}}
+\label{proof:lipschitz-of-the-converter-on-boundaries}
+
+\repii*
+
+According to the characterization \cref{lem:symmetry-on-converted-coordinates}, for any $z\in [0,1]$, we have
+\begin{align*}
+    \rel(1-z,0,z),~\rel(0,1-z,z) ~\in~
+    \begin{cases}
+        \hfill \{0,1\} \hfill & \text{if $z\leq 0.1-2\eps^2$~;} \\
+        \hfill \settxt{0} \hfill & \text{if $z\in (0.1-2\eps^2, 0.1-\eps^2]$~;} \\
+        \hfill \set{0.5\eps^{-2}\cdot(z-0.1+\eps^2)} \hfill & \text{if $z\in 0.1\pm \eps^2$~;} \\
+        \hfill \settxt{1} \hfill & \text{if $z\in [0.1+\eps^2, 0.1+2\eps^2)$~;} \\
+        \hfill \{0,1\} \hfill & \text{if $z\geq 0.1+2\eps^2$~.}
+    \end{cases}
+\end{align*}
+That is, when $z\in 0.1\pm 2\eps^2$, we have an exact characterization for it.
+Note that the RHS of the characterization is continuous and $0.5\eps^{-2}\cdot (z-0.1+\eps^2)$ is $0.5\eps^{-2}$-Lipschitz. 
+We have obtained this lemma for any $z,z'\in 0.1\pm 2\eps^{2}$.
+
+On the other hand, w.l.o.g., suppose that $z\notin 0.1 \pm 2\eps^{2}$.
+If $|z-z'|\geq \eps^2$, this lemma is simply trivial because we have $\eps^{-2}\cdot |z-z'|\geq 1$. 
+Otherwise, according to the triangle inequality, $z'\notin 0.1\pm \eps^2$. 
+Therefore, we have $\rel(\vec{x}), \rel(\vec{x'}) \in \{0,1\}$, which matches the second bullet of this lemma.
+
+\subsection{Proof of \cref{fact:new-coordinate-converter-at-the-bottom-part}}
+\label{proof:new-coordinate-converter-at-the-bottom-part}
+
+\repiii*
+
+Note that in our base instance $C$, we have 
+\begin{align*}
+    \forall \vec{x'}\in \Delta^2, \quad
+    \begin{cases}
+    C(\vec{y'}) = 1 & \quad \text{if } y'_3\leq 0.1, y'_2 \leq 0.5~,\\
+    C(\vec{y'}) = 2 & \quad \text{if } y'_3\leq 0.1, y'_2 > 0.5~.
+    \end{cases}
+\end{align*}
+
+If $y_2\leq 0.5$, we have $C(\vec{y})=1$. 
+$C(\vec{y'})$ is different with $C(\vec{y})$ only if $y'_2>0.5$ or $y'_3>0.1$. 
+Since $0.1-y_3>0.04\gg 2\eps^2$, $\vec{y}$ is hot or warm if and only if $\alpha(y_3) \cdot (0.5-y_2)<2\eps^2$, i.e., $g(\vec{y})\in (-2\eps^2,0)$. 
+In this case, we have $d^{\alpha}(\vec{y}, \nna(\vec{y})) = \alpha(y_3)\cdot |0.5-y_2| = |g(\vec{y})|$, $C^{\alpha}_{\sf nn}(\vec{y})=2$, and 
+\begin{align*}
+    \rela(\vec{y}) = \left(0.5-0.5\eps^{-2}\cdot |g(\vec{y})|\right)_+ = \left(0.5+0.5\eps^{-2}\cdot g(\vec{y})\right)_{[0,1]}~.
+\end{align*}
+
+On the other hand, if $y_2> 0.5$, we have $C(\vec{y})=2$. 
+$C(\vec{y'})$ is different with $C(\vec{y})$ only if $y'_2\leq 0.5$ or $y'_3>0.1$. 
+Since $0.1-y_3>0.04\gg 2\eps^2$, $\vec{y}$ is hot or warm if and only if $\alpha(y_3) \cdot (y_2-0.5)<2\eps^2$, i.e., $g(\vec{y})\in (0,2\eps^2)$. 
+In this case, we have $d^{\alpha}(\vec{y}, \nna(\vec{y})) = \alpha(y_3)\cdot |0.5-y_2| = |g(\vec{y})|$, $C^{\alpha}_{\sf nn}(\vec{y})=1$, and 
+\begin{align*}
+    \rela(\vec{y}) = \left(0.5+0.5\eps^{-2}\cdot |g(\vec{y})|\right)_- = \left(0.5+0.5\eps^{-2}\cdot g(\vec{y})\right)_{[0,1]}~.
+\end{align*}
+
+\subsection{Proof of \cref{lem:poly-time-recovery-symmetry}}
+\label{proof:poly-time-recovery-symmetry}
+
+\repiv*
+
+We assume that $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}$ give a trichromatic triangle in the \outofk Approximate Symmetric \Sperner instance $\Csym{k}$ such that $\normtxt{\vec{x}^{(i)}-\vec{x}^{(j)}}\infty\leq 2^{-4kn}$, where $k\geq 3$.
+As in the earlier proof of \cref{lem:poly-time-recovery}, 
+we use $\vec{y}^{(i)}(\vec{x}) = (y^{(i)}_1(\vec{x}), y^{(i)}_2(\vec{x}), y^{(i)}_3(\vec{x}))$
+to denote the {\em intermediate projections} and use
+$\vec{c}^{(i)}(\vec{x}) = (c^{(i)}_1(\vec{x}), c^{(i)}_2(\vec{x}), c^{(i)}_3(\vec{x}))$ 
+to denote the {\em intermediate palettes}.
+In addition, we introduce a new notation $\tilde{y}_0(\vec{x})$ for the converted coordinate we compute on \cref{line:first-converted-coordinate}.
+In the rest of this section, because the subscripts we will use for $\vec{c}^{(i)}$ can be very complicated, we will use $c_j^{(i)}(\vec{x})$ and $c^{(i)}(\vec{x}, j)$ interchangeably for better presentation.
+For any vector $\vec{y}\in \Delta^2$, we use $i^*(\vec{y})$ to denote the first non-zero index of $\vec{y}$, i.e., 
+\begin{align}
+    \label{eqn:first-nonzero-index-symmetry}
+    i^*(\vec{y}) = \begin{cases}
+        1 & \text{if $y_1>0$,}\\
+        2 & \text{if $y_1=0$ and $y_2>0$,}\\
+        3 & \text{otherwise.}
+    \end{cases}
+\end{align}
+
+Our recovery algorithm (formalized in \cref{alg:recover-2d-sol-symmetry}) simulates \cref{alg:approx-symmetric-sperner-kgeq3} for each $\vec{x}^{(j)}$.
+At time $i\in [2,k-1]$ when we have computed $\vec{y}^{(i)}(\vec{x}^{(j)})$ for each $j\in [3]$, we examine whether one of them is inside a trichromatic region, i.e., whether $C$ has three different colors in $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ for some $j\in [3]$.
+According to our earlier discussions, this examination can be done in polynomial time.
+After we finish the simulation, we simply output $\vec{y}^{(k)}(\vec{x}^{(1)}), \vec{y}^{(k)}(\vec{x}^{(2)}), \vec{y}^{(k)}(\vec{x}^{(3)})$ as a solution for $C$. 
+
+
+It is clear that any output during the simulation phase of this recovery algorithm gives a valid solution for the 2{\rm D}-\Sperner instance $C$. 
+To prove \cref{lem:poly-time-recovery-symmetry}, we only need to show that the three intermediate projections after the simulation form a valid solution for $C$ if we output after the simulation phase. 
+Or equivalently, if each $\vec{y}^{(i)}(\vec{x}^{(j)})$ does not lie in a trichromatic region, the final converted coordinates, $\vec{y}^{(k)}(\vec{x}^{(1)}), \vec{y}^{(k)}(\vec{x}^{(2)}), \vec{y}^{(k)}(\vec{x}^{(3)})$, give a solution for $C$.
+
+As in \cref{lem:poly-time-recovery}, our proof will be considers two cases; the first is where
+the given solution $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}$  for $\Csym{k}$ further enjoys the following property: 
+\begin{align}
+\label{eqn:assumption-for-simple-proof-of-recovery-symmetry}
+\forall 2\leq i\leq k, \forall j\in [3], \quad P_{i+1}^{(k-i)}(\vec{x}^{(j)})\leq 0.9~.
+\end{align}
+One benefit of first considering this case is that we don't have too crazy projections in \cref{alg:recover-2d-sol-symmetry}, which can help us significantly simplify the proof.
+The formal intermediate technical result is presented in \cref{cor:no-sols-in-sim-implies-final-ones-symmetry}.
+Later, in the second step, we will explain how to prove \cref{lem:poly-time-recovery-symmetry} in the  case where this property is not satisfied.
+
+\paragraph{Case 1: the output satisfies \cref{eqn:assumption-for-simple-proof-of-recovery-symmetry}.}
+We can continue to use the Lipschitzness of the projection step (\cref{lem:lipschitz-of-projection}) to obtain Lipschitzness for the intermediate projections.
+
+\begin{lemma}
+\label{lem:intermediate-projections-are-close-to-each-other-symmetry}
+    Consider any $k\geq 2$ and any $\vec{x}^{(1)}, \vec{x}^{(2)}\in \Delta^k$.
+    Suppose that $P_{i+1}^{(k-i)}(\vec{x}^{(j)})\leq 0.9$ for any $2\leq i\leq k$ and any $j\in [2]$.
+    Also, suppose that $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ is at most bichromatic for any $2\leq i<k$ and any $j\in [2]$.
+    Then, for any $2\leq i\leq k$, we have Lipschitzness for the third coordinate of the intermediate projections:
+    \begin{align*}
+        \abstxt{y^{(i)}_3(\vec{x}^{(1)})-y^{(i)}_3(\vec{x}^{(2)})}\leq 2^{O(k)}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty~.
+    \end{align*}
+    Furthermore, at least one of the following is satisfied for the second coordinates of the intermediate projections:
+    \begin{itemize}[itemsep=0.1em, topsep=0.4em]
+        \item {\bf Lipschitz:} $\abstxt{y_2^{(i)}(\vec{x}^{(1)})-y_2^{(i)}(\vec{x}^{(2)})}\leq 2^{3in+O(k)}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty$, or
+        \item {\bf both are on the left/right boundaries:} for any $j\in [2]$, we have either $y_1^{(i)}(\vec{x}^{(j)})=0$ or $y_2^{(i)}(\vec{x}^{(j)})=0$.
+    \end{itemize}
+\end{lemma}
+\begin{proof}
+    We prove this lemma by induction on $i$. The base case is when $i=2$. 
+    We have $y^{(2)}_3(\vec{x})=P_3^{(k-2)}(\vec{x})$ and thus we can obtain the Lipschitzness for $y^{(2)}_3(\cdot)$ by
+    \begin{align*}
+        \abs{y_3^{(i)}(\vec{x}^{(1)})-y_3^{(i)}(\vec{x}^{(2)})}
+        &\leq 
+        \normtxt{\vec{P}^{(k-i)}(\vec{x}^{(1)})-\vec{P}^{(k-i)}(\vec{x}^{(2)})}{\infty}
+        \\
+        &\leq 
+        110\cdot \normtxt{\vec{P}^{(k-i-1)}(\vec{x}^{(1)})-\vec{P}^{(k-i-1)}(\vec{x}^{(2)})}{\infty}
+        \\
+        &\leq
+        \cdots
+        \\
+        &\leq 
+        110^{k-i}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty}
+        \leq 2^{7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty}~,
+    \end{align*}
+    which works for any $i\geq 2$. 
+    At the same time, we can similarly obtain $\abstxt{P_2^{(k-1)}(\vec{x}^{(1)})-P_2^{(k-1)}(\vec{x}^{(2)})}\leq 2^{7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty$. 
+    Because the function $g(y_0)=(0.5+0.5\eps^{-2}\cdot (y_0-0.1))_{[0,1]}$ is clearly $0.5\eps^{-2}$-Lipschitz, we have
+    \begin{align*}
+        \abstxt{\tilde{y}_0(\vec{x}^{(1)}) - \tilde{y}_0(\vec{x}^{(2)})} \leq 2^{2n} \cdot \abstxt{P_2^{(k-1)}(\vec{x}^{(1)})-P_2^{(k-1)}(\vec{x}^{(2)})} \leq 2^{2n+7k} \cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty~.
+    \end{align*}
+    Hence, we can the first bullet of the second statement of this lemma. 
+    \begin{align*}
+        \abstxt{y_2^{(2)}(\vec{x}^{(1)}) - y_2^{(2)}(\vec{x}^{(2)})} \leq \abs{\tilde{y}_0(\vec{x}^{(1)})-\tilde{y}_0(\vec{x}^{(2)})} + \abs{y^{(2)}_3(\vec{x}^{(1)})-y^{(2)}_3(\vec{x}^{(2)})} \leq 2^{2n+7k+1}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty~.
+    \end{align*}
+
+    Consider any $i_0\geq 3$. 
+    Suppose that we have proved this lemma for $i<i_0$. 
+    Next, we consider when $i=i_0$.
+    Note that we have $y_3^{(i)}(\vec{x})=P_{i+1}^{(k-i)}(\vec{x})$ for any $\vec{x}$.
+    By the premise that $P_{i+1}^{(k-i)}(\vec{x}^{(j)})\leq 0.9$, we can use \cref{lem:lipschitz-of-projection} to get
+    the first statement of this lemma by the earlier inequalities. 
+
+    Next, we establish the second statement of this lemma, in which we need to prove at least one of the bullets is satisfied.
+    For the induction hypothesis, we will use the following more specific version of the first bullet 
+    \[
+        \abstxt{y_2^{(i)}(\vec{x}^{(1)})-y_2^{(i)}(\vec{x}^{(2)})}\leq 2^{3in+7k+\log  2i}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty~.
+    \]
+    Note that $y_2^{(i)}(\vec{x})=(1-y_3^{(i)}(\vec{x}))\cdot \rela(\vec{y}^{(i-1)}(\vec{x}))$. 
+    Then, it is easy to obtain that
+    \begin{align*}
+        \abs{y_2^{(i)}(\vec{x}^{(1)})-y_2^{(i)}(\vec{x}^{(2)})} 
+        &= 
+        \abs{(1-y_3^{(i)}(\vec{x}^{(1)}))\cdot \rela(\vec{y}^{(i-1)}(\vec{x}^{(1)})) - (1-y_3^{(i)}(\vec{x}^{(2)}))\cdot \rela(\vec{y}^{(i-1)}(\vec{x}^{(2)}))}
+        \\
+        &\leq
+        \rela(\vec{y}^{(i-1)}(\vec{x}^{(1)}))\cdot \abs{y_3^{(i)}(\vec{x}^{(1)})-y_3^{(i)}(\vec{x}^{(2)})} 
+        \\
+        & \qquad \quad + (1-y_3^{(i)}(\vec{x}^{(2)})) \cdot \abs{\rela(\vec{y}^{(i-1)}(\vec{x}^{(1)})) - \rela(\vec{y}^{(i-1)}(\vec{x}^{(2)})) }
+        \\
+        &\leq
+        \abs{y_3^{(i)}(\vec{x}^{(1)})-y_3^{(i)}(\vec{x}^{(2)})} + \abs{\rela(\vec{y}^{(i-1)}(\vec{x}^{(1)})) - \rela(\vec{y}^{(i-1)}(\vec{x}^{(2)})) }
+        \\
+        &\leq 
+        2^{7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty + \abs{\rela(\vec{y}^{(i-1)}(\vec{x}^{(1)})) - \rela(\vec{y}^{(i-1)}(\vec{x}^{(2)})) }~.
+    \end{align*}
+
+    Suppose that our induction hypothesis gives the first bullet for $i-1$.
+    Combining the Lipschitzness on the third coordinate, we have 
+    \begin{align*}
+        \normtxt{\vec{y}^{(i-1)}(\vec{x}^{(1)})-\vec{y}^{(i-1)}(\vec{x}^{(2)})}\infty &\leq (2^{3(i-1)n+7 k + \log 2(i-1)}+2^{7k}) \cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty~. 
+    \end{align*}
+    If $\rela(\vec{y}^{(i-1)}(\vec{x}^{(1)})), \rela(\vec{y}^{(i-1)}(\vec{x}^{(2)})) \in \{0,1\}$, we have the second bullet for $i=i_0$.
+    Otherwise, according to \cref{lem:lipschitz-of-the-converter-for-symmetry}, we have 
+    \begin{align*}
+        \abs{y_2^{(i)}(\vec{x}^{(1)})-y_2^{(i)}(\vec{x}^{(2)})} 
+        &\leq 
+        2^{7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty + 2^{3n} \cdot \abs{\vec{y}^{(i-1)}(\vec{x}^{(1)}) - \vec{y}^{(i-1)}(\vec{x}^{(2)})}
+        \\
+        &\leq
+        2^{7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty} + 2^{3n}\cdot (2^{3(i-1)n+7k+\log 2(i-1)}+2^{7k}) \cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty}
+        \\
+        &\leq
+        2^{7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty} + (2i-1)\cdot 2^{3in+7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty}
+        \\
+        &\leq 
+        2^{3in+7k + \log 2i}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty} ~,
+    \end{align*}
+    which gives the first bullet for $i=i_0$.
+
+    On the other hand, suppose that the induction hypothesis further gives us the second bullet for $i-1$. 
+    That is, for any $j\in [2]$, we have 
+    \[
+        \vec{y}^{(i-1)}(\vec{x}^{(j)}) \in \set{\left(0,\ 1-y_3^{(i-1)}(\vec{x}^{(j)}),\ y_3^{(i-1)}(\vec{x}^{(j)})\right), ~~ \left(1-y_3^{(i-1)}(\vec{x}^{(j)}),\ 0,\ y_3^{(i-1)}(\vec{x}^{(j)})\right)}~.
+    \]
+    If $\rela(\vec{y}^{(i-1)}(\vec{x}^{(1)})), \rela(\vec{y}^{(i-1)}(\vec{x}^{(2)})) \in \{0,1\}$, we have the second bullet for $i=i_0$.
+    Otherwise, according to \cref{lem:lipschitz-of-the-converter-on-boundaries-for-symmetry}, we have 
+    \begin{align*}
+        \abs{y_2^{(i)}(\vec{x}^{(1)})-y_2^{(i)}(\vec{x}^{(2)})} 
+        &\leq 
+        2^{7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}\infty + 2^{2n} \cdot \abs{y_3^{(i-1)}(\vec{x}^{(1)}) - y_3^{(i-1)}(\vec{x}^{(2)})}
+        \\
+        &\leq
+        2^{7k}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty} + 2^{2n+7k} \cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty}
+        \\
+        &\leq 
+        2^{2in+7k+1}\cdot \normtxt{\vec{x}^{(1)}-\vec{x}^{(2)}}{\infty} ~, 
+    \end{align*}
+    which gives the first bullet for $i=i_0$.
+\end{proof}
+
+Suppose that \cref{alg:recover-2d-sol-symmetry} fails to give us any solution during the simulation phase, i.e., for any $2\leq i\leq k-1$ and $j\in [3]$, $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ is at most bichromatic. 
+Since the solution of the \outofk Approximate Symmetric \Sperner instance satisfies $\normtxt{\vec{x}^{(j_1)}-\vec{x}^{(j_2)}}{\infty}\leq 2^{-4kn}$, we have $\abstxt{y_3^{(i)}(\vec{x}^{(j_1)})-y_3^{(i)}(\vec{x}^{(j_2)})} < 2^{-5n}=\eps^5$ for any $2\leq i\leq k$ and any $j_1,j_2\in [3]$, and further that
+\begin{itemize}[itemsep=0.2em, topsep=0.5em]
+    \item {\bf the intermediate projections are close to each other:} for any $j_1,j_2\in [3]$,$\abstxt{y_2^{(k)}(\vec{x}^{(j_1)})-y_2^{(k)}(\vec{x}^{(j_2)})}<2^{-2n}=\eps^2$ and $\abstxt{y_2^{(i)}(\vec{x}^{(j_1)})-y_2^{(i)}(\vec{x}^{(j_2)})}<2^{-5n}=\eps^5$ for $i<k$; or
+    \item {\bf all intermediate projections are on the left/right boundaries:} for any $j\in [3]$, we have either $y_1^{(i)}(\vec{x}^{(j)})=0$ or $y_2^{(i)}(\vec{x}^{(j)})=0$.
+\end{itemize}
+
+Next, we prove the same characterization of the intermediate palettes used in \cref{alg:approx-symmetric-sperner-kgeq3} by \cref{lem:characterization-of-intermediate-colors-symmetry}.
+The characterization gives equivalence between the set of relevant colors in the palette.
+In the first case, where the intermediate projections of the three input vectors are close to each other (and at least one of them is not on the left/right boundaries), the palettes are exactly the same.
+In the second case, where the intermediate projections of the input vectors are all on the left/right boundaries, the only two relevant colors for the points, $c^{(i)}(\vec{x}, i^*(\vec{y}^{(i)}(\vec{x})))$ and $c^{(i)}_3(\vec{x})$, are respectively equal. 
+
+\begin{lemma}
+    \label{lem:characterization-of-intermediate-colors-symmetry}
+    Suppose that $P_{i+1}^{(k-i)}(\vec{x}^{(j)})\leq 0.9$ for any $2\leq i\leq k$ and any $j\in [3]$.
+    Suppose that $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ is not trichromatic for any $2\leq i<k$ and $j\in [3]$. 
+    For any $2\leq i\leq k$, at least one of the following holds:
+    \begin{itemize}
+        \item The intermediate projections are close to each other, and we have that the corresponding palettes are the same: $\vec{c}^{(i)}(\vec{x}^{(j_1)})=\vec{c}^{(i)}(\vec{x}^{(j_2)})$ for any $j_1,j_2\in [3]$.
+        \item All intermediate projections are on the left/right boundaries, and the palettes may be different on an irrelevant color, but we still have that both of the following hold: 
+        \begin{itemize}
+            \item The color of the first non-zero coordinate $c^{(i)}\left(\vec{x}^{(j)}, i^*(\vec{y}^{(i)}(\vec{x}^{(j)}))\right)$ is the same across all  $j\in [3]$; and
+            \item the 3rd color is the same, $c^{(i)}_3(\vec{x}^{(j)})=i+1$ for any $j\in [3]$.
+        \end{itemize} 
+    \end{itemize}
+\end{lemma}
+
+Since the output $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}$ is trichromatic in $\Csym{k}$, we have 
+\begin{align}
+    \label{eqn:final-trichromatic-symmetry}
+    \abs{\set{c^{(k)}(\vec{x}^{(j)},C(\vec{y}^{(k)}(\vec{x}^{(j)})))}_{j\in [3]}}=3~.
+\end{align}
+We should always have the first bullet of \cref{lem:characterization-of-intermediate-colors-symmetry} for $k$ when each $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ is not trichromatic, because otherwise the second bullet of \cref{lem:characterization-of-intermediate-colors-symmetry} violates \cref{eqn:final-trichromatic-symmetry} as $C(\vec{y}^{(k)}(\vec{x}^{(j)}))\in \{i^*(\vec{y}^{(k)}(\vec{x}^{(j)})), 3\}$.
+Note that
+the first bullet of \cref{lem:characterization-of-intermediate-colors} and \cref{eqn:final-trichromatic} imply that the colors in the base instance $C(\vec{y}^{(k)}(\vec{x}^{(1)}))$, $C(\vec{y}^{(k)}(\vec{x}^{(2)}))$, and $C(\vec{y}^{(k)}(\vec{x}^{(3)}))$ should be distinct. 
+We can always guarantee that the tuple $\vec{y}^{(k)}(\vec{x}^{(1)}), \vec{y}^{(k)}(\vec{x}^{(2)}), \vec{y}^{(k)}(\vec{x}^{(3)})$ gives a solution to $C$.
+\begin{corollary}
+    \label{cor:no-sols-in-sim-implies-final-ones-symmetry}
+    Suppose that $P_{i+1}^{(k-i)}(\vec{x}^{(j)})\leq 0.9$ for any $2\leq i\leq k$ and any $j\in [3]$.
+    Suppose that $\mathcal{N}(\vec{y}^{(i)}(\vec{x}^{(j)}))$ is not trichromatic for any $2\leq i<k$ and $j\in [3]$. 
+    Then, we have $|\settxt{C(\vec{y}^{(k)}(\vec{x}^{(j)})): j\in [3]}|=3$.
+\end{corollary}
+
+Before giving the proof of \cref{lem:characterization-of-intermediate-colors-symmetry}, we give an useful lemma here. The lemma states that any point very close (e.g., $<\eps^3$) to a hot point should be either hot or warm. 
+This could resolve the problem arisen from the fact that $d^{\alpha}(\cdot, \cdot)$ is only quasimetric and does not enjoy the triangle inequality. 
+\begin{lemma}
+\label{lem:close-to-hot-points}
+    For any $\vec{x}$ that is hot and any $\vec{x'}$ such that $d(\vec{x}, \vec{x'})\leq \eps^3$, $\vec{x'}$ is either hot or warm. 
+\end{lemma}
+\begin{proof}
+    If $\vec{x}, \vec{x'}$ has different colors, both of them are hot. 
+    Next, we consider that $\vec{x}, \vec{x'}$ have the same color.
+    Let $\vec{y}=\nna(\vec{x})$ denote the nearest neighbor of $\vec{x}$.
+    If $x_3,x'_3\geq 0.05$, because of \cref{lem:same-def-for-converted-coordinate} and the fact $d(\cdot,\cdot)$ satisfies the triangle inequality, the lemma holds as 
+    \begin{align*}
+        d^\alpha(\vec{x'},\vec{y}) = d(\vec{x'},\vec{y}) \leq d(\vec{x}, \vec{x'}) + d(\vec{x}, \vec{y}) = d(\vec{x}, \vec{x'}) + d^{\alpha}(\vec{x}, \vec{y}) < \eps^3 + \eps^2 < 2\eps^2~.
+    \end{align*}
+    Further, we consider that $x_3,x'_3\leq 0.06$ to finish the proof (because we have $|x_3-x_3'|\leq \eps^3$). 
+    Since $\vec{x}$ is hot, we have $d^{\alpha}(\vec{x}, \vec{y})<\eps^2$, and thus
+    \begin{align*}
+        \alpha(x_3) \cdot |x_2-y_2|, |x_3-y_3| < \eps^2~.
+    \end{align*}
+    Because $d(\vec{x}, \vec{x'})\leq \eps^3$, we have $|x_2-x'_2|, |x_3-x'_3|\leq \eps^3$, and thus 
+    \begin{align*}
+        \alpha(x'_3) \cdot |x'_2-y_2| & \leq |\alpha(x_3)-\alpha(x'_3)| + \alpha(x_3) \cdot |x'_2-y_2|\\
+        &\leq O(n)\cdot |x_3-x'_3| + \alpha(x_3)\cdot (|x'_2-x_2| + |x_2-y_2|) \tag{\cref{lem:shrinking-factor-basics}}\\
+        &\leq O(n)\cdot \eps^3 + \eps^3 + \eps^2 < 2\eps^2~,\\
+        |x'_3-y_3| & \leq |x_3-x'_3| + |x_3-y_3| < \eps^3 +\eps^2 < 2\eps^2~.
+    \end{align*}
+    We have $d^{\alpha}(\vec{x'}, \vec{y})<2\eps^2$. Because $\vec{y}$ (or, an infinite sequence of points that converges to $\vec{y}$) has a different color with $\vec{x},\vec{x'}$, $\vec{x'}$ is hot or warm.
+\end{proof}
+
+\begin{proof}[Proof of \cref{lem:characterization-of-intermediate-colors-symmetry}]
+    We prove this lemma by induction.
+    The base case is when $i=2$. 
+    At the beginning of \cref{alg:approx-symmetric-sperner-kgeq3}, we have $\normtxt{\vec{y}^{(2)}(\vec{x}^{(j_1)})-\vec{y}^{(2)}(\vec{x}^{(j_2)})}\infty\leq 2^{O(k)}\cdot 2^{-4kn}<\eps^5$ for any $j_1,j_2\in [3]$ according to the proof of \cref{lem:intermediate-projections-are-close-to-each-other-symmetry} and $\vec{c}^{(2)}(\vec{x}^{(j)})=(1,2,3)$ for any $j\in [3]$. 
+    We have the first bullet satisfied for $i=2$. 
+
+    Consider any $i_0\geq 3$. Assume that we have established this lemma for any $i=i_0-1$. 
+    Next, we establish this lemma for $i=i_0$.
+
+    First, consider that the first bullet holds for $i-1$. We have $\abstxt{y_2^{(i-1)}(\vec{x}^{(j_1)})-y_2^{(i-1)}(\vec{x}^{(j_2)})}< 2^{-5n}=\eps^5$ for any $j_1,j_2\in [3]$. 
+    Hence, $d(\vec{y}^{(i-1)}(\vec{x}^{(j_1)}), \vec{y}^{(i-1)}(\vec{x}^{(j_2)}))\leq \eps^5$ for any $j_1,j_2\in [3]$. 
+    We discuss two cases on whether there is a hot point in $\vec{y}^{(i-1)}(\vec{x}^{(1)}), \vec{y}^{(i-1)}(\vec{x}^{(2)})$ and $\vec{y}^{(i-1)}(\vec{x}^{(3)})$. 
+    \begin{itemize}[itemsep=0.2em,topsep=0.5em]
+        \item W.l.o.g., suppose that $\vec{y}^{(i-1)}(\vec{x}^{(1)})$ is a hot point. 
+        According to \cref{lem:lipschitz-of-the-converter-for-symmetry} and \cref{line:y_1,line:y_2,line:y_3}, all the $i$-th intermediate projections are close to each other. 
+        According to \cref{lem:close-to-hot-points}, $\vec{y}^{(i-1)}(\vec{x}^{(2)})$ and $\vec{y}^{(i-1)}(\vec{x}^{(2)})$ are also hot or warm.
+        Since they are all in a region that is at most bichromatic, 
+        the following color set $\{C(\vec{y}^{(i-1)}(\vec{x}^{(j)})), \hat{C}^\alpha_{\sf nn}(\vec{y}^{(i-1)}(\vec{x}^{(j)}))\}$ is then the same across all $j\in [3]$.
+        Since $\vec{c}^{(i-1)}(\vec{x}^{(1)})=\vec{c}^{(i-1)}(\vec{x}^{(2)})=\vec{c}^{(i-1)}(\vec{x}^{(3)})$, we then have the same $\vec{c}^{(i)}(\vec{x}^{(j)})$ across all $j\in [3]$, which gives the first bullet of this lemma. 
+        \item Otherwise, suppose that $\vec{y}^{(i-1)}(\vec{x}^{(j)})$ is warm or cold for each $j\in [3]$. We have $\rela(\vec{y}^{(i-1)}(\vec{x}^{(j)}))\in \{0,1\}$ for any $j\in [3]$ in this case.
+        The $i$-th intermediate projections are on the left/right boundaries, i.e., we have $y_1^{(i)}(\vec{x}^{(j)})=0$ or $y_2^{(i)}(\vec{x}^{(j)})=0$ for each $j\in [3]$.
+        Note that there is only one color in $\settxt{C(\vec{y}^{(i-1)}(\vec{x}^{(j)}))}_{j\in [3]}$, because otherwise we clearly have $d^\alpha(\vec{y}^{(i-1)}(\vec{x}^{(j)}),\nna(\vec{y}^{(i-1)}(\vec{x}^{(j)})))<\eps^2$ and all points are hot. 
+        Note that \cref{alg:approx-symmetric-sperner-kgeq3} ensures in this scenario that 
+        \begin{align*}
+            i^*(\vec{y}^{(i)}(\vec{x}^{(j)}))=1 
+            &\Leftrightarrow 
+            \rela(\vec{y}^{(i-1)}(\vec{x}^{(j)}))=0\\
+            &\Leftrightarrow
+            C(\vec{y}^{(i-1)}(\vec{x}^{(j)}))<\hat{C}^\alpha_{\sf nn}(\vec{y}^{(i-1)}(\vec{x}^{(j)}))\\
+            &\Leftrightarrow
+            c^{(i)}(\vec{x}^{(j)},1) = c^{(i-1)}(\vec{x}^{(j)}, C(\vec{y}^{(i-1)}(\vec{x}^{(j)})))
+        \end{align*}
+        where the second {\em iff} is obtained by \cref{fact:modified-neighboring-color-for-symmetry}.
+        We have $c^{(i)}(\vec{x}^{(j)}, i^*(\vec{y}^{(i)}(\vec{x}^{(j)}))) = c^{(i-1)}(\vec{x}^{(j)}, C(\vec{y}^{(i-1)}(\vec{x}^{(j)})))$ for each $j\in [3]$.
+        Since $\vec{c}^{(i-1)}(\vec{x}^{(1)})=\vec{c}^{(i-1)}(\vec{x}^{(2)})=\vec{c}^{(i-1)}(\vec{x}^{(3)})$ and $C(\vec{y}^{(i-1)}(\vec{x}^{(1)}))=C(\vec{y}^{(i-1)}(\vec{x}^{(2)}))=C(\vec{y}^{(i-1)}(\vec{x}^{(3)}))$, 
+        we have the second bullet for $i$.
+    \end{itemize}
+
+    Second, consider that the second bullet holds for $i-1$. 
+    Because $|y_3^{(i-1)}(\vec{x}^{(j_1)})-y_3^{(i-1)}(\vec{x}^{(j_2)})|<\eps^{5}$ for any $j_1,j_2\in [3]$, according to the characterization of the temperature on the left/right boundaries (\cref{lem:symmetry-on-converted-coordinates-for-symmetric-sperner}), we have 
+    \begin{itemize}[itemsep=0.2em,topsep=0.5em]
+        \item for each $j\in [3]$, $\vec{y}^{(i-1)}(\vec{x}^{(j)})$ is hot or warm; or 
+        \item for each $j\in [3]$, $\vec{y}^{(i-1)}(\vec{x}^{(j)})$ is warm or cold. 
+    \end{itemize}
+    Since we have $C(1-z,0,z)=3=C(0,1-z,z)$ or $C(1-z,0,z)=1, C(0,1-z,z)=2$ for any $z\in [0,1]$ (\cref{lem:base-instance-lr-boundaries}), we have the same $c^{(i-1)}(\vec{x}^{(j)},C(\vec{y}^{(i-1)}(\vec{x}^{(j)})))$ across all $j\in [3]$.
+    Next, we discuss the above two cases to finish the proof. 
+    \begin{itemize}[itemsep=0.2em,topsep=0.5em]
+        \item Consider when each $\vec{y}^{(i-1)}(\vec{x}^{(j)})$ is hot or warm. We have $\hat{C}^\alpha_{\sf nn}(\vec{y}^{(i-1)}(\vec{x}^{(j)}))=C^\alpha_{\sf nn}(\vec{y}^{(i-1)}(\vec{x}^{(j)}))$ for each $j\in [3]$. Because we have $C^\alpha_{\sf nn}(1-z,0,z)=1, C^\alpha_{\sf nn}(0,1-z,z)=2$, or $C^\alpha_{\sf nn}(1-z,0,z)=3=C^\alpha_{\sf nn}(0,1-z,z)$ for each $z\in 0.1\pm 2\eps^2$ (\cref{lem:symmetry-on-converted-coordinates-for-symmetric-sperner}), we have the same $c^{(i-1)}(\vec{x}^{(j)},\hat{C}^\alpha_{\sf nn}(\vec{y}^{(i-1)}(\vec{x}^{(j)})))$ across all $j\in [3]$.
+        Therefore, the palette $\vec{c}^{(i)}(\vec{x}^{(j)})$ is the same across all $j\in [3]$. 
+        Because of \cref{lem:intermediate-projections-are-close-to-each-other-symmetry} and the Lipschitzness of the coordinate converter on the left/right boundaries \cref{lem:lipschitz-of-the-converter-on-boundaries-for-symmetry}, the $i$-th intermediate projections, $\vec{y}^{(i)}(\vec{x}^{(1)}), \vec{y}^{(i)}(\vec{x}^{(2)})$ and $\vec{y}^{(i)}(\vec{x}^{(3)})$, are close to each other. 
+        Hence, we prove the first bullet of this lemma for $i$. 
+        \item Consider when each $\vec{y}^{(i-1)}(\vec{x}^{(j)})$ is warm or cold. We have $\rela(\vec{y}^{(i-1)}(\vec{x}^{(j)}))\in \{0,1\}$ and all $i$-th intermediate projections are on the left/right boundaries. 
+        Note that there is only one color in $\settxt{C(\vec{y}^{(i-1)}(\vec{x}^{(j)}))}_{j\in [3]}$, because otherwise we clearly have $d^\alpha(\vec{y}^{(i-1)}(\vec{x}^{(j)}),\nn(\vec{y}^{(i-1)}(\vec{x}^{(j)})))<\eps^2$ and all points are hot. 
+        According to our earlier discussions, \cref{alg:approx-symmetric-sperner-kgeq3} ensures in this scenario that $c^{(i)}(\vec{x}^{(j)}, i^*(\vec{y}^{(i)}(\vec{x}^{(j)}))) = c^{(i-1)}(\vec{x}^{(j)}, C(\vec{y}^{(i-1)}(\vec{x}^{(j)})))$.
+        Therefore, we have the same $c^{(i)}(\vec{x}^{(j)}, i^*(\vec{y}^{(i)}(\vec{x}^{(j)})))$ across all $j\in [3]$, and thus the second bullet of this lemma holds. \qedhere
+    \end{itemize}
+\end{proof}
+
+\paragraph{Case 2: the output does not satisfy~\cref{eqn:assumption-for-simple-proof-of-recovery-symmetry}.}
+Next, we complete our second step by showing how to prove \cref{lem:poly-time-recovery-symmetry} without the property (\cref{eqn:assumption-for-simple-proof-of-recovery-symmetry}). 
+Suppose $\theta^*$ is the minimum threshold $\theta\geq 2$ such that $P_{i+1}^{(k-i)}(\vec{x}^{(j)})\leq 0.9$ for any $\theta\leq i\leq k$ and $j\in[3]$. 
+Such threshold always exists because otherwise we have $x^{(1)}_{k+1}, x^{(2)}_{k+1}, x^{(3)}_{k+1}\geq 0.8$. 
+This implies $y_3^{(k)}(\vec{x}^{(j)})>0.8$ for any $j\in [3]$, and according to our construction of the base instance (\cref{alg:base-instance}), we have $C^{(k)}(\vec{x}^{(j)})=c^{(k)}_3(\vec{x}^{(j)}) = k+1$ for any $j\in[3]$, violating the assumption that $\vec{x}^{(1)}, \vec{x}^{(2)}, \vec{x}^{(3)}$ form a solution for the \outofk Approximate Symmetric \Sperner problem. 
+When $\theta^*=2$, it is equivalent with the special case satisfying \cref{eqn:assumption-for-simple-proof-of-recovery-symmetry} and we have proved \cref{lem:poly-time-recovery-symmetry} for this case.
+On the other hand, if $\theta^*>2$, we have $P^{(k-\theta^*+1)}_{\theta^*}(\vec{x}^{(j)})\geq 0.8$ for any $j\in [3]$ because of the Lipschitzness of the projection step \cref{lem:lipschitz-of-projection} and that $\normtxt{\vec{x}^{(i)}-\vec{x}^{(j)}}{\infty}\leq 2^{-4kn}$ for any $i,j\in [3]$. 
+This means that we have $C(\vec{y}^{(\theta^*-1)}(\vec{x}^{(j)}))=3$.
+And because of \cref{lem:trivial-converter-for-symmetry}, we have $\rela(\vec{y}^{(\theta^*-1)}(\vec{x}^{(j)}))=1$ and $y_1^{(\theta^*)}(\vec{x}^{(j)})=0$ for any $j\in [3]$. 
+Further, we have for each $j\in [3]$,
+\begin{align}
+    \label{eqn:y-theta-star}
+    \vec{y}^{(\theta^*)}(\vec{x}^{(j)})=\left(0,\ 1-P^{(k-\theta^*)}_{\theta^*+1}(\vec{x}^{(j)}),\ P^{(k-\theta^*)}_{\theta^*+1}(\vec{x}^{(j)})\right)~.
+\end{align}
+Therefore, running \cref{alg:approx-symmetric-sperner-kgeq3} on instance $C^{(k)}$ for $\vec{x}^{(1)},\vec{x}^{(2)}, \vec{x}^{(3)}$ is equivalent to running \cref{alg:approx-symmetric-sperner-kgeq3} on instance $C^{(k')}$ with $k'=k-\theta^*+2$ for $\vec{\hat{x}}^{(1)},\vec{\hat{x}}^{(2)},\vec{\hat{x}}^{(3)}\in \Delta^{k'}$ such that
+\begin{align*}
+    \forall i\in [k'+1], j\in [3], \quad \hat{x}_i^{(j)} = \begin{cases}
+        0 & \text{if $i=1$,}\\
+        1-\sum_{i'=\theta^*+1}^{k+1} x^{(j)}_{i'} & \text{if $i=2$,}\\
+        x^{(j)}_{i+\theta^*-2} & \text{if $i>2$.}
+    \end{cases}
+\end{align*}
+This is because $\vec{y}^{(2)}(\vec{\hat{x}}^{(j)})$ equals the RHS of \cref{eqn:y-theta-star}.
+Because this new instance has a smaller number of dimensions and satisfies the condition of our special cases (\cref{eqn:assumption-for-simple-proof-of-recovery-symmetry}), we complete the proof for \cref{lem:poly-time-recovery-symmetry}.

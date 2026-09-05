@@ -1,0 +1,61 @@
+
+We use $[n]$ to denote the set $\{1,\dots, n\}$.
+We use $Q_n$ to denote the integer set $\{0,\dots, 2^n-1\}$ that can be encoded by $n$ bits. 
+We use $(x)_+$ to denote $\max\{0,x\}$.
+We use $(x)_-$ to denote $\min\{1,x\}$.
+Further, we use $(x)_{[0,1]}$ to denote $((x)_+)_-$.
+For any vector $\vec{x}$ and any $l,r\in \mathbb{Z}$, we use $\vec{x}_{l:r}$ to denote $\vec{x}$ restricted to indices in $[l,r]$, i.e., $(x_l,\dots,x_r)$.
+For any vector $\vec{x}$ and any $i\in \mathbb{Z}$, we use $\vec{x}_{-i}$ to denote $\vec{x}$ restricted to indices not equalling $i$, i.e., $(\vec{x}_{1:i-1}, \vec{x}_{i+1:r})$.
+
+\paragraph{The Complexity Class: \TFNP.}
+Search problems are defined via relations $R\subseteq \{0,1\}^*\times \{0,1\}^*$, where the goal is to find a string $\vec{y}$ for the input $\vec{x}$ such that $(\vec{x},\vec{y})\in R$, or to claim no such $\vec{y}$ exists. 
+The class {\FNP\xspace} consists of all such search problems in which $R$ is polynomial-time computable, which means that whether any $(\vec{x},\vec{y})\in R$ can be decided in polynomial time, and polynomially balanced, which means that there exists a polynomial $p(n)$ such that $(\vec{x},\vec{y})\in R$ only if $|\vec{y}|\leq p(|\vec{x}|)$. 
+Here, $|\vec{x}|$ is defined as the number of bits in string $\vec{x}$.
+The class {\TFNP\xspace} consists of all {\FNP\xspace} problems whose relation $R$ is total, i.e., for any input $\vec{x}$, there always exists a string $\vec{y}$ such that $(\vec{x}, \vec{y})\in R$.
+
+The polynomial-time reduction between two \TFNP~problems $R,R'$ is defined by two polynomial-time computable functions $f:\{0,1\}^*\to \{0,1\}^*$ and $g:\{0,1\}^*\times \{0,1\}^* \to \{0,1\}^*$ such that for any instance $\vec{x}$ of $R$, we can always reduce it to the instance $f(\vec{x})$ (of $R'$) and then recover a solution from any output $\vec{y}$ of the instance of $R'$ by $g(\vec{x}, \vec{y})$.
+That is, for any input $\vec{x}$ of $R$ and any output $ \vec{y}$ of $R'$,
+\begin{align*}
+    (f(\vec{x}),\vec{y}) \in R' \Longrightarrow (\vec{x},g(\vec{x},\vec{y})) \in R~.
+\end{align*}
+
+\paragraph{The Complexity Class: \PPAD.}
+The class 
+\PPAD~consists of all \TFNP~problems that are polynomial-time reducible to the following \EoL problem.
+\begin{definition}[\EoL]
+    In \EoL, we are given a predecessor function $P:Q_n\to Q_n$ and a successor function $S:Q_n\to Q_n$ such that $P(0^n)=0^n\neq S(0^n)$, where both $P$ and $S$ are given by a polynomial-size circuit. The goal of \EoL is to find $x\in Q_n$ such that we have either $P(S(\vec{x}))\neq \vec{x}$ or $S(P(\vec{x}))\neq \vec{x} \neq 0^n$.
+\end{definition}
+
+
+This class, \PPAD, captures the complexity of the following $k$D-\Sperner problem, whose totality is guranteed by the famous Sperner's lemma \cite{sperner1928neuer}.
+
+\begin{definition}
+    \label{def:standard-simplex}
+    The standard $k$-simplex is $\Delta^k = \{\vec{x}\in [0,1]^{k+1}: \sum_{i=1}^{k+1} x_i=1\}$.
+\end{definition}
+
+
+\begin{definition}
+    \label{def:discrete-simplex}
+    The discrete $k$-simplex with triangulation side-length of $2^{-n}$ is defined as the following subset of the standard $k$-simplex $\Delta^k$: $\Delta^k_n = \{\vec{x}\in \Delta^k: \forall i\in [k+1], ~ (2^n-1)\cdot x_i\in \mathbb{Z} \}$.
+\end{definition}
+
+
+\begin{definition}
+    The array of non-trivial indices $\mathcal{I}_{>0}(\vec{x})$ of $\vec{x}$ is given by indices $i$ such that $x_i>0$ in an increasing order.
+\end{definition}
+
+
+\begin{definition}[$k${\rm D}-\Sperner]
+    In $k${\rm D}-\Sperner, we are given function 
+    $C:\Delta^k_n \to [k+1]$ satisfying $C(\vec{x}) \in \mathcal{I}_{>0}(\vec{x})$ for any $\vec{x}\in \Delta^k_n$.
+    The goal of $k${\rm D}-\Sperner is to find $k+1$ points $\vec{x^{(1)}},\vec{x^{(2)}}, \dots, \vec{x^{(k+1)}}\in \Delta_n^k$ such that
+    \begin{enumerate}[itemsep=0.2em,topsep=0.5em]
+        \item {\bf the three points are close to each other}, i.e., $\forall i,j\in [k+1], \normtxt{\vec{x^{(i)}}-\vec{x^{(j)}}}{\infty}\leq 2^{-n}$; and 
+        \item {\bf the induced simplex is rainbow}, i.e., $|\{C(\vec{x^{(i)}}): i\in [k+1]\}|=k+1$.
+    \end{enumerate}
+\end{definition}
+
+\begin{theorem}[\cite{DBLP:journals/jc/HirschPV89,DBLP:journals/jcss/Papadimitriou94,DBLP:journals/tcs/ChenD09}]
+    For any $k\geq 2$, $k${\rm D}-\Sperner is \PPAD-complete (if the coloring $C$ is given by a polynomial-size circuit) and requires a query complexity of $2^{\Omega(n)}$ (if the coloring $C$ is given by a black box).
+\end{theorem}

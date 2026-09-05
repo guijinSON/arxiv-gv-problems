@@ -1,0 +1,84 @@
+
+
+\subsubsection*{Cuts, pieces and allocations}
+\paragraph{$k$-cuts:} In line with the classic model of cake cutting, we use a line segment $[0, 1]$ to represent the ``cake''. We let $k$ be the number of the cuts. A {\em $k$-cut} can be represented as a vector $\vec{x} = (x_1, x_2, \ldots, x_k)$ with $k$ dimensions such that $0 \leq x_1 \leq x_2 \leq \ldots \leq x_k \leq 1$. Dimension $i$ shows where the $i$-th cut is located on $[0, 1]$. 
+
+We only define preferences with respect to partitions that use exactly $k$ cuts, for some parameter $k$ (note that we allow $k$ to be larger than the number of agents). Partitions corresponding to fewer than $k$ cuts can easily%
+\footnote{This is easy to {\em model}. But for the {\em proof}, the boundary conditions imposed by those empty pieces are actually one of our main sources of difficulty!} 
+be incorporated in this model by adding trivial cuts (equivalently, empty pieces).  
+We do not allow more than $k$ cuts in our model. Note that without an upper bound on the number of cuts, one could partition the cake into infinitesimal pieces and assign them to agents at random; by continuity of the valuations this would trivially be approximately envy-free, but eating infinitely many disconnected infinitesimal pieces of cake can be unsatisfactory in applications.
+
+\paragraph{Pieces of cake:} A {\em piece of cake} is an open interval that is a subset of $[0, 1]$. So a $k$-cut partitions the cake into $k+1$ (possibly empty) pieces%
+\footnote{... and their $k+2$ endpoints (since we treat pieces as open intervals).}. For a $k$-cut $\vec{x}$, we use $X = (X_0, X_1, \ldots, X_k)$ (capitalizing the character representing the $k$-cut) to denote the corresponding pieces of the cake where $X_0$ and $X_k$ are the leftmost and the rightmost pieces of the cake, respectively. 
+
+\paragraph{Equivalent $k$-cuts:} We say that two $k$-cuts $\vec{x}$ and $\vec{y}$ are {\em equivalent} if they induce the same pieces of cake. (For example, $\vec{x} = (1/3,1/3)$ and $\vec{y} = (0,1/3)$ both induce the pieces $(0,1/3), (1/3,1), \emptyset$.) We use $\eqClass{\vec{x}}$ to denote the equivalence class of $\vec{x}$.
+
+\paragraph{Allocation:}
+An {\em allocation} is an assignment of pieces to a set of agents $\{1, 2, \ldots, p\}$ (possibly multiple pieces to the same agent). 
+
+\subsubsection*{Utilities and preferences}
+
+\paragraph{Utility functions:}
+Each agent $d$ has a {\em utility function} $u_d$ that takes a piece of cake and the entire partition of the cake into an (unordered) set of pieces, and maps them to a real value in $[0,1]$. Equivalently, and consistent with the notation we will use, $u_d$ maps a piece $X_i$ and an equivalence class of $k$-cuts $\eqClass{\vec{x}}$ to $u_d(\eqClass{\vec{x}}, X_i) \in [0,1]$. We assume that our utility functions satisfy two conditions commonly found in cake-cutting literature. The first condition is Lipschitz continuity which lets us to discretize the problem. The second condition is Nonnegativity condition which is the requirement for the existence of a valid solution for cake-cutting. We formally define these two conditions as follows:
+
+\begin{itemize}
+    \item \textbf{Lipschitz condition:} Let $\vec{x}$ and $\vec{y}$ be two $k$-cuts. For any player $d$, we have $|u_d(\eqClass{\vec{x}}, X_i) - u_d(\eqClass{\vec{y}}, Y_i)| \leq L \cdot \norm{\vec{x} - \vec{y}}{1}$ for all $i \in \{0, \ldots, k\}$, where $L$ is the Lipschitz constant.
+
+    \item \textbf{Nonnegativity condition:} Let $k$-cuts $\vec{x}$ be a $k$-cut. For any player $d$, we have $u_d(\eqClass{\vec{x}}, X_i) > 0$ if $X_i \neq \emptyset$, and $u_d(\eqClass{\vec{x}}, X_i) = 0$ otherwise.
+\end{itemize}
+
+\paragraph{Bundles of cake pieces:}
+Given a partition of the cake into (connected) pieces, a {\em bundling} $\mathcal{B} = \{B_1, B_2, \ldots, B_{p}\}$ partitions the set of cake pieces into {\em bundles}, or subsets of pieces. The utility of a bundle of pieces for one agent is the sum of the utility of the pieces belonging to the bundle. Formally, if $B = \{X_{i_1}, X_{i_2}, \ldots, X_{i_r} \}$ is a bundle, we have $u_d(\eqClass{\vec{x}}, B) = \sum_{j=1}^r u_d(\eqClass{\vec{x}}, X_{i_j})$.
+
+\paragraph{Preferences:}
+Given a bundling $\mathcal{B} = \{B_1, B_2, \ldots, B_{p}\}$, we say agent $d$ (Weakly) {\em prefers} bundle $B_i$ if $u_d(\eqClass{\vec{x}}, B_i) \geq u_d(\eqClass{\vec{x}}, B_{j})$ for all $j$.
+
+
+
+\subsection{Envy-free cake cuts}
+
+\begin{definition}[$\eps$-Approximate Envy-Free Cake Cut]
+    Given a $k$-cut $\vec{x}$, a bundling $\mathcal{B}$ of the induced cake pieces, an assignment $\pi: [p] \rightarrow [p]$ of the bundles to agents, and $\eps>0$ we say that  $(\vec{x}, \mathcal{B}, \pi)$ is  {\em $\eps$-approximate envy-free} if $u_d(\eqClass{\vec{x}}, B_{\pi(d)}) + \eps \geq u_d(\eqClass{\vec{x}}, B_i)$  for every agent $d$ and any bundle $B_i$. When $\eps = 0$, we simply say that $(\vec{x}, \mathcal{B}, \pi)$ is  envy-free.
+\end{definition}
+
+Put in this language, prior work showed that with connected pieces, an envy-free cake cut always exists, but finding one is \PPAD-complete:
+
+
+
+
+
+\begin{theorem}[\textcite{stromquist1980cut,Su99-rental-harmony}]\label{thm:cake-cutting-exists}
+    There exists an envy-free cake cut for $k + 1$ agents with $k$ cuts.
+\end{theorem}
+
+
+
+\begin{theorem}[\textcite{DBLP:journals/ior/DengQS12}]\label{thm:previous-result}
+    Finding $\eps$-approximate envy-free cake cut for $k + 1$ agents using $k$ cuts is \PPAD-complete.
+\end{theorem}
+
+
+We consider two different settings that are less restrictive compared to the result of \Cref{thm:previous-result} and we prove that even if we allow both relaxations, the problem is still \PPAD-complete. We study the following relaxations of the cake-cutting:
+\begin{itemize}
+
+    \item \textbf{Making almost every agent almost envy-free:} similar to the setting in \cite{DBLP:journals/ior/DengQS12}, consider $k$-cut and $k + 1$ agents, with the objective of allocating each agent a single continuous piece obtained by $k$ cuts. Instead of seeking an envy-free $k$-cut, one might ask whether it is possible to find a $k$-cut where the majority of the agents do not envy anyone. Specifically, if $k + 1 > 3$, can we find a $k$-cut where at least three agents do not envy anyone? We provide a negative answer to this question and demonstrate that this relaxed version of the cake-cutting problem is also \PPAD-complete. 
+    
+    
+    \item \textbf{Three agents with multiple pieces:} given the current results, a natural question arises: if we allow agents to have a bundle of pieces of the cake, is the problem still hard? It is worth noting that this question is computationally easier compared to the scenario where we allocate only one piece to each agent, as we have the option to allocate empty pieces to agents. Suppose that we have three agents and $k + 1 > 3$ pieces of cake. Essentially, we cut the cake into $k + 1$ pieces and bundle these pieces into three bundles. The goal is to determine whether such a bundling exists where we can allocate to each agent a bundle of pieces such that agents do not envy each other. Similarly, we demonstrate that this problem is \PPAD-complete. 
+\end{itemize}
+
+More specifically, we combine both relaxations. We assume that we have $p$ agents and $k$ cuts such that $p \leq k + 1$. We bundle the $k + 1$ pieces to $p$ bundles and allocate them to the agents, and our objective is to find an approximate envy-free cake cut where at least three agents do not envy others. 
+
+
+\begin{restatable}[$\eps$-Approximate $p'$-out-of-$p$-Envy-Free Cake Cut]{definition}{poutofqcakecut}
+    Given a $k$-cut $\vec{x}$, a bundling $\mathcal{B}$ of the induced cake pieces, an assignment $\pi: [p] \rightarrow [p]$ of the bundles to agents, $\eps>0$, and $p' < p$ we say that  $(\vec{x}, \mathcal{B}, \pi)$ is  $\eps$-approximate $p'$-out-of-$p$-envy-free if there exists a subset $S \subseteq [p]$ of $p'$ agents, such that for every $d \in S$, $u_d(\eqClass{\vec{x}}, B_{\pi(d)}) + \eps \geq u_d(\eqClass{\vec{x}}, B_i)$  for every bundle $B_i$. 
+\end{restatable}
+
+
+We can now formally state our main result for cake cutting.
+\begin{restatable}{theorem}{cakecuttingtheorem}\label{thm:cake-main}
+For any constants $3 \le p \le k+1$ and $\eps$ such that $k < \log^{1-\delta}(1/\eps)$ for some constant $\delta > 0$, the problem of finding an $\eps$-approximate $3$-out-of-$p$-envy-free cake cut with $k$ cuts is \PPAD-complete. If, instead, the algorithm has black-box access to a value oracle, it requires a query complexity of $(1/\eps)^{\Omega(1/k)} / \polylog(1/\eps)$.
+\end{restatable}
+
+
+We defer the proofs and technical details to \Cref{sec:cake-cutting}.
