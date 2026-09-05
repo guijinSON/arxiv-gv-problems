@@ -1,0 +1,154 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 20,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "expected exactly 113 list entries",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "an edge ID is duplicated",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer list is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "edge ID outside the allowed range -1..111",
+        "rejected": true
+      },
+      "swap_one": {
+        "reason": "page-0 edge IDs are not strictly increasing",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 5192296858534827628530496329220096,
+    "exact_probability": 8.673617379884035e-19,
+    "exact_valid_partitions": 4503599627370496,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform canonical partitions of all edge IDs",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations_mean": 6717.25,
+    "baseline_pair_tests_mean": 6216.0,
+    "baseline_wall_clock_sec_max": 0.00048179994337260723,
+    "baseline_wall_clock_sec_mean": 0.00047196916420944035,
+    "demo_candidate_space": 4096,
+    "demo_valid_solution_count": 256,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "shipping_exact_solution_count": 4503599627370496,
+    "shipping_exact_valid_fraction": 8.673617379884035e-19,
+    "shipping_observed_fraction": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "alternating_input_rows": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_online_first_fit": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_short_vs_long": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "raw_spine_span_parity": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(m^2) exact endpoint comparisons and O(m+c) BFS",
+      "name": "explicit crossing graph plus BFS bipartite colouring",
+      "operations_max": 6808,
+      "operations_mean": 6717.25,
+      "pair_tests_max": 6216,
+      "pair_tests_mean": 6216.0,
+      "paper_location": "Theorem 9, NP-membership certificate check",
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.00048179994337260723,
+      "wall_clock_sec_mean": 0.00047196916420944035
+    }
+  },
+  "G7_scales": {
+    "doubled_active_vertices": 104,
+    "doubled_edges": 225,
+    "doubled_space_bits": 225,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_active_vertices": 52,
+    "shipping_edges": 112,
+    "shipping_space_bits": 112
+  },
+  "G8_canonical_key": {
+    "composed_transformation_checks": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "pass": true,
+    "real_transformation_checks": 20,
+    "transformations": [
+      "arbitrary vertex-label permutation carried through spine and edges",
+      "edge-row permutation with the page certificate carried by row",
+      "composition of vertex relabelling and edge-row permutation"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 454,
+    "answer_elements": 113,
+    "answer_tokens": 114,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 2
+      },
+      "placebo": {
+        "attempts": 3,
+        "solved": 3
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "compact_route_verifies": true,
+    "hinted_minus_placebo": -0.33333333333333337,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 292,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
