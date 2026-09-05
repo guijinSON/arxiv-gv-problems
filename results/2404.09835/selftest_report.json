@@ -1,0 +1,162 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop": {
+        "accepted": false,
+        "reason": "matrix row must contain exactly 48 entries"
+      },
+      "duplicate": {
+        "accepted": false,
+        "reason": "matrix entries must be pairwise distinct"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "answer matrix must contain one row, not zero rows"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "entry 0 is outside 0..65536"
+      },
+      "swap": {
+        "accepted": false,
+        "reason": "decoded square 0 is not contained in the polygon"
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_matches": true,
+    "pass": true,
+    "realistic_wrapper": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 1527137080811665524284244835915490666000433138642867975816562787045237289793820786166565695596746242080107723083795390791114354921787511996987176800133668188166916631124585907164961199985961826293526534440110793487810560000000000000,
+    "certified_valid_keys": 1,
+    "exact_solution_fraction": 6.548200633491954e-232,
+    "hits": 0,
+    "observed_fraction": 0.0,
+    "pass": true,
+    "sampling_prior": "uniform pairwise-distinct GF(p) row, already satisfying every shape/range/distinctness rule stated to the solver",
+    "total": 200000,
+    "wall_clock_sec": 22.474696
+  },
+  "G5_density_and_baseline": {
+    "demo_bruteforce_solution_count": 1,
+    "demo_candidate_space": 57120,
+    "pass": true,
+    "reference_algorithm_median_wall_clock_sec": 0.00063,
+    "reference_algorithm_operations": 139946,
+    "reference_algorithm_wall_clock_sec": 0.004931,
+    "reference_average_operations_per_instance": 17493,
+    "shipping_certified_solution_count": 1,
+    "shipping_exact_solution_fraction": 6.548200633491954e-232,
+    "shipping_sampled_density": 0.0,
+    "shipping_sampled_valid_hits": 0,
+    "shipping_sampled_valid_total": 200000,
+    "strongest_failing_attack": "random_restart_256",
+    "strongest_failing_attack_steps": 2048,
+    "strongest_failing_attack_wall_clock_sec": 0.231906
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "direct_offset_as_key": {
+        "attempts": 8,
+        "steps": 384,
+        "successes": 0,
+        "wall_clock_sec": 0.000331
+      },
+      "greedy_diagonal_fit": {
+        "attempts": 8,
+        "steps": 1536,
+        "successes": 0,
+        "wall_clock_sec": 0.000519
+      },
+      "outlier_offset_rank": {
+        "attempts": 8,
+        "steps": 2304,
+        "successes": 0,
+        "wall_clock_sec": 0.000358
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "steps": 2048,
+        "successes": 0,
+        "wall_clock_sec": 0.231906
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "average_operations_per_instance": 17493,
+      "complexity": "O(V+n^3) exact operations",
+      "median_wall_clock_sec": 0.00063,
+      "name": "integer-placement enumeration followed by dense modular Gaussian elimination",
+      "operations": 139946,
+      "solves": "8/8, as expected",
+      "wall_clock_sec": 0.004931
+    }
+  },
+  "G7_scales": {
+    "doubled_n": 96,
+    "doubled_reason": "ok",
+    "doubled_verifies": true,
+    "fixed_answer_length_axis_after_hard": "increase p at n=96",
+    "pass": true,
+    "preset_candidate_spaces": {
+      "demo": 57120,
+      "easy": 194340199499313549405623595292950706648026201431501467510554511947060943048172023669926333757098811624582953852596760025467498628577983769440982736305632155134853120000000000,
+      "hard": 999016469291368621573351193879395309967219894696334882527834618627965219389261883559265642086508450241790006480765643770107353975459317523446041745037287734462525944706492714270867498653456799153757685741638203125541167617514489046325019614436898561886395719313570469511168000000000000000,
+      "medium": 1527137080811665524284244835915490666000433138642867975816562787045237289793820786166565695596746242080107723083795390791114354921787511996987176800133668188166916631124585907164961199985961826293526534440110793487810560000000000000
+    }
+  },
+  "G8_canonical_key": {
+    "carried_witness_checks": 80,
+    "distinct_keys": 20,
+    "invariance_checks": 80,
+    "invariance_failures": [],
+    "pass": true,
+    "transformations": [
+      "arbitrary simultaneous decoder-row/key-coordinate relabelling",
+      "polygon boundary cyclic shift and reversal",
+      "global integer translation and independent axis reflections",
+      "composition of all three kinds"
+    ],
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 282,
+    "answer_elements": 48,
+    "answer_tokens": 71,
+    "arms": {
+      "bare": {
+        "attempts": 3,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 3,
+        "solved": 1
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "too_easy",
+    "intended_route_operations": 144,
+    "pass": false,
+    "within_caps": true
+  },
+  "all_passed": false,
+  "shipping_difficulty": "medium",
+  "shipping_params": {
+    "n": 48,
+    "p": 65537
+  },
+  "track": "B"
+}
