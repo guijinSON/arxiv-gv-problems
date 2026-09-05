@@ -1,0 +1,188 @@
+{
+  "G1_planted_verifies": {
+    "attempts": 20,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one_element": {
+        "reason": "every road trip must contain exactly three teams",
+        "rejected": true
+      },
+      "duplicate_one": {
+        "reason": "a team label appears more than once",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "team label is outside 0..n-1",
+        "rejected": true
+      },
+      "swap_members_between_trips": {
+        "reason": "travel 123487308668816 exceeds target 123487308668156",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "parsed_matches": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 3838913882342214507422549592783467604327408893510627396779644600106713346830727389702927369351822226327808986140457878407086080000000000000000000000,
+    "exact_probability_by_tree_identity": 2.85025901817712e-128,
+    "exact_valid_canonical_road_plans": 109418989131512359209,
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform ordered trip plans after quotienting trip permutation and trip reversal",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_operations_max": 15750,
+    "baseline_operations_mean": 15750.0,
+    "baseline_wall_clock_sec_max": 0.06410482292994857,
+    "baseline_wall_clock_sec_mean": 0.01172923535341397,
+    "demo_candidate_space": 90,
+    "demo_valid_solution_count": 9,
+    "pass": true,
+    "shipping_density_hits": 0,
+    "shipping_density_total": 200000,
+    "shipping_exact_fraction_by_tree_identity": 2.85025901817712e-128,
+    "shipping_exact_valid_canonical_plans": 109418989131512359209,
+    "shipping_observed_fraction": 0.0,
+    "shipping_structure_aware_space": 3838913882342214507422549592783467604327408893510627396779644600106713346830727389702927369351822226327808986140457878407086080000000000000000000000
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "by_hand_consecutive_labels": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_shortest_remaining_edge": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_sort_home_distance": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O(n^2) exact integer arithmetic and O(n^2) storage",
+      "name": "complete positive home-slack tree scan",
+      "operations_max": 15750,
+      "operations_mean": 15750.0,
+      "pair_tests_mean": 7875.0,
+      "paper_location": "Section 5 ordered three-game road-trip packing",
+      "solves": "8/8, as expected",
+      "wall_clock_sec_max": 0.06410482292994857,
+      "wall_clock_sec_mean": 0.01172923535341397
+    }
+  },
+  "G7_scales": {
+    "answer_elements_doubled": 252,
+    "answer_elements_shipping": 126,
+    "doubled_candidate_space": 3189752964634700400967933114123961307490024823816403669319693982745582918764130245359939467950152786572507842067888328107867002248056117047279048265481004316920756878293061907409281284054807563255731095694842817716350485489201635400493937525970750282746684360762403331116454761281815153257451920377774080000000000000000000000000000000000000000000,
+    "doubled_n": 252,
+    "doubled_verify_reason": "ok",
+    "pass": true,
+    "shipping_candidate_space": 3838913882342214507422549592783467604327408893510627396779644600106713346830727389702927369351822226327808986140457878407086080000000000000000000000,
+    "shipping_n": 126
+  },
+  "G8_canonical_key": {
+    "composed_transformation_checks": 20,
+    "failures": [],
+    "invariance_checks": 20,
+    "key_limit": "sorted weighted-row profiles; full weighted-graph canonization is not attempted",
+    "pass": true,
+    "real_transformation_checks": 20,
+    "transformations": [
+      "arbitrary permutation of all away-team labels with carried plan",
+      "composition of two independent away-team permutations"
+    ],
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 479,
+    "answer_elements": 126,
+    "answer_tokens": 120,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "compact_route_verifies": true,
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "oracle_unreachable_http_403_key_limit",
+    "intended_route_operations": 126,
+    "pass": true
+  },
+  "all_passed": true,
+  "certificate_language": {
+    "bounds": {
+      "each_team_exactly_once": true,
+      "language_size": "n!/((n/3)!*2^(n/3))",
+      "number_of_trips": "n/3",
+      "quotiented_symmetries": [
+        "trip permutation",
+        "trip reversal"
+      ],
+      "team_max": "n-1",
+      "team_min": 0,
+      "trip_length": 3
+    },
+    "description": "A JSON list of n/3 ordered triples partitioning team labels 0..n-1. Trip order is immaterial and reversing a trip is equivalent, so the structure-aware language uses lexicographically sorted trips with each trip no greater than its reversal."
+  },
+  "problem_profile": {
+    "certificate_form": "integer_tuple",
+    "computational_core": "exact_cover",
+    "domain_essentiality": "native",
+    "hardness_basis": "Track B: Section 5's standard ordered-trip enumeration has n!/((n/3)!*2^(n/3)) cases (340,540,200 already at n=15); for the shipping n=126 distribution the stronger home-slack tree scan is O(n^2), performs 7,875 pair tests and 15,750 exact arithmetic operations, measured 0.0117 seconds mean wall-clock over 8/8 successful seeds, while the compact residue invariant needs 126 modular reductions.",
+    "intuition_description": "Home-to-venue distances have the same residue modulo n+1 precisely inside each optimal three-game road trip; without noticing this, a solver must search triplet exact covers or reconstruct the tree metric.",
+    "intuition_type": "invariant",
+    "max_answer_tokens": 125,
+    "native_domain": "optimization",
+    "native_objects": [
+      "symmetric integer venue-distance matrix",
+      "ordered three-game road trips"
+    ],
+    "object_regime": "finite_discrete",
+    "reduction": null,
+    "reduction_kind": "none",
+    "reduction_source": "paper_central",
+    "verification_operations": [
+      "partition coverage check",
+      "exact integer route-length summation",
+      "integer threshold comparison"
+    ]
+  },
+  "shipping_difficulty": "hard",
+  "track": "B"
+}
