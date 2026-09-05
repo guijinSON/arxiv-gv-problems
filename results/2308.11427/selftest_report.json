@@ -1,0 +1,216 @@
+{
+  "paper": "2308.11427",
+  "track": "B",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "n": 128,
+    "factors": 96,
+    "modulus": 1009
+  },
+  "G1_planted_verifies": {
+    "pass": true,
+    "successes": 16,
+    "attempts": 16,
+    "json_native_roundtrips": 16,
+    "demo_direct_expansion_matches": true,
+    "demo_idempotence_checks": 64,
+    "demo_ybe_checks": 512
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "cases": {
+      "drop": {
+        "rejected": true,
+        "reason": "wrong number of terms: expected 6"
+      },
+      "swap": {
+        "rejected": true,
+        "reason": "terms must be ordered by increasing generator index"
+      },
+      "duplicate": {
+        "rejected": true,
+        "reason": "generator indices must be distinct; duplicate 0"
+      },
+      "empty": {
+        "rejected": true,
+        "reason": "answer cannot be empty"
+      },
+      "out_of_range": {
+        "rejected": true,
+        "reason": "generator index out of range at term 0"
+      }
+    },
+    "distinct_reasons": 5
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "realistic_response_recovered": true,
+    "garbage_returns_none": true
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 200000,
+    "empirical_probability": 0.0,
+    "candidate_space": 1024192512,
+    "exact_probability": 9.763789407591373e-10,
+    "prior": "uniform over three independent nonzero power-image branch scalars; all stated shape, proportionality, and exponent constraints enforced"
+  },
+  "G5_density_and_baseline": {
+    "pass": true,
+    "shipping_sampled_solution_hits": 0,
+    "shipping_sampled_solution_total": 200000,
+    "shipping_sampled_solution_fraction": 0.0,
+    "shipping_exact_solution_fraction": 9.763789407591373e-10,
+    "strongest_attack_wall_sec": 0.019093,
+    "strongest_attack_operations": 294168,
+    "strongest_attack_mean_operations": 36771,
+    "strongest_attack_solved_instances": 8,
+    "demo_exact_valid_certificate_count": 1
+  },
+  "G6_adversary_panel": {
+    "pass": true,
+    "attacks": {
+      "outlier_modal_coefficient": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "ignore_f_pairing_center_guess": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "adjacent_pairing_guess": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_leading_product": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "copy_terminal_factors": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "single_shared_scalar_ansatz": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_256": {
+        "successes": 0,
+        "attempts": 8
+      }
+    },
+    "reference_algorithm": {
+      "name": "PBW coefficient-sum normal-form scan",
+      "complexity": "O(branches*factors*n) exact finite-field operations; O(n) working memory",
+      "wall_clock_sec": 0.019093,
+      "mean_wall_clock_sec": 0.002387,
+      "operations": 294168,
+      "mean_operations": 36771,
+      "solves": "8/8, as expected",
+      "instances": [
+        {
+          "seed": 8100,
+          "operations": 36771,
+          "wall_clock_sec": 0.002325,
+          "solved": true
+        },
+        {
+          "seed": 8101,
+          "operations": 36771,
+          "wall_clock_sec": 0.002317,
+          "solved": true
+        },
+        {
+          "seed": 8102,
+          "operations": 36771,
+          "wall_clock_sec": 0.00253,
+          "solved": true
+        },
+        {
+          "seed": 8103,
+          "operations": 36771,
+          "wall_clock_sec": 0.002411,
+          "solved": true
+        },
+        {
+          "seed": 8104,
+          "operations": 36771,
+          "wall_clock_sec": 0.002355,
+          "solved": true
+        },
+        {
+          "seed": 8105,
+          "operations": 36771,
+          "wall_clock_sec": 0.002303,
+          "solved": true
+        },
+        {
+          "seed": 8106,
+          "operations": 36771,
+          "wall_clock_sec": 0.002328,
+          "solved": true
+        },
+        {
+          "seed": 8107,
+          "operations": 36771,
+          "wall_clock_sec": 0.002525,
+          "solved": true
+        }
+      ]
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "base_n": 128,
+    "doubled_n": 256,
+    "base_dense_coefficients": 36480,
+    "doubled_dense_coefficients": 72960,
+    "base_answer_terms": 6,
+    "doubled_answer_terms": 6,
+    "doubled_planted_verifies": true
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_checks": 80,
+    "carried_certificate_checks": 80,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20,
+    "symmetries_tested": [
+      "global generator relabelling carrying the pivot",
+      "summand reorder",
+      "nonfinal factor reorder",
+      "independent endpoint swaps within f-cycles in every dense row",
+      "composition of all four"
+    ]
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": {
+        "solved": 0,
+        "attempts": 3
+      },
+      "hinted": {
+        "solved": 3,
+        "attempts": 3
+      },
+      "placebo": {
+        "solved": 2,
+        "attempts": 3
+      }
+    },
+    "hinted_minus_placebo": 0.33333333333333337,
+    "hinted_verdict": "too_easy",
+    "answer_chars": 67,
+    "answer_tokens": 17,
+    "answer_elements": 12,
+    "intended_route_operations": 51,
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    }
+  },
+  "all_passed": true
+}
