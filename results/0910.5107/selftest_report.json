@@ -1,0 +1,158 @@
+{
+  "G1_planted_verifies": {
+    "checked": 12,
+    "failures": [],
+    "pass": true
+  },
+  "G2_rejects_corruption": {
+    "cases": {
+      "drop_one": {
+        "reason": "wrong number of steps: expected 47, got 46",
+        "rejected": true
+      },
+      "duplicate": {
+        "reason": "step 3 repeats an already eliminated victim",
+        "rejected": true
+      },
+      "empty": {
+        "reason": "answer is empty",
+        "rejected": true
+      },
+      "out_of_range": {
+        "reason": "step 1 has a row index outside 0..174",
+        "rejected": true
+      },
+      "swap_victim_dominator": {
+        "reason": "step 1 is not strict row dominance at column C0",
+        "rejected": true
+      }
+    },
+    "distinct_reasons": 5,
+    "pass": true
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G4_guess_resistance": {
+    "candidate_space": 18245143447234509611971330279182239281190433318719100788027306004504886477146840038316353589553455234210034289410477342327476378959755641589247950904857965641248272889280277135658812640308756480000000000000000000000,
+    "hits": 0,
+    "measured_probability": 0.0,
+    "pass": true,
+    "sampler": "uniform exact-length alternating words with distinct victims, target last, and active in-range dominators",
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "baseline_payoff_comparisons_max": 375550792,
+    "baseline_payoff_comparisons_mean": 348009726.75,
+    "baseline_rounds_mean": 47.0,
+    "baseline_wall_clock_sec_max": 2.128725229995325,
+    "baseline_wall_clock_sec_mean": 1.629744174744701,
+    "demo_candidate_space": 2016,
+    "demo_exact_valid_answers": 4,
+    "pass": true,
+    "reference_attempts": 8,
+    "reference_successes": 8,
+    "shipping_density_hits": 0,
+    "shipping_density_samples": 200000,
+    "shipping_solution_fraction_estimate": 0.0
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_highest_label_branch": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "greedy_lowest_label_branch": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_payoff_histogram": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_backward_trace_64": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "failing_panel_wall_clock_sec": 0.13254582695662975,
+    "pass": true,
+    "reference_algorithm": {
+      "complexity": "O((R+C)(R^2*C+C^2*R)) exact payoff comparisons",
+      "name": "Theorem 6.1 repeated strict-dominance scan",
+      "operations_mean": 348009726.75,
+      "rounds_mean": 47.0,
+      "solves": "8/8, as expected",
+      "wall_clock_sec_mean": 1.629744174744701
+    },
+    "seeds": [
+      810,
+      811,
+      812,
+      813,
+      814,
+      815,
+      816,
+      817
+    ]
+  },
+  "G7_scales": {
+    "answer_length_base": 47,
+    "answer_length_doubled": 47,
+    "base_candidate_space": 18245143447234509611971330279182239281190433318719100788027306004504886477146840038316353589553455234210034289410477342327476378959755641589247950904857965641248272889280277135658812640308756480000000000000000000000,
+    "base_n": 64,
+    "doubled_build_sec": 0.0024070690851658583,
+    "doubled_candidate_space": 3084906294896262735075881296475241330814995150116125160693229706855484956681597705859227681903039114358984590200813572939696614184787952807834775564238008941772908231562226871504583564277701581734544416513572009410560000000000000000000000,
+    "doubled_n": 128,
+    "pass": true,
+    "verify_reason": "ok"
+  },
+  "G8_canonical_key": {
+    "failures": [],
+    "invariance_checks": 60,
+    "invariant": "target-rooted Merkle normal form of the full payoff-incidence tree",
+    "pass": true,
+    "real_transformation_witness_checks": 60,
+    "unrelated_distinct_keys": 20,
+    "unrelated_instances": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 506,
+    "answer_elements": 47,
+    "answer_tokens": 127,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "service_errors": 4,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "service_errors": 4,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "service_errors": 4,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "chars": 2000,
+      "elements": 256,
+      "operations": 300
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "unreachable",
+    "intended_route_operations": 70,
+    "pass": true
+  },
+  "all_passed": true,
+  "shipping_difficulty": "easy",
+  "shipping_params": {
+    "depth": 24,
+    "n": 64
+  },
+  "track": "B"
+}
