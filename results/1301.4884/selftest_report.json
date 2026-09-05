@@ -1,0 +1,150 @@
+{
+  "G1_planted_verifies": {
+    "answers_json_native": true,
+    "attempts": 12,
+    "pass": true,
+    "verified": 12
+  },
+  "G2_rejects_corruption": {
+    "distinct_reasons": 5,
+    "pass": true,
+    "results": {
+      "drop_one": {
+        "accepted": false,
+        "reason": "wrong row count: expected 6 vectors, got 5"
+      },
+      "duplicate_row": {
+        "accepted": false,
+        "reason": "duplicate representative: the six selected vectors must be distinct"
+      },
+      "empty": {
+        "accepted": false,
+        "reason": "empty answer: expected six selected representatives"
+      },
+      "out_of_range": {
+        "accepted": false,
+        "reason": "out of range: a rational coordinate exceeds the declared bound"
+      },
+      "swap_rows": {
+        "accepted": false,
+        "reason": "candidate mismatch: answer row 0 is not listed for fiber 0"
+      }
+    }
+  },
+  "G3_round_trip": {
+    "garbage_returns_none": true,
+    "parsed_equals_planted": true,
+    "pass": true
+  },
+  "G4_guess_resistance": {
+    "hits": 0,
+    "observed_probability": 0.0,
+    "pass": true,
+    "prior": "independently uniform over the listed representative in each fiber",
+    "structure_aware_space": 16777216,
+    "total": 200000
+  },
+  "G5_density_and_baseline": {
+    "demo_exact_valid_answers": 1,
+    "demo_language_size": 1,
+    "easy_exact_valid_answers": 1,
+    "easy_language_size": 46656,
+    "pass": true,
+    "shipping_density": {
+      "hits": 0,
+      "observed_probability": 0.0,
+      "total": 200000
+    },
+    "strongest_attack_cost": {
+      "attempts": 8,
+      "complexity": "O(n^2) compatibility construction; O(n^6) worst-case search",
+      "exact_arithmetic_operations_median": 64876.0,
+      "name": "exact orbit-compatibility tables plus depth-first constraint propagation",
+      "search_nodes_median": 167.0,
+      "successes": 8,
+      "wall_clock_sec_median": 0.051178309484384954
+    }
+  },
+  "G6_adversary_panel": {
+    "attacks": {
+      "greedy_no_backtracking": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "outlier_l1_coordinate": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "random_restart_256": {
+        "attempts": 8,
+        "successes": 0
+      },
+      "unrotated_24cell_ansatz": {
+        "attempts": 8,
+        "successes": 0
+      }
+    },
+    "pass": true,
+    "reference_algorithm": {
+      "attempts": 8,
+      "complexity": "O(n^2) compatibility construction; O(n^6) worst-case search",
+      "exact_arithmetic_operations_median": 64876.0,
+      "name": "exact orbit-compatibility tables plus depth-first constraint propagation",
+      "search_nodes_median": 167.0,
+      "solves": "8/8, as expected on Track B",
+      "successes": 8,
+      "wall_clock_sec_median": 0.051178309484384954
+    }
+  },
+  "G7_scales": {
+    "doubled_request_actual_n": 36,
+    "doubled_search_space": 2176782336,
+    "pass": true,
+    "shipping_n": 16
+  },
+  "G8_canonical_key": {
+    "invariant": "SHA-256 of the exact full Gram-value multiset, not seed or render text",
+    "invariant_transformations": 20,
+    "pass": true,
+    "transformation_witnesses_verified": 20,
+    "unrelated_attempts": 20,
+    "unrelated_distinct": 20
+  },
+  "G9_no_tool_suitability": {
+    "answer_chars": 387,
+    "answer_elements": 48,
+    "answer_tokens": 97,
+    "arms": {
+      "bare": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "hinted": {
+        "attempts": 0,
+        "solved": 0
+      },
+      "placebo": {
+        "attempts": 0,
+        "solved": 0
+      }
+    },
+    "caps": {
+      "answer_chars": 2000,
+      "answer_elements": 256,
+      "intended_route_operations": 300
+    },
+    "hinted_minus_placebo": 0.0,
+    "hinted_verdict": "not_run",
+    "intended_route_operations": 192,
+    "operation_note": "two exact additions/sign changes normalize each of 6n candidates; set insertion and equality comparisons are not arithmetic operations",
+    "pass": true
+  },
+  "all_passed": true,
+  "paper": "1301.4884",
+  "shipping_difficulty": "hard",
+  "shipping_params": {
+    "crowding": 5,
+    "n": 16
+  },
+  "track": "B"
+}
