@@ -98,9 +98,16 @@ MIN_DYNAMICS_OPT_ANALYTIC_SHARE = 0.15  # dynamics / optimization / certified an
 MAX_SINGLE_INTUITION_SHARE = 0.30       # no single intuition_type above this
 
 # Ceiling on how many dynamics/optimization/analytic families the 12,167-paper pool
-# can ever yield: ~524 papers in the dynamics_opt arXiv-category bucket at the ~25%
-# acceptance rate measured across the corpus so far.
-POOL_CAP_DYNAMICS_OPT_ANALYTIC = 131
+# can ever yield: ~524 papers in the dynamics_opt arXiv-category bucket, times the
+# acceptance rate.
+#
+# 2026-09-06: this was 131, computed at a ~25% acceptance rate.  That rate came from
+# the deficit-based scheduler, which deliberately fed the hardest under-represented
+# buckets and so measured the acceptance rate of a worst case, not of the pool.  Under
+# uniform random draw the measured rate is 62.2% (414 accepted / 666 resolved), so the
+# real ceiling is ~326, not 131 -- the old figure understated it by 2.5x and made the
+# 15% floor look unreachable above ~873 problems when the true bound is ~2,170.
+POOL_CAP_DYNAMICS_OPT_ANALYTIC = 326
 
 UNKNOWN = "unknown"            # we did not measure it
 UNCLASSIFIED = "unclassified"  # free text that no taxonomy entry matched
@@ -733,9 +740,10 @@ def print_gate(rows, advisory, out):
     failed = [q[0] for q in quotas if not q[3]]
     out.append("")
     deadlock = int(POOL_CAP_DYNAMICS_OPT_ANALYTIC / MIN_DYNAMICS_OPT_ANALYTIC_SHARE)
-    out.append(f"  note: the pool holds ~{POOL_CAP_DYNAMICS_OPT_ANALYTIC} papers that could "
-               f"ever yield a dynamics/optimization/analytic")
-    out.append(f"        family, so a release above ~{deadlock} problems cannot satisfy the "
+    out.append(f"  note: ~524 pool papers sit in the dynamics/optimization/analysis bucket, "
+               f"which at the measured 62.2%")
+    out.append(f"        acceptance rate yields ~{POOL_CAP_DYNAMICS_OPT_ANALYTIC} families ever, "
+               f"so a release above ~{deadlock} problems cannot satisfy the "
                f"{100*MIN_DYNAMICS_OPT_ANALYTIC_SHARE:.0f}% floor at all.")
     out.append("        That is a pool defect, not a builder defect -- which is why --advisory")
     out.append("        exists.  Retrieve more non-discrete papers before tightening this.")
