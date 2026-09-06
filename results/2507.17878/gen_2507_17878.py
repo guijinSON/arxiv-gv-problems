@@ -15,6 +15,7 @@ from collections import Counter, deque
 
 
 DIFFICULTY = {
+    "demo": {"n": 3, "degree3_pct": 35},
     "easy": {"n": 8, "degree3_pct": 35},
     "medium": {"n": 16, "degree3_pct": 40},
     "hard": {"n": 96, "degree3_pct": 45},

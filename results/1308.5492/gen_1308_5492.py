@@ -105,7 +105,7 @@ CERTIFICATE_LANGUAGE = {
 DIFFICULTY = {
     "demo": {
         "n": 650,
-        "prime_floor": 10,
+        "prime_floor": 500_000,
         "min_gap_slot": 1,
         "gap_slots": 1,
         "power_max": 8,

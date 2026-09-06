@@ -17,7 +17,7 @@ from typing import Iterable
 
 
 DIFFICULTY = {
-    "demo": {"n": 3},
+    "demo": {"n": 2},
     "easy": {"n": 11},
     "medium": {"n": 15},
     "hard": {"n": 20},

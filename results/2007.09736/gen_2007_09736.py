@@ -19,7 +19,7 @@ from collections import Counter
 
 
 DIFFICULTY = {
-    "demo": {"n": 4, "q": 4},
+    "demo": {"n": 2, "q": 4},
     "easy": {"n": 5, "q": 4},
     "medium": {"n": 40, "q": 6},
     "hard": {"n": 56, "q": 6},

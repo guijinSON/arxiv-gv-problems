@@ -25,7 +25,7 @@ DIFFICULTY = {
     "demo": {
         "n": 24,
         "rows": 12,
-        "weight": 24,
+        "weight": 4,
         "marker_vertices": 5,
         "marker_edges": 6,
     },

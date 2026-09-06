@@ -22,7 +22,7 @@ from collections import deque
 
 
 DIFFICULTY = {
-    "demo": {"n": 4},
+    "demo": {"n": 12},
     "easy": {"n": 128},
     "medium": {"n": 160},
     "hard": {"n": 192},

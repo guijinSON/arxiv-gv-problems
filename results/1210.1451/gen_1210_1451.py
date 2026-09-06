@@ -100,10 +100,10 @@ NATIVE: dict = {
 
 DIFFICULTY: dict = {
     "demo": {
-        "n": 8,
+        "n": 4,
         "modulus": 10,
-        "center_min": 10,
-        "center_max": 24,
+        "center_min": 6,
+        "center_max": 8,
     },
     "easy": {
         "n": 24,

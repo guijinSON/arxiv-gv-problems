@@ -81,7 +81,7 @@ NATIVE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 6, "exceptions": 2, "compactness": 0, "screen_restarts": 4},
+    "demo": {"n": 4, "exceptions": 2, "compactness": 0, "screen_restarts": 4},
     "easy": {"n": 36, "exceptions": 5, "compactness": 1, "screen_restarts": 32},
     "medium": {"n": 48, "exceptions": 6, "compactness": 2, "screen_restarts": 48},
     "hard": {"n": 60, "exceptions": 7, "compactness": 3, "screen_restarts": 64},

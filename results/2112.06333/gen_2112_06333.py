@@ -17,7 +17,7 @@ from collections import Counter
 
 
 DIFFICULTY = {
-    "demo": {"n": 4, "matchings": 2, "triangle_free": False},
+    "demo": {"n": 3, "matchings": 2, "triangle_free": False},
     "easy": {"n": 36, "matchings": 4, "triangle_free": True},
     "medium": {"n": 72, "matchings": 4, "triangle_free": True},
     "hard": {"n": 108, "matchings": 4, "triangle_free": True},

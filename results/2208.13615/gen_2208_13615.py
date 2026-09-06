@@ -106,7 +106,7 @@ CERTIFICATE_LANGUAGE = {
 
 DIFFICULTY = {
     "demo": {
-        "n": 8, "extra_edges": 5, "decoys": 2,
+        "n": 6, "extra_edges": 2, "decoys": 0,
         "disclose": "pages",
     },
     "easy": {

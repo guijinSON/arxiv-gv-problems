@@ -19,7 +19,7 @@ from collections import Counter
 DIFFICULTY = {
     # This deliberately easy complete graph makes the README example readable
     # and gives the hardening ladder an unambiguous first rung.
-    "demo": {"n": 4, "k": 3, "mode": "demo"},
+    "demo": {"n": 3, "k": 2, "mode": "demo"},
     "easy": {"n": 24, "k": 3, "mode": "random"},
     "medium": {"n": 64, "k": 3, "mode": "random"},
     "hard": {"n": 128, "k": 3, "mode": "random"},

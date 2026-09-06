@@ -144,7 +144,7 @@ PLACEBO_HINT = (
 )
 
 DIFFICULTY = {
-    "demo":   {"dims": [3, 3, 3],       "d": 1, "B": 3},
+    "demo":   {"dims": [2, 2, 2],       "d": 1, "B": 2},
     "easy":   {"dims": [6, 6, 6],       "d": 2, "B": 5},
     "medium": {"dims": [8, 8, 8],       "d": 2, "B": 5},
     "hard":   {"dims": [10, 10, 10],    "d": 2, "B": 6},

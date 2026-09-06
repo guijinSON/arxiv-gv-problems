@@ -23,7 +23,7 @@ from collections import deque
 # 2-subsets, so the public graph has 15*n vertices.  Degree five is the useful
 # sparse/hard window found by the local-solver sweep.
 DIFFICULTY = {
-    "demo": {"n": 4, "degree": 3},
+    "demo": {"n": 1, "degree": 6},
     "easy": {"n": 18, "degree": 5},
     "medium": {"n": 24, "degree": 5},
     "hard": {"n": 30, "degree": 5},

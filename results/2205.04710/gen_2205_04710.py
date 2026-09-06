@@ -15,7 +15,7 @@ from typing import Any
 
 
 DIFFICULTY = {
-    "demo": {"n": 3},
+    "demo": {"n": 2},
     "easy": {"n": 24},
     "medium": {"n": 28},
     "hard": {"n": 32},

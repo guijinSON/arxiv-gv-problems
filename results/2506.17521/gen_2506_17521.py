@@ -86,7 +86,7 @@ NATIVE = {
 # n is the order of each side of the hidden regular bipartite graph.  degree is
 # its degree and also the number of exchangeable perfect-matching classes.
 DIFFICULTY = {
-    "demo": {"n": 3, "degree": 2, "label_decoys": 0},
+    "demo": {"n": 2, "degree": 2, "label_decoys": 0},
     "easy": {"n": 11, "degree": 5, "label_decoys": 0},
     "medium": {"n": 17, "degree": 5, "label_decoys": 1},
     "hard": {"n": 23, "degree": 5, "label_decoys": 2},

@@ -88,7 +88,7 @@ NATIVE = {
 
 DIFFICULTY = {
     "demo": {
-        "n": 9,
+        "n": 8,
         "components": 4,
         "filter_min_nodes": 0,
         "filter_max_nodes": 0,

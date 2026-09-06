@@ -132,7 +132,7 @@ NATIVE = {
 # ---------------------------------------------------------------------------
 
 DIFFICULTY = {
-    "demo":   {"n": 4, "num_max": 3, "den_max": 1, "b_num_max": 1, "scramble": False},
+    "demo":   {"n": 3, "num_max": 3, "den_max": 1, "b_num_max": 1, "scramble": False},
     "easy":   {"n": 6, "num_max": 6, "den_max": 1, "b_num_max": 2, "scramble": True},
     "medium": {"n": 7, "num_max": 8, "den_max": 2, "b_num_max": 3, "scramble": True},
     "hard":   {"n": 8, "num_max": 9, "den_max": 2, "b_num_max": 4, "scramble": True},

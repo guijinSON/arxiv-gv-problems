@@ -62,7 +62,7 @@ TRACK = "B"
 # ---------------------------------------------------------------------------
 DIFFICULTY = {
     # Hand rung: weights below 50, critical exponents below 10, q = 5.
-    "demo":   {"scale": 3,      "q": 5},
+    "demo":   {"scale": 2,      "q": 5},
     "easy":   {"scale": 60,     "q": 11},
     "medium": {"scale": 2000,   "q": 31},
     "hard":   {"scale": 200000, "q": 101},

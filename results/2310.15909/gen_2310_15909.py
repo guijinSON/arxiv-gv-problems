@@ -87,7 +87,7 @@ CERTIFICATE_LANGUAGE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 13, "edge_factor": 5},
+    "demo": {"n": 13, "edge_factor": 3},
     "easy": {"n": 37, "edge_factor": 8},
     "medium": {"n": 109, "edge_factor": 8},
     "hard": {"n": 229, "edge_factor": 8},

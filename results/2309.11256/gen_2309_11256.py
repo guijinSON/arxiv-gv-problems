@@ -20,7 +20,7 @@ from typing import Any
 
 
 DIFFICULTY = {
-    "demo": {"n": 4, "coefficient_max": 7},
+    "demo": {"n": 3, "coefficient_max": 5},
     "easy": {"n": 18, "coefficient_max": 127},
     "medium": {"n": 36, "coefficient_max": 127},
     "hard": {"n": 72, "coefficient_max": 127},

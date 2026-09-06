@@ -102,7 +102,7 @@ CERTIFICATE_LANGUAGE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 4, "root_bound": 20, "tensor_power": 2},
+    "demo": {"n": 4, "root_bound": 8, "tensor_power": 2},
     "easy": {"n": 32, "root_bound": 25000, "tensor_power": 3},
     "medium": {"n": 52, "root_bound": 50000, "tensor_power": 4},
     "hard": {"n": 64, "root_bound": 75000, "tensor_power": 5},

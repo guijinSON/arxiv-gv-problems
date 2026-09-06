@@ -95,7 +95,7 @@ CERTIFICATE_LANGUAGE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 3, "coefficient_span": 9},
+    "demo": {"n": 3, "coefficient_span": 2},
     "easy": {"n": 48, "coefficient_span": 9},
     "medium": {"n": 66, "coefficient_span": 9},
     "hard": {"n": 84, "coefficient_span": 9},

@@ -81,7 +81,7 @@ NATIVE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 8, "key_bits": 8, "decoder_decoys": 0, "anchors": 2},
+    "demo": {"n": 8, "key_bits": 8, "decoder_decoys": 0, "anchors": 4},
     "easy": {"n": 112, "key_bits": 88, "decoder_decoys": 32, "anchors": 0},
     "medium": {"n": 116, "key_bits": 92, "decoder_decoys": 64, "anchors": 0},
     "hard": {"n": 120, "key_bits": 96, "decoder_decoys": 96, "anchors": 0},

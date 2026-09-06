@@ -23,8 +23,8 @@ from collections import Counter
 
 DIFFICULTY = {
     "demo": {
-        "n": 5,
-        "clue_density": 0.52,
+        "n": 3,
+        "clue_density": 0.7,
         "filter_nodes": 0,
         "attack_filter": False,
     },

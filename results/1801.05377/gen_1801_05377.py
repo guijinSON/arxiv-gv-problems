@@ -88,7 +88,7 @@ NATIVE: dict = {
 
 DIFFICULTY: dict = {
     "demo": {
-        "n": 3, "modulus": 17, "base_bound": 2, "h_bound": 1,
+        "n": 3, "modulus": 7, "base_bound": 1, "h_bound": 1,
     },
     "easy": {
         "n": 8192, "modulus": 2305843009213693951,

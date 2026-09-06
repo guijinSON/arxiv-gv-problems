@@ -20,7 +20,7 @@ from typing import Any
 DIFFICULTY = {
     # The demo rung is intentionally readable and is expected to be defeated by
     # the oracle loop.  It exists for examples and exact enumeration.
-    "demo": {"n": 10, "slack": 1},
+    "demo": {"n": 6, "slack": 1},
     # In the crowded rungs only a few nonzero residues are absent.  A local
     # greedy choice is therefore liable to strand the final few elements.
     "easy": {"n": 120, "slack": 6},

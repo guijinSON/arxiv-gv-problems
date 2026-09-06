@@ -101,7 +101,7 @@ CERTIFICATE_LANGUAGE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 6, "moment_count": 10, "prime_min": 2, "prime_span": 12},
+    "demo": {"n": 6, "moment_count": 10, "prime_min": 2, "prime_span": 1},
     "easy": {"n": 40, "moment_count": 10, "prime_min": 100, "prime_span": 800},
     "medium": {"n": 80, "moment_count": 10, "prime_min": 1_000, "prime_span": 8_000},
     "hard": {"n": 128, "moment_count": 10, "prime_min": 10_000, "prime_span": 50_000},

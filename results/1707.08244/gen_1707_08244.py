@@ -85,7 +85,7 @@ NATIVE = {
 # n grows the coefficient haystack.  k grows the work of the generic sparse
 # recovery while the certificate remains a single n-entry coefficient vector.
 DIFFICULTY = {
-    "demo": {"n": 11, "m": 8, "k": 3},
+    "demo": {"n": 4, "m": 4, "k": 3},
     "easy": {"n": 80, "m": 18, "k": 7},
     "medium": {"n": 120, "m": 28, "k": 11},
     "hard": {"n": 160, "m": 40, "k": 15},

@@ -17,7 +17,7 @@ import re
 
 DIFFICULTY = {
     "demo": {
-        "n": 4,
+        "n": 3,
         "layer_ratio": 0.75,
         "max_width": 1,
         "canvas_factor": 2,

@@ -37,7 +37,7 @@ TRACK = "B"
 DIFFICULTY = {
     # Hand rung: no QM twist at all, so the displayed trinomial is literally
     # x + x^(2^k-1) + x^(2^k+1), the polynomial of Proposition 2.6.
-    "demo": {"m": 9, "n_targets": 2, "n_decoys": 2, "twist_level": 0},
+    "demo": {"m": 9, "n_targets": 1, "n_decoys": 0, "twist_level": 0},
     # Coefficients twisted (a, b random), exponents still the paper's.
     "easy": {"m": 15, "n_targets": 3, "n_decoys": 4, "twist_level": 1},
     # Full quasi-multiplicative twist: exponents scrambled by a random d with

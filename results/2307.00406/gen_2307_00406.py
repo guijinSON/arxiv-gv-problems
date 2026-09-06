@@ -71,7 +71,7 @@ NATIVE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 5, "coeff_max": 3, "factor_max": 3},
+    "demo": {"n": 5, "coeff_max": 2, "factor_max": 2},
     "easy": {"n": 25, "coeff_max": 9, "factor_max": 5},
     "medium": {"n": 33, "coeff_max": 15, "factor_max": 6},
     "hard": {"n": 41, "coeff_max": 31, "factor_max": 7},

@@ -125,7 +125,7 @@ NATIVE = {
 # grows.
 # ---------------------------------------------------------------------------
 DIFFICULTY = {
-    "demo": {"n": 3, "t_num_max": 6, "t_den_max": 1,
+    "demo": {"n": 3, "t_num_max": 5, "t_den_max": 1,
              "mu_num_max": 4, "mu_den_max": 1},
     "easy": {"n": 4, "t_num_max": 10, "t_den_max": 1,
              "mu_num_max": 8, "mu_den_max": 1},

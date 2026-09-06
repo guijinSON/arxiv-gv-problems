@@ -86,7 +86,7 @@ NATIVE = {
 # n controls the number q=n(n-1)/2 of oriented edges.  decoys controls the
 # number of redundant four-cycle constraints without lengthening the answer.
 DIFFICULTY = {
-    "demo": {"n": 4, "decoys": 2, "local_restarts": 2},
+    "demo": {"n": 3, "decoys": 0, "local_restarts": 2},
     "easy": {"n": 9, "decoys": 36, "local_restarts": 4},
     "medium": {"n": 12, "decoys": 160, "local_restarts": 6},
     "hard": {"n": 15, "decoys": 600, "local_restarts": 8},

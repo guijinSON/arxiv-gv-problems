@@ -96,7 +96,7 @@ CERTIFICATE_LANGUAGE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 13, "q": 5},
+    "demo": {"n": 11, "q": 5},
     "easy": {"n": 900, "q": 59},
     "medium": {"n": 1400, "q": 73},
     "hard": {"n": 1800, "q": 83},

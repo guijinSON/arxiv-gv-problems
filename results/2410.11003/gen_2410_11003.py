@@ -85,9 +85,9 @@ NATIVE: dict = {
 DIFFICULTY: dict = {
     "demo": {
         "n": 5,
-        "modulus_bits": 8,
-        "tag_bits": 13,
-        "coefficient_bound": 8,
+        "modulus_bits": 7,
+        "tag_bits": 20,
+        "coefficient_bound": 4,
         "perturb_ppm": 166_000,
     },
     "easy": {

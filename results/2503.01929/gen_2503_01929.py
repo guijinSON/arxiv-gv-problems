@@ -19,6 +19,7 @@ from itertools import combinations
 
 
 DIFFICULTY: dict = {
+    "demo": {"n": 2, "width_factor": 0.5},
     "easy": {"n": 10, "width_factor": 0.5},
     "medium": {"n": 20, "width_factor": 0.5},
     "hard": {"n": 32, "width_factor": 0.5},

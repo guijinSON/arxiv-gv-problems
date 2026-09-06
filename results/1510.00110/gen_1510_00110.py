@@ -83,7 +83,7 @@ _MODULI = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 2, "side": 2, "moduli": "toy"},
+    "demo": {"n": 1, "side": 2, "moduli": "toy"},
     "easy": {"n": 128, "side": 6, "moduli": "p31"},
     "medium": {"n": 256, "side": 6, "moduli": "p61"},
     "hard": {"n": 512, "side": 6, "moduli": "p127"},

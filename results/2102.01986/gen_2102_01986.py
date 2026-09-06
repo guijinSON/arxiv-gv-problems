@@ -18,7 +18,7 @@ from typing import Any
 
 
 DIFFICULTY = {
-    "demo": {"n": 4, "bits_num": 1, "bits_den": 1, "min_bits": 8},
+    "demo": {"n": 3, "bits_num": 1, "bits_den": 1, "min_bits": 8},
     "easy": {"n": 96, "bits_num": 1, "bits_den": 1, "min_bits": 24},
     "medium": {"n": 128, "bits_num": 1, "bits_den": 1, "min_bits": 24},
     "hard": {"n": 160, "bits_num": 1, "bits_den": 1, "min_bits": 24},

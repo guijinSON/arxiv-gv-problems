@@ -14,7 +14,7 @@ import re
 
 
 DIFFICULTY = {
-    "demo": {"n": 3, "part_size": 6, "degree": 4, "mix_steps": 2},
+    "demo": {"n": 3, "part_size": 4, "degree": 2, "mix_steps": 2},
     "easy": {"n": 16, "part_size": 16, "degree": 11, "mix_steps": 6},
     "medium": {"n": 20, "part_size": 18, "degree": 13, "mix_steps": 7},
     "hard": {"n": 24, "part_size": 20, "degree": 14, "mix_steps": 8},
