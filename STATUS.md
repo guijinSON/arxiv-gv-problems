@@ -1,12 +1,12 @@
 # Status
 
-`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **642 / 12,167** resolved (5.28%)
+`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **643 / 12,167** resolved (5.28%)
 
 | state | count |
 |---|---:|
 | ✅ done | 402 |
-| 🚫 rejected (documented) | 240 |
-| 🔄 in progress | 133 |
+| 🚫 rejected (documented) | 241 |
+| 🔄 in progress | 132 |
 | ⚪ free | 11,384 |
 | **total** | **12,167** |
 
@@ -51,10 +51,10 @@
 | `2006.15730` | GUIJIN SON | 2026-09-05T08:38 |
 | `2109.11203` | GUIJIN SON | 2026-09-05T08:38 |
 | `1201.1728` | GUIJIN SON | 2026-09-05T08:38 |
-| `2004.04028` | GUIJIN SON | 2026-09-05T08:38 |
 | `2202.12042` | GUIJIN SON | 2026-09-05T08:38 |
 | `2309.11606` | GUIJIN SON | 2026-09-05T08:38 |
-| … 93 more | | |
+| `2105.02837` | GUIJIN SON | 2026-09-05T08:39 |
+| … 92 more | | |
 
 ## By family
 
@@ -67,10 +67,10 @@
 | reconfiguration | 36 | 551 |
 | geometric configurations | 31 | 533 |
 | constraint satisfaction | 27 | 508 |
-| algebraic identity solutions | 15 | 398 |
+| algebraic identity solutions | 16 | 398 |
 | algebraic geometric structures | 17 | 299 |
 | schedules and allocations | 21 | 259 |
 | words and permutations | 12 | 237 |
 | finite field constructions | 26 | 235 |
 
-_regenerated 2026-09-05 16:27Z by `scripts/status.sh --write`_
+_regenerated 2026-09-06 01:03Z by `scripts/status.sh --write`_
