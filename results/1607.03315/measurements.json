@@ -1,0 +1,232 @@
+{
+ "G1_planted_verifies": {
+  "ok": 24,
+  "pass": true,
+  "per_preset": {
+   "demo": "6/6",
+   "easy": "6/6",
+   "hard": "6/6",
+   "medium": "6/6"
+  },
+  "total": 24
+ },
+ "G2_rejects_corruption": {
+  "accepted_corruptions": 0,
+  "distinct_reasons": [
+   "X1 + a1 != a1 + a2",
+   "X1 has dimension 2, expected 3",
+   "X1 has entry 10 outside 0..6",
+   "X2 has dimension 2, expected 3",
+   "answer must be a list of two matrices",
+   "t(X1,X2) != C1"
+  ],
+  "pass": true
+ },
+ "G3_round_trip": {
+  "garbage_returns_none": true,
+  "json_form_accepted": true,
+  "pass": true,
+  "prose_round_trip": true
+ },
+ "G4_guess_resistance": {
+  "pass": true,
+  "per_preset": {
+   "demo": {
+    "hits": 3781,
+    "structure_aware_space": 16,
+    "trials": 20000
+   },
+   "easy": {
+    "hits": 0,
+    "structure_aware_space": 230400,
+    "trials": 20000
+   },
+   "hard": {
+    "hits": 0,
+    "structure_aware_space": 1141367304720384,
+    "trials": 8000
+   },
+   "medium": {
+    "hits": 0,
+    "structure_aware_space": 174240000,
+    "trials": 20000
+   }
+  }
+ },
+ "G5_density_and_baseline": {
+  "baseline_attack": "frame coordinatisation (Lemma 6(iii)(b)) + Sylvester solve",
+  "baseline_max_operations": 9435,
+  "baseline_median_operations": 8910,
+  "baseline_median_seconds": 0.00244,
+  "baseline_solved": "20/20",
+  "density_shipping": 1.8924670358672697e-13,
+  "exact_valid_answer_count_demo": 3,
+  "exact_valid_answer_count_shipping": [
+   216,
+   288,
+   252,
+   288,
+   342,
+   342,
+   252,
+   288,
+   342,
+   288
+  ],
+  "note": "the domain-standard attack SOLVES 20/20 in 0.002 s -- this is the rejection",
+  "pass": false,
+  "shipping_params": {
+   "d": 3,
+   "q": 7
+  },
+  "shipping_preset": "hard",
+  "structure_aware_space_shipping": 1141367304720384
+ },
+ "G6_adversary_panel": {
+  "attacks": {
+   "coordinatisation_domain_standard": {
+    "attempts": 8,
+    "successes": 8
+   },
+   "greedy_frame_echo": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "mrv_backtracking_propagation_easy": {
+    "attempts": 1,
+    "nodes": 2532,
+    "seconds": 0.589,
+    "successes": 1
+   },
+   "random_restart_3000": {
+    "attempts": 8,
+    "successes": 0
+   }
+  },
+  "note": "the domain-standard attack succeeds 8/8 -- panel fails by construction",
+  "pass": false
+ },
+ "G7_scales": {
+  "answer_length_fixed": true,
+  "axes_moved": [
+   "q"
+  ],
+  "axes_required": 2,
+  "ladder": [
+   {
+    "answer_atoms": 72,
+    "attack_operations": 9222,
+    "attack_solves": true,
+    "params": {
+     "d": 3,
+     "q": 13
+    },
+    "planted_verifies": true,
+    "round": 1,
+    "space": 94603203064534155264
+   },
+   {
+    "answer_atoms": 72,
+    "attack_operations": 9525,
+    "attack_solves": true,
+    "params": {
+     "d": 3,
+     "q": 29
+    },
+    "planted_verifies": true,
+    "round": 2,
+    "space": 195710891348626753126809600
+   },
+   {
+    "answer_atoms": 72,
+    "attack_operations": 9909,
+    "attack_solves": true,
+    "params": {
+     "d": 3,
+     "q": 59
+    },
+    "planted_verifies": true,
+    "round": 3,
+    "space": 72482703831648990799178628326400
+   },
+   {
+    "answer_atoms": 72,
+    "attack_operations": 9888,
+    "attack_solves": true,
+    "params": {
+     "d": 3,
+     "q": 101
+    },
+    "planted_verifies": true,
+    "round": 4,
+    "space": 1172346485610090301322436000000000000
+   }
+  ],
+  "note": "only one axis (q) moves at fixed answer length; d lengthens the answer. Space grows 1.14e15 -> 1.17e36 while attack cost moves 8835 -> 9888 ops.",
+  "pass": false
+ },
+ "G8_canonical_key": {
+  "deterministic": true,
+  "distinct_keys": 20,
+  "distinct_seeds": 20,
+  "pass": true
+ },
+ "G9_no_tool_suitability": {
+  "answer_chars": 232,
+  "answer_elements": 72,
+  "answer_tokens": 59,
+  "arms": {
+   "bare": null,
+   "hinted": null,
+   "placebo": null
+  },
+  "arms_note": "not run: no OPENROUTER_API_KEY, and not needed for a measured rejection",
+  "intended_route_operations": 8910,
+  "note": "intended (compact) route is 8.9x over the 1000-operation cap",
+  "pass": false,
+  "render_chars": 2576,
+  "route_cap": 1000,
+  "within_route_cap": false
+ },
+ "all_gates_pass": false,
+ "answer_caps_per_preset": {
+  "demo": {
+   "atoms": 8,
+   "chars": 32,
+   "d": 1,
+   "q": 5,
+   "render_chars": 1782,
+   "tokens": 9
+  },
+  "easy": {
+   "atoms": 32,
+   "chars": 108,
+   "d": 2,
+   "q": 5,
+   "render_chars": 2082,
+   "tokens": 28
+  },
+  "hard": {
+   "atoms": 72,
+   "chars": 232,
+   "d": 3,
+   "q": 7,
+   "render_chars": 2576,
+   "tokens": 59
+  },
+  "medium": {
+   "atoms": 32,
+   "chars": 111,
+   "d": 2,
+   "q": 11,
+   "render_chars": 2099,
+   "tokens": 28
+  }
+ },
+ "fails": "H",
+ "module": "rejected_gen_1607_03315",
+ "paper": "arXiv:1607.03315",
+ "track_A": "impossible (undecidability only)",
+ "track_B": "no gap (compact route == mechanical route)",
+ "verdict": "REJECTED"
+}
