@@ -68,7 +68,7 @@ NATIVE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 10, "s_min": 3, "s_max": 3},
+    "demo": {"n": 10, "s_min": 3, "s_max": 10},
     "easy": {"n": 1000, "s_min": 11, "s_max": 31},
     "medium": {"n": 1600, "s_min": 19, "s_max": 47},
     "hard": {"n": 2400, "s_min": 28, "s_max": 61},

@@ -99,10 +99,10 @@ NATIVE = {
 # grows the haystack without lengthening the answer.
 DIFFICULTY = {
     "demo": {
-        "n": 1,
-        "plant_mode": "visible",
-        "mix_rounds": 0,
-        "permute": False,
+        "n": 2,
+        "plant_mode": "row_sum",
+        "mix_rounds": 40,
+        "permute": True,
     },
     "easy": {
         "n": 8,

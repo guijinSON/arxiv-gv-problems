@@ -83,7 +83,7 @@ NATIVE: dict = {
 DIFFICULTY: dict = {
     "demo": {
         "n": 4, "composition_height": 1, "transform_height": 2,
-        "identity": True,
+        "identity": False,
     },
     "easy": {
         "n": 10, "composition_height": 2, "transform_height": 8,

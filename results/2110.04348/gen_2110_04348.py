@@ -76,7 +76,7 @@ NATIVE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 3, "odd_bits": 1, "a_width": 1},
+    "demo": {"n": 3, "odd_bits": 1, "a_width": 2},
     "easy": {"n": 29, "odd_bits": 16, "a_width": 12},
     "medium": {"n": 59, "odd_bits": 16, "a_width": 16},
     "hard": {"n": 97, "odd_bits": 18, "a_width": 16},

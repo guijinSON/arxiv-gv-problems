@@ -86,7 +86,7 @@ NATIVE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 12, "q": 3, "modulus_bits": 13, "outlier_milli": 410},
+    "demo": {"n": 24, "q": 4, "modulus_bits": 13, "outlier_milli": 410},
     "easy": {"n": 48, "q": 6, "modulus_bits": 31, "outlier_milli": 440},
     "medium": {"n": 56, "q": 6, "modulus_bits": 61, "outlier_milli": 440},
     "hard": {"n": 64, "q": 6, "modulus_bits": 89, "outlier_milli": 450},

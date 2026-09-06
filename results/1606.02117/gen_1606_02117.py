@@ -80,7 +80,7 @@ NATIVE: dict = {
 }
 
 DIFFICULTY: dict = {
-    "demo": {"n": 11, "exponent": 4},
+    "demo": {"n": 11, "exponent": 36},
     "easy": {"n": 22, "exponent": 84},
     "medium": {"n": 33, "exponent": 84},
     "hard": {"n": 44, "exponent": 84},

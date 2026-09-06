@@ -90,8 +90,8 @@ DIFFICULTY = {
         "n": 13,
         "code_size": 6,
         "index": 1,
-        "pool_size": 6,
-        "marker_count": 3,
+        "pool_size": 13,
+        "marker_count": 4,
         "marker_required": 3,
     },
     "easy": {

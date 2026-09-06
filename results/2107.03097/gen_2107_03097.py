@@ -90,7 +90,7 @@ DIFFICULTY: dict = {
         "paper_n": 4,
         "offset_scale": 1,
         "shear_scale": 1,
-        "scramble": False,
+        "scramble": True,
     },
     "easy": {
         "n": 2_049,

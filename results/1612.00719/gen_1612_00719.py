@@ -74,7 +74,7 @@ NATIVE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 17, "gap_bits": 2, "transform_bits": 2, "demo_pattern": True},
+    "demo": {"n": 17, "gap_bits": 2, "transform_bits": 2, "demo_pattern": False},
     "easy": {"n": 25, "gap_bits": 10, "transform_bits": 10},
     "medium": {"n": 31, "gap_bits": 16, "transform_bits": 16},
     "hard": {"n": 35, "gap_bits": 22, "transform_bits": 22},

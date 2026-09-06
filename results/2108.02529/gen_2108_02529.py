@@ -101,7 +101,7 @@ CERTIFICATE_LANGUAGE = {
 # hidden matching subspace.  This makes the ladder about recognition, not a
 # longer witness.
 DIFFICULTY = {
-    "demo": {"n": 4, "label_mode": "contiguous"},
+    "demo": {"n": 8, "label_mode": "matching"},
     "easy": {"n": 8, "label_mode": "contiguous"},
     "medium": {"n": 16, "label_mode": "contiguous"},
     "hard": {"n": 16, "label_mode": "matching"},

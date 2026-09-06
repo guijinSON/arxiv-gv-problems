@@ -119,7 +119,7 @@ NATIVE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 8, "chain_length": 2, "coefficient_cap": 1},
+    "demo": {"n": 8, "chain_length": 2, "coefficient_cap": 8},
     "easy": {"n": 4_096, "chain_length": 8},
     "medium": {"n": 65_536, "chain_length": 16},
     "hard": {"n": 262_144, "chain_length": 32},

@@ -79,7 +79,7 @@ NATIVE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 1, "crowding": 100},
+    "demo": {"n": 11_500, "crowding": 20},
     "easy": {"n": 20_000, "crowding": 60},
     "medium": {"n": 100_000, "crowding": 70},
     "hard": {"n": 1_000_000, "crowding": 80},
@@ -825,7 +825,17 @@ def selftest() -> dict:
         },
     }
 
-    demo = make_instance(seed=0, **DIFFICULTY["demo"])
+    # This gate needs a preset small enough for enumerate_all() to run
+    # exhaustively.  It used to read DIFFICULTY["demo"], which silently coupled it
+    # to the illustration rung: prompts/codex_task.md defines demo as the rung a
+    # person can solve on paper, and a demo that is also DIVERSE across seeds
+    # necessarily exceeds enumerate_all()'s internal cap, at which point it returns
+    # None and this gate breaks on a module that is perfectly healthy.  The
+    # measurement size is therefore pinned here, independent of the ladder -- these
+    # are exactly the params the gate measured before, so its behaviour is
+    # unchanged.
+    G5_ENUMERATION_PARAMS = {"n": 1, "crowding": 100}
+    demo = make_instance(seed=0, **G5_ENUMERATION_PARAMS)
     demo_count = enumerate_all(demo)
     report["G5_density_and_baseline"] = {
         "pass": (demo_count == 1 and sample_hits == 0

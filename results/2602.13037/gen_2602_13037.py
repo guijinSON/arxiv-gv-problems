@@ -82,7 +82,7 @@ NATIVE = {
 }
 
 DIFFICULTY = {
-    "demo": {"n": 0},
+    "demo": {"n": 2},
     "easy": {"n": 4},
     "medium": {"n": 7},
     "hard": {"n": 10},
