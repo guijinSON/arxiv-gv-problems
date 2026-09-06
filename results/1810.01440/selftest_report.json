@@ -1,0 +1,137 @@
+{
+  "paper": "1810.01440",
+  "track": "A",
+  "shipping": "medium",
+  "G1_planted_verifies": {
+    "pass": true,
+    "ok": 24,
+    "total": 24
+  },
+  "G2_rejects_corruption": {
+    "pass": true,
+    "distinct_reasons": 7,
+    "reasons": {
+      "drop_one_fiber": "answer has 31 fibers, expected 32",
+      "short_fiber": "fiber 0 has 3 qubits, expected 4",
+      "swap_two_qubits": "fiber 0 induces 1 internal edges, but its pullback coefficient is 3",
+      "duplicate_qubit": "fiber 1 shares qubit 113 with an earlier fiber",
+      "empty": "answer has 0 fibers, expected 32",
+      "out_of_range": "qubit 133 in fiber 0 is outside [0, 128)",
+      "permuted_labels": "fibers 0 and 2 are joined by 0 edges of X, but C[0][2] = 1"
+    }
+  },
+  "G3_round_trip": {
+    "pass": true,
+    "recovered": true
+  },
+  "V_exact_verification": {
+    "pass": true,
+    "ok": 24,
+    "total": 24,
+    "floats_in_verify": 0
+  },
+  "G4_guess_resistance": {
+    "pass": true,
+    "hits": 0,
+    "total": 3000,
+    "empirical_p": 0.0,
+    "naive_search_space": 2626638821257923552661782302054075947641935813033225480385780132231082818447337493599176643262731784243443562038503894400799419560990376053030000000000000000000000000000000,
+    "naive_search_space_bits": 570,
+    "note": "structure-aware: every sample is already a partition into connected k-subtrees of X"
+  },
+  "G5_density_and_baseline": {
+    "pass": false,
+    "exact_solution_count_demo": 128,
+    "density_at_shipping": 0.0,
+    "density_sample_size": 3000,
+    "density_hits": 0,
+    "strongest_attack": "cp_mrv_forward_checking",
+    "strongest_attack_solved": 4,
+    "strongest_attack_attempts": 8,
+    "strongest_attack_nodes_median": 3044,
+    "strongest_attack_nodes_total": 17654,
+    "strongest_attack_wall_clock_sec": 514.734,
+    "candidate_pool_size": 7456,
+    "strongest_attack_operations_seed2": 63738971,
+    "strongest_attack_operations_seed3": 835993,
+    "note": "solved-count is a LOWER bound: attack_cp_mrv carries a 120 s wall-clock cap and this is hand-rolled Python; the unsolved seeds were cut off at 7,686 and 16,113 nodes, which any real CP/SAT solver clears in under a second."
+  },
+  "G6_adversary_panel": {
+    "pass": false,
+    "attacks": {
+      "outlier_degree_position": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "greedy_chain_growth": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "random_restart_1k": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "spectral_laplacian_cut": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "static_backtracking_2e6": {
+        "successes": 0,
+        "attempts": 8
+      },
+      "cp_mrv_forward_checking": {
+        "successes": 4,
+        "attempts": 8
+      }
+    },
+    "escalation_destination_check": {
+      "params": {
+        "L": 2,
+        "t": 16,
+        "k": 4
+      },
+      "n": 128,
+      "m": 32,
+      "cp_mrv_solved": "5/5",
+      "nodes_min": 32,
+      "nodes_max": 200,
+      "operations_seed0": 6202318,
+      "candidate_pool": 192768,
+      "comment": "escalate() sends the ladder HERE, and here the domain attack solves essentially without backtracking -- the ladder runs backwards."
+    }
+  },
+  "G7_scales": {
+    "pass": true,
+    "escalated_params": {
+      "L": 2,
+      "t": 16,
+      "k": 4
+    },
+    "escalated_answer_atoms": 128
+  },
+  "G8_canonical_key": {
+    "pass": true,
+    "invariance_ok": 60,
+    "invariance_total": 60,
+    "distinct_keys": 20,
+    "distinct_of": 20
+  },
+  "G9_no_tool_suitability": {
+    "pass": true,
+    "arms": {
+      "bare": null,
+      "hinted": null,
+      "placebo": null
+    },
+    "hinted_minus_placebo": null,
+    "hinted_verdict": "not run (no OPENROUTER_API_KEY in this environment)",
+    "answer_chars": 467,
+    "answer_tokens": 116,
+    "answer_elements": 128,
+    "intended_route_operations": 624
+  },
+  "all_pass": false,
+  "selftest_wall_clock_sec": 2156.24,
+  "verdict": "REJECTED",
+  "reject_reason": "H fails on Track A (domain-standard CP+MRV solves the shipping preset) and on Track B (mechanical route ~6e7 operations, compact route is the same rule, ratio ~1)"
+}
