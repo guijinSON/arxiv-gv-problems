@@ -1,0 +1,336 @@
+{
+ "G1_planted_verifies": {
+  "ok": 24,
+  "pass": true,
+  "per_preset": {
+   "demo": "6/6",
+   "easy": "6/6",
+   "hard": "6/6",
+   "medium": "6/6"
+  },
+  "total": 24
+ },
+ "G2_rejects_corruption": {
+  "accepted_corruptions": 0,
+  "distinct_reasons": [
+   "answer is not a sequence of bits",
+   "ciphertext mismatch on pair # (# of # bits differ)",
+   "key length #, expected #",
+   "value # out of range #..#"
+  ],
+  "pass": true
+ },
+ "G3_round_trip": {
+  "garbage_returns_none": true,
+  "json_form_accepted": true,
+  "pass": true,
+  "prose_round_trip": true,
+  "render_round_trip": true
+ },
+ "G4_guess_resistance": {
+  "analytic_p_guess": "1/281474976710656",
+  "hits": 0,
+  "note": "the statement pins down exactly one property of the answer -- that it is K bits -- so the naive and the structure-aware spaces coincide at 2^K",
+  "pass": true,
+  "structure_aware_space": "281474976710656",
+  "structure_aware_space_log2": 48,
+  "trials": 200000
+ },
+ "G5_density_and_baseline": {
+  "baseline_attack": "algebraic attack of Definition 5.9 (Groebner-style elimination / unit propagation with branching)",
+  "baseline_nodes_before_cap": 5755,
+  "baseline_nodes_per_sec": 143.9,
+  "baseline_ops_per_node": 3801.8,
+  "baseline_primitive_ops_before_cap": 21879432,
+  "baseline_projected_nodes_log2": 48.43,
+  "baseline_projected_primitive_ops_log2": 60.33,
+  "baseline_projected_years": 83696.92002258693,
+  "baseline_solved": false,
+  "baseline_wall_clock_sec": 40.002,
+  "bruteforce_keys_per_sec": 2084.4,
+  "bruteforce_projected_sec": 135038531111.3846,
+  "bruteforce_projected_years": 4279.112832135035,
+  "compact_route_primitive_ops": 492,
+  "exact_solution_count_demo": 1,
+  "exact_solution_count_demo_unique_over_20_seeds": "20/20",
+  "exact_solution_count_demo_values": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1
+  ],
+  "expected_spurious_keys_log2_shipping": -96,
+  "mechanical_over_compact_ratio_log2": 51.38,
+  "pass": true,
+  "sampled_density_shipping": "0/200000",
+  "shipping_params": {
+   "K": 48,
+   "m": 6,
+   "nl_taps": 5,
+   "npairs": 3
+  },
+  "shipping_preset": "hard"
+ },
+ "G6_adversary_panel": {
+  "attacks": {
+   "algebraic_attack_definition_5_9": {
+    "attempts": 8,
+    "seconds": 82.614,
+    "successes": 0
+   },
+   "brute_force_key_search": {
+    "attempts": 8,
+    "seconds": 33.521,
+    "successes": 0
+   },
+   "correlation_hill_climb": {
+    "attempts": 8,
+    "seconds": 32.361,
+    "successes": 0
+   },
+   "fixed_point_scan_section_5": {
+    "attempts": 8,
+    "seconds": 0.006,
+    "successes": 0
+   },
+   "guess_and_determine_interior_bits": {
+    "attempts": 8,
+    "seconds": 32.169,
+    "successes": 0
+   },
+   "key_equation_elimination_theorem_5_4": {
+    "attempts": 8,
+    "detail_at_demo_preset": [
+     {
+      "blew_up_at_round": 14,
+      "cap": 1500,
+      "key_variables": 12,
+      "peak_monomials": 1061,
+      "solved": false
+     },
+     {
+      "blew_up_at_round": 15,
+      "cap": 1500,
+      "key_variables": 12,
+      "peak_monomials": 781,
+      "solved": false
+     },
+     {
+      "blew_up_at_round": 15,
+      "cap": 1500,
+      "key_variables": 12,
+      "peak_monomials": 872,
+      "solved": false
+     }
+    ],
+    "seconds": 4.25,
+    "successes": 0
+   },
+   "linearisation_degree_3": {
+    "attempts": 8,
+    "detail": {
+     "deg3_monomials": 75498113,
+     "equations": 864,
+     "rank_deficit": 75497248,
+     "solved": false,
+     "unknowns": 768
+    },
+    "seconds": 0.0,
+    "successes": 0
+   },
+   "naive_readoff_plaintext_ciphertext": {
+    "attempts": 8,
+    "seconds": 0.013,
+    "successes": 0
+   },
+   "outlier_pair_statistics": {
+    "attempts": 8,
+    "seconds": 32.51,
+    "successes": 0
+   }
+  },
+  "pass": true,
+  "plant_detectability": {
+   "candidates": 6,
+   "chance_mean_rank": 3.5,
+   "observed_mean_rank": 3.75,
+   "rank_of_true_slid_pair": [
+    6,
+    1,
+    6,
+    1,
+    3,
+    5,
+    3,
+    5
+   ],
+   "statistic": "Hamming distances P_i-P_j, C_i-C_j, P_i-C_j"
+  },
+  "reference_algorithm": {
+   "complexity": "O(s^2 * K) GF(2) operations, s = number of pairs",
+   "name": "key-period / slid-pair attack (Section 5, final subsection; the KeeLoq instance of Section 7)",
+   "operations": 456,
+   "solves": "8/8, as expected",
+   "wall_clock_sec": 0.00396
+  }
+ },
+ "G7_scales": {
+  "answer_atoms_escalated": 48,
+  "answer_atoms_shipping": 48,
+  "answer_length_fixed": true,
+  "escalated_compact_route_ops": 444,
+  "escalated_params": {
+   "K": 48,
+   "m": 8,
+   "nl_taps": 6,
+   "npairs": 3
+  },
+  "escalated_verifies": true,
+  "ladder": [
+   [
+    "demo",
+    12,
+    24,
+    2,
+    12,
+    144
+   ],
+   [
+    "easy",
+    24,
+    72,
+    3,
+    24,
+    372
+   ],
+   [
+    "medium",
+    32,
+    128,
+    3,
+    32,
+    336
+   ],
+   [
+    "hard",
+    48,
+    288,
+    3,
+    48,
+    384
+   ]
+  ],
+  "ladder_columns": [
+   "preset",
+   "K",
+   "R",
+   "pairs",
+   "log2_key_space",
+   "compact_route_ops"
+  ],
+  "ladder_monotone": true,
+  "pass": true,
+  "size_doubled_params": {
+   "K": 48,
+   "m": 12,
+   "nl_taps": 5,
+   "npairs": 3
+  },
+  "size_doubled_verifies": true
+ },
+ "G8_canonical_key": {
+  "distinct_keys": 20,
+  "distinct_seeds": 20,
+  "invariance_ok": 100,
+  "invariance_total": 100,
+  "invariances_tested": [
+   "permutation of the published plaintext/ciphertext pair list",
+   "reversal of the pair list",
+   "swap of the two linear taps (x(t+a1)+x(t+a2) is symmetric)",
+   "both, composed, in both orders"
+  ],
+  "pass": true,
+  "transformation_checks": 100,
+  "transformation_is_real_ok": 100
+ },
+ "G9_no_tool_suitability": {
+  "answer_chars": 48,
+  "answer_elements": 48,
+  "answer_json_chars": 97,
+  "answer_tokens": 48,
+  "arms": {
+   "bare": null,
+   "hinted": null,
+   "placebo": null
+  },
+  "arms_note": "three-arm oracle diagnostic not run: no OPENROUTER_API_KEY in this environment",
+  "hinted_minus_placebo": null,
+  "hinted_verdict": null,
+  "intended_route_note": "Track B.  The compact route is the key-period/slid-pair attack: for each of the s(s-1) ordered plaintext hypotheses read key bits off (P_i, P_j) and off (C_i, C_j) one at a time and stop at the first disagreement -- a wrong hypothesis dies after about two bits -- then finish the surviving one from the P side alone.  Counted primitives: one NL table lookup and five XORs per key bit.",
+  "intended_route_operations": 504,
+  "intended_route_operations_per_seed": [
+   444,
+   444,
+   408,
+   492,
+   504,
+   444,
+   456,
+   420,
+   492,
+   384,
+   384,
+   492
+  ],
+  "pass": true,
+  "render_chars": 2388,
+  "within_caps": true
+ },
+ "all_gates_pass": true,
+ "all_passed": true,
+ "elapsed_sec": 372.9,
+ "json_native_answer": true,
+ "module": "gen_2003_14215",
+ "problem_profile": {
+  "certificate_form": "integer_tuple",
+  "computational_core": "other",
+  "domain_essentiality": "native",
+  "hardness_basis": "Track B.  The algorithm that exists is the key-period / slid-pair attack of Section 5's final subsection (the paper's own reduction of the final clock T to the period d of the key subsystem, applied to KeeLoq in Section 7); its complexity is O(s^2 * K) GF(2) operations and its measured cost at the shipping preset is 384-564 primitive operations over 24 seeds.  The mechanical route -- the algebraic attack of Definition 5.9 by multiple plaintext-ciphertext pairs, run as Groebner-style elimination / unit propagation with branching, which is what Sections 6 and 7 run against Bivium and KeeLoq -- was measured to degenerate to exhaustive key search: 0.5*2^12, 1.5*2^14 and 1.35*2^16 search nodes at K = 12, 14, 16 with m >= 3, flat in m past m = 3.  With R = m*K and m >= 2 the first round equation whose left-hand side is a published ciphertext bit is t = R - L = (m-1)K >= K, so every key bit is assigned before any consistency check exists and the search tree cannot be pruned above the leaves.  At the shipping preset that is of order 2^48 nodes; the measured per-node cost and node rate, and the projected wall clock, are in G5_density_and_baseline.  Brute force over the key space is 2^48 encryptions of 288 rounds, also projected there from a measured rate.",
+  "intuition_description": "The round count is an exact multiple of the key subsystem's period, so the encryption is a power of one fixed permutation F and therefore commutes with it; two published plaintexts standing in the relation P2 = F(P1) then form a single-period plaintext/ciphertext pair whose internal bit-sequence is completely published, and each round equation reads off one key bit.  A solver without that observation must run the algebraic attack of Definition 5.9, which on an explicit difference system collapses to exhaustive key search.",
+  "intuition_type": "symmetry",
+  "max_answer_tokens": 48,
+  "native_domain": "algebra",
+  "native_objects": [
+   "explicit difference system over GF(2): k(K)=k(0) and x(L)=x(0)+x(a1)+x(a2)+NL(x(p1),...,x(p5))+k(0)",
+   "t-states of the system, published as plaintext/ciphertext pairs",
+   "initial state of the key subsystem (the key), a vector in GF(2)^K"
+  ],
+  "object_regime": "finite_field",
+  "reduction": null,
+  "reduction_kind": "none",
+  "reduction_source": "paper_central",
+  "verification_operations": [
+   "exact GF(2) evaluation of the explicit difference equation, R times per published pair",
+   "table lookup of the NL polynomial on 5 GF(2) arguments",
+   "componentwise equality of the recomputed t-state with the published ciphertext"
+  ]
+ },
+ "shipping_difficulty": "hard",
+ "track": "B"
+}
