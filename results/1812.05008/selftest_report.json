@@ -1,0 +1,206 @@
+{
+ "G1_planted_verifies": {
+  "ok": 24,
+  "pass": true,
+  "per_preset": {
+   "demo": "6/6",
+   "easy": "6/6",
+   "hard": "6/6",
+   "medium": "6/6"
+  },
+  "total": 24
+ },
+ "G2_rejects_corruption": {
+  "accepted_corruptions": 0,
+  "distinct_reasons": [
+   "index 15 out of range 0..9",
+   "index 155 out of range 0..149",
+   "index 215 out of range 0..209",
+   "index 65 out of range 0..59",
+   "support size 13 exceeds the weight bound 12",
+   "support size 18 exceeds the weight bound 17",
+   "support size 3 exceeds the weight bound 2",
+   "support size 7 exceeds the weight bound 6",
+   "syndrome mismatch",
+   "value 0 out of range 1..12",
+   "value 0 out of range 1..30",
+   "value 0 out of range 1..6"
+  ],
+  "pass": true
+ },
+ "G3_round_trip": {
+  "garbage_returns_none": true,
+  "json_form_accepted": true,
+  "pass": true,
+  "prose_round_trip": true
+ },
+ "G4_guess_resistance": {
+  "analytic_p_guess": "~1/56242403011815344815408212815029338467688400996801",
+  "hits": 0,
+  "information_set_space_log2": 159.55,
+  "pass": true,
+  "structure_aware_space": "56242403011815344815408212815029338467688400996801",
+  "structure_aware_space_log2": 165.27,
+  "trials": 200000
+ },
+ "G5_density_and_baseline": {
+  "baseline_attack": "Prange information-set decoding",
+  "baseline_wall_clock_sec": 25.001,
+  "exact_solution_count_demo": 1,
+  "expected_spurious_solutions_log2_shipping": -42.81,
+  "pass": true,
+  "prange_expected_iterations": 17051725770062.34,
+  "prange_expected_iterations_log2": 43.95,
+  "prange_measured_iterations": 6048,
+  "prange_measured_seconds": 25.001,
+  "prange_projected_seconds": 70488516000.50226,
+  "prange_projected_years": 2233.6462849045,
+  "prange_seconds_per_iteration": 0.00413380539606488,
+  "sampled_density_shipping": "0/200000",
+  "shipping_params": {
+   "k": 168,
+   "n": 210,
+   "q": 31,
+   "w": 17
+  },
+  "shipping_preset": "hard"
+ },
+ "G6_adversary_panel": {
+  "attacks": {
+   "bruteforce_supports": {
+    "attempts": 8,
+    "seconds": 12.623,
+    "successes": 0
+   },
+   "gaussian_elimination_baseline": {
+    "attempts": 8,
+    "seconds": 0.01,
+    "successes": 0
+   },
+   "greedy_syndrome_peeling": {
+    "attempts": 8,
+    "seconds": 2.979,
+    "successes": 0
+   },
+   "lee_brickell_isd_p1": {
+    "attempts": 8,
+    "seconds": 160.252,
+    "successes": 0
+   },
+   "outlier_column_correlation": {
+    "attempts": 8,
+    "seconds": 0.208,
+    "successes": 0
+   },
+   "prange_isd": {
+    "attempts": 8,
+    "seconds": 160.039,
+    "successes": 0
+   },
+   "random_restart_256": {
+    "attempts": 8,
+    "seconds": 2.522,
+    "successes": 0
+   }
+  },
+  "pass": true
+ },
+ "G7_scales": {
+  "answer_atoms_escalated": 34,
+  "answer_atoms_shipping": 34,
+  "answer_length_fixed": true,
+  "escalated_params": {
+   "k": 378,
+   "n": 420,
+   "q": 127,
+   "w": 17
+  },
+  "escalated_prange_log2": 61.44,
+  "escalated_verifies": true,
+  "harder": true,
+  "ladder_monotone": true,
+  "ladder_prange_log2": [
+   [
+    "demo",
+    2.17
+   ],
+   [
+    "easy",
+    13.29
+   ],
+   [
+    "medium",
+    30.89
+   ],
+   [
+    "hard",
+    43.95
+   ]
+  ],
+  "pass": true,
+  "shipping_prange_log2": 43.95
+ },
+ "G8_canonical_key": {
+  "distinct_keys": 20,
+  "distinct_seeds": 20,
+  "invariance_ok": 80,
+  "invariance_total": 80,
+  "invariances_tested": [
+   "H -> U H, s -> U s (change of parity-check basis)",
+   "relabelling of the k information coordinates",
+   "both composed, in both orders"
+  ],
+  "pass": true,
+  "transformation_checks": 80,
+  "transformation_is_real_ok": 80
+ },
+ "G9_no_tool_suitability": {
+  "answer_chars": 120,
+  "answer_elements": 34,
+  "answer_json_chars": 173,
+  "answer_tokens": 30,
+  "arms": {
+   "bare": null,
+   "hinted": null,
+   "placebo": null
+  },
+  "arms_note": "three-arm oracle diagnostic not run: no OPENROUTER_API_KEY in this environment",
+  "intended_route_note": "Track A: there is no compact solving route.  The recorded number is the cost of CHECKING a proposed answer (w*u modular multiply-adds); the cost of FINDING one is the Prange figure in G5.",
+  "intended_route_operations": null,
+  "pass": true,
+  "render_chars": 20675,
+  "verification_operations": 714
+ },
+ "all_gates_pass": true,
+ "all_passed": true,
+ "elapsed_sec": 374.3,
+ "json_native_answer": true,
+ "module": "gen_1812_05008",
+ "problem_profile": {
+  "certificate_form": "exact_symbolic",
+  "computational_core": "linear_algebra",
+  "domain_essentiality": "native",
+  "hardness_basis": "Track A: coset weights / syndrome decoding of a random linear code is NP-complete (Berlekamp, McEliece, van Tilborg 1978), and McNie's own security reduction (Section 4.2 of arXiv:1812.05008) is to exactly this problem; the shipped distribution is the standard hard one - uniform H and a uniform weight-w error with w = 17 strictly below the unique-decoding radius of a random [210,168] code over F_31 - where the best known attack is information-set decoding.  Measured at the shipping preset: Prange needs 1.705e13 expected iterations (2^44.0), Lee-Brickell with p=1 reduces that by 110.8x at 23x the per-iteration cost, and both were run and failed.",
+  "intuition_description": "The systematic block I_u makes the first u coordinates of e a linear function of the last k, so the free unknowns are only e restricted to the information set; a solver without that observation searches the whole weight-w sphere in F_q^n instead of the much smaller set of low-weight patterns on k coordinates.",
+  "intuition_type": "duality",
+  "max_answer_tokens": 96,
+  "native_domain": "algebra",
+  "native_objects": [
+   "parity-check matrix H = [I_u | A] over the prime field F_q",
+   "syndrome vector s in F_q^u",
+   "bounded-Hamming-weight error vector e in F_q^n, given by its support"
+  ],
+  "object_regime": "finite_field",
+  "reduction": null,
+  "reduction_kind": "none",
+  "reduction_source": "paper_central",
+  "verification_operations": [
+   "exact modular matrix-vector product H e^T over F_q",
+   "componentwise equality with the published syndrome",
+   "Hamming weight count against the published bound w",
+   "range and distinctness checks on the reported support"
+  ]
+ },
+ "shipping_difficulty": "hard",
+ "track": "A"
+}
