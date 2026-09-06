@@ -111,7 +111,7 @@ DIFFICULTY = {
     },
     "easy": {
         "n": 18, "extra_edges": 12, "decoys": 4,
-        "disclose": "pages",
+        "disclose": "rule",
     },
     "medium": {
         "n": 34, "extra_edges": 30, "decoys": 8,

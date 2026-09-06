@@ -102,7 +102,7 @@ CERTIFICATE_LANGUAGE = {
 # longer witness.
 DIFFICULTY = {
     "demo": {"n": 8, "label_mode": "matching"},
-    "easy": {"n": 8, "label_mode": "contiguous"},
+    "easy": {"n": 8, "label_mode": "matching"},
     "medium": {"n": 16, "label_mode": "contiguous"},
     "hard": {"n": 16, "label_mode": "matching"},
 }
