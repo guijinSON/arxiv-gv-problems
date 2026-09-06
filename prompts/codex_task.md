@@ -904,7 +904,7 @@ write `REJECTED.md` citing G9(b); `submit.sh --reject` will refuse it.
 | cap | limit at the shipping preset |
 |---|---|
 | serialised answer | ≤ **2,000 characters** (≈ **500 tokens**) and ≤ **256 atomic elements** |
-| intended route | ≤ **300 exact arithmetic operations** |
+| intended route | ≤ **1,000 exact arithmetic operations** (raised from 300 on 2026-09-06) |
 
 Measure both, put the numbers in the gate dict, and put the token figure in
 `PROBLEM_PROFILE["max_answer_tokens"]`.

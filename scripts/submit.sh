@@ -219,13 +219,24 @@ if g9key:
     def _num(d, k):
         v = d.get(k)
         return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+    # POLICY caps, applied regardless of what the module records in its own `caps`
+    # block. A module must not set the bar it is judged against -- several record
+    # caps.operations=300 simply because that was the figure in the prompt when they
+    # were written, and honouring a stale self-reported cap would keep enforcing a
+    # retired policy after it changed.
+    #
+    # The route cap went 300 -> 1000 on 2026-09-06. Its purpose is to exclude families
+    # whose intended method is a CALCULATOR TEST -- "thousands of arithmetic
+    # operations" in G9(c)'s own words -- not to exclude one that needs a few hundred.
+    # It was blocking 1905.11021 at 343 ops, where six unknowns is the structural floor
+    # for a cubic norm form over a degree-3 extension, and 2205.13442 at 967.
+    POLICY_CAPS = {"chars": 2000, "elements": 256, "operations": 1000}
     over = []
-    for field, capkey, default in (("answer_chars", "chars", 2000),
-                                   ("answer_elements", "elements", 256),
-                                   ("intended_route_operations", "operations", 300)):
+    for field, capkey in (("answer_chars", "chars"),
+                          ("answer_elements", "elements"),
+                          ("intended_route_operations", "operations")):
         got = _num(g9, field)
-        cap = _num(caps, capkey)
-        cap = default if cap is None else cap
+        cap = POLICY_CAPS[capkey]
         if got is not None and got > cap:
             over.append(f"{field}={got} > {cap}")
     gates[g9key] = {**g9, "pass": not over}
