@@ -1,0 +1,281 @@
+{
+ "G1_planted_verifies": {
+  "failures": [],
+  "ok": 24,
+  "pass": true,
+  "total": 24
+ },
+ "G2_rejects_corruption": {
+  "distinct_reasons": 8,
+  "pass": true,
+  "reasons": {
+   "drop_one": "answer has 148 entries, expected 149 (one per missing difference class)",
+   "duplicate": "residue 91 is used by two of your pairs",
+   "empty": "answer has 0 entries, expected 149 (one per missing difference class)",
+   "non_orphan": "pair 1 uses residue 344, which already occurs in one of the given pairs",
+   "out_of_range": "y1 = 1264 is outside [1, 1258]",
+   "shifted": "pair 1 uses residue 92, which already occurs in one of the given pairs",
+   "swap_two": "pair 1 uses residue 995, which already occurs in one of the given pairs",
+   "zero_entry": "y1 = 0 is outside [1, 1258]"
+  }
+ },
+ "G3_round_trip": {
+  "garbage_is_none": true,
+  "pass": true,
+  "recovered": true,
+  "verifies": true
+ },
+ "G4_guess_resistance": {
+  "analytic_p_upper": 2.5739614478038753e-245,
+  "empirical_p": 0.0,
+  "empirical_p_upper_95pct": 1.5e-05,
+  "hits": 0,
+  "hits_easy_preset": 0,
+  "pass": true,
+  "search_space": 38850620736888195228496125729491935325304263333524431204093321241578405804187740088515433281642547857249812917014985664879606685795938804343661242258005023646085659912346071362448411134093322574963727864430592000000000000000000000000000000000000,
+  "search_space_bits": 813,
+  "total": 200000,
+  "total_easy_preset": 200000
+ },
+ "G5_density_and_baseline": {
+  "density_at_shipping": 0.0,
+  "density_hits": 0,
+  "density_sample_size": 200000,
+  "exact_solution_count_at_shipping": null,
+  "exact_solution_count_demo": 1,
+  "exact_solution_count_n211_k20": 4,
+  "pass": true,
+  "reference_algorithm_correct": true,
+  "reference_algorithm_operations": 504,
+  "reference_algorithm_sec": 0.00012803077697753906,
+  "strongest_attack": "exact_cover_algorithm_X_mrv",
+  "strongest_attack_nodes": 1429720,
+  "strongest_attack_sec": 240.00017094612122,
+  "strongest_attack_solved": false
+ },
+ "G6_adversary_panel": {
+  "attack_cost": {
+   "dinitz_stinson_hill_climbing": [
+    [
+     2000000,
+     4.51
+    ],
+    [
+     2000000,
+     4.56
+    ],
+    [
+     2000000,
+     4.54
+    ],
+    [
+     2000000,
+     4.55
+    ],
+    [
+     2000000,
+     4.54
+    ],
+    [
+     2000000,
+     4.55
+    ],
+    [
+     2000000,
+     4.58
+    ],
+    [
+     2000000,
+     4.59
+    ]
+   ],
+   "exact_cover_algorithm_X_mrv": [
+    [
+     342075,
+     60.0
+    ],
+    [
+     325607,
+     60.0
+    ],
+    [
+     351397,
+     60.0
+    ],
+    [
+     354862,
+     60.0
+    ],
+    [
+     318016,
+     60.0
+    ],
+    [
+     300592,
+     60.0
+    ],
+    [
+     338405,
+     60.0
+    ],
+    [
+     337633,
+     60.0
+    ]
+   ],
+   "exact_cover_skew_signature": [
+    [
+     305646,
+     60.0
+    ],
+    [
+     290599,
+     60.0
+    ],
+    [
+     291803,
+     60.0
+    ],
+    [
+     295893,
+     60.0
+    ],
+    [
+     328535,
+     60.0
+    ],
+    [
+     316387,
+     60.0
+    ],
+    [
+     304197,
+     60.0
+    ],
+    [
+     311610,
+     60.0
+    ]
+   ]
+  },
+  "attacks": {
+   "constant_shift_ansatz": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "dinitz_stinson_hill_climbing": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "exact_cover_algorithm_X_mrv": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "exact_cover_skew_signature": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "greedy_smallest_difference_first": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "outlier_min_pair_sum": {
+    "attempts": 8,
+    "successes": 0
+   }
+  },
+  "pass": true,
+  "reference_algorithm": {
+   "complexity": "O(k) modular multiplications after 2 inversions",
+   "name": "recover the hidden multiplier c from one displayed pair, then x_j = +- d_j * (1-c)^{-1}",
+   "operations": 503,
+   "solves": "8/8, as expected",
+   "wall_clock_sec": 0.0003402233123779297
+  },
+  "reference_algorithm_fallback": {
+   "complexity": "O(n) trials, O(k) each in the worst case",
+   "name": "sweep the sum/difference ratio (1+c)/(1-c) over Z_n^*",
+   "operations_median": 24674,
+   "solves": "3/3"
+  }
+ },
+ "G7_scales": {
+  "escalated": {
+   "answer_atoms": 149,
+   "candidates_per_class": 56.9,
+   "params": {
+    "k": 149,
+    "n": 1031,
+    "n_clustered": 74,
+    "show_differences": false
+   }
+  },
+  "ladder": [
+   {
+    "answer_atoms": 149,
+    "candidates_per_class": 33.14,
+    "candidates_per_class_skew_aware": 10.95,
+    "k": 149,
+    "n": 1601,
+    "preset": "easy",
+    "skew_exact_cover_nodes": 100001,
+    "skew_exact_cover_solved": false
+   },
+   {
+    "answer_atoms": 149,
+    "candidates_per_class": 38.76,
+    "candidates_per_class_skew_aware": 14.01,
+    "k": 149,
+    "n": 1409,
+    "preset": "medium",
+    "skew_exact_cover_nodes": 100001,
+    "skew_exact_cover_solved": false
+   },
+   {
+    "answer_atoms": 149,
+    "candidates_per_class": 43.72,
+    "candidates_per_class_skew_aware": 17.68,
+    "k": 149,
+    "n": 1259,
+    "preset": "hard",
+    "skew_exact_cover_nodes": 100001,
+    "skew_exact_cover_solved": false
+   }
+  ],
+  "pass": true,
+  "shipping_candidates_per_class": 44.13
+ },
+ "G8_canonical_key": {
+  "carried_answer_verifies": 80,
+  "distinct_keys": 20,
+  "distinct_of": 20,
+  "invariance_ok": 80,
+  "invariance_total": 80,
+  "pass": true
+ },
+ "G9_no_tool_suitability": {
+  "answer_chars": 756,
+  "answer_elements": 149,
+  "answer_tokens": 222,
+  "arms": {
+   "bare": null,
+   "hinted": null,
+   "placebo": null
+  },
+  "caps": {
+   "chars": 2000,
+   "elements": 256,
+   "route_operations": 1000
+  },
+  "hinted_minus_placebo": null,
+  "hinted_verdict": "not run in-process (needs scripts/harden.py)",
+  "intended_route_operations": 504,
+  "pass": true
+ },
+ "all_pass": true,
+ "all_passed": true,
+ "paper": "2506.06461",
+ "selftest_wall_clock_sec": 1380.3291120529175,
+ "shipping": "hard",
+ "track": "B"
+}
