@@ -557,11 +557,43 @@ except Exception:
 keys = (" ".join(k for k in i if k != "answer") + " " + _shown).lower()
 graphy = _is_graphy(keys)
 
+# A graphy INSTANCE is not the same as a graph-cored PROBLEM. The guard exists to
+# catch a module that hands the solver a graph to search while declaring a
+# non-discrete core. But a graph can also be scaffolding -- 1604.02195 prescribes a
+# matrix's zero-pattern by a path and asks for the rational ENTRIES; the solver never
+# searches the graph. Distinguish by whether the ANSWER indexes the graph: a genuine
+# graph certificate is vertex/edge indices, all inside [0, max_vertex].
+def _answer_indexes_graph(inst, ans):
+    verts = set()
+    for k, v in inst.items():
+        if k == "answer" or not isinstance(v, (list, tuple)):
+            continue
+        for e in v:
+            if isinstance(e, (list, tuple)) and len(e) == 2 and all(
+                    isinstance(x, int) and not isinstance(x, bool) for x in e):
+                verts.update(e)
+    if not verts:
+        return True                     # cannot tell -- keep the old, stricter behaviour
+    lo, hi = min(verts), max(verts)
+    flat = []
+    def walk(a):
+        if isinstance(a, dict): [walk(x) for x in a.values()]
+        elif isinstance(a, (list, tuple)): [walk(x) for x in a]
+        else: flat.append(a)
+    walk(ans)
+    if not flat:
+        return True
+    return all(isinstance(x, int) and not isinstance(x, bool) and lo <= x <= hi
+               for x in flat)
+
 if graphy and NAT["core"] not in DISCRETE_CORE:
-    print(f"ERROR: the solver is handed {sorted(k for k in i if k != 'answer')},\n"
-          f"       which is a graph, but NATIVE['core'] says {NAT['core']!r}.\n"
-          "       Label the core by what the solver actually searches.")
-    sys.exit(1)
+    if _answer_indexes_graph(i, i.get("answer")):
+        print(f"ERROR: the solver is handed {sorted(k for k in i if k != 'answer')},\n"
+              f"       which is a graph, and the ANSWER indexes it, but NATIVE['core']\n"
+              f"       says {NAT['core']!r}.  Label the core by what the solver searches.")
+        sys.exit(1)
+    print("  note: instance is graphy but the answer does not index the graph "
+          f"(core {NAT['core']!r} accepted -- the graph is scaffolding, not the search space)")
 
 # The old guard was NAT["domain"] in CONTINUOUS -- unreachable, because the prompt
 # tells builders to set domain by what the SOLVER reasons about, so an honest
