@@ -564,9 +564,14 @@ graphy = _is_graphy(keys)
 # searches the graph. Distinguish by whether the ANSWER indexes the graph: a genuine
 # graph certificate is vertex/edge indices, all inside [0, max_vertex].
 def _answer_indexes_graph(inst, ans):
+    # Only GRAPH-NAMED keys define the vertex set. Scanning every list-of-pairs key
+    # was wrong: 1604.02195 publishes characteristic polynomials p and q as coefficient
+    # lists, whose range [-557573, 63127] swallowed the real vertex range [0, 7] and
+    # made every rational answer look like a vertex index.
+    VKEY = re.compile(r"edge|adjac|neighbou?r|arc|incidence|vertic|vertex|graph", re.I)
     verts = set()
     for k, v in inst.items():
-        if k == "answer" or not isinstance(v, (list, tuple)):
+        if k == "answer" or not isinstance(v, (list, tuple)) or not VKEY.search(k):
             continue
         for e in v:
             if isinstance(e, (list, tuple)) and len(e) == 2 and all(
