@@ -1,0 +1,363 @@
+{
+ "G1_planted_verifies": {
+  "ok": 32,
+  "pass": true,
+  "per_preset": {
+   "demo": "8/8",
+   "easy": "8/8",
+   "hard": "8/8",
+   "medium": "8/8"
+  },
+  "total": 32
+ },
+ "G2_rejects_corruption": {
+  "corruptions_rejected": 10,
+  "corruptions_total": 10,
+  "distinct_reasons": 6,
+  "pass": true,
+  "reasons": [
+   "answer is not a list of 5 rational numbers",
+   "common denominator 1 outside the allowed band [20, 80]",
+   "first nonzero coordinate is negative (sign convention)",
+   "grad F(x) is not parallel to x",
+   "not a unit vector",
+   "not robust"
+  ],
+  "robustness_clause_exercised": {
+   "control_F_eq_x3_plus_xy2_rho_two_thirds_accepted": true,
+   "instance": "F = x^3 + 3 x y^2, candidate (1,0): exact eigenvector, rho(J)=2",
+   "reason": "not robust: I - J is not positive definite (rho(J) >= 1)",
+   "rejected": true
+  }
+ },
+ "G3_round_trip": {
+  "parsed_ok": true,
+  "pass": true,
+  "rejects_junk": true,
+  "tolerates_markdown": true
+ },
+ "G4_guess_resistance": {
+  "analytic_p_one_valid": 2.008888931745186e-08,
+  "full_verifications_after_mod_p_filter": 0,
+  "hits": 0,
+  "pass": true,
+  "sampler": "same Householder sampler that draws the plant",
+  "seconds": 202.5763759613037,
+  "structure_aware_space": 49778760,
+  "trials": 200000
+ },
+ "G5_density_and_cost": {
+  "baseline_operations": 127419600,
+  "baseline_operations_extrapolated_to_success": 774576560.3830134,
+  "baseline_restarts": 512,
+  "baseline_solved": false,
+  "baseline_wall_clock_sec": 9.44206690788269,
+  "bruteforce_over_certificate_language": {
+   "exact_operations_per_candidate": 2100,
+   "language_size": 49778760,
+   "seconds_per_candidate_measured": 0.0009439671039581298,
+   "total_operations": 104535396000,
+   "total_seconds_extrapolated": 46989.5119158268
+  },
+  "compact_ops_shipping": 659,
+  "compact_seconds_shipping": 0.00203930139541626,
+  "exact_count_demo": 1,
+  "exact_count_demo_language_size": 192,
+  "gap_bruteforce_over_compact": 158627308.0424886,
+  "gap_mechanical_over_compact": 1175381.7304749824,
+  "generic_eigenvector_count_formula": 781,
+  "pass": true,
+  "plant_basin_hits_uniform_restarts": 0.0,
+  "plant_region_of_convergence": {
+   "directions": 16,
+   "max_half_angle_rad": 0.27151459945575845,
+   "mean_half_angle_rad": 0.20792630210793653,
+   "min_half_angle_rad": 0.16260196351587797,
+   "sphere_fraction_at_mean_angle": 0.0003212934898610155,
+   "sphere_fraction_at_min_angle": 0.0001373452008276552
+  },
+  "robust_eigenvector_basins": [
+   192,
+   50,
+   38,
+   20
+  ],
+  "robust_eigenvectors_found_numerically": 4,
+  "shipping_density": 2.008888931745186e-08,
+  "shipping_density_sampled_hits": 0,
+  "shipping_density_sampled_trials": 200000,
+  "shipping_valid_answer_count": 1,
+  "shipping_valid_answer_count_basis": "the plant, verified exactly; plus any OTHER rational robust eigenvector the numerical census turned up (measured: 0)",
+  "strongest_attack": "tensor power method with random restarts (the paper's own algorithm)"
+ },
+ "G6_adversary_panel": {
+  "additional_reference_routes": {
+   "newton_on_the_eigensystem": {
+    "complexity": "O(#coefficients * n^2 + n^3) float ops per iteration; hits the plant with probability ~1/(number of real critical points) per start",
+    "mean_operations_per_instance": 50401162,
+    "name": "Newton from random starts on grad F(x) = lam x, <x,x> = 1, then rational reconstruction of the limit",
+    "restart_budget": 200,
+    "solves": "2/8",
+    "starts_used_when_solved": [
+     146,
+     46,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "wall_clock_sec_per_instance": 37.641316652297974,
+    "why_not_in_attacks": "it succeeds; on Track B a succeeding efficient algorithm is the hardness basis, not a gate failure"
+   },
+   "tensor_power_method_random_restarts": {
+    "complexity": "O(#coefficients * n) float ops per iteration; expected restarts = 1 / (region of convergence)",
+    "mean_operations_per_instance": 182320425,
+    "name": "the paper's own algorithm: x <- T.x^{d-1}/||T.x^{d-1}|| from random starts, then rational reconstruction",
+    "restart_budget": 512,
+    "solves": "1/8",
+    "starts_used_when_solved": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     297,
+     null
+    ],
+    "wall_clock_sec_per_instance": 13.628888607025146,
+    "why_not_in_attacks": "on Track B the domain-standard algorithm is EXPECTED to succeed and is the hardness basis, not a gate failure.  It solved 1 of 8 shipping instances inside 512 restarts; the measured region of convergence around the plant (G5) says the expected budget is ~1/3.2e-4 = 3100 restarts."
+   },
+   "unfolding_gram_bottom_eigenvector": {
+    "mean_operations_per_instance": 13170,
+    "name": "HOSVD unfolding Gram, SMALLEST eigenvector",
+    "solves": "6/8",
+    "why_not_in_attacks": "this is the compact route entered from the other end of the spectrum: the plant is an exact eigenvector of every second-order contraction, which is precisely the insight the family tests.  Disclosed, not hidden."
+   }
+  },
+  "attacks": {
+   "best_rank_one_dominant_eigenvector": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "coefficient_outlier": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "hosvd_dominant_singular_vector": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "low_height_sweep_in_context": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "random_candidate_2000": {
+    "attempts": 8,
+    "successes": 0
+   }
+  },
+  "pass": true,
+  "reference_algorithm": {
+   "complexity": "O(n^3) exact rational operations, independent of the number of published coefficients",
+   "name": "commutator of two Hessians, then its kernel (exact over Q)",
+   "operations": 659,
+   "solves": "8/8, as expected",
+   "wall_clock_sec": 0.06407710909843445
+  }
+ },
+ "G7_scales": {
+  "escalated_builds_and_verifies": true,
+  "escalation_ladder": [
+   {
+    "answer_chars": 46,
+    "answer_elements": 10,
+    "params": {
+     "d": 6,
+     "m": 60,
+     "n": 5,
+     "qmax": 160,
+     "qmin": 40,
+     "whi": 1000,
+     "wlo": 40
+    },
+    "round": 1,
+    "terms_published": 210,
+    "verifies": true
+   },
+   {
+    "answer_chars": 47,
+    "answer_elements": 10,
+    "params": {
+     "d": 7,
+     "m": 75,
+     "n": 5,
+     "qmax": 160,
+     "qmin": 40,
+     "whi": 5000,
+     "wlo": 200
+    },
+    "round": 2,
+    "terms_published": 330,
+    "verifies": true
+   },
+   {
+    "answer_chars": 48,
+    "answer_elements": 10,
+    "params": {
+     "d": 7,
+     "m": 90,
+     "n": 5,
+     "qmax": 320,
+     "qmin": 80,
+     "whi": 25000,
+     "wlo": 1000
+    },
+    "round": 3,
+    "terms_published": 330,
+    "verifies": true
+   }
+  ],
+  "moved_params": [
+   "m",
+   "whi",
+   "wlo",
+   "qmax",
+   "qmin"
+  ],
+  "pass": true,
+  "size_doubled_builds_and_verifies": true
+ },
+ "G8_canonical_key": {
+  "distinct_keys": 20,
+  "invariance_ok": 140,
+  "invariance_total": 140,
+  "keys_total": 20,
+  "pass": true,
+  "transformations": "variable permutations, sign flips of variables, rescaling F by a nonzero integer",
+  "transformed_instance_verifies": 140
+ },
+ "G9_no_tool_suitability": {
+  "answer_chars": 35,
+  "answer_elements": 10,
+  "answer_tokens": 9,
+  "arms": {
+   "bare": {
+    "attempts": 0,
+    "solved": 0
+   },
+   "hinted": {
+    "attempts": 0,
+    "solved": 0
+   },
+   "placebo": {
+    "attempts": 0,
+    "solved": 0
+   }
+  },
+  "arms_note": "three-arm diagnostic not run by this selftest (no OPENROUTER_API_KEY in this environment); recorded, never gated",
+  "caps": {
+   "chars": 2000,
+   "elements": 256,
+   "operations": 1000
+  },
+  "hint_leak_check": {
+   "answer_not_in_render": true,
+   "default_render_has_no_hint": true
+  },
+  "hinted_minus_placebo": null,
+  "hinted_verdict": null,
+  "intended_route_operations": 659,
+  "pass": true,
+  "per_preset": {
+   "demo": {
+    "chars": 18,
+    "elements": 6,
+    "route_ops": 162
+   },
+   "easy": {
+    "chars": 34,
+    "elements": 10,
+    "route_ops": 659
+   },
+   "hard": {
+    "chars": 35,
+    "elements": 10,
+    "route_ops": 659
+   },
+   "medium": {
+    "chars": 33,
+    "elements": 10,
+    "route_ops": 659
+   }
+  }
+ },
+ "all_passed": true,
+ "certificate_language": {
+  "bounds": {
+   "n": 5,
+   "n_elements": 10,
+   "qmax": 80,
+   "qmin": 20
+  },
+  "description": "A rational unit vector x in Q^n: x = a/q with a a primitive integer vector, q a positive integer, |a|^2 = q^2, the reduced denominator q in [qmin, qmax], and the first nonzero coordinate of x positive.  The answer is the n coordinates written as reduced fractions."
+ },
+ "exactness_audit": {
+  "clean": true,
+  "functions_checked": [
+   "_as_fractions",
+   "_grad_int",
+   "_hess_int",
+   "_hessian_at_basis_vector",
+   "_is_pd_exact",
+   "_is_pd_exact_internal",
+   "_mod_p_eigen_filter",
+   "_nullspace",
+   "_reduce",
+   "_value_int",
+   "compact_route",
+   "parse_answer",
+   "verify"
+  ],
+  "note": "gvlib.exact_matrices is audited for the same property by gvlib's own AST test",
+  "positive_definiteness_backend": {
+   "agreements": 400,
+   "backend": "gvlib.exact_matrices.is_positive_definite",
+   "cross_check_trials": 400,
+   "gvlib_available": true,
+   "positive_definite_seen": 114
+  },
+  "violations": []
+ },
+ "problem_profile": {
+  "certificate_form": "rational",
+  "computational_core": "polynomial_identity",
+  "domain_essentiality": "native",
+  "hardness_basis": "Track B.  An efficient algorithm exists and it is stated here: read the n(n+1)/2 coefficients that give Hess F(e_1) and Hess F(e_2), form the commutator, take its kernel -- O(n^3) exact rational operations, measured at 647 operations and ~4e-4 s at the shipping preset (selftest_report.json, G6.reference_algorithm).  The mechanical route, the one available without that observation, is the paper's own tensor power method with random restarts: the plant's region of convergence is measured at ~1e-3 to 1e-4 of the sphere at the shipping preset, so it costs ~1e8-1e9 floating point operations before rational reconstruction -- fine for a solver with a machine, out of reach for a model working in context.  Guessing is excluded separately: the certificate language holds 4.98e7 sign-normalised rational unit vectors and the valid ones number in the single digits.",
+  "intuition_description": "Every second-order contraction of the tensor -- the Hessian of F at ANY point -- has the planted eigenvector among its eigenvectors, because the planted generator is orthogonal to every other generator of the symmetric decomposition.  Two Hessians therefore commute on that direction and it spans the kernel of their commutator.  A solver who does not see this is left with the tensor power method: iterate from random starts until one of them lands in the plant's (small) region of convergence, then reconstruct the exact rational limit.",
+  "intuition_type": "invariant",
+  "max_answer_tokens": 60,
+  "native_domain": "algebra",
+  "native_objects": [
+   "a symmetric tensor T in S^d(R^n), published as the integer coefficients of the degree-d form F(x) = T . x^d",
+   "a rational unit vector x in Q^n (the claimed robust eigenvector)",
+   "the exact rational Jacobian J = Hess F(x)/(d mu) - (d-1) x x^T of the tensor power method at x (paper Lemma 4)"
+  ],
+  "object_regime": "rational_exact",
+  "reduction": null,
+  "reduction_kind": "none",
+  "reduction_source": "paper_central",
+  "verification_operations": [
+   "exact integer evaluation of grad F at the numerator vector",
+   "exact parallelism test grad F(a) x a = 0 (the eigenvector identity)",
+   "exact rational inner product <x,x> = 1 and denominator bound",
+   "exact rational Hessian evaluation and assembly of J",
+   "positive-definiteness of I-J and I+J by exact LDL^T over Q (rho(J) < 1)"
+  ]
+ },
+ "selftest_seconds": 793.800213098526,
+ "shipping_difficulty": "hard",
+ "track": "B"
+}
