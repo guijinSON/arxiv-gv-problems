@@ -1,0 +1,178 @@
+{
+ "G1_planted_verifies": {
+  "ok": 32,
+  "pass": true,
+  "total": 32
+ },
+ "G2_rejects_corruption": {
+  "distinct_reasons": 10,
+  "pass": true
+ },
+ "G3_round_trip": {
+  "pass": true
+ },
+ "G4_guess_resistance": {
+  "analytic_p": 1.9531249995117186e-21,
+  "hits": 0,
+  "pass": true,
+  "trials": 200000
+ },
+ "G5_density_and_cost": {
+  "baseline_wall_clock_sec": 0.0019231659825891256,
+  "compact_ops_shipping": 2696,
+  "compact_s_reached": 168,
+  "compact_seconds_shipping": 0.0019231659825891256,
+  "exact_count_demo": 2,
+  "gap_mechanical_over_compact": 23738872.40652819,
+  "mechanical_ops_shipping": 64000000008,
+  "mechanical_seconds_shipping_extrapolated": 1260962.773582504,
+  "naive_order_compact_ops": 1763,
+  "pass": true,
+  "shipping_analytic_density": 1.9531249995117186e-21,
+  "sieve_speedup": 7.96023856858847,
+  "sieved_mechanical_ops_shipping": 8039960040.9650345,
+  "strongest_attack": "congruence-sieved exhaustive scan (bruteforce_scan + congruence_sieve)"
+ },
+ "G6_adversary_panel": {
+  "attacks": {
+   "bruteforce_scan": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "congruence_sieve": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "in_context_heuristics": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "lattice_coppersmith": {
+    "attempts": 8,
+    "successes": 0
+   }
+  },
+  "outlier_diagnostics": {
+   "chance_baseline": 3.0,
+   "hits": {
+    "bit_length_argmax": 3,
+    "bit_length_argmin": 3,
+    "dist_to_4th_power_argmax": 5,
+    "dist_to_4th_power_argmin": 3,
+    "dist_to_square_argmax": 5,
+    "dist_to_square_argmin": 3,
+    "k_mod_2520_argmax": 2,
+    "k_mod_2520_argmin": 5,
+    "magnitude_argmax": 3,
+    "magnitude_argmin": 3
+   },
+   "trials": 24
+  },
+  "pass": true,
+  "reference_algorithm": {
+   "complexity": "O(m * S) big-integer square roots",
+   "name": "phi_1 reduction to E_{1,k} + outward scan over s = x+y",
+   "ops": 2696,
+   "seconds": 0.0019231659825891256,
+   "solved": true
+  }
+ },
+ "G7_scales": {
+  "escalate": {
+   "height": 1000000000,
+   "n_ks": 16,
+   "near_miss_frac": 1.0,
+   "slack": 4,
+   "spread": [
+    80,
+    440
+   ]
+  },
+  "escalated_answer_chars": 28,
+  "escalated_builds_and_verifies": true,
+  "moved_params": [
+   "n_ks",
+   "spread"
+  ],
+  "pass": true
+ },
+ "G8_canonical_key": {
+  "pass": true
+ },
+ "G9_no_tool_suitability": {
+  "answer_chars": 28,
+  "answer_elements": 3,
+  "answer_tokens": null,
+  "arms": {
+   "bare": {
+    "attempts": 0,
+    "solved": 0
+   },
+   "hinted": {
+    "attempts": 0,
+    "solved": 0
+   },
+   "placebo": {
+    "attempts": 0,
+    "solved": 0
+   }
+  },
+  "arms_note": "three-arm diagnostic not run by the module's selftest; the bare arm is covered by the STEP 4 oracle loop recorded in llm_loop_transcript.jsonl",
+  "caps": {
+   "chars": 2000,
+   "elements": 256,
+   "operations": 1000
+  },
+  "diagnostic_not_gated": true,
+  "hinted_minus_placebo": null,
+  "hinted_verdict": null,
+  "intended_route_operations": 967,
+  "intended_route_operations_note": "measured by reference_algorithm at the preset the oracle actually shipped (easy); demo=103, easy=967, medium=1446, hard=8815",
+  "pass": true
+ },
+ "all_passed": true,
+ "certificate_language": {
+  "bounds": {
+   "coordinate_bound": "B",
+   "index_range": "m",
+   "n_elements": 3
+  },
+  "description": "A triple [j, x, y] of integers: j is a 0-based index into the published list of m values, and x, y are integers with |x|, |y| <= B."
+ },
+ "problem_profile": {
+  "certificate_form": "integer_tuple",
+  "computational_core": "other",
+  "domain_essentiality": "native",
+  "hardness_basis": "Track B.  An efficient algorithm exists and is the paper's own: apply phi_1, scan s = x + y upward, and for each s test whether 9 s^2 - 4 s^3 + 4 k is a perfect square and then whether s^2 - 4t is.  Its cost is O(S) big-integer square roots per listed k, i.e. a few hundred operations at the shipping preset (measured: see README).  The mechanical route -- solve the cubic in y for every integer x in [-B, B], the standard way to hunt integral points on a plane quartic -- costs Theta(m * B) cubic solves, measured at 6.4e10 operations at the 'hard' preset (1.27e6 s extrapolated in CPython, ~15 CPU-days; 8.0e9 operations after a mod-30030 congruence sieve).  Neither route is executable in context by brute force; only the compact one is, and only if the substitution is found.",
+  "intuition_description": "The equation is symmetric in x and y, so s = x + y and t = xy satisfy t^2 - 3 s t + s^3 = k (the paper's phi_1 onto E_{1,k}); since k is close to a perfect square, |t| is pinned to within O(|s|) of sqrt(k) and the two-dimensional search over (x, y) collapses to a one-dimensional scan over the small quantity s.  A solver who does not see this must scan x over the whole interval [-B, B].",
+  "intuition_type": "change of variables",
+  "max_answer_tokens": 40,
+  "native_domain": "number_theory",
+  "native_objects": [
+   "the plane quartic C_k : x^3 + x^2 y^2 + y^3 = k",
+   "integral points on C_k",
+   "the elliptic curve E_{1,k} : Y^2 + 3XY = X^3 + k and the degree-2 map phi_1"
+  ],
+  "object_regime": "integer_lattice",
+  "reduction": null,
+  "reduction_kind": "none",
+  "reduction_source": "paper_central",
+  "verification_operations": [
+   "exact integer evaluation of x^3 + x^2 y^2 + y^3",
+   "exact integer equality against the published k_j",
+   "integer magnitude comparison against the published bound B"
+  ]
+ },
+ "shipping_difficulty": "easy",
+ "shipping_params": {
+  "height": 3000,
+  "n_ks": 4,
+  "near_miss_frac": 0.5,
+  "slack": 4,
+  "spread": [
+   6,
+   40
+  ]
+ },
+ "track": "B"
+}
