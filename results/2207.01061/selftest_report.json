@@ -1,0 +1,169 @@
+{
+ "G1_planted_verifies": {
+  "ok": 24,
+  "pass": true,
+  "total": 24
+ },
+ "G2_rejects_corruption": {
+  "distinct_reasons": 8,
+  "pass": true,
+  "reasons": {
+   "bad_coefficients": "binomial 3 is not of the form c*(m - m'): coefficients 1, -2 mod 101",
+   "drop_one": "answer has 2 binomials, expected 3",
+   "duplicate": "two binomials both single out x1; the three must single out x1, x2 and x3",
+   "empty": "answer has 0 binomials, expected 3",
+   "exponent_zero": "binomial 2 does not have the shape x1*x2*x3*(x_i^E - x_j^F*x_k^G) with all exponents >= 1",
+   "non_minimal_double": "binomial 1 is not minimal: E = 50508600 = 505086*(q-1) but the smallest admissible multiplier is 252543",
+   "swap_two_exponents": "binomial 1 is not beta-homogeneous: 25254300*7469046875 = 188625550495312500 but 6132800*26601157337 + 318100*29377074476 = 172484425107169200",
+   "untwisted": "binomial 1 does not vanish on X(F_q): nonzero at the point (2, 1, 1)"
+  }
+ },
+ "G3_round_trip": {
+  "pass": true,
+  "recovered": true,
+  "rejects_garbage": true
+ },
+ "G4_guess_resistance": {
+  "analytic_p": 3.199867413439202e-31,
+  "empirical_p": 0.0,
+  "hits": 0,
+  "pass": true,
+  "search_space": 3125129484428246401262726142339,
+  "search_space_bits": 102,
+  "total": 220000,
+  "verify_audit_agreements": 400,
+  "verify_audit_total": 400
+ },
+ "G5_density_and_baseline": {
+  "compact_route_operations": 622,
+  "compact_route_wall_clock_sec": 9.799003601074219e-05,
+  "density_at_shipping": 1.5824071695313253e-32,
+  "density_hits": 0,
+  "density_sample_size": 220000,
+  "exact_valid_answer_count_at_shipping": 1,
+  "mechanical_over_compact": 2984.469453376206,
+  "mechanical_route_naive_membership_operations": 232925903078,
+  "mechanical_route_operations": 1856340,
+  "mechanical_route_wall_clock_sec": 0.7260141372680664,
+  "pass": true,
+  "strongest_failing_attack": "greedy_smallest_cofactor",
+  "strongest_failing_attack_operations": 300000,
+  "strongest_failing_attack_wall_clock_sec": 0.30855774879455566
+ },
+ "G6_adversary_panel": {
+  "attacks": {
+   "bruteforce_exponent_sweep_4k": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "greedy_smallest_cofactor_20k": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "linear_algebra_kernel": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "magnitude_ansatz": {
+    "attempts": 8,
+    "successes": 0
+   },
+   "random_restart_20k": {
+    "attempts": 8,
+    "successes": 0
+   }
+  },
+  "linear_algebra_discrimination_measured_on_demo": {
+   "discrimination": 0.002551020408163265,
+   "evaluation_matrix_rank": 12,
+   "graded_piece_dim": 13,
+   "graded_piece_truncated": false,
+   "kernel_basis_entries_max": 11,
+   "kernel_dim": 1,
+   "kernel_size": 5,
+   "points": 124,
+   "row_reduction_field_operations": 10035,
+   "shape_candidates_in_kernel": 392,
+   "shape_candidates_tested": 392
+  },
+  "linear_algebra_verdict": "the evaluation-matrix kernel contains EVERY candidate of the asked shape, so row reduction has zero discriminating power; the answer is pinned by minimality, an integer program over ker[w], not by any linear condition over F_q",
+  "pass": true,
+  "reference_algorithm": {
+   "complexity": "O(log w) exact integer operations",
+   "name": "Lagrange-Gauss reduction of the rank-2 lattice ker[w1 w2 w3]",
+   "operations": 684,
+   "solves": "8/8, as expected",
+   "wall_clock_sec": 9.524822235107422e-05
+  },
+  "reference_algorithm_mechanical": {
+   "complexity": "Theta(a_i) = Theta(sqrt(w)) modular tests",
+   "name": "semigroup sweep c = 1,2,... with an O(1) modular membership test",
+   "operations": 2542239,
+   "solves": "8/8, as expected"
+  }
+ },
+ "G7_scales": {
+  "answer_atoms_constant": true,
+  "axes_moved": [
+   "scale",
+   "q"
+  ],
+  "escalated_params": {
+   "q": 251,
+   "scale": 1000000
+  },
+  "ladder": [
+   {
+    "answer_atoms": 24,
+    "answer_chars": 150,
+    "q": 251,
+    "scale": 1000000,
+    "verifies": true
+   },
+   {
+    "answer_atoms": 24,
+    "answer_chars": 156,
+    "q": 401,
+    "scale": 5000000,
+    "verifies": true
+   },
+   {
+    "answer_atoms": 24,
+    "answer_chars": 166,
+    "q": 701,
+    "scale": 25000000,
+    "verifies": true
+   }
+  ],
+  "pass": true
+ },
+ "G8_canonical_key": {
+  "carried_answer_total": 100,
+  "carried_answer_verifies": 100,
+  "distinct_keys": 20,
+  "distinct_of": 20,
+  "invariance_ok": 120,
+  "invariance_total": 120,
+  "pass": true
+ },
+ "G9_no_tool_suitability": {
+  "answer_chars": 141,
+  "answer_elements": 24,
+  "answer_tokens": 47,
+  "arms": {
+   "bare": null,
+   "hinted": null,
+   "placebo": null
+  },
+  "hinted_minus_placebo": null,
+  "hinted_verdict": "not run in-process (needs scripts/harden.py)",
+  "intended_route_operations": 684,
+  "pass": true
+ },
+ "all_pass": true,
+ "all_passed": true,
+ "paper": "2207.01061",
+ "selftest_wall_clock_sec": 41.730441093444824,
+ "shipping": "hard",
+ "track": "B"
+}
