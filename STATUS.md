@@ -1,13 +1,13 @@
 # Status
 
-`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **651 / 12,167** resolved (5.35%)
+`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **652 / 12,167** resolved (5.36%)
 
 | state | count |
 |---|---:|
 | ✅ done | 407 |
-| 🚫 rejected (documented) | 244 |
+| 🚫 rejected (documented) | 245 |
 | 🔄 in progress | 127 |
-| ⚪ free | 11,381 |
+| ⚪ free | 11,380 |
 | **total** | **12,167** |
 
 ## In progress
@@ -62,7 +62,7 @@
 |---|---:|---:|
 | graph structures | 249 | 5,559 |
 | designs and codes | 60 | 1,022 |
-| algebraic decomposition | 53 | 804 |
+| algebraic decomposition | 54 | 804 |
 | integer equations | 31 | 607 |
 | reconfiguration | 36 | 551 |
 | geometric configurations | 32 | 533 |
@@ -73,4 +73,4 @@
 | words and permutations | 12 | 237 |
 | finite field constructions | 26 | 235 |
 
-_regenerated 2026-09-06 03:23Z by `scripts/status.sh --write`_
+_regenerated 2026-09-06 03:28Z by `scripts/status.sh --write`_

@@ -1,0 +1,77 @@
+{
+ "paper": "arXiv:2510.11212",
+ "verdict": "REJECTED",
+ "fails": "H",
+ "track_evaluated": ["A", "B"],
+ "family": "least common standard multiple of two standard bideterminants in A_gen^bd (Definition 5.10, Theorem 7.19 / Algorithm 7.1)",
+
+ "mechanical_route": {
+  "name": "the paper's Algorithm 7.1 (get-admissible-shapes + get-admissible-standard-bd + line-10 divisibility filter)",
+  "basis": "exact count via the hook-content formula: #standard bitableaux of shape lambda over [m]x[n] = s_{lambda'}(1^m) * s_{lambda'}(1^n)",
+  "demo_m4n4": 400,
+  "easy_m5n5": 78400,
+  "medium_m6n6": 65028096,
+  "hard_shipping_m7n7": 223812255744,
+  "escalated_m9n9": 809420877950091264,
+  "measured_enumeration_seconds_capped_at_4e6": 175.06
+ },
+
+ "compact_route": {
+  "name": "constraint propagation on the forced row multisets (shape forced by Lemma 7.22, row content forced by the multiplicity-wise union, R and C decouple)",
+  "solved_at_shipping": "40/40",
+  "median_backtracking_nodes": 35,
+  "max_backtracking_nodes": 954,
+  "median_seconds": 0.2175,
+  "max_seconds": 0.974,
+  "approx_exact_operations": 500,
+  "gap_mechanical_over_compact": 6394635878
+ },
+
+ "attacks": {
+  "constraint_propagation_rows": {"successes": 40, "attempts": 40, "note": "THIS IS THE COMPACT ROUTE; it is executable in context"},
+  "union_rows_padding_no_search": {"successes": 23, "attempts": 40},
+  "obvious_LT_f_times_g": {"successes": 0, "attempts": 40},
+  "random_from_certificate_language": {"successes": 0, "attempts": 200000}
+ },
+
+ "escalation_sweep": [
+  {"config": "hard m=n=7 heights=(5,4,3,2,1) overlap=2", "cp_solved": "8/8", "median_nodes": 34, "max_nodes": 116, "union_rows": "6/8", "answer_atoms": 30},
+  {"config": "m=n=8 heights=(5,4,3,2,1) overlap=3",      "cp_solved": "8/8", "median_nodes": 11, "max_nodes": 81,  "union_rows": "6/8", "answer_atoms": 30},
+  {"config": "m=n=9 heights=(6,5,4,3,2,1) overlap=4",    "cp_solved": "8/8", "median_nodes": 13, "max_nodes": 505, "union_rows": "6/8", "answer_atoms": 42},
+  {"config": "m=n=5 heights=(4,3,2,1) overlap=3",        "cp_solved": "8/8", "median_nodes": 23, "max_nodes": 73,  "union_rows": "4/8", "answer_atoms": 20},
+  {"config": "m=n=6 heights=(5,4,3,2,1) overlap=4",      "cp_solved": "8/8", "median_nodes": 11, "max_nodes": 36,  "union_rows": "8/8", "answer_atoms": 30}
+ ],
+
+ "valid_answer_counts_exact_enumeration": {
+  "demo_m4n4": {"per_seed": [3, 2, 1, 19], "candidates_scanned": 24626, "density_range": [4.06e-05, 7.72e-04]},
+  "easy_m5n5": {"per_seed": [2, 1, 1, 1], "candidates_scanned": 6935760, "density_range": [1.44e-07, 2.88e-07]},
+  "note": "the planted answer was in the enumerated set every time"
+ },
+
+ "answer_size_at_shipping": {"chars_max": 87, "atoms_max": 30, "cap_chars": 2000, "cap_atoms": 256},
+
+ "paper_error_found": {
+  "claim": "Theorem 7.19 completeness: every least common standard multiple has exactly P = max_i max(rd_i, cd_i) columns; get-admissible-shapes returns only such shapes",
+  "counterexample": {"f": "(2|1)", "g": "(2,3|1,2)", "matrix": "3x3", "paper_P": 1,
+                     "common_multiples_with_1_column": 0,
+                     "least_common_multiples_with_2_columns": 2,
+                     "example_LCM": "(1,3|1,2) * (2|1)",
+                     "least_common_multiples_with_3_columns": 0},
+  "reason": "P ignores the shape-containment constraint lambda contains shape(f) union shape(g); here that union is (2,1), already two columns",
+  "second_error": "the worked example in applications.tex lists 12 bitableaux as LCM(f,g); f lt-divides none of the three shape-(3,3,2) ones checked. It shows the unfiltered line-9 output. Under the algorithm as written the answer is 3, all of shape (3,2,2).",
+  "consequence": "leastness has no cheap closed-form certificate; verify() must enumerate the one-column-smaller divisors"
+ },
+
+ "hidden_term_order_idea": {
+  "verdict": "REJECTED",
+  "reason_1": "not this paper's mathematics: the bideterminant term order (Definition 7.6) is a single fixed order, and a Robbiano-style weight characterisation of pseudo-ASL term orders is the paper's Open Question 10.4",
+  "reason_2": "the valid answers form a full-dimensional Groebner cone (Mora-Robbiano 1988); recovering it is leading-term choice plus one LP",
+  "measurement": "toric ideals, from-scratch Buchberger over Q, weight order tie-broken by lex, 250 random weight vectors per instance",
+  "distinct_reduced_GBs_over_250_weights": [4, 4, 8, 5, 14, 7, 8, 2, 3],
+  "largest_cone_fraction_range": [0.208, 0.516],
+  "P_two_random_weights_give_same_reduced_GB": [0.3198, 0.2617, 0.2025, 0.2, 0.1072, 0.1952, 0.214, 0.5005, 0.375],
+  "G4_threshold": 1e-06,
+  "orders_of_magnitude_short": "5 to 6",
+  "leading_term_readable_as_unique_max_total_degree_monomial": "229/625 basis elements"
+ }
+}

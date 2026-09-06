@@ -1,0 +1,323 @@
+{
+ "G1_planted_verifies": {
+  "ok": 32,
+  "pass": true,
+  "total": 32
+ },
+ "G2_rejects_corruption": {
+  "all_rejected": true,
+  "distinct_reasons": 6,
+  "pass": true,
+  "reasons": [
+   "a minor is empty or has |S| != |T|",
+   "an index is outside the matrix",
+   "f does not lt-divide the answer",
+   "malformed answer",
+   "not a standard bitableau",
+   "not least: a proper standard divisor is also a common multiple"
+  ]
+ },
+ "G3_round_trip": {
+  "parsed_ok": true,
+  "pass": true,
+  "rejects_junk": true
+ },
+ "G4_guess_resistance": {
+  "analytic_p": 0.0,
+  "hits": 0,
+  "naive_space": 475448619008086151,
+  "pass": true,
+  "structure_aware_space": 475448619008086151,
+  "trials": 20000,
+  "trials_note": "20,000 structure-aware trials here plus 10,000 in the final sweep, 0 hits in 30,000 total. Below the 200k the contract asks for, but not load-bearing: the EXACT enumeration at easy gives a density of 1.4e-7 directly, and the family is rejected on H, not on G4."
+ },
+ "G5_density_and_cost": {
+  "baseline_nodes_max": 954,
+  "baseline_nodes_median": 35,
+  "baseline_solved": "40/40",
+  "baseline_wall_clock_sec": 0.2175,
+  "compact_ops_shipping": 500,
+  "exact_count_demo": [
+   3,
+   2,
+   1,
+   19
+  ],
+  "exact_count_demo_grid": 24626,
+  "exact_count_easy": [
+   2,
+   1,
+   1,
+   1
+  ],
+  "exact_count_easy_grid": 6935760,
+  "fail_reason": "the strongest attack SOLVES the shipping preset 40/40 in a median of 35 nodes and 0.22 s; a large space and a low density are not difficulty",
+  "gap_mechanical_over_compact": 6394635878,
+  "mechanical_ops_shipping": 223812255744,
+  "pass": false,
+  "shipping_density": 1.44e-07,
+  "shipping_density_basis": "exact enumeration at easy (m=n=5): 1-2 valid answers out of 6,935,760 standard bitableaux of admissible shape; at demo (m=n=4) the exact counts are 1,2,3,19",
+  "shipping_valid_answer_count": 1,
+  "shipping_valid_answer_count_range": [
+   1,
+   19
+  ],
+  "strongest_attack": "constraint propagation on the forced row multisets (shape forced by Lemma 7.22; row content forced by the multiplicity-wise union; R and C decouple)"
+ },
+ "G6_adversary_panel": {
+  "attacks": {
+   "constraint_propagation_rows": {
+    "attempts": 40,
+    "successes": 40
+   },
+   "obvious_LT_f_times_g": {
+    "attempts": 40,
+    "successes": 0
+   },
+   "random_from_certificate_language": {
+    "attempts": 200000,
+    "successes": 0
+   },
+   "union_rows_padding_no_search": {
+    "attempts": 40,
+    "successes": 23
+   }
+  },
+  "domain_attack": "constraint_propagation_rows -- the standard algorithm for a semi-standard-tableau completion, and simultaneously the compact route",
+  "fail_reason": "two of the four attacks succeed, one of them with no search at all; Track B requires a FAILING in-context attack and there is none",
+  "pass": false
+ },
+ "G7_scales": {
+  "escalate": {
+   "heights": [
+    6,
+    5,
+    4,
+    3,
+    2,
+    1
+   ],
+   "m": 8,
+   "n": 8,
+   "overlap": 3
+  },
+  "escalated_answer_atoms": 42,
+  "escalated_builds_and_verifies": true,
+  "escalation_sweep": [
+   {
+    "answer_atoms": 30,
+    "config": "hard m=n=7 heights=(5,4,3,2,1) overlap=2",
+    "cp_solved": "8/8",
+    "max_nodes": 116,
+    "median_nodes": 34,
+    "union_rows": "6/8"
+   },
+   {
+    "answer_atoms": 30,
+    "config": "m=n=8 heights=(5,4,3,2,1) overlap=3",
+    "cp_solved": "8/8",
+    "max_nodes": 81,
+    "median_nodes": 11,
+    "union_rows": "6/8"
+   },
+   {
+    "answer_atoms": 42,
+    "config": "m=n=9 heights=(6,5,4,3,2,1) overlap=4",
+    "cp_solved": "8/8",
+    "max_nodes": 505,
+    "median_nodes": 13,
+    "union_rows": "6/8"
+   },
+   {
+    "answer_atoms": 20,
+    "config": "m=n=5 heights=(4,3,2,1) overlap=3",
+    "cp_solved": "8/8",
+    "max_nodes": 73,
+    "median_nodes": 23,
+    "union_rows": "4/8"
+   },
+   {
+    "answer_atoms": 30,
+    "config": "m=n=6 heights=(5,4,3,2,1) overlap=4",
+    "cp_solved": "8/8",
+    "max_nodes": 36,
+    "median_nodes": 11,
+    "union_rows": "8/8"
+   }
+  ],
+  "fail_reason": "difficulty does not grow: the CP attack solves 8/8 at every escalated setting, with FEWER nodes as m,n grow (median 13 at m=n=9 vs 34 at m=n=7)",
+  "moved_params": [
+   "m",
+   "n",
+   "overlap",
+   "heights"
+  ],
+  "pass": false
+ },
+ "G8_canonical_key": {
+  "distinct_keys": 24,
+  "invariance_note": "the key is invariant under swapping f and g, which is the family's only relabelling symmetry (indices are not permutable: the term order of Definition 7.6 is not symmetric under relabelling rows or columns)",
+  "invariance_ok": 24,
+  "invariance_total": 24,
+  "keys_total": 24,
+  "pass": true,
+  "transformed_instance_verifies": 24
+ },
+ "G9_no_tool_suitability": {
+  "answer_atoms": 30,
+  "answer_chars": 87,
+  "answer_elements": 30,
+  "answer_tokens": 32,
+  "arms": {
+   "bare": {
+    "attempts": 0,
+    "solved": 0
+   },
+   "hinted": {
+    "attempts": 0,
+    "solved": 0
+   },
+   "placebo": {
+    "attempts": 0,
+    "solved": 0
+   }
+  },
+  "arms_note": "three-arm diagnostic not run: no OPENROUTER_API_KEY, and the family is rejected on H before the oracle loop",
+  "caps": {
+   "chars": 2000,
+   "elements": 256,
+   "operations": 1000
+  },
+  "diagnostic_not_gated": true,
+  "hinted_minus_placebo": null,
+  "hinted_verdict": null,
+  "intended_route_operations": 500,
+  "note": "the caps are met comfortably -- which is exactly the problem: a 500-operation route that a solver can execute by hand is not a gap",
+  "pass": true
+ },
+ "all_passed": false,
+ "certificate_language": {
+  "bounds": {
+   "m": 7,
+   "max_columns": 5,
+   "max_height": 5,
+   "n": 7,
+   "n_elements": 30
+  },
+  "description": "A standard bitableau over [m]x[n]: an ordered list of minors (S_j|T_j) with |S_j|=|T_j| non-increasing in j, each S_j a strictly increasing subset of [m] and T_j of [n], such that both the row and the column tableau are semi-standard."
+ },
+ "compact_route": {
+  "approx_exact_operations": 500,
+  "gap_mechanical_over_compact": 6394635878,
+  "max_backtracking_nodes": 954,
+  "max_seconds": 0.974,
+  "median_backtracking_nodes": 35,
+  "median_seconds": 0.2175,
+  "name": "constraint propagation on the forced row multisets (shape forced by Lemma 7.22, row content forced by the multiplicity-wise union, R and C decouple)",
+  "solved_at_shipping": "40/40"
+ },
+ "hidden_term_order_idea": {
+  "G4_threshold": 1e-06,
+  "P_two_random_weights_give_same_reduced_GB": [
+   0.3198,
+   0.2617,
+   0.2025,
+   0.2,
+   0.1072,
+   0.1952,
+   0.214,
+   0.5005,
+   0.375
+  ],
+  "distinct_reduced_GBs_over_250_weights": [
+   4,
+   4,
+   8,
+   5,
+   14,
+   7,
+   8,
+   2,
+   3
+  ],
+  "largest_cone_fraction_range": [
+   0.208,
+   0.516
+  ],
+  "leading_term_readable_as_unique_max_total_degree_monomial": "229/625 basis elements",
+  "measurement": "toric ideals, from-scratch Buchberger over Q, weight order tie-broken by lex, 250 random weight vectors per instance",
+  "orders_of_magnitude_short": "5 to 6",
+  "reason_1": "not this paper's mathematics: the bideterminant term order (Definition 7.6) is a single fixed order, and a Robbiano-style weight characterisation of pseudo-ASL term orders is the paper's Open Question 10.4",
+  "reason_2": "the valid answers form a full-dimensional Groebner cone (Mora-Robbiano 1988); recovering it is leading-term choice plus one LP",
+  "verdict": "REJECTED"
+ },
+ "mechanical_route": {
+  "basis": "exact count via the hook-content formula: #standard bitableaux of shape lambda over [m]x[n] = s_{lambda'}(1^m) * s_{lambda'}(1^n)",
+  "demo_m4n4": 400,
+  "easy_m5n5": 78400,
+  "escalated_m9n9": 809420877950091264,
+  "hard_shipping_m7n7": 223812255744,
+  "measured_enumeration_seconds_capped_at_4e6": 175.06,
+  "medium_m6n6": 65028096,
+  "name": "the paper's Algorithm 7.1 (get-admissible-shapes + get-admissible-standard-bd + line-10 divisibility filter)"
+ },
+ "paper_error_found": {
+  "claim": "Theorem 7.19 completeness: every least common standard multiple has exactly P = max_i max(rd_i, cd_i) columns; get-admissible-shapes returns only such shapes",
+  "consequence": "leastness has no cheap closed-form certificate; verify() must enumerate the one-column-smaller divisors",
+  "counterexample": {
+   "common_multiples_with_1_column": 0,
+   "example_LCM": "(1,3|1,2) * (2|1)",
+   "f": "(2|1)",
+   "g": "(2,3|1,2)",
+   "least_common_multiples_with_2_columns": 2,
+   "least_common_multiples_with_3_columns": 0,
+   "matrix": "3x3",
+   "paper_P": 1
+  },
+  "reason": "P ignores the shape-containment constraint lambda contains shape(f) union shape(g); here that union is (2,1), already two columns",
+  "second_error": "the worked example in applications.tex lists 12 bitableaux as LCM(f,g); f lt-divides none of the three shape-(3,3,2) ones checked. It shows the unfiltered line-9 output. Under the algorithm as written the answer is 3, all of shape (3,2,2)."
+ },
+ "problem_profile": {
+  "certificate_form": "integer_tuple",
+  "computational_core": "other",
+  "domain_essentiality": "native",
+  "hardness_basis": "REJECTED.  Track B was the only candidate and it fails: the compact route IS an in-context attack.  Constraint propagation over the forced row multisets solves 40/40 shipping instances in a median of 34 backtracking nodes (~5e2 exact operations, 0.14 s), and a zero-search padding heuristic solves 6/8.  The paper's own Algorithm 7.1 enumerates ~7e6 standard bitableaux at the same preset, but that gap is not testable because the short side is trivially reachable by hand.",
+  "intuition_description": "Row i of every common multiple must contain the multiplicity-wise union of row i of f and row i of g, and the shape must contain the multiset union of the two shapes; a solver who does not see this must search standard bitableaux.",
+  "intuition_type": "constraint propagation",
+  "max_answer_tokens": 40,
+  "native_domain": "algebra",
+  "native_objects": [
+   "standard bitableaux over [m]x[n]",
+   "bideterminants (products of minors) of a generic matrix"
+  ],
+  "object_regime": "finite_discrete",
+  "reduction": null,
+  "reduction_kind": "none",
+  "reduction_source": "paper_central",
+  "verification_operations": [
+   "multiset subtraction on tableau rows",
+   "multiset subtraction on column heights",
+   "recomputation of LT(f*h) by merge-and-sort (Thm 7.12)",
+   "semi-standardness comparisons",
+   "enumeration of the one-column-smaller divisors"
+  ]
+ },
+ "rejected_on": [
+  "H"
+ ],
+ "shipping_difficulty": "hard",
+ "shipping_params": {
+  "heights": [
+   5,
+   4,
+   3,
+   2,
+   1
+  ],
+  "m": 7,
+  "n": 7,
+  "overlap": 2
+ },
+ "track": "B",
+ "verdict": "REJECTED"
+}
