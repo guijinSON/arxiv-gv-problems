@@ -1,0 +1,280 @@
+{
+ "paper": "arXiv:2403.16874 (Cohn, de Laat, Leijenhorst)",
+ "family_built": "exact rational dual certificate for the Delsarte two-point LP bound on spherical codes (Appendix A; k=2 case of the k-point bounds of Section 1; the k=3 analogue is Section 3, eq. (3.1))",
+ "verdict": "REJECTED on H, on both Track A and Track B",
+ "TRACK_attempted": "B",
+ "shipping_preset_attempted": "hard (dim=48, degree=10, 4 double roots)",
+ "G_generatable": {
+  "pass": true,
+  "note": "the certificate is planted first: f(t) = (t+1)(t-s) prod_i (t-a_i)^2 is non-positive on [-1,s] by inspection; no LP or search runs in make_instance",
+  "planted_verifies": {
+   "demo": {
+    "verify_true": 24,
+    "seeds": 24,
+    "answer_chars_max": 30,
+    "answer_chars_median": 25,
+    "answer_atoms": 8,
+    "degree": 4,
+    "dim": 8
+   },
+   "easy": {
+    "verify_true": 24,
+    "seeds": 24,
+    "answer_chars_max": 78,
+    "answer_chars_median": 63,
+    "answer_atoms": 12,
+    "degree": 6,
+    "dim": 16
+   },
+   "medium": {
+    "verify_true": 24,
+    "seeds": 24,
+    "answer_chars_max": 179,
+    "answer_chars_median": 126,
+    "answer_atoms": 16,
+    "degree": 8,
+    "dim": 24
+   },
+   "hard": {
+    "verify_true": 24,
+    "seeds": 24,
+    "answer_chars_max": 326,
+    "answer_chars_median": 254,
+    "answer_atoms": 20,
+    "degree": 10,
+    "dim": 48
+   }
+  }
+ },
+ "V_verifiable": {
+  "pass": true,
+  "exact_rational_only": true,
+  "operations": [
+   "Gegenbauer three-term recurrence over Q",
+   "sign comparison of f_k over Q",
+   "Yun squarefree decomposition + Sturm root count (gvlib.roots) for the odd-multiplicity part",
+   "rational sample-point sign test"
+  ],
+  "verify_true_seeds": {
+   "demo": 24,
+   "easy": 24,
+   "medium": 24,
+   "hard": 24
+  },
+  "seeds_per_preset": 24,
+  "distinct_rejection_reasons": 20,
+  "number_of_valid_certificates": "infinite -- the accepted set is a full-dimensional convex cone section; enumerate_all() returns None honestly"
+ },
+ "answer_cap_G9c": {
+  "cap_chars": 2000,
+  "cap_atoms": 256,
+  "measured": {
+   "demo": {
+    "chars_max": 30,
+    "atoms": 8
+   },
+   "easy": {
+    "chars_max": 78,
+    "atoms": 12
+   },
+   "medium": {
+    "chars_max": 179,
+    "atoms": 16
+   },
+   "hard": {
+    "chars_max": 326,
+    "atoms": 20
+   }
+  },
+  "pass": true
+ },
+ "escalate": {
+  "axes_moved": [
+   "den_max",
+   "dim",
+   "height_bits"
+  ],
+  "ladder": [
+   {
+    "round": 0,
+    "params": {
+     "dim": 48,
+     "n_roots": 4,
+     "den_max": 14,
+     "height_bits": 160
+    },
+    "degree": 10,
+    "answer_chars": 233,
+    "answer_atoms": 20,
+    "verifies": true
+   },
+   {
+    "round": 1,
+    "params": {
+     "dim": 96,
+     "n_roots": 4,
+     "den_max": 20,
+     "height_bits": 320
+    },
+    "degree": 10,
+    "answer_chars": 258,
+    "answer_atoms": 20,
+    "verifies": true
+   },
+   {
+    "round": 2,
+    "params": {
+     "dim": 192,
+     "n_roots": 4,
+     "den_max": 26,
+     "height_bits": 640
+    },
+    "degree": 10,
+    "answer_chars": 323,
+    "answer_atoms": 20,
+    "verifies": true
+   },
+   {
+    "round": 3,
+    "params": {
+     "dim": 384,
+     "n_roots": 4,
+     "den_max": 32,
+     "height_bits": 1280
+    },
+    "degree": 10,
+    "answer_chars": 446,
+    "answer_atoms": 20,
+    "verifies": true
+   }
+  ],
+  "answer_length_fixed_at_20_atoms_across_the_whole_ladder": true
+ },
+ "H_hardness_MEASURED": {
+  "pass": false,
+  "domain_standard_attack": {
+   "name": "exact rational max-margin (Chebyshev-centre) LP over Q, two-phase simplex with Bland's rule, cutting planes on the continuum constraint",
+   "why_this_one": "the family asks for FEASIBILITY, so the standard method is to maximise the slack, not to minimise the objective",
+   "solves": {
+    "easy": "12/12",
+    "medium": "12/12",
+    "hard": "12/12"
+   },
+   "median_exact_operations": {
+    "easy": 155100,
+    "medium": 239322,
+    "hard": 304808
+   },
+   "median_seconds": {
+    "easy": 0.17,
+    "medium": 0.38,
+    "hard": 0.51
+   }
+  },
+  "domain_standard_attack_minimising_variant": {
+   "name": "same simplex, but minimising f(1) instead of maximising the slack",
+   "solves": {
+    "easy": "0/12",
+    "medium": "0/12",
+    "hard": "0/12"
+   },
+   "median_exact_operations": {
+    "easy": 2754476,
+    "medium": 5558054,
+    "hard": 6159118
+   },
+   "median_seconds": {
+    "easy": 2.38,
+    "medium": 4.03,
+    "hard": 5.41
+   },
+   "note": "fails only because a minimiser lands exactly on the boundary of the discretised cone and is generically infeasible between grid points; this is an artefact of the objective, not hardness"
+  },
+  "in_context_tool_free_attack": {
+   "name": "one-parameter repeated-root sweep: f = (t+1)(t-s)(t-a)^{2m}, a swept over 11 rationals",
+   "solves": {
+    "easy": "16/20",
+    "medium": "18/20",
+    "hard": "16/20"
+   },
+   "median_exact_operations": {
+    "easy": 470,
+    "medium": 584,
+    "hard": 1144
+   },
+   "note": "Track B requires a fourth in-context attack that FAILS.  This one succeeds 80-90% of the time inside a compact-route budget."
+  },
+  "randomised_baseline_structure_aware": {
+   "easy": {
+    "structure_aware_hits": 960,
+    "trials": 1800,
+    "density": 0.5333333333333333,
+    "seconds": 1.1,
+    "naive_uniform_hits": 0,
+    "naive_uniform_trials": 12000
+   },
+   "medium": {
+    "structure_aware_hits": 1009,
+    "trials": 1800,
+    "density": 0.5605555555555556,
+    "seconds": 1.9,
+    "naive_uniform_hits": 0,
+    "naive_uniform_trials": 12000
+   },
+   "hard": {
+    "structure_aware_hits": 629,
+    "trials": 1800,
+    "density": 0.34944444444444445,
+    "seconds": 2.4,
+    "naive_uniform_hits": 0,
+    "naive_uniform_trials": 12000
+   }
+  },
+  "compact_route_operations": {
+   "easy": 126,
+   "medium": 196,
+   "hard": 280
+  },
+  "mechanical_over_compact_gap": {
+   "easy": 1231,
+   "medium": 1221,
+   "hard": 1089
+  },
+  "published_bound_slack": {
+   "easy": {
+    "sweep_solves": 16,
+    "of": 20,
+    "B_over_sweep_certificate_value": {
+     "min": 1.04,
+     "median": 1.47,
+     "max": 5.06
+    }
+   },
+   "medium": {
+    "sweep_solves": 18,
+    "of": 20,
+    "B_over_sweep_certificate_value": {
+     "min": 1.15,
+     "median": 2.01,
+     "max": 16.17
+    }
+   },
+   "hard": {
+    "sweep_solves": 16,
+    "of": 20,
+    "B_over_sweep_certificate_value": {
+     "min": 1.13,
+     "median": 3.67,
+     "max": 48.41
+    }
+   }
+  },
+  "scaling_closure": {
+   "statement": "if f is accepted with f(1) = V, then for lambda = (B-1)/(V-1) >= 1 the certificate lambda*f + (1-lambda) is also accepted and has f(1) = B exactly",
+   "verified_numerically": true,
+   "cost": "one rational division plus d multiplications",
+   "consequence": "tightening the published condition to f(1) == B does not rescue the family"
+  }
+ },
+ "root_cause": "the quantity the certificate bounds is the OPTIMUM of the LP, which is a function of (n, d, s) alone.  A generator can plant a feasible dual certificate but not an optimal one, so the published bound is always strictly slack and the accepted set is full-dimensional."
+}
