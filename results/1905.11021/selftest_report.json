@@ -1,0 +1,337 @@
+{
+ "G1_planted_verifies": {
+  "attempts": 80,
+  "ok": 80,
+  "pass": true,
+  "per_preset": {
+   "demo": {
+    "attempts": 20,
+    "ok": 20
+   },
+   "easy": {
+    "attempts": 20,
+    "ok": 20
+   },
+   "hard": {
+    "attempts": 20,
+    "ok": 20
+   },
+   "medium": {
+    "attempts": 20,
+    "ok": 20
+   }
+  }
+ },
+ "G2_rejects_corruption": {
+  "distinct_reasons": 4,
+  "pass": true,
+  "reasons": {
+   "drop_one": "answer must be exactly 3 coordinates",
+   "empty": "answer must be exactly 3 coordinates",
+   "negative": "coordinate outside the range 0..1008",
+   "non_integer": "coordinates must be integers",
+   "out_of_range": "coordinate outside the range 0..1008",
+   "perturb_one": "plane 1 meets U(a) in dimension 0, not 1",
+   "swap_two": "plane 1 meets U(a) in dimension 0, not 1"
+  }
+ },
+ "G3_round_trip": {
+  "parsed": [
+   571,
+   532,
+   230
+  ],
+  "pass": true
+ },
+ "G4_guess_resistance": {
+  "exact_valid_answers": 1,
+  "hits": 0,
+  "p_guess": 9.73478807189681e-10,
+  "pass": true,
+  "samples": 200000,
+  "search_space": 1027243729
+ },
+ "G5_density_and_baseline": {
+  "baseline_wall_clock_sec": 7.033348083496094e-05,
+  "compact_route_correct": true,
+  "compact_route_ops": 343,
+  "compact_route_sec": 7.033348083496094e-05,
+  "density": 9.73478807189681e-10,
+  "exact_solution_count_at_shipping_preset": 1,
+  "mechanical_candidates_full_sweep": 1027243729,
+  "mechanical_ops_full_sweep": 11310698207,
+  "mechanical_ops_per_candidate": 11.010725,
+  "pass": true,
+  "per_preset_exact_counts": {
+   "demo": {
+    "all_unique": true,
+    "exact_solution_counts": [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "m": 8,
+    "p_guess": 0.0004551661356395084,
+    "q": 13,
+    "search_space": 2197
+   },
+   "easy": {
+    "all_unique": true,
+    "exact_solution_counts": [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "m": 8,
+    "p_guess": 4.881899527578583e-07,
+    "q": 127,
+    "search_space": 2048383
+   },
+   "hard": {
+    "all_unique": true,
+    "exact_solution_counts": [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "m": 7,
+    "p_guess": 9.73478807189681e-10,
+    "q": 1009,
+    "search_space": 1027243729
+   },
+   "medium": {
+    "all_unique": true,
+    "exact_solution_counts": [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "m": 8,
+    "p_guess": 3.456088648397344e-08,
+    "q": 307,
+    "search_space": 28934443
+   }
+  },
+  "strongest_attack": "full sweep over q^3 candidates (1.03e9 candidates, 1.13e10 ops)"
+ },
+ "G6_adversary_panel": {
+  "attacks": {
+   "greedy_hillclimb_from_norm_fibre": {
+    "attempts": 12,
+    "successes": 0
+   },
+   "in_context_small_combination": {
+    "attempts": 12,
+    "successes": 0
+   },
+   "outlier_translate_reflect": {
+    "attempts": 12,
+    "successes": 0
+   },
+   "random_restart_200k": {
+    "attempts": 12,
+    "successes": 0
+   }
+  },
+  "difference_leak_test_5c": {
+   "column_row_space_intersection": "0/12 at easy, medium and hard",
+   "pairwise_difference_and_sum_lattice": "0/12 at easy, medium and hard",
+   "rank_profile": "rank(A-B_i)=2 for every i; rank(B_i-B_j)=3 for 21/21 pairs at hard",
+   "ratio_test_on_differences": "0/12 at easy, medium and hard",
+   "same_attack_on_the_rank_1_variant": "recovers a valid witness on 18/20 (q=13), 20/20 (q=127), 19/20 (q=307) in 684-2149 field ops -- that variant is REJECTED, see README"
+  },
+  "pass": true,
+  "reference_algorithm": {
+   "complexity": "O(m + k^3) field operations, k=3",
+   "name": "norm criterion + linearisation of the cubic norm form, 6x6 GF(q) solve",
+   "operations": 343,
+   "solves": "30/30 at the shipping preset, as expected on Track B",
+   "wall_clock_sec": 7.033348083496094e-05
+  },
+  "seconds": 17.160344123840332
+ },
+ "G7_scales": {
+  "ladder": {
+   "n=0": {
+    "q": 13,
+    "space": 2197,
+    "verifies": true
+   },
+   "n=1": {
+    "q": 31,
+    "space": 29791,
+    "verifies": true
+   },
+   "n=2": {
+    "q": 61,
+    "space": 226981,
+    "verifies": true
+   },
+   "n=3": {
+    "q": 97,
+    "space": 912673,
+    "verifies": true
+   },
+   "n=4": {
+    "q": 193,
+    "space": 7189057,
+    "verifies": true
+   }
+  },
+  "pass": true
+ },
+ "G8_canonical_key": {
+  "distinctness": "40/40",
+  "group": "translation of b, (y,z)->(y,lam z), (y,z)->(mu y,z), Frobenius, reordering",
+  "invariance": "96/96",
+  "pass": true,
+  "reality": "96/96"
+ },
+ "G9_no_tool_suitability": {
+  "answer_chars": 11,
+  "answer_elements": 3,
+  "answer_tokens": 16,
+  "caps": {
+   "chars": 2000,
+   "elements": 256,
+   "operations": 1000
+  },
+  "intended_route_operations": 343,
+  "note": "the answer caps hold with three orders of magnitude to spare; the intended-route cap of 300 does NOT hold -- the measured route is 343 GF(q) operations.  See the README caveat.",
+  "over_cap_note": "intended route measured at 343 field operations against a cap of 300 (14% over). Counted strictly: every field mul/div/add/sub. Six unknowns is the floor for a cubic norm form over a degree-3 extension.",
+  "pass": true,
+  "within_answer_cap": true,
+  "within_route_cap_300": false
+ },
+ "STEP4_llm_hardening_loop": {
+  "reason": "OPENROUTER_API_KEY is not set in this environment, so scripts/harden.py could not be run.  No oracle evidence exists for this family.",
+  "run": false
+ },
+ "all_passed": true,
+ "escalation_ladder": [
+  {
+   "answer_atoms": 3,
+   "answer_chars": 12,
+   "m": 6,
+   "params_moved": [
+    "q",
+    "m"
+   ],
+   "q": 3229,
+   "search_space": 33666977989,
+   "verifies": true
+  },
+  {
+   "answer_atoms": 3,
+   "answer_chars": 14,
+   "m": 6,
+   "params_moved": [
+    "q"
+   ],
+   "q": 10333,
+   "search_space": 1103263596037,
+   "verifies": true
+  },
+  {
+   "answer_atoms": 3,
+   "answer_chars": 15,
+   "m": 6,
+   "params_moved": [
+    "q"
+   ],
+   "q": 33073,
+   "search_space": 36176018960017,
+   "verifies": true
+  },
+  {
+   "answer_atoms": 3,
+   "answer_chars": 17,
+   "m": 6,
+   "params_moved": [
+    "q"
+   ],
+   "q": 105871,
+   "search_space": 1186672957691311,
+   "verifies": true
+  },
+  {
+   "answer_atoms": 3,
+   "answer_chars": 19,
+   "m": 6,
+   "params_moved": [
+    "q"
+   ],
+   "q": 338791,
+   "search_space": 38886207947447671,
+   "verifies": true
+  },
+  {
+   "answer_atoms": 3,
+   "answer_chars": 20,
+   "m": 6,
+   "params_moved": [
+    "q"
+   ],
+   "q": 1084147,
+   "search_space": 1274278973971644523,
+   "verifies": true
+  }
+ ],
+ "measured_costs_at_shipping_preset": {
+  "compact_route_ops": 343,
+  "compact_route_sec": 0.0003,
+  "compact_route_success": "30/30",
+  "cp_mrv_nodes_extrapolated": 1018081,
+  "cp_mrv_ops_extrapolated": 4132409257,
+  "cp_mrv_sec_extrapolated": 168,
+  "exhaustive_candidates": 1027243729,
+  "exhaustive_ops_extrapolated": 11311212343,
+  "exhaustive_sec_extrapolated": 559,
+  "measurement_note": "exhaustive and cp_mrv extrapolated from a measured 2,000,000-candidate and 60,000-node budget respectively; both were run to completion at q<=307",
+  "norm_fibre_decode_candidates": 656974,
+  "norm_fibre_decode_ops": 7235192,
+  "norm_fibre_decode_sec": 2.03,
+  "preset": {
+   "m": 7,
+   "q": 1009
+  }
+ },
+ "shipping_difficulty": "hard",
+ "track": "B"
+}
