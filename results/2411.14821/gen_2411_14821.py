@@ -21,7 +21,7 @@ from typing import Any
 
 
 DIFFICULTY = {
-    "demo": {"n": 8, "degree": 6},
+    "demo": {"n": 3, "degree": 3},
     "easy": {"n": 16, "degree": 6},
     "medium": {"n": 32, "degree": 6},
     "hard": {"n": 64, "degree": 6},
@@ -667,7 +667,16 @@ def selftest() -> dict:
         "naive_space": search_space(shipping),
     }
 
-    small_params = DIFFICULTY["demo"]
+    # This gate needs a preset small enough for enumerate_all() to run exhaustively,
+    # AND large enough that solutions are a tiny fraction of the space.  It used to
+    # read DIFFICULTY["demo"], but those two requirements pull against demo's own
+    # contract: prompts/codex_task.md defines demo as the rung a person can solve on
+    # paper, which means the solution density there is deliberately high.  Measured:
+    # enumerate_all returns None at easy and medium (too big), so the gate cannot
+    # simply move up the ladder either.  The measurement size is therefore pinned
+    # here, independent of demo -- these are the exact params this gate used before
+    # demo was made hand-scale, so its behaviour is unchanged.
+    small_params = {"n": 8, "degree": 6}
     sparse_rows = []
     sparse_pass = True
     for seed in range(3):

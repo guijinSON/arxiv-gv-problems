@@ -28,7 +28,7 @@ FAMILY_VERSION = 1
 # the expected degree of the induced exact-cover hypergraph roughly constant
 # as n grows (the deviation range is spread*n^2).
 DIFFICULTY = {
-    "demo": {"n": 4, "spread": 2.0, "attack_filter": False},
+    "demo": {"n": 2, "spread": 2.0, "attack_filter": False},
     "easy": {"n": 24, "spread": 0.30, "attack_filter": True},
     "medium": {"n": 32, "spread": 0.30, "attack_filter": True},
     "hard": {"n": 40, "spread": 0.30, "attack_filter": True},
@@ -884,13 +884,24 @@ def selftest():
     }
 
     # G5: exact small enumeration.
-    small = make_instance(seed=2718, **DIFFICULTY["demo"])
+    #
+    # This gate needs a preset small enough for enumerate_all() to run exhaustively,
+    # AND large enough that solutions are a tiny fraction of the space.  It used to
+    # read DIFFICULTY["demo"], but those two requirements pull against demo's own
+    # contract: prompts/codex_task.md defines demo as the rung a person can solve on
+    # paper, which means the solution density there is deliberately high.  Measured:
+    # enumerate_all returns None at easy and medium (too big), so the gate cannot
+    # simply move up the ladder either.  The measurement size is therefore pinned
+    # here, independent of demo -- these are the exact params this gate used before
+    # demo was made hand-scale, so its behaviour is unchanged.
+    G5_ENUMERATION_PARAMS = {"n": 4, "spread": 2.0, "attack_filter": False}
+    small = make_instance(seed=2718, **G5_ENUMERATION_PARAMS)
     exact = enumerate_all(small)
     small_space = search_space(small)
     fraction = None if exact is None else exact / small_space
     report["G5_sparse"] = {
         "pass": exact is not None and fraction < 1e-3,
-        "preset": "demo",
+        "preset": "G5_ENUMERATION_PARAMS (pinned; see comment)",
         "valid_answers": None if exact is None else str(exact),
         "candidate_space": str(small_space),
         "fraction": fraction,
