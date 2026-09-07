@@ -46,8 +46,15 @@ except Exception as e:
 # failure here is reported, never swallowed: `core_provenance` would silently read
 # "derived" and the release would look measured when it is not.
 try:
+    # arxiv_id is REQUIRED, not optional: profile_for_module consults
+    # audit/backfilled_profiles.json keyed by it, and that is the only tier that
+    # answers for the ~40 modules predating PROBLEM_PROFILE.  Omitting it silently
+    # drops to the `derived` tier, which emits free text like "graph structures"
+    # instead of the taxonomy value "combinatorics" -- so the record looks
+    # populated while being unusable for slicing.
     profile = corpus_report.profile_for_module(
-        m, m.make_instance(seed=1, **params), family=corpus_report.family_for(pid))
+        m, m.make_instance(seed=1, **params),
+        family=corpus_report.family_for(pid), arxiv_id=pid)
 except Exception as e:
     print(f"ERROR: could not profile {pid}: {type(e).__name__}: {e}")
     sys.exit(1)
