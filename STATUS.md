@@ -1,13 +1,13 @@
 # Status
 
-`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **652 / 12,167** resolved (5.36%)
+`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **653 / 12,167** resolved (5.37%)
 
 | state | count |
 |---|---:|
-| ✅ done | 405 |
+| ✅ done | 406 |
 | 🚫 rejected (documented) | 247 |
 | 🔄 in progress | 125 |
-| ⚪ free | 11,382 |
+| ⚪ free | 11,381 |
 | **total** | **12,167** |
 
 ## In progress
@@ -65,7 +65,7 @@
 | algebraic decomposition | 59 | 804 |
 | integer equations | 30 | 607 |
 | reconfiguration | 36 | 551 |
-| geometric configurations | 31 | 533 |
+| geometric configurations | 32 | 533 |
 | constraint satisfaction | 28 | 508 |
 | algebraic identity solutions | 17 | 398 |
 | algebraic geometric structures | 18 | 299 |
@@ -73,4 +73,4 @@
 | words and permutations | 12 | 237 |
 | finite field constructions | 26 | 235 |
 
-_regenerated 2026-09-08 03:47Z by `scripts/status.sh --write`_
+_regenerated 2026-09-08 07:12Z by `scripts/status.sh --write`_
