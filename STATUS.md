@@ -1,13 +1,13 @@
 # Status
 
-`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **651 / 12,167** resolved (5.35%)
+`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **652 / 12,167** resolved (5.36%)
 
 | state | count |
 |---|---:|
-| ✅ done | 404 |
+| ✅ done | 405 |
 | 🚫 rejected (documented) | 247 |
 | 🔄 in progress | 125 |
-| ⚪ free | 11,383 |
+| ⚪ free | 11,382 |
 | **total** | **12,167** |
 
 ## In progress
@@ -71,6 +71,6 @@
 | algebraic geometric structures | 18 | 299 |
 | schedules and allocations | 19 | 259 |
 | words and permutations | 12 | 237 |
-| finite field constructions | 25 | 235 |
+| finite field constructions | 26 | 235 |
 
-_regenerated 2026-09-08 01:58Z by `scripts/status.sh --write`_
+_regenerated 2026-09-08 03:47Z by `scripts/status.sh --write`_
