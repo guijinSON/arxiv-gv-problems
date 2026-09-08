@@ -1,13 +1,13 @@
 # Status
 
-`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **661 / 12,167** resolved (5.43%)
+`██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░`  **651 / 12,167** resolved (5.35%)
 
 | state | count |
 |---|---:|
-| ✅ done | 414 |
+| ✅ done | 404 |
 | 🚫 rejected (documented) | 247 |
 | 🔄 in progress | 125 |
-| ⚪ free | 11,373 |
+| ⚪ free | 11,383 |
 | **total** | **12,167** |
 
 ## In progress
@@ -60,17 +60,17 @@
 
 | family | resolved | total |
 |---|---:|---:|
-| graph structures | 250 | 5,559 |
-| designs and codes | 60 | 1,022 |
+| graph structures | 246 | 5,559 |
+| designs and codes | 59 | 1,022 |
 | algebraic decomposition | 59 | 804 |
-| integer equations | 31 | 607 |
+| integer equations | 30 | 607 |
 | reconfiguration | 36 | 551 |
-| geometric configurations | 32 | 533 |
+| geometric configurations | 31 | 533 |
 | constraint satisfaction | 28 | 508 |
 | algebraic identity solutions | 17 | 398 |
 | algebraic geometric structures | 18 | 299 |
-| schedules and allocations | 21 | 259 |
+| schedules and allocations | 19 | 259 |
 | words and permutations | 12 | 237 |
-| finite field constructions | 26 | 235 |
+| finite field constructions | 25 | 235 |
 
-_regenerated 2026-09-06 04:52Z by `scripts/status.sh --write`_
+_regenerated 2026-09-08 01:58Z by `scripts/status.sh --write`_
